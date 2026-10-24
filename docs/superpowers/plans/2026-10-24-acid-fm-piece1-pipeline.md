@@ -896,6 +896,10 @@ ls -l ~/fm1-backups/2026-10-24-jiant && sha256sum ~/fm1-backups/2026-10-24-jiant
 Expected: the backup reads the 1 MiB flash twice and the reads match (the tool says so); the files are 1048576 B.
 Power-cycle the FM-1: it boots JIANT as before. **Do not continue without this backup.**
 
+Optionally also take the web editor's complete backup of the user data (projects, songs), with JIANT still on the
+device: the rollback in Step 6 moves data written by 0.9.18 onto JIANT 0.9.9, which may not read it. The full-flash
+backup stays the exact way back.
+
 - [ ] **Step 2: Record the starting state**
 
 ```bash
@@ -904,7 +908,8 @@ python3 tools/fm1_install.py --info
 aconnect -l | grep -A1 -iE "jiant|acid"
 ```
 
-Create `docs/acid-fm/device-log.md`:
+If you want the editor's complete backup of projects and songs (see Step 1), take it now and note its file name in the
+log. Create `docs/acid-fm/device-log.md`:
 
 ```markdown
 # Device log
@@ -912,19 +917,37 @@ Create `docs/acid-fm/device-log.md`:
 ## 2026-10-24 — piece 1
 
 - Backup: ~/fm1-backups/2026-10-24-jiant, sha256 <hash>, double read matched
+- Editor backup of user data (optional): <file name, or none>
 - Before: identity <from --info>, port <from aconnect>
 ```
 
-- [ ] **Step 3: Install ACID FM 0.1**
+- [ ] **Step 3: Rebuild the release on a clean HEAD**
+
+The package that goes on the device must come from the commit that gets pinned, with no uncommitted changes:
+
+```bash
+git status --short
+./build.sh --release 0.1
+sha256sum build/release-0.1/acid-fm-0.1.fwsc
+git rev-parse HEAD
+./build.sh
+```
+
+Expected: `git status --short` prints nothing (if it does, stop and commit or stash first); the release build succeeds.
+Record the `sha256sum` and the `git rev-parse HEAD` in `docs/acid-fm/device-log.md` now. The last `./build.sh` returns
+the tree to the dev build; Steps 4 to 7 install the release package from `build/release-0.1/`.
+
+- [ ] **Step 4: Install ACID FM 0.1**
 
 ```bash
 python3 tools/fm1_install.py build/release-0.1/acid-fm-0.1.fwsc
 ```
 
-Expected: the installer finds `JIANT FM`, the update loader (`JIANT Update`, then after the restart the device shows as
-`ACID FM`), and ends `done: the FM-1 runs FM-1_901`.
+Expected: the installer finds `JIANT FM`, then the update loader appears as `ACID FM Update` (the running JIANT stages
+the loader from the package being installed), then the device restarts as `ACID FM`, and the run ends
+`done: the FM-1 runs FM-1_901`.
 
-- [ ] **Step 4: USER STEP — check it on the device**
+- [ ] **Step 5: USER STEP — check it on the device**
 
 ```bash
 python3 tools/fm1_install.py --info
@@ -936,7 +959,7 @@ Expected: identity `FM-1_901`; ALSA client `ACID FM`; `iManufacturer NorfolkHack
 confirm on the FM-1: the ABOUT page (MENU) shows ACID FM v0.1 and its QR code opens the repo URL on a phone; the
 power-on song plays and sounds as it did on JIANT; keys and knobs respond; a project saves and loads.
 
-- [ ] **Step 5: Roll back to JIANT**
+- [ ] **Step 6: Roll back to JIANT**
 
 Build JIANT's own public version (the commit in upstream's `web/STABLE`) in a separate worktree and install it with our
 CLI:
@@ -949,10 +972,10 @@ python3 tools/fm1_install.py build/jiant-stable/build/felucca.fwsc
 python3 tools/fm1_install.py --info && aconnect -l | grep -iE "jiant|acid"
 ```
 
-Expected: the install ends `done: the FM-1 runs FM-1_900`; the port is named `JIANT` or `JIANT FM` again; the user
+Expected: the install ends `done: the FM-1 runs FM-1_900`; its update loader appears as `JIANT Update`; the port is named `JIANT` or `JIANT FM` again; the user
 confirms JIANT boots and plays.
 
-- [ ] **Step 6: Install ACID FM 0.1 again**
+- [ ] **Step 7: Install ACID FM 0.1 again**
 
 ```bash
 python3 tools/fm1_install.py build/release-0.1/acid-fm-0.1.fwsc && python3 tools/fm1_install.py --info
@@ -961,7 +984,7 @@ git worktree remove build/jiant-stable
 
 Expected: `done: the FM-1 runs FM-1_901`; the port is `ACID FM`.
 
-- [ ] **Step 7: Log and commit**
+- [ ] **Step 8: Log and commit**
 
 Append to `docs/acid-fm/device-log.md`:
 
@@ -971,6 +994,8 @@ Append to `docs/acid-fm/device-log.md`:
 - Rolled back to JIANT <$JS> (FM-1_900): boots and plays
 - Re-installed acid-fm-0.1.fwsc: FM-1_901
 - Proven commit: <git rev-parse HEAD>
+- Site / STABLE builds are dev builds (identity FM-1_900, felucca-v0.1-<sha>.fwsc) from the same sources; the
+  device-proven release is FM-1_901.
 ```
 
 ```bash
@@ -1005,27 +1030,30 @@ git switch main && git merge --ff-only piece1-pipeline && git log --oneline -3
 
 Expected: `main` now ends with this piece's commits, on top of the spec commits and JIANT's history.
 
-- [ ] **Step 2: Create the public repo and push**
+- [ ] **Step 2: Create the public repo and turn on Pages (GitHub Actions source)**
+
+Pages is enabled before the first push, so the push's workflow run can deploy.
 
 ```bash
 gh repo create NorfolkHacker/acid-fm --public --description "ACID FM: IDM / braindance firmware for the M-VAVE FM-1 (a fork of JIANT FM)" --homepage "https://norfolkhacker.github.io/acid-fm/"
-git remote add origin https://github.com/NorfolkHacker/acid-fm.git
-git push -u origin main
+gh api -X POST repos/NorfolkHacker/acid-fm/pages -f build_type=workflow
 ```
 
-Expected: the push succeeds; `git remote -v` lists `origin` and `upstream`.
+Expected: the repo exists (empty) and the Pages call returns the site's JSON.
 
-- [ ] **Step 3: Turn on Pages (GitHub Actions source) and run the workflow**
+- [ ] **Step 3: Add the remote, push and watch the workflow**
 
 ```bash
-gh api -X POST repos/NorfolkHacker/acid-fm/pages -f build_type=workflow
-gh workflow run emulator.yml --repo NorfolkHacker/acid-fm
+git remote add origin https://github.com/NorfolkHacker/acid-fm.git
+git push -u origin main
 sleep 5; gh run list --repo NorfolkHacker/acid-fm --workflow emulator.yml --limit 1
 ```
 
-Then wait for the run (`gh run watch --repo NorfolkHacker/acid-fm <run id>`). Expected: the build and deploy jobs
-succeed. If the JieLi toolchain or gitee download fails, re-run the workflow once (`gh run rerun <id>`); the workflow
-retries with backoff and caches them after the first success.
+Expected: the push succeeds, `git remote -v` lists `origin` and `upstream`, and the push starts the workflow. Only if no
+run started, trigger it: `gh workflow run emulator.yml --repo NorfolkHacker/acid-fm`. Then wait for the run
+(`gh run watch --repo NorfolkHacker/acid-fm <run id>`). Expected: the build and deploy jobs succeed. If the JieLi
+toolchain or gitee download fails, re-run the workflow once (`gh run rerun <id>`); the workflow retries with backoff and
+caches them after the first success.
 
 - [ ] **Step 4: Check the live site**
 
@@ -1038,11 +1066,11 @@ landing page, that the installer page connects to the FM-1 (it should name the f
 and offer the current build), and that the emulator plays. Do not install from the site in this step: Task 6 already
 proved the device path.
 
-- [ ] **Step 5: CI ran the web tests**
+- [ ] **Step 5: Record the evidence for the web tests**
 
-If `node` was missing locally, check that the workflow's run (or a local run after `sudo apt install nodejs`, a USER
-STEP) passed `node web/test_web.mjs`: the workflow log's web-test step, or run it locally. Expected: all pass,
-including the ACID FM installer cases from Task 4.
+The workflow (`emulator.yml`) builds and deploys; it does not run the web tests. The evidence that they pass is the
+local Node run in Tasks 4 and 5 (`node web/test_web.mjs` and the other `web/test_*.mjs`, all passing, including the ACID FM
+installer cases), plus the workflow's build and deploy jobs succeeding. Note both in the final report.
 
 ---
 
@@ -1053,7 +1081,7 @@ including the ACID FM installer cases from Task 4.
 
 - [ ] **Step 1: Pin**
 
-Write the proven commit from `docs/acid-fm/device-log.md` (Task 6 Step 7) into `web/STABLE`, one line, the full SHA:
+Write the proven commit from `docs/acid-fm/device-log.md` (Task 6 Step 8) into `web/STABLE`, one line, the full SHA:
 
 ```bash
 git switch -c pin-stable-0.1
