@@ -254,6 +254,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "ux_theme: the spec's colours, the 256-step blend, gradient text, glow, band" "$OUT/ux_theme_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ux_glow_test" tests/ux_glow_test.c -lm
     run "ux_glow: each pixel written once, pixels identical to the overlapped rings it replaced" "$OUT/ux_glow_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ux_widgets_test" tests/ux_widgets_test.c -lm
+    run "ux_widgets: the rows sum to 240, header / knobs / panel / footer land on theirs, meters, step strip colours" "$OUT/ux_widgets_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/text_ref_test" tests/text_ref_test.c -lm
     run "text: pens, kerning and pixels equal the reference renderer" "$OUT/text_ref_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ux_font_test" tests/ux_font_test.c -lm
