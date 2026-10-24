@@ -1,0 +1,25 @@
+ACID FM piece 3a (UI foundations) — deferred items, each tagged with the piece that should pick it up.
+Read this when writing the plan for that piece. [3b] EDIT screens, [3c] the remaining sections and the menu,
+[3d] docs, pictures and tools.
+
+[3b]      Low-contrast creature reds (1.2-2:1) on the EDIT screens: fix as the creatures are restyled.
+[3b]      ux_knob_touch has no firmware caller beyond HOME: wire it into the EDIT knob rows.
+[3b]      6 Huffman faces share 4+1 slots in gfx.c: profile slot thrash on screens that mix title + keycaps + values.
+[3c]      The menu's help text (DIM on RAISE rows, 2.9:1) needs contrast; the SCREEN rows (COLOR / SKIN / STYLE are inert
+          editor ids) get removed or repurposed. ui_menu.c ~469 still hashes the inert ui_style / ui_skin; mi_tab hidden
+          rows rely on the page-0 fallback.
+[3c]      Glow ring step is ~7x4.5 px (faint rim banding): smooth it if other sections use big glows.
+[3c]      ux_widgets.h: the footer doc comment is orphaned above ux_status; tidy it.
+[3c]      Knob-row value width in UF_VAL is not measured by a test (renders fit): add the measurement.
+[3d]      Navigation-map PNGs (docs/navigation-map*.png) need re-rendering with Chromium (SVGs are regenerated).
+[3d]      tools/video/* scripts still have signature stubs.
+[3d]      tools/gen_readme_hero.py expects AIR_JIANT / COLORS renders; web/manual/shots are JIANT renders.
+[3d]      ui_test ~9866: LARGE footer check weakened to "has ink" (compared to OFF capture shifted 1 row).
+[3d]      Stale mention of ui_lzhome.c in ui_engvis.c ~1857.
+[piece 6] GEN is still JIANT's screen (its status hint is shown as a header message): redo it with the generator.
+[any]     gfx.c ~639 "never drawn together" comment overstates.
+[any]     build/gen/ui_fonts.h can be stale against the generator output (gitignored artifact); gen_aa_font.py has a PFX
+          global; adv_digit fallback.
+[any]     VISUAL legend clock starts before the legend is first shown (a knob held in the first 4 s hides it).
+[any]     VISUAL silent-ring test tolerance is loose; "full panel <= 1 write per pixel incl. glyphs" is not tested.
+[any]     SCOPE ON is not positively checked in ui_test (pre-existing).

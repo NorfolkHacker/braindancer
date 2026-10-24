@@ -39,7 +39,7 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.2" /* ACID FM's (a fork of JIANT 0.9.18, on Felucca 1.1.5.1): the splash, the menu, the
+#define FELUCCA_VERSION "v0.3" /* ACID FM's (a fork of JIANT 0.9.18, on Felucca 1.1.5.1): the splash, the menu, the
                                 * console, the editor */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH

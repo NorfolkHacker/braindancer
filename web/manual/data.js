@@ -610,6 +610,11 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.3", items: [
+    ["0.3: una cara nueva: una sola paleta ACID, letras Inter Tight con degradé y brillo, y piezas compartidas (cabecera, fila de perillas con color, panel con brillo, línea de estado, pie).", "0.3: a new look: one ACID palette, Inter Tight lettering with gradient and glow, and shared pieces (header, colour-coded knob row, glow panel, status line, footer)."],
+    ["HOME ahora es TRACKS, VISUAL y GEN: HOME otra vez (o SELECT) los recorre; HOME + SELECT va directo a GEN. TRACKS muestra seis crestas con el nivel de cada pista, en dB como el mezclador; VISUAL, seis anillos que laten con los golpes de cada pista.", "HOME is now TRACKS, VISUAL and GEN: HOME again (or SELECT) walks them; HOME + SELECT goes straight to GEN. TRACKS shows six ridgelines with each track's level, in dB like the mixer; VISUAL shows six rings pulsing with each track's hits."],
+    ["La pantalla de inicio es el nombre ACID FM; la firma de JIANT se retira.", "The splash is the ACID FM wordmark; JIANT's signature is removed."],
+    ["Las demás pantallas siguen con los diseños de JIANT, en colores ACID; se rehacen en 0.4 y 0.5.", "The other screens keep JIANT's layouts, in ACID colours; they are restyled in 0.4 and 0.5."]]},
   {v: "0.2", items: [
     ["0.2: ANIMAL y WHEEL se retiran: un sonido guardado con ellos se carga como ANALOG, y T3 al encender es PHASE (los números de program change se corren).", "0.2: ANIMAL and WHEEL are retired: a stored sound that used them loads as ANALOG, and T3 at power-on is PHASE (program-change numbers shift)."],
     ["4 canciones; el resto de la flash queda reservado para los breakbeats, que llegan en una versión posterior.", "4 songs; the rest of the flash is kept for breakbeats, coming in a later version."],
