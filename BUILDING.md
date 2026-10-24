@@ -85,6 +85,8 @@ MIDI out, the editor, updates) and TRS MIDI.
 tests/run_tests.sh
 ```
 
+On a GCC 14+ host, run it as `CC=tools/host-cc sh tests/run_tests.sh` from the repo root (GCC 14 turns implicit declarations in the test builds into errors).
+
 Runs the host tests and, with Node.js, the web page tests (and, with Emscripten too, the browser emulator's). Run it after `./build.sh`
 (it uses `build/` and needs `AC79_SDK` set as for the build). The suites cover flash storage,
 user presets, projects of every format, backup, the keys and knobs, MIDI (USB, TRS, clock,
