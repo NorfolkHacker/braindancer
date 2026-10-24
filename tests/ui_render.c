@@ -1856,7 +1856,7 @@ static void draw(int s)
         lcd_fill(0, 0, 240, 240, UX_BG);
         cv_begin(240, 150, UX_BG);
         ux_glow(0, 10, 240, 130, 3);
-        ux_text_grad(40, 50, &UF_TTL, "ACID 303", ux_mix(UX_BG, UX_VIOLET, 45));
+        ux_text_grad(40, 50, &UF_TTL, "ACID 303", swap16(cv_px[62u * cv_w + 112u]));   /* (the glow's colour under the text) */
         ux_band(124, 14);
         ux_topline();
         cv_blit(0, 0);

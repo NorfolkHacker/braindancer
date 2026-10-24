@@ -3,10 +3,6 @@
 /* ACID FM's blend, gradient text, glow and band (ux_theme.h). Included into gfx.c's unity build after it. */
 #include "ux_theme.h"
 
-static const uint16_t UX_BLEND[256] = {
-#include "ux_blend.h"
-};
-
 static uint16_t ux_knob_col(uint32_t k)
 {
     static const uint16_t C[4] = {UX_ACID, UX_SLIDE, UX_VIOLET, UX_ACCENT};
@@ -47,26 +43,48 @@ static void ux_text_grad(int32_t x, int32_t y, const aafont_t *f, const char *s,
     }
 }
 
-/* the panel glow: concentric filled rounded rects, outside in, each a little brighter; the colour runs VIOLET (outer) to
- * SLIDE (centre) over BG. level -> rings, and per ring the percent of colour over BG. No per-pixel maths. */
-#define UX_GLOW_RINGS 8u
-#define UX_GLOW_STEP 4           /* px between rings at most: the innermost ring (the lint's "cell") stays big enough for a title */
-static const struct { uint8_t n, pct[UX_GLOW_RINGS]; } UX_GLOW[3] = {
-    {4, {3, 6, 9, 12}},
-    {6, {3, 6, 10, 15, 20, 25}},
-    {8, {3, 6, 10, 15, 21, 28, 36, 45}},
-};
+/* the panel glow: UX_GLOW_N filled ellipses, outside in, centred at 40 % / 30 % of the panel, each a little stronger. The
+ * mock-up's gradient runs to 70 % of its farthest-corner radius (0.6 w sqrt 2, 0.7 h sqrt 2), so the outer ellipse has
+ * half-axes 0.594 w x 0.693 h. A ring's colour, from u = its radius as a percent of the gradient radius (0..70): alpha
+ * 35 % at the centre to 12 % at u 45 to 0 at u 70, the hue VIOLET at the centre to SLIDE at u 45; level scales alpha.
+ * Integer arithmetic once per ring; spans are cv_rect rows (unhooked: the glow is no lint cell). */
+static uint16_t ux_glow_col(uint32_t level, uint32_t ring)
+{
+    int32_t u = (int32_t)(2u * (UX_GLOW_N - ring) - 1u) * 70 / (int32_t)(2u * UX_GLOW_N);   /* the ring's middle */
+    int32_t a = u <= 45 ? 35 - 23 * u / 45 : 12 * (70 - u) / 25;
+    int32_t hue = u >= 45 ? 100 : u * 100 / 45;
+    if (level > 3u) level = 3u;
+    return ux_mix(UX_BG, ux_mix(UX_VIOLET, UX_SLIDE, hue), a * (int32_t)level * 10 / 30);
+}
+
+static uint32_t ux_isqrt(uint32_t v)
+{
+    uint32_t r = 0, b = 1u << 30;
+    while (b > v) b >>= 2;
+    for (; b; b >>= 2) {
+        if (v >= r + b) { v -= r + b; r = (r >> 1) + b; }
+        else r >>= 1;
+    }
+    return r;
+}
+
 static void ux_glow(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t level)
 {
     uint32_t i;
-    int32_t half = (w < h ? w : h) / 2;
-    uint16_t under = UX_BG;
-    if (level == 0 || level > 3u) return;
-    for (i = 0; i < UX_GLOW[level - 1u].n; i++) {
-        int32_t n = UX_GLOW[level - 1u].n, in = (int32_t)i * (half / n < UX_GLOW_STEP ? half / n : UX_GLOW_STEP);
-        uint16_t c = ux_mix(UX_BG, ux_mix(UX_VIOLET, UX_SLIDE, (int32_t)i * 100 / (n - 1)), UX_GLOW[level - 1u].pct[i]);
-        cv_rrect(x + in, y + in, w - 2 * in, h - 2 * in, 8, c, under);
-        under = c;
+    int32_t cx = x + w * 40 / 100, cy = y + h * 30 / 100, ax = w * 594 / 1000, by = h * 693 / 1000;
+    if (level == 0 || level > 3u || w < 2 || h < 2) return;
+    for (i = 0; i < UX_GLOW_N; i++) {
+        int32_t ra = ax * (int32_t)(UX_GLOW_N - i) / (int32_t)UX_GLOW_N, rb = by * (int32_t)(UX_GLOW_N - i) / (int32_t)UX_GLOW_N, dy;
+        uint16_t c = ux_glow_col(level, i);
+        if (rb < 1) continue;
+        for (dy = -rb; dy <= rb; dy++) {
+            int32_t row = cy + dy, hw, x0, x1;
+            if (row < y || row >= y + h) continue;
+            hw = (int32_t)ux_isqrt((uint32_t)ra * (uint32_t)ra * (uint32_t)(rb * rb - dy * dy) / (uint32_t)(rb * rb));
+            x0 = cx - hw < x ? x : cx - hw;
+            x1 = cx + hw + 1 > x + w ? x + w : cx + hw + 1;
+            if (x1 > x0) cv_rect(x0, row, x1 - x0, 1, c);
+        }
     }
 }
 

@@ -27,6 +27,17 @@ static int near(uint16_t a, uint16_t b, int tol)
     return 1;
 }
 
+static int dist(uint16_t a, uint16_t b)    /* the sum of the channels' distances, in 8-bit steps */
+{
+    int d = 0;
+    for (int k = 0; k < 3; k++) {
+        int sh = k == 0 ? 11 : k == 1 ? 5 : 0, mk = k == 1 ? 63 : 31, sc = k == 1 ? 4 : 8;
+        int x = (int)((a >> sh) & mk) * sc - (int)((b >> sh) & mk) * sc;
+        d += x < 0 ? -x : x;
+    }
+    return d;
+}
+
 int main(void)
 {
     palette_set(UI_ACID_INDEX);
@@ -61,25 +72,36 @@ int main(void)
         printf("ux_theme:   leftmost ink x%d %04x, rightmost x%d %04x\n", l, lc, r, rc);
         /* find the strongest (nearest-to-blend) ink on the leftmost and rightmost 6 columns */
         {
-            int best_l = 99, best_r = 99;
-            for (x = l; x < l + 6; x++) for (y = 0; y < 60; y++) { int d = near(px(x, y), UX_ACID, 8) ; if (d) best_l = 0; }
-            for (x = r - 5; x <= r; x++) for (y = 0; y < 60; y++) { int d = near(px(x, y), UX_QUEUED, 8); if (d) best_r = 0; }
-            ck("left ink near ACID", best_l == 0);
-            ck("right ink near QUEUED", best_r == 0);
+            int best_l = 9999, best_r = 9999;
+            for (x = l; x < l + 6; x++) for (y = 0; y < 60; y++) { int d = dist(px(x, y), UX_ACID); if (d < best_l) best_l = d; }
+            for (x = r - 5; x <= r; x++) for (y = 0; y < 60; y++) { int d = dist(px(x, y), UX_QUEUED); if (d < best_r) best_r = d; }
+            ck("left ink within 40 (8-bit channel sum) of ACID", best_l <= 40);
+            ck("right ink within 40 (8-bit channel sum) of QUEUED", best_r <= 40);
         }
         ck("pixel (0,0) and (239,59) untouched", px(0, 0) == UX_BG && px(239, 59) == UX_BG);
     }
-    {   /* glow */
+    {   /* glow: the mock-up's: violet strongest at the centre (40 % / 30 %), fading through slide to nothing */
         uint16_t before[240 * 100];
-        int32_t i, same = 1;
+        int32_t i, same = 1, mono = 1;
+        uint32_t lv;
         cv_begin(240, 100, UX_BG);
         memcpy(before, cv_px, sizeof before);
         ux_glow(20, 10, 200, 80, 0);
         for (i = 0; i < 240 * 100; i++) same &= cv_px[i] == before[i];
         ck("ux_glow level 0 leaves the canvas untouched", same);
+        for (lv = 1; lv <= 3u; lv++) {
+            for (i = 1; i < (int32_t)UX_GLOW_N; i++)   /* each ring as far from BG as the one outside it, give or take RGB565 rounding (12 of 765) */
+                mono &= dist(ux_glow_col(lv, (uint32_t)i), UX_BG) + 12 >= dist(ux_glow_col(lv, (uint32_t)i - 1u), UX_BG);
+        }
+        ck("ring colours get stronger toward the centre (level 1..3)", mono);
+        ck("centre ring: more red (violet) than the outermost", (ux_glow_col(3, UX_GLOW_N - 1) >> 11) > (ux_glow_col(3, 0) >> 11));
+        ck("centre ring is more violet (higher R) than the SLIDE-coloured middle ring", (ux_glow_col(3, UX_GLOW_N - 1) >> 11) > (ux_glow_col(3, UX_GLOW_N / 3) >> 11));
+        ck("level 3 centre is the mock-up's 35 % violet over BG (one step)", near(ux_glow_col(3, UX_GLOW_N - 1), ux_mix(UX_BG, UX_VIOLET, 35), 1));
+        ck("level 1 is fainter than level 3", ((ux_glow_col(1, UX_GLOW_N - 1) >> 11)) < (ux_glow_col(3, UX_GLOW_N - 1) >> 11));
         ux_glow(20, 10, 200, 80, 3);
-        ck("level 3: centre brighter than the edge", px(120, 50) != UX_BG && px(120, 50) > px(22, 50) && px(22, 50) >= UX_BG);
-        ck("level 3: outside the box untouched", px(5, 50) == UX_BG && px(120, 95) == UX_BG);
+        ck("level 3: centre (40 %, 30 %) is more red than a point near the rim", (px(100, 34) >> 11) > (px(30, 34) >> 11));
+        ck("level 3: outside the box untouched", px(5, 50) == UX_BG && px(120, 95) == UX_BG && px(100, 5) == UX_BG);
+        ck("level 3: a far corner of the box is untouched (transparent beyond 70 %)", px(21, 89) == UX_BG);
     }
     {   /* band and top line */
         cv_begin(240, 40, UX_BG);

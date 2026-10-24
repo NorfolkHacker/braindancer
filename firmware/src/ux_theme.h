@@ -19,10 +19,20 @@
 #define UX_QUEUED    RGB(0xFF, 0xC8, 0x3C)
 #define UX_ACID_LT   RGB(0xDC, 0xFA, 0x9D)
 #define UX_VIOLET_LT RGB(0xD3, 0xA5, 0xFF)
+#define UX_GLOW_N    20u         /* the glow's rings */
 
-static const uint16_t UX_BLEND[256];     /* ACID at 0, QUEUED at 255 (flash; tools/gen_ux_blend.py) */
+/* ACID at 0, QUEUED at 255 (flash; tools/gen_ux_blend.py writes ux_blend.h) */
+static const uint16_t UX_BLEND[256] = {
+#include "ux_blend.h"
+};
 static uint16_t ux_knob_col(uint32_t k);                 /* 0..3: ACID, SLIDE, VIOLET, ACCENT */
+/* Canvas text, coloured from UX_BLEND by x across the text's width. bg is ONE colour: pass the colour under the text
+ * (over a glow, the glow's colour at that spot: ux_glow_col or the canvas pixel there). Where the glow varies across
+ * the text the anti-aliased edges show a faint seam; the ink itself is exact. */
 static void ux_text_grad(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t bg);
+static uint16_t ux_glow_col(uint32_t level, uint32_t ring);   /* ring 0 outermost .. UX_GLOW_N - 1 the centre */
+/* the panel glow, the mock-up's radial-gradient(ellipse at 40% 30%, violet .35, slide .12 45%, transparent 70%): level 3 is
+ * that, levels 1 and 2 a third and two thirds of its strength; drawn as unhooked spans (not lint cells) */
 static void ux_glow(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t level);   /* level 0..3 (0: none) */
 static void ux_band(int32_t y, int32_t h);               /* the blend as a solid band across the canvas */
 static void ux_topline(void);                            /* the 2 px blend line at canvas y 0 */
