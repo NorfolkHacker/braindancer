@@ -135,7 +135,7 @@ controls: {
       {k: "REC+GLO", t: ["borra la automatización de nivel y paneo", "clear the level and pan automation"]}
     ]},
   "HOME": {kind: "button", sec: "home", shot: 'home', layer: "HOME",
-    alone: ["HOME: desde otra sección, la última página de HOME; en HOME la otra (TRACKS ↔ VISUAL). HOME + SELECT: GEN.", "HOME: from elsewhere the HOME page last shown; on HOME the other one (TRACKS ↔ VISUAL). HOME + SELECT: GEN."],
+    alone: ["HOME: desde otra sección, la última página de HOME; en HOME la siguiente (TRACKS → VISUAL → GEN). HOME + SELECT: directo a GEN.", "HOME: from elsewhere the HOME page last shown; on HOME the next one (TRACKS → VISUAL → GEN). HOME + SELECT: straight to GEN."],
     held: ["Unos 0,7 s: abre el MENU.", "About 0.7 s: opens the MENU."],
     combos: [{k: "HOME+SELECT", t: ["GEN, el generador de temas", "GEN, the song generator"]}]},
   "SAVE": {kind: "button", sec: "save", shot: 'save_sound', layer: "SAVE",
@@ -274,7 +274,7 @@ commands: [
 
   // HOME
   {s: "home", k: "HOME", shot: 'home', t: ["HOME: TRACKS y VISUAL", "HOME: TRACKS and VISUAL"],
-   d: ["Dos páginas: TRACKS y VISUAL. Desde otra sección, HOME vuelve a la última que viste; en HOME, HOME otra vez (o SELECT) cambia de página. La línea de estado dice qué hace el próximo HOME. KNOB 1–4 en TRACKS: las cuatro perillas más útiles del motor.", "Two pages: TRACKS and VISUAL. From another section HOME comes back to the one you saw last; on HOME, HOME again (or SELECT) changes page. The status line says what the next HOME does. KNOB 1–4 on TRACKS: the engine's four most useful knobs."]},
+   d: ["Tres páginas: TRACKS → VISUAL → GEN. Desde otra sección, HOME vuelve a la última que viste; en HOME, HOME otra vez pasa a la siguiente (en ronda) y SELECT las recorre. La línea de estado dice qué hace el próximo HOME. KNOB 1–4 en TRACKS: las cuatro perillas más útiles del motor.", "Three pages: TRACKS → VISUAL → GEN. From another section HOME comes back to the one you saw last; on HOME, HOME again goes to the next (round) and SELECT walks them. The status line says what the next HOME does. KNOB 1–4 on TRACKS: the engine's four most useful knobs."]},
   {s: "home", k: "HOME", shot: 'home_visual', t: ["VISUAL: los macros", "VISUAL: the macros"],
    d: ["HOME › VISUAL: KNOB 1–4 son M1–M4 (como LFO mantenido).", "HOME › VISUAL: KNOB 1–4 are M1–M4 (as LFO held)."]},
   {s: "home", k: "HOME", shot: 'menu', t: ["Abrir el MENU", "Open the MENU"],
@@ -290,7 +290,7 @@ commands: [
   {s: "gen", k: "SELECT", shot: 'gen_parts', t: ["Dosificar las partes (GEN 2 / GEN 3)", "Weigh the parts (GEN 2 / GEN 3)"],
    d: ["GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % o AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Bajá DRUMS y OCT+: la misma pieza con menos batería.", "GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % or AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Lower DRUMS and OCT+: the same piece, fewer drums."]},
   {s: "gen", k: "OCT-", t: ["Salir de GEN / volver a lo de antes", "Leave GEN / go back to before"],
-   d: ["OCT− vuelve a HOME (la pieza queda). Para recuperar lo que había antes: GLO + G4 (UNDO). FORM PARTS / SONG llena las secciones y ARRANGE, pero nunca pisa secciones guardadas por vos.", "OCT− goes back to HOME (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and ARRANGE, but never overwrites sections you stored."]},
+   d: ["OCT− vuelve a TRACKS (la pieza queda). Para recuperar lo que había antes: GLO + G4 (UNDO). FORM PARTS / SONG llena las secciones y ARRANGE, pero nunca pisa secciones guardadas por vos.", "OCT− goes back to TRACKS (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and ARRANGE, but never overwrites sections you stored."]},
 
   // EDIT
   {s: "edit", k: "EDIT", shot: 'edit_analog', t: ["Editar el motor (EDIT 1 / EDIT 2)", "Edit the engine (EDIT 1 / EDIT 2)"],

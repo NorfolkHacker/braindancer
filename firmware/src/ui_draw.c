@@ -956,6 +956,10 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
         str_cpy(b, "HOME", n);
         return;
     }
+    if (gen_on() && lz_fam() == LZ_HOME) {             /* (ACID FM 3a) GEN, HOME's third page: its pages at the right */
+        str_cpy(b, "HOME \xB7 GEN", n);
+        return;
+    }
     if (lock_held()) {                                  /* (0.9.12) a step held: the page its knobs lock (SELECT walks */
         uint8_t v[16];                                  /* it, ui_input.c lock_select): LOCK . KIT 2, LOCK . EDIT 1 . OSC */
         uint32_t at, m = lock_chain(v, &at);
@@ -1023,6 +1027,11 @@ static int32_t crumb_count(char *b)
     } else if (lz_fam() == LZ_LAYER) {
         k = ui.lylv % 3u;
         n = 3;
+    } else if (gen_on() && lz_fam() == LZ_HOME) {      /* (ACID FM 3a) GEN: "GEN 2/3" */
+        str_cpy(b, "GEN ", 5);
+        fmt_int(b + 4, (int32_t)gen_page() + 1);
+        str_cpy(b + str_len(b), "/3", 3);
+        return text_w(&AF_X, b);
     } else if (lock_held()) {                           /* (0.9.12) the locks' page in their walk */
         uint8_t v[16];
         n = lock_chain(v, &k);

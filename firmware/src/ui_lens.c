@@ -2,9 +2,9 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * Portions Copyright (C) 2026 NorfolkHacker */
-/* (ACID FM 3a) HOME is two pages, TRACKS and VISUAL (ux_nav.c): a HOME tap from elsewhere the one last shown, on HOME the
- * other one; SELECT steps them; GEN 1..3 (JIANT's) by HOME + SELECT, out of it (OCT-, HOME, a section) HOME's last page.
- * Every other section as below. */
+/* (ACID FM 3a) HOME is three pages, TRACKS -> VISUAL -> GEN (ux_nav.c; GEN JIANT's GEN 1..3 until piece 6): a HOME tap
+ * from elsewhere the one last shown (GEN too), on HOME the next one, round; SELECT walks TRACKS VISUAL GEN 1..3 as one chain;
+ * HOME + SELECT straight to GEN 1; OCT- in GEN: TRACKS. Every other section as below. */
 /* (0.9.2) The navigation, as the approved mock-up (navegacion.html): six rules, the same in every section.
  *   1 SELECT walks the section's pages as one chain (no levels, no zoom), stopping at its first and last page.
  *   2 The section's button: from another section, the page last shown there; already inside, the first page of the
@@ -46,7 +46,8 @@ typedef struct { const char *nm, *tab; } ng_t;                /* a group: its na
 typedef struct { const nv_t *e; const ng_t *g; uint8_t n, ng; } ch_t;
 #define NV(t, nm, g, lv) {t, nm, g, lv}
 static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV(0, "VISUAL", 1, 0),   /* (ACID FM 3a: ux_nav.h UXH_*; was 0.9.2's */
-                               NV(0, "GEN 1", 2, 2), NV(0, "GEN 2", 2, 2), NV(0, "GEN 3", 2, 2)};   /* ECO MACROS BEING ROUTES) */
+                               NV(0, "GEN 1", 2, 2), NV(0, "GEN 2", 2, 2), NV(0, "GEN 3", 2, 2)};   /* ECO MACROS BEING ROUTES
+                                                         * then GEN) */
 static const ng_t CG_HOME[] = {{"TRACKS", 0}, {"VISUAL", 0}, {"GEN", 0}};
 static const nv_t CE_SYN[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("MORPH", 0, 1, 1),
                               NV("RETRIG", 0, 1, 1), NV("ROTOR", 0, 1, 1), NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1),
@@ -173,14 +174,13 @@ static uint32_t save_level(void) { return nav_lv(); }
 static uint32_t home_level(void) { return gen_on() ? 2u : 0u; }   /* (the 0.8.5 lens level: GEN 2, HOME's pages 0) */
 static uint32_t home_set(void) { return !gen_on() && ux_home_page() == UXH_VISUAL; }
 static int home_macros(void) { return ui.home && !ui.menu && home_set(); }   /* VISUAL: M1..M4 (spec 4.3) */
-/* the entries shown now (on this track, at this LOAD), in order: their indices in v; how many. HOME's: TRACKS VISUAL, in
- * GEN its pages (SELECT never crosses between them) */
+/* the entries shown now (on this track, at this LOAD), in order: their indices in v; how many */
 static uint32_t nav_list(uint32_t sec, uint8_t *v)
 {
     const ch_t *c = nav_ch(sec);
     uint32_t k, n = 0;
     for (k = 0; k < c->n; k++)
-        if (nv_ok(sec, k) && (sec != SEC_HOME || (k >= UXH_GEN0) == (gen_on() != 0)))
+        if (nv_ok(sec, k))
             v[n++] = (uint8_t)k;
     return n;
 }
@@ -207,15 +207,14 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
     if (k >= c->n)
         return;
     e = k;
-    if (sec != SEC_HOME || e < UXH_N)                   /* (HOME's memory: TRACKS / VISUAL only, never GEN) */
-        nav_mem_put(key, e);
+    if (sec == SEC_HOME && e >= UXH_GEN0 && !gen_on() && chain_busy()) {
+        ui_message("STOP TO EDIT");                     /* (GEN refused while the song plays: TRACKS, HOME's next, said why) */
+        e = UXH_TRACKS;
+    }
+    nav_mem_put(key, e);
     if (sec == SEC_HOME) {
-        if (e >= UXH_GEN0) {                            /* GEN: the generator's screen, HOME + SELECT */
+        if (e >= UXH_GEN0) {                            /* GEN: the generator's screen, HOME's third page */
             if (!gen_on()) {
-                if (chain_busy()) {
-                    ui_message("STOP TO EDIT");
-                    return;
-                }
                 confirm_open(CF_DICE_ALL, song.sel);
                 gen_open();
             }
@@ -239,16 +238,16 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
         ui.act = outside && (PAGES[i].graph == GR_USER || c->e[e].lv == SV_PROJ) ? 4u : 0u;
     page_flash();
 }
-/* rule 2: a section's button. HOME (ACID FM 3a): from elsewhere or GEN the page last shown on HOME, on it the other one */
+/* rule 2: a section's button. HOME (ACID FM 3a): from elsewhere the page last shown on HOME, on it the next one, round */
 static void nav_button(uint32_t sec)
 {
     const ch_t *c = nav_ch(sec);
     uint32_t e, g, j, k;
     if (sec == SEC_HOME) {
-        if (ui.home && !gen_on())
+        if (ui.home || gen_on())
             ux_home_flip();
         else
-            nav_go(SEC_HOME, ux_home_page(), 1);
+            nav_go(SEC_HOME, ux_home_entry(), 1);
         return;
     }
     if (nav_sec() != sec || ui.home) {

@@ -2395,7 +2395,7 @@ static void ui_input_frame(void)
     if (seq == BT_TAP || seq == BT_HOLD)                /* (SONG: SAVE held, G5) */
         open_family(FAM_SEQ);
     if (home == BT_TAP)                                 /* HOME acts on release (a hold opens the menu): rule 2, HOME's */
-        nav_button(SEC_HOME);                           /* page last shown; on HOME the other one (TRACKS <-> VISUAL) */
+        nav_button(SEC_HOME);                           /* page last shown; on HOME the next (TRACKS VISUAL GEN, round) */
     cursor_fix();                                       /* LEN may have changed (knob, editor, load) */
     for (id = 0; id < 14u; id++) {
         if (!((pressed >> id) & 1u))
@@ -2475,9 +2475,9 @@ static void ui_input_frame(void)
         if (b & 1u)
             page_tap(panel_btn_of(id));
     if (gen_on() && (oct & 2u)) {                       /* (0.9.2) GEN, HOME's pages: OCT+ the piece (the screen stays, */
-        if (!chain_busy()) gen_press();                 /* OCT+ again: another), OCT- back to HOME's last page */
+        if (!chain_busy()) gen_press();                 /* OCT+ again: another), OCT- back to TRACKS */
     } else if (gen_on() && (oct & 1u)) {
-        nav_go(SEC_HOME, ux_home_page(), 0);
+        nav_go(SEC_HOME, UXH_TRACKS, 0);
     } else if (act_cols() && (oct & 2u)) {              /* action pages: OCT+ does the picked action, */
         act_do();
     } else if (act_cols() && (oct & 1u)) {              /* OCT- drops it, or (none picked) goes HOME; PHRASES: back to */
@@ -2523,7 +2523,7 @@ static void ui_input_frame(void)
             ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
         }
     } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.9.2, rule 1) SELECT alone: the section's
-                                                        * chain, a page a detent (HOME's: TRACKS VISUAL; in GEN its pages) */
+                                                        * chain, a page a detent (HOME's: TRACKS VISUAL GEN 1..3) */
         if (lock_held())                                /* (0.9.12) a step held on STEP: the page its locks take */
             lock_select(s);
         else

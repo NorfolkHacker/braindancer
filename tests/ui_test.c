@@ -9678,11 +9678,9 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -1);
     ok &= str_eq(cur_page()->title, "GLOBAL");
     go_home(); frame(); turn(EN_SELECT, 1);
-    ok &= ui.home && !ui.confirm && ux_home_page() == UXH_VISUAL;     /* (ACID FM 3a: TRACKS VISUAL, never GEN) */
-    turn(EN_SELECT, 3);
-    ok &= ui.home && !ui.confirm && ux_home_page() == UXH_VISUAL && song.g[G_BPM] == b0;
-    held_turn(B_HOME, 1); frames(600);
-    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME (+ SELECT): GEN */
+    ok &= ui.home && !ui.confirm && ux_home_page() == UXH_VISUAL;     /* (ACID FM 3a: TRACKS VISUAL GEN) */
+    turn(EN_SELECT, 1);
+    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: GEN */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); turn(EN_SELECT, 2);
     ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.9.2: EDIT 1 EDIT 2 FILTER ..) */
@@ -9690,7 +9688,7 @@ static int test_bpm_lock(void)
     ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
     ok &= str_eq(cur_page()->title, "STAGE") && !ui.home;             /* (0.8.5 LENTE: ENV -> STAGE, the last; no LFO) */
-    bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME + SELECT: DICE ALL; never the tempo", ok);
+    bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
     hold(B_HOME);
@@ -10866,34 +10864,43 @@ static int test_ux_nav_sections(void)
     return bad;
 }
 
-/* HOME (ACID FM 3a, ux_nav.c; spec 4.1 / 4.3): two pages, TRACKS and VISUAL. A HOME tap from elsewhere: the page last shown
- * there (power-on: TRACKS); on HOME: the other one; SELECT steps them (no wrap); HOME held: MENU; HOME + SELECT: GEN 1
- * (JIANT's GEN 1..3, SELECT along them), OCT- or a HOME tap out of GEN: HOME's last page; a section's button leaves GEN and
- * HOME comes back to HOME's last page; a stored HOME page that is no more: TRACKS. TRACKS' knobs the sound's four (until
- * piece 3a task 6), VISUAL's M1..M4; the MACRO layer (LFO held) still M1..M4. The placeholder: header, knob row, the
- * status line's hint of what HOME does next, the footer HOME . page and n / 2.
- * (Was 0.9.2's: ECO MACROS BEING ROUTES GEN 1..3 one chain, a HOME tap the next group) */
-static int ux_home_at(uint32_t p) { return ui.home && !ui.confirm && !ui.menu && ux_home_page() == p && nav_cur() == p && nav_sec() == SEC_HOME; }
+/* HOME (ACID FM 3a, ux_nav.c; spec 4.1 / 4.2 / 4.3): three pages, TRACKS -> VISUAL -> GEN (user, 2026-10-24: GEN with no
+ * combo). A HOME tap from elsewhere: the page last shown there, GEN too (power-on: TRACKS); on HOME: the next one, round;
+ * SELECT walks TRACKS VISUAL GEN 1..3 (JIANT's GEN pages until piece 6) and stops at the ends; HOME held: MENU; HOME + SELECT
+ * straight to GEN 1; OCT- in GEN: TRACKS; a stored HOME entry that is no more: TRACKS. TRACKS' knobs the sound's four (until
+ * 3a task 6), VISUAL's M1..M4; the MACRO layer (LFO held) still M1..M4. TRACKS / VISUAL: the placeholder (header, knob row,
+ * status line saying what HOME does next, footer HOME . page and n / 3); GEN JIANT's screen, its footer HOME . GEN and
+ * GEN n/3. (Was 0.9.2's: ECO MACROS BEING ROUTES GEN 1..3, a HOME tap the next group) */
+static int ux_home_at(uint32_t p)
+{
+    return ui.home && !ui.menu && ux_home_page() == p && nav_sec() == SEC_HOME &&
+           (p == UXH_GEN ? gen_on() && nav_cur() >= UXH_GEN0 : !ui.confirm && nav_cur() == p);
+}
 static int test_ux_nav_home(void)
 {
     int bad = 0, ok;
     uint8_t cnt[8], gi[8];
     uint32_t g, p, i, m, k, c;
+    char b[48];
     ui_power_on(); frame();
     ok = ux_home_at(UXH_TRACKS);                                    /* power-on: TRACKS */
     press(B_SEQ); frame();
     ok &= !ui.home && nav_sec() == SEC_SEQ;
     press(B_HOME); frame();                                         /* from SEQ (fresh): TRACKS */
     ok &= ux_home_at(UXH_TRACKS);
-    press(B_HOME); frame();                                         /* HOME again: VISUAL */
+    press(B_HOME); frame();                                         /* HOME again: VISUAL, GEN (GEN 1), TRACKS */
     ok &= ux_home_at(UXH_VISUAL);
-    press(B_HOME); frame();                                         /* and again: TRACKS */
+    press(B_HOME); frame();
+    ok &= ux_home_at(UXH_GEN) && gen_page() == 0u && nav_cur() == UXH_GEN0;
+    press(B_HOME); frame();
     ok &= ux_home_at(UXH_TRACKS);
     ux_home_flip(); frame();
     ok &= ux_home_at(UXH_VISUAL);
     ux_home_flip(); frame();
+    ok &= ux_home_at(UXH_GEN);
+    ux_home_flip(); frame();
     ok &= ux_home_at(UXH_TRACKS);
-    bad += check("3a HOME: power-on TRACKS; from SEQ a HOME tap TRACKS; HOME again VISUAL, again TRACKS (ux_home_flip)", ok);
+    bad += check("3a HOME: power-on TRACKS; from SEQ TRACKS; HOME again VISUAL, GEN, TRACKS (round; ux_home_flip the same)", ok);
     press(B_HOME); frame();                                         /* VISUAL, then SEQ, then HOME: VISUAL */
     press(B_SEQ); frame();
     ok = !ui.home;
@@ -10901,82 +10908,84 @@ static int test_ux_nav_home(void)
     ok &= ux_home_at(UXH_VISUAL);
     press(B_ENV); frame(); press(B_HOME); frame();
     ok &= ux_home_at(UXH_VISUAL);
-    press(B_HOME); frame();
-    press(B_FX); frame(); press(B_HOME); frame();
-    ok &= ux_home_at(UXH_TRACKS);
-    bad += check("3a HOME: from another section the page last shown on HOME (VISUAL, TRACKS)", ok);
-    ui_power_on(); frame();
-    (void)nav_groups(cnt, gi, &g, &p, &i, &m);
-    ok = nav_groups(cnt, gi, &g, &p, &i, &m) == 2u && m == 2u && g == 0u && i == 0u && cnt[0] == 1u && cnt[1] == 1u &&
-         lz_tabs() == 2u && lz_level() == 0u && str_eq(nav_group_name(0), "TRACKS") && str_eq(nav_group_name(1), "VISUAL");
-    press(B_HOME); frame();
-    (void)nav_groups(cnt, gi, &g, &p, &i, &m);
-    ok &= m == 2u && g == 1u && i == 1u && lz_tabs() == 2u && lz_level() == 1u && str_eq(nav_page_name(), "VISUAL");
-    ok &= str_eq(ux_home_where(), "HOME \xB7 VISUAL") && str_eq(ux_home_count(), "2 / 2") && str_eq(ux_home_hint(), "HOME AGAIN: TRACKS");
-    press(B_HOME); frame();
-    ok &= str_eq(nav_page_name(), "TRACKS") && str_eq(ux_home_where(), "HOME \xB7 TRACKS") && str_eq(ux_home_count(), "1 / 2") &&
-          str_eq(ux_home_hint(), "HOME AGAIN: VISUAL");
-    bad += check("3a HOME: two pages (groups TRACKS, VISUAL; tabs 2; footer HOME . page, n / 2; the hint what HOME does next)", ok);
-    ui_power_on(); frame();
-    turn(EN_SELECT, 1); frame();                                    /* SELECT: TRACKS -> VISUAL (rule 2), no wrap */
-    ok = ux_home_at(UXH_VISUAL);
+    press(B_HOME); frame();                                         /* GEN; SELECT to GEN 2; ENV leaves it; HOME: GEN 2 */
+    fm1_ms += 1000u;
     turn(EN_SELECT, 1); frame();
-    ok &= ux_home_at(UXH_VISUAL) && !gen_on();
-    turn(EN_SELECT, -1); frame();
-    ok &= ux_home_at(UXH_TRACKS);
-    turn(EN_SELECT, -1); frame();
-    ok &= ux_home_at(UXH_TRACKS);
-    bad += check("3a HOME: SELECT steps TRACKS <-> VISUAL (no wrap, never into GEN)", ok);
-    ui_power_on(); frame();
-    press(B_HOME); frame();                                         /* VISUAL, then HOME + SELECT: GEN 1 */
-    held_turn(B_HOME, 1); frame(); frames(600);
-    ok = gen_on() && gen_page() == 0u && ui.home && nav_sec() == SEC_HOME && nav_cur() == UXH_GEN0 && !ui.menu &&
-         str_eq(nav_page_name(), "GEN 1");
-    fm1_ms += 1000u;
-    turn(EN_SELECT, 1); frame();                                    /* (SELECT along GEN's pages) */
-    ok &= gen_on() && gen_page() == 1u && nav_cur() == UXH_GEN0 + 1u;
-    turn(EN_SELECT, -5); frame();
-    ok &= gen_on() && gen_page() == 0u;
-    press(B_OCTDN); frame();                                        /* OCT-: HOME's last page, VISUAL */
-    ok &= ux_home_at(UXH_VISUAL);
-    press(B_HOME); frame();                                         /* TRACKS; GEN; OCT-: TRACKS */
-    held_turn(B_HOME, 1); frame(); frames(600);
-    ok &= gen_on() && gen_page() == 0u;
-    fm1_ms += 1000u;
-    turn(EN_SELECT, 2); frame();                                    /* GEN 3 left; HOME + SELECT again: GEN 1 */
-    ok &= gen_on() && gen_page() == 2u;
-    press(B_OCTDN); frame();
-    ok &= ux_home_at(UXH_TRACKS);
-    held_turn(B_HOME, 1); frame(); frames(600);
-    ok &= gen_on() && gen_page() == 0u && nav_cur() == UXH_GEN0;
-    press(B_OCTDN); frame();
-    ok &= ux_home_at(UXH_TRACKS);
-    bad += check("3a HOME: HOME + SELECT GEN 1 (SELECT its pages; always GEN 1); OCT- back to HOME's last page", ok);
-    press(B_HOME); frame();                                         /* VISUAL; GEN; a HOME tap: VISUAL */
-    held_turn(B_HOME, 1); frame(); frames(600);
-    ok = gen_on();
-    press(B_HOME); frame();
-    ok &= ux_home_at(UXH_VISUAL);
-    held_turn(B_HOME, 1); frame(); frames(600);                     /* GEN; ENV leaves it; HOME: VISUAL */
-    ok &= gen_on();
+    ok &= ux_home_at(UXH_GEN) && gen_page() == 1u;
     press(B_ENV); frame();
     ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV");
     press(B_HOME); frame();
+    ok &= ux_home_at(UXH_GEN) && gen_page() == 1u && nav_cur() == UXH_GEN0 + 1u;
+    press(B_HOME); frame();                                         /* round: TRACKS; FX, HOME: TRACKS */
+    press(B_FX); frame(); press(B_HOME); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    bad += check("3a HOME: from another section the page last shown on HOME (VISUAL, GEN at its page, TRACKS)", ok);
+    ui_power_on(); frame();
+    ok = nav_groups(cnt, gi, &g, &p, &i, &m) == 3u && m == 5u && g == 0u && i == 0u && cnt[0] == 1u && cnt[1] == 1u &&
+         cnt[2] == 3u && lz_tabs() == 3u && lz_level() == 0u && str_eq(nav_group_name(0), "TRACKS") &&
+         str_eq(nav_group_name(1), "VISUAL") && str_eq(nav_group_name(2), "GEN");
+    ok &= str_eq(nav_page_name(), "TRACKS") && str_eq(ux_home_where(), "HOME \xB7 TRACKS") && str_eq(ux_home_count(), "1 / 3") &&
+          str_eq(ux_home_hint(), "HOME AGAIN: VISUAL");
+    press(B_HOME); frame();
+    (void)nav_groups(cnt, gi, &g, &p, &i, &m);
+    ok &= g == 1u && lz_tabs() == 3u && lz_level() == 1u && str_eq(nav_page_name(), "VISUAL") &&
+          str_eq(ux_home_where(), "HOME \xB7 VISUAL") && str_eq(ux_home_count(), "2 / 3") && str_eq(ux_home_hint(), "HOME AGAIN: GENERATE");
+    press(B_HOME); frame();
+    (void)nav_groups(cnt, gi, &g, &p, &i, &m);
+    ok &= g == 2u && lz_tabs() == 3u && lz_level() == 2u && lz_tab_lit(2) && str_eq(ux_home_where(), "HOME \xB7 GEN") &&
+          str_eq(ux_home_count(), "3 / 3") && str_eq(ux_home_hint(), "HOME AGAIN: TRACKS");
+    foot_crumbs(b, sizeof b);
+    ok &= str_eq(b, "HOME \xB7 GEN") && lz_count_is("GEN 1/3");
+    ok &= msg_is("HOME AGAIN: TRACKS");                             /* (GEN's hint: JIANT's screen, a message) */
+    fm1_ms += 1000u;
+    turn(EN_SELECT, 1); frame();
+    ok &= lz_count_is("GEN 2/3");
+    bad += check("3a HOME: three pages (tabs TRACKS VISUAL GEN; footer HOME . page, n / 3; GEN's HOME . GEN, GEN n/3; the hints)", ok);
+    ui_power_on(); frame();
+    turn(EN_SELECT, 1); frame();                                    /* SELECT: TRACKS VISUAL GEN 1 GEN 2 GEN 3, stops */
+    ok = ux_home_at(UXH_VISUAL);
+    fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
+    ok &= ux_home_at(UXH_GEN) && gen_page() == 0u;
+    fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
+    ok &= gen_page() == 1u;
+    fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
+    ok &= gen_page() == 2u;
+    fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
+    ok &= ux_home_at(UXH_GEN) && gen_page() == 2u;                  /* (the last page: no wrap) */
+    fm1_ms += 1000u; turn(EN_SELECT, -3); frame();
     ok &= ux_home_at(UXH_VISUAL);
-    bad += check("3a HOME: out of GEN by a HOME tap or a section's button: HOME's last page (not GEN)", ok);
+    turn(EN_SELECT, -1); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    turn(EN_SELECT, -1); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    bad += check("3a HOME: SELECT walks TRACKS VISUAL GEN 1..3, stopping at both ends (as every chain)", ok);
+    ui_power_on(); frame();
+    held_turn(B_HOME, 1); frame(); frames(600);                     /* HOME + SELECT: GEN 1 */
+    ok = ux_home_at(UXH_GEN) && gen_page() == 0u && !ui.menu && str_eq(nav_page_name(), "GEN 1");
+    fm1_ms += 1000u;
+    turn(EN_SELECT, 2); frame();
+    ok &= gen_page() == 2u;
+    press(B_OCTDN); frame();                                        /* OCT-: TRACKS */
+    ok &= ux_home_at(UXH_TRACKS);
+    press(B_HOME); frame();                                         /* VISUAL; HOME + SELECT: GEN 1 (not GEN 3) */
+    held_turn(B_HOME, 1); frame(); frames(600);
+    ok &= ux_home_at(UXH_GEN) && gen_page() == 0u;
+    press(B_OCTDN); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    bad += check("3a HOME: HOME + SELECT straight to GEN 1; OCT- in GEN: TRACKS", ok);
     hold(B_HOME); frame();                                          /* HOME held: MENU (unchanged) */
     ok = ui.menu == 1u;
     press(B_HOME); frame();
-    ok &= !ui.menu && ux_home_at(UXH_VISUAL);
+    ok &= !ui.menu && ux_home_at(UXH_TRACKS);
     bad += check("3a HOME: HOME held MENU; a HOME tap closes it, on HOME's page", ok);
     ui_power_on(); frame();
-    ui.nmem[0] = (uint8_t)(5u ^ NAV_DEF[0]);                        /* a stored HOME page that is no more (0.9.2's ROUTES ..) */
+    ui.nmem[0] = (uint8_t)(7u ^ NAV_DEF[0]);                        /* a stored HOME entry that is no more */
     ok = ux_home_page() == UXH_TRACKS && nav_cur() == UXH_TRACKS;
     press(B_SEQ); frame(); press(B_HOME); frame();
     ok &= ux_home_at(UXH_TRACKS) && sizeof ui.nmem == 13u && nav_mem(0) == UXH_TRACKS;
     ui.nmem[0] = (uint8_t)(UXH_VISUAL ^ NAV_DEF[0]);                /* (the byte as before: the entry ^ the default) */
     ok &= ux_home_page() == UXH_VISUAL;
-    bad += check("3a HOME: page memory the same 13 bytes (entry ^ default); a HOME page that is no more: TRACKS", ok);
+    bad += check("3a HOME: page memory the same 13 bytes (entry ^ default); a HOME entry that is no more: TRACKS", ok);
     ui_power_on(); frame();                                         /* TRACKS: the sound's four knobs */
     c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
     k = macro_v[0];
@@ -10985,7 +10994,8 @@ static int test_ux_nav_home(void)
     press(B_HOME); frame();                                         /* VISUAL: M1..M4 */
     turn(EN_K1, 3); frame();
     ok &= home_macros() && macro_v[0] == (uint8_t)(k + 3u);
-    press(B_HOME); frame();                                         /* TRACKS, the MACRO layer latched (LFO held): M1 */
+    press(B_HOME); press(B_HOME); frame();                          /* TRACKS, the MACRO layer latched (LFO held): M1 */
+    ok &= ux_home_at(UXH_TRACKS);
     hold(B_LFO); frame();
     ok &= mac_latch;
     turn(EN_K1, 2); frame();
@@ -11845,22 +11855,22 @@ static int test_lz_reach(void)
                         if (j == NPAGES) { seen_old[i][k] |= 2u; continue; }   /* (not this engine's, this LOAD's) */
                         if (rv_has(OLD_LV[i].t[k], OLD_LV[i].fam, OLD_LV[i].lv)) seen_old[i][k] |= 1u;
                     }
-            {   /* HOME (ACID FM 3a): TRACKS VISUAL by SELECT; GEN 1..3 by HOME + SELECT, then SELECT */
+            {   /* HOME (ACID FM 3a): TRACKS VISUAL GEN 1..3, by SELECT alone */
                 uint32_t n = 0;
                 go_home(); frames(32); press(B_HOME); frames(32);
                 turn(EN_SELECT, -10); frames(2);
-                for (k = 0; k < UXH_N; k++) {
+                for (k = 0; k < UXH_GEN; k++) {
                     n += nav_cur() == k && ux_home_page() == k && home_level() == 0u && ui.home && !gen_on();
+                    fm1_ms += 1000u;
                     turn(EN_SELECT, 1); frames(2);
                 }
-                held_turn(B_HOME, 1); frames(600);
                 for (k = 0; k < UXH_NGEN; k++) {
                     n += nav_cur() == UXH_GEN0 + k && home_level() == 2u && gen_on() && gen_page() == k;
                     fm1_ms += 1000u;
                     turn(EN_SELECT, 1); frames(2);
                 }
-                if (n != UXH_N + UXH_NGEN) printf("  %s: HOME's pages %u of %u\n", ENGINES[e]->name, n, UXH_N + UXH_NGEN);
-                okh &= n == UXH_N + UXH_NGEN;
+                if (n != UXH_GEN + UXH_NGEN) printf("  %s: HOME's pages %u of %u\n", ENGINES[e]->name, n, UXH_GEN + UXH_NGEN);
+                okh &= n == UXH_GEN + UXH_NGEN;
                 press(B_OCTDN); frames(2);
             }
         }
@@ -11873,7 +11883,7 @@ static int test_lz_reach(void)
     bad += check("0.9.2 reach: every page each engine shows (LOFI BYTE, LOAD ECO too) by its button and SELECT alone", ok);
     bad += check("0.9.2 reach: every parameter of those pages (the ids on them)", okp);
     bad += check("0.9.2 reach: every 0.9.1 lens page at its 0.9.1 level (drawn as it was; NOTE's STEP view merged)", okold);
-    bad += check("0.9.2 reach: HOME's TRACKS VISUAL by SELECT, GEN 1..3 by HOME + SELECT (ACID FM 3a); PHRASES by SEQ's PRESETS", okh);
+    bad += check("0.9.2 reach: HOME's TRACKS VISUAL GEN 1..3 by SELECT alone (ACID FM 3a); PHRASES by SEQ's PRESETS", okh);
     ui_power_on();
     return bad;
 }
