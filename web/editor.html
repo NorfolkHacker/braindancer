@@ -1539,8 +1539,9 @@ function makeMockDevice(opt = {}) {
     D("SIZE", F.PCT, 0, 127, 90), D("DAMP", F.PCT, 0, 127, 60), D("RATE", F.LFOHZ, 0, 127, 40), D("DEPTH", F.PCT, 0, 127, 60),
     E("MIDI", ["USB", "TRS"], 0), D("REL", F.PCT, 0, 100, 30),   /* G_DREL (was SYNC): DUCK's release */ E("ROUTE", ["CH1-6", "SEL"], 0), D("CPU", F.INT, 0, 0, 0),
     D("SLOT", F.INT, 1, 4, 1), D("DJ FILT", F.BIPCT, -64, 63, 0), E("LOAD", NGO, 0), E("SAVE", NGO, 0),   /* (0.9.1) G_DJF 17 (was NAME, "--"): the master DJ FILTER */
-    E("ENG", ["ANALOG", "-", "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL",
-      "-", "-", "DRUM", "NOISE", "FM6", "-", "ANIMAL"], 0), D("CLIP", F.PCT, 0, 100, 0),   /* G_CLIP (was SET); 0.8.3 ANIMAL */
+    E("ENG", ["ANALOG", "-", "PHASE", "LOFI", "-", "VOICE", "-", "-",
+      "-", "-", "DRUM", "NOISE", "FM6", "-", "-"], 0), D("CLIP", F.PCT, 0, 100, 0),   /* G_CLIP (was SET); 0.8.3 ANIMAL; ACID FM 0.2:
+      WHEEL 7, ANIMAL 14 retired */
     E("CLRSQ", NGO, 0), E("INIT", NGO, 0),
     E("TYPE", ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"], 0),               /* G_RTYPE (id 24, was G_DRCH): the reverb's model */
     D("PUNCH", F.PCT, 0, 100, 0), D("DUCK", F.PCT, 0, 100, 0),   /* G_PUNCH, G_DUCK (JIANT; were G_DRLVL, G_DRREV) */
@@ -1628,14 +1629,10 @@ function makeMockDevice(opt = {}) {
     { name: "-", titles: ["-", "-"], edit: [D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0),
         D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0)],
       presets: [] },
-    { name: "WHEEL", titles: ["BARS", "TONE"], edit: [E("REG", ["FLUTE", "MELLO", "HOLLW", "SMOOT", "3BAR", "BLUES", "GOSPL", "ROCK",
-        "TOPS", "CLARI", "REED", "STRNG", "CHAPL", "BRITE", "BASS", "FULL"], 4), D("SUB", F.INT, -8, 8, 0), D("BODY", F.INT, -8, 8, 0), D("TOP", F.INT, -8, 8, 0),
-        E("PERC", ["OFF", "2ND", "3RD", "2SOFT", "3SOFT", "2SLOW", "3SLOW"], 0), D("CLICK", F.PCT, 0, 127, 40), D("DRIVE", F.PCT, 0, 127, 0), E("ROTOR", ["OFF", "SLOW", "FAST"], 1)],
-      presets: [P("FULL ORGAN", [15, 0, 0, 0, 0, 30, 20, 1], [0, 64, 127, 45], 0, 5), P("JAZZ PERC", [4, 0, 0, 0, 2, 50, 8, 1], [0, 64, 127, 40], 0, 3),
-        P("GOSPEL", [6, 0, 0, 0, 1, 60, 40, 2], [0, 64, 127, 45], 0, 6), P("SOFT FLUTE", [1, 0, -2, 0, 0, 10, 0, 1], [0, 64, 127, 55], 0, 5),
-        P("ROCK DRIVE", [7, 0, 0, 0, 0, 70, 100, 2], [0, 64, 127, 40], 0, 4), P("DUB ORGAN", [2, 0, 0, 0, 0, 20, 10, 1], [0, 64, 127, 40], 0, 6),
-        P("SOFT KEYS", [3, 0, 0, -2, 0, 5, 0, 0], [5, 64, 127, 50], 0, 6), P("CHURCH", [12, 0, 0, 0, 0, 0, 0, 0], [15, 64, 127, 70], 0, 5),
-        P("WAVE ORGAN", [8, 0, 0, 2, 3, 35, 15, 2], [0, 64, 127, 35], 0, 3), P("REED BASS", [14, 2, 0, -4, 0, 20, 10, 0], [0, 64, 127, 30], 1, 2)] },
+    /* 7: reserved (WHEEL, retired in ACID FM 0.2; its sounds load as ANALOG) */
+    { name: "-", titles: ["-", "-"], edit: [D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0),
+        D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0)],
+      presets: [] },
     /* 8: reserved (GRAIN, retired in JIANT) */
     { name: "-", titles: ["-", "-"], edit: [D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0),
         D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0)],
@@ -1674,24 +1671,10 @@ function makeMockDevice(opt = {}) {
     { name: "-", titles: ["-", "-"], edit: [D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0),
         D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0)],
       presets: [] },
-    /* 14: ANIMAL (JIANT 0.8.3, src/eng_animal.c; generated from it): animal calls, five sources (MODE); the labels as the
-       device shows them per MODE (animal_desc) are the device's; here the engine's own */
-    { name: "ANIMAL", titles: ["SRC", "CALL"], edit: [E("MODE", ["CMOS", "PULSE", "WHSTL", "WING", "GLOTT"], 0),
-        D("PRESS", F.PCT, 0, 127, 100), D("CHAOS", F.PCT, 0, 127, 0), D("SIZE", F.INT, 0, 127, 64), D("SWEEP", F.BIPCT, -64, 63, 0),
-        D("RATE", F.LFOHZ, 0, 127, 80), E("GROUP", ["HOLD", "TRILL", "1+1", "1+3", "2+2", "2+6", "3+3", "3+9", "4+4", "4+12", "6+6", "8+8", "8+24", "12+12", "16+16", "32+32"], 0),
-        D("TEMP", F.INT, 0, 40, 22, null, "C")],
-      presets: [P("CMOS BIRD", [0, 90, 0, 37, 16, 74, 0, 20], [0, 64, 127, 40], 0, 7), P("CMOS TRILL", [0, 70, 0, 50, 6, 94, 0, 6], [0, 64, 127, 40], 0, 7),
-        P("CMOS MONKEY", [0, 110, 20, 80, -40, 70, 5, 28], [0, 64, 127, 50], 0, 3), P("CMOS BUG", [0, 60, 90, 20, 12, 104, 0, 16], [0, 64, 127, 30], 0, 7),
-        P("CRICKET", [1, 127, 100, 26, 0, 119, 7, 22], [0, 64, 127, 30], 0, 5), P("TREE CRICKT", [1, 127, 110, 32, 4, 102, 1, 22], [0, 64, 127, 40], 0, 5),
-        P("KATYDID", [1, 10, 20, 24, 50, 80, 7, 22], [0, 64, 127, 30], 0, 5), P("CICADA", [1, 38, 85, 28, 14, 60, 0, 24], [20, 64, 127, 60], 0, 5),
-        P("TREEFROG", [1, 106, 49, 41, 6, 127, 15, 26], [0, 64, 127, 40], 0, 5), P("TOAD", [1, 127, 80, 44, 8, 116, 1, 22], [4, 64, 127, 50], 0, 5),
-        P("BULLFROG", [1, 70, 30, 53, 10, 52, 7, 22], [2, 64, 127, 50], 0, 8), P("CANARY", [2, 100, 20, 38, -30, 112, 14, 22], [0, 64, 127, 30], 0, 3),
-        P("CARDINAL", [2, 110, 6, 46, -40, 77, 10, 22], [0, 64, 127, 30], 0, 3), P("DOVE", [2, 70, 10, 66, 15, 60, 9, 22], [6, 64, 127, 50], 0, 5),
-        P("OWL", [2, 80, 8, 68, -8, 68, 9, 22], [4, 64, 127, 50], 0, 8), P("PEEPER", [2, 100, 4, 34, 30, 80, 3, 22], [0, 64, 127, 30], 0, 5),
-        P("BAT", [2, 120, 0, 40, -64, 127, 3, 22], [0, 64, 127, 20], 0, 7), P("MOSQUITO", [3, 30, 50, 64, 20, 40, 2, 22], [10, 64, 127, 40], 0, 5),
-        P("BEE", [3, 90, 30, 75, 10, 40, 2, 22], [10, 64, 127, 40], 0, 5), P("FLY", [3, 70, 90, 78, 25, 50, 1, 22], [10, 64, 127, 40], 0, 5),
-        P("WOLF", [4, 0, 8, 64, 40, 50, 0, 5], [20, 64, 127, 60], 1, 5), P("DOG BARK", [4, 100, 70, 64, -15, 85, 5, 6], [0, 64, 127, 30], 0, 3),
-        P("ROAR", [4, 110, 100, 100, -20, 50, 3, 9], [6, 64, 127, 50], 1, 8), P("PURR", [4, 10, 60, 50, 0, 60, 1, 19], [10, 64, 127, 40], 1, 8)] },
+    /* 14: reserved (ANIMAL, JIANT 0.8.3, retired in ACID FM 0.2; its sounds load as ANALOG) */
+    { name: "-", titles: ["-", "-"], edit: [D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0),
+        D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0)],
+      presets: [] },
   ];
   const FM6_E = ENG.findIndex((e) => e.name === "FM6"), FM6_OWN = FM6.FACTORY_PK.length, DRUM_E = ENG.findIndex((e) => e.name === "DRUM");
   /* factory PATTERNS[] (engines.c; the device loads them from SEQ > PATTERNS, presets only suggest one): absolute
@@ -1843,10 +1826,11 @@ function makeMockDevice(opt = {}) {
     st.bank[slot] = snapshot(name);
     clearSteps(); st.p[29] = 16;
   });
-  /* the power-on sounds (engines.c TRK_DEF, 0.9.9): DRUM-X, SINGER EN, CMOS BIRD, BYTEBEAT, FAT BASS, TINE EP */
-  [[1, 5, 9], [2, 14, 0], [3, 3, 0], [4, 0, 14], [5, FM6_E, 0], [0, 10, 0]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
+  /* the power-on sounds (engines.c TRK_DEF, 0.9.9): DRUM-X, SINGER EN, PHASE's first (ACID FM 0.2: was CMOS BIRD),
+     BYTEBEAT, FAT BASS, TINE EP */
+  [[1, 5, 9], [2, 2, 0], [3, 3, 0], [4, 0, 14], [5, FM6_E, 0], [0, 10, 0]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
   /* the device powers on with its sequencers empty; the mock starts as a little demo to look at: track 1 (DRUM-X)
-     with BEAT, track 5 (the bass) with OFFBEAT (as SEQ > PATTERNS would load them), the voice left, the bird right */
+     with BEAT, track 5 (the bass) with OFFBEAT (as SEQ > PATTERNS would load them), the voice left, PHASE right */
   st.sel = 4; loadPattern(1);
   st.sel = 0; loadPattern(11);
   st.tracks[1].p[39] = -24; st.tracks[2].p[39] = 20; st.tracks[2].p[0] = 92;
@@ -2354,9 +2338,10 @@ function enumShown(d) {
 /* the order the device shows its engines in (src/engines.c ENGINE_ORDER): the lists here follow it, the protocol keeps
    the engine numbers. engineOrder(names): the indices of names in that order, "-" (a reserved number) left out; a name
    the list does not know (another firmware) follows in index order */
-const ENGINE_ORDER = ["DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6", "PHASE", "WHEEL", "NOISE", "DIGITAL"];   /* (0.9.9: DRUM-X, VOICE,
+const ENGINE_ORDER = ["DRUM", "VOICE", "PHASE", "LOFI", "ANALOG", "FM6", "NOISE", "DIGITAL"];   /* (0.9.9: DRUM-X, VOICE,
    ANIMAL first, as the parts at power-on; DIGITAL, FELUCCA_FM4 builds only, last; was ANALOG FM6 DIGITAL PHASE LOFI VOICE WHEEL NOISE
-   DRUM ANIMAL; PROGRAM CHANGE numbers the sounds in this order too) */
+   DRUM ANIMAL; PROGRAM CHANGE numbers the sounds in this order too. ACID FM 0.2: WHEEL and ANIMAL retired, PHASE in ANIMAL's
+   place) */
 function engineOrder(names) {
   const rank = (n) => { const k = ENGINE_ORDER.indexOf(n); return k < 0 ? ENGINE_ORDER.length : k; };
   return (names || []).map((n, i) => i).filter((i) => names[i] !== "-")

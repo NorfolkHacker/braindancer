@@ -258,7 +258,7 @@ commands: [
   {s: "basic", k: "ALGORITHM", shot: 'home', t: ["Elegir la pista", "Pick the track"],
    d: ["ALGORITHM elige T1–T6 desde cualquier página. Con TRACKS 4 (de fábrica) frena en T4: T5 y T6 duermen hasta GLO › SYSTEM › TRACKS 6.", "ALGORITHM picks T1–T6 from any page. With TRACKS 4 (the default) it stops at T4: T5 and T6 sleep until GLO › SYSTEM › TRACKS 6."]},
   {s: "basic", k: "PRESETS", shot: 'save_presets', t: ["Cambiar el sonido (preset)", "Change the sound (preset)"],
-   d: ["PRESETS recorre los sonidos de la pista: los de fábrica de cada motor (DRUM-X, VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE) y después tus presets de usuario.", "PRESETS browses the track's sounds: every engine's factory presets (DRUM-X, VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE), then your user presets."]},
+   d: ["PRESETS recorre los sonidos de la pista: los de fábrica de cada motor (DRUM-X, VOICE, PHASE, LOFI, ANALOG, FM6, NOISE) y después tus presets de usuario.", "PRESETS browses the track's sounds: every engine's factory presets (DRUM-X, VOICE, PHASE, LOFI, ANALOG, FM6, NOISE), then your user presets."]},
   {s: "basic", k: "GLO+ALGORITHM", shot: 'ly_glo_state', t: ["Ver una capa como MAP, KNOBS o STATE", "See a layer as MAP, KNOBS or STATE"],
    d: ["Con cualquier botón de capa mantenido, ALGORITHM cambia la vista: MAP (el teclado con lo que hace cada tecla), KNOBS (las cuatro perillas) y STATE (qué está activo).", "With any layer button held, ALGORITHM switches the view: MAP (the keyboard with what each key does), KNOBS (the four knobs) and STATE (what is on)."]},
   {s: "basic", k: "OCT-+OCT+", t: ["Octava, y volver a 0", "Octave, and back to 0"],
@@ -278,7 +278,7 @@ commands: [
   {s: "home", k: "HOME", shot: 'home_macros', t: ["MACROS en HOME", "MACROS on HOME"],
    d: ["HOME › ECO › MACROS: KNOB 1–4 son M1–M4 (como LFO mantenido); arriba las rutas contadas.", "HOME › ECO › MACROS: KNOB 1–4 are M1–M4 (as LFO held); the routes counted on top."]},
   {s: "home", k: "HOME", shot: 'home_being', t: ["BEING y ROUTES", "BEING and ROUTES"],
-   d: ["BEING: la criatura de la pista grande con sus cuatro perillas como órganos (VOICE su cabeza, ANIMAL su bicho, DRUM-X su kit). ROUTES: M1–M4 con sus rutas dibujadas.", "BEING: the track's creature large with its four knobs as organs (VOICE its head, ANIMAL its creature, DRUM-X its kit). ROUTES: M1–M4 with their routes drawn."]},
+   d: ["BEING: la criatura de la pista grande con sus cuatro perillas como órganos (VOICE su cabeza, DRUM-X su kit). ROUTES: M1–M4 con sus rutas dibujadas.", "BEING: the track's creature large with its four knobs as organs (VOICE its head, DRUM-X its kit). ROUTES: M1–M4 with their routes drawn."]},
   {s: "home", k: "HOME", shot: 'menu', t: ["Abrir el MENU", "Open the MENU"],
    d: ["Mantené HOME ~0,7 s. SELECT recorre las filas, ALGORITHM las pestañas, una perilla u OCT± cambian el valor; HOME cierra (y guarda).", "Hold HOME ~0.7 s. SELECT walks the rows, ALGORITHM the tabs, a knob or OCT± changes the value; HOME closes (and saves)."]},
 
@@ -315,8 +315,6 @@ commands: [
    d: ["Importá un cartucho .syx de 32 voces en la pestaña 6-OP FM del editor web y mandalo al banco del equipo. En FM6, SLOT (EDIT 2, KNOB 4) va F1–F8, OWN, B1–B32. El backup completo no incluye el banco: guardá el .syx.", "Import a 32-voice .syx in the web editor's 6-OP FM tab and send it to the device's bank. On FM6, SLOT (EDIT 2, KNOB 4) goes F1–F8, OWN, B1–B32. The full backup does not hold the bank: keep the .syx."]},
   {s: "edit", k: "EDIT", shot: 'v6_lofi_float', t: ["LOFI: BYTE y FLOAT", "LOFI: BYTE and FLOAT"],
    d: ["LOFI con WAVE en BYTE: ALGO elige una de 32 fórmulas bytebeat, VAR la muta; MOTN, GRIT, BEND, LOOP en la segunda página (LOOP alto: nota afinada). FLOAT: 32 fórmulas floatbeat en la tonalidad tocada; CHIP la resolución.", "LOFI with WAVE on BYTE: ALGO picks one of 32 bytebeat formulas, VAR mutates it; MOTN, GRIT, BEND, LOOP on the second page (LOOP high: a tuned note). FLOAT: 32 floatbeat formulas in the key played; CHIP the resolution."]},
-  {s: "edit", k: "EDIT", shot: 'vx_bird', t: ["ANIMAL: pájaros, insectos, ranas", "ANIMAL: birds, insects, frogs"],
-   d: ["Cantos de animales con modelos físicos: CMOS, PULSE, WHSTL, WING, GLOTT; GROUP hace trinos, TEMP acelera a los insectos. Cada nota es un canto. 24 presets.", "Animal calls from physical models: CMOS, PULSE, WHSTL, WING, GLOTT; GROUP makes trills, TEMP speeds insects up. A note is a call. 24 presets."]},
 
   // DRUM-X
   {s: "drum", k: "KNOB 1", shot: 'drumx', t: ["MORPH: del lado A al B de todo el kit", "MORPH: the whole kit from side A to B"],
@@ -518,13 +516,13 @@ commands: [
   {s: "menu", k: "HOME", shot: 'about', t: ["CPU TEST medido", "CPU TEST measured"],
    d: ["SAVE › TOOLS 6 CPU TEST, PLAY 10 s o más, STOP: la carga media queda en los ajustes (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE dimensiona sus piezas con eso; sin medir supone un FM-1 1,6 veces más pesado que la estimación.", "SAVE › TOOLS 6 CPU TEST, PLAY 10 s or more, STOP: the mean load is kept in the settings (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE sizes its pieces by it; unmeasured, it assumes an FM-1 1.6 times heavier than the estimate."]},
   {s: "menu", k: "HOME", t: ["NEW PROJECT (antes INIT SYSTEM)", "NEW PROJECT (was INIT SYSTEM)"],
-   d: ["SAVE › TOOLS › NEW PROJECT (hasta la 0.9.17 también MENU › SYSTEM › INIT SYSTEM), OCT+: todo a cero para un tema nuevo (T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6). Proyectos guardados, presets y MENU quedan. UNDO trae la música.", "SAVE › TOOLS › NEW PROJECT (until 0.9.17 also MENU › SYSTEM › INIT SYSTEM), OCT+: everything to zero for a new song (T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6). Saved projects, presets and MENU stay. UNDO brings the music back."]}
+   d: ["SAVE › TOOLS › NEW PROJECT (hasta la 0.9.17 también MENU › SYSTEM › INIT SYSTEM), OCT+: todo a cero para un tema nuevo (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI, T5 ANALOG, T6 FM6). Proyectos guardados, presets y MENU quedan. UNDO trae la música.", "SAVE › TOOLS › NEW PROJECT (until 0.9.17 also MENU › SYSTEM › INIT SYSTEM), OCT+: everything to zero for a new song (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI, T5 ANALOG, T6 FM6). Saved projects, presets and MENU stay. UNDO brings the music back."]}
 ],
 
 // ------------------------------------------------------------------------------------------- task recipes
 recipes: [
   {id: "first", s: "basic", shots: ['home', 'dlg_dice_sound'], t: ["Tu primer sonido (1 minuto)", "Your first sound (1 minute)"], steps: [
-    ["Encendé: la firma se dibuja y caés en HOME, una criatura por pista (T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI…).", "Power on: the signature draws itself and you land on HOME, one being per track (T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI…)."],
+    ["Encendé: la firma se dibuja y caés en HOME, una criatura por pista (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI…).", "Power on: the signature draws itself and you land on HOME, one being per track (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI…)."],
     ["ALGORITHM elige la pista; PRESETS recorre sonidos; tocá las teclas.", "ALGORITHM picks the track; PRESETS browses sounds; play the keys."],
     ["KNOB 1–4 en HOME: los cuatro controles más útiles del motor.", "KNOB 1–4 on HOME: the engine's four most useful controls."],
     ["¿No te gusta? EDIT mantenido + SELECT: dados del sonido. OCT+ lo deja, OCT− vuelve.", "Don't like it? EDIT held + SELECT: the sound dice. OCT+ keeps it, OCT− goes back."]]},
