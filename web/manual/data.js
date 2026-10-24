@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+// Portions Copyright (C) 2026 NorfolkHacker
 // The interactive manual's content (web/manual/index.html), Spanish first, English second: every text is [es, en].
 // Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.16; the layer maps from the firmware's
 // own MAP screens (tests/ui_render.c). A shot is a render in shots/ (tools/gen_manual.py copies them).
@@ -613,6 +614,8 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.1", items: [
+    ["0.1: JIANT FM 0.9.18 con el nombre ACID FM; compilación, sitio, instalación y vuelta atrás probados. Lo que sigue de esta lista es la historia de JIANT.", "0.1: JIANT FM 0.9.18 renamed ACID FM; build, site, install and rollback proven. What follows in this list is JIANT's history."]]},
   {v: "0.9.18", items: [
     ["RATCH y ECHO son uno: RATCH x1–x8, FLAT, FADE (el ECHO de antes) o RISE, con un paso de altura (+1 DEG, −1 DEG, +OCT). Sus golpes se derraman sobre los pasos siguientes (cuatro pasos en un sinte, dos en un kit); un golpe que cae en un paso con la misma nota se omite.", "RATCH and ECHO are one: RATCH x1–x8, FLAT, FADE (the old ECHO) or RISE, with a pitch step (+1 DEG, −1 DEG, +OCT). Its hits spill over the steps after it (four steps on a synth, two on a kit); a hit landing on a step with the same note is left out."],
     ["ARP toca las notas del paso de a una a su RATE (1/32 a 1/4), en su ORDER y octavas, a lo largo del paso y sus ties y más allá. ARP SCALE se carga como WALK; OCT es ahora una octava por vuelta (el CLIMB de antes); TOUCH pasa a los modos de los sonidos.", "ARP plays the step's notes one at a time at its RATE (1/32 to 1/4), in its ORDER and octaves, through the step and its TIEs and past them. ARP SCALE loads as a WALK; OCT is now an octave a lap (the old CLIMB); TOUCH becomes the sounds' modes."],
