@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+# Portions Copyright (C) 2026 NorfolkHacker
 # (JIANT 0.5; 0.6.30: from the presentation video's footage) the README's images, docs/jiant-hero.png and
 # docs/jiant-screens.png. (0.9.2) From the firmware's own renders in the default skin on the JIANT palette (0.9.7: AIR,
 # tests/ui_render.c -> build/ui_new/AIR_JIANT/<screen>.png, with MENU > DISPLAY > SCOPE OFF as a new FM-1 has it: the
@@ -30,19 +31,6 @@ def shot(name, skin='AIR_JIANT'):                         # a screen as the firm
     return Image.open(U / skin / f'{name}.png').convert('RGB')
 
 
-def signature(d, ox, oy, sc, width):
-    src = (R / 'firmware/src/ui_signature.h').read_text()
-    nums = [int(x) for x in re.findall(r'\b\d+\b', src.split('{', 1)[1])]
-    pts = [(nums[i], nums[i + 1]) for i in range(0, len(nums) - 1, 2)]
-    segs, L = [], 0
-    for i in range(len(pts) - 1):
-        if pts[i + 1][1] & 128: continue
-        a = (pts[i][0], pts[i][1] & 127); b = (pts[i + 1][0], pts[i + 1][1] & 127)
-        l = max(abs(b[0] - a[0]), abs(b[1] - a[1])); segs.append((a, b, L)); L += l
-    for a, b, acc in segs:
-        d.line([(ox + a[0] * sc, oy + a[1] * sc), (ox + b[0] * sc, oy + b[1] * sc)], fill=heat(0.08 + 0.86 * acc / L), width=width)
-
-
 def framed(im, img, x, y, s, resample=Image.NEAREST):
     d = ImageDraw.Draw(im)
     d.rounded_rectangle([x - 4, y - 4, x + 240 * s + 3, y + 240 * s + 3], 10, outline=(40, 34, 48), width=2)
@@ -52,7 +40,6 @@ def framed(im, img, x, y, s, resample=Image.NEAREST):
 # ---- the hero
 W, Hh = 1600, 1900
 im = Image.new('RGB', (W, Hh), BG); d = ImageDraw.Draw(im)
-signature(d, 70, 40, 2.6, 5)
 d.text((690, 70), "JIANT FM", font=font('Bold', 128), fill=TXT)
 d.text((696, 215), "bio-synthetic operating system for the M-VAVE FM-1", font=font('Medium', 30), fill=MID)
 d.text((696, 258), f"firmware {VERSION}  ·  synthesis · sequencing · mutation · performance", font=font('Medium', 24), fill=DIM)

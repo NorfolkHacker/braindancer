@@ -138,7 +138,7 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/ui_input.c"
 #include "../firmware/src/ui_layer.c"
 #include "../firmware/src/ux_widgets.c"
-#include "../firmware/src/ux_home.c"                     /* (ux_nav.c: by ui.c) */
+#include "../firmware/src/ux_home.c"                     /* (ux_nav.c: by ui.c; ux_splash.c: by ui_draw.c) */
 #include "../firmware/src/upreset.c"
 #include "../firmware/src/project.c"
 

@@ -302,21 +302,6 @@ PILL_H, STEP = 34, 44
 PAGE_FS, TAB_SC, KEY_SC = 19, 2.5, 3.5
 
 
-def signature(sv, ox, oy, sc):
-    src = (R / 'firmware/src/ui_signature.h').read_text()
-    nums = [int(x) for x in re.findall(r'\b\d+\b', src.split('{', 1)[1])]
-    pts = [(nums[i], nums[i + 1]) for i in range(0, len(nums) - 1, 2)]
-    heat = ['#00D2FF', '#5A3CFF', '#B432E6', '#F02832', '#FF7A00', '#FFD700']
-    n = len(pts)
-    for i in range(n - 1):
-        if pts[i + 1][1] & 128: continue
-        a = (pts[i][0], pts[i][1] & 127); b = (pts[i + 1][0], pts[i + 1][1] & 127)
-        t = i / n * (len(heat) - 1); k = min(len(heat) - 2, int(t))
-        c = mix(heat[k], heat[k + 1], t - k)
-        sv.add(f'<line x1="{ox + a[0] * sc:.1f}" y1="{oy + a[1] * sc:.1f}" x2="{ox + b[0] * sc:.1f}" y2="{oy + b[1] * sc:.1f}" '
-               f'stroke="{c}" stroke-width="2.6" stroke-linecap="round"/>')
-
-
 def block_cols(ch):
     """a chain's columns: [(group, [pages])] in chain order"""
     cols = []
@@ -436,7 +421,6 @@ def build(lang, keys):
     drawn = set()
     y = M + 8
     # ---- the title
-    signature(sv, M + 8, y - 4, 0.62)
     sv.text(M + 170, y + 46, 'JIANT FM', 52, TXT, 700)
     sv.text(M + 170 + tw('JIANT FM', 52, 700) + 22, y + 46, T['title'], 52, VIOLET, 500)
     sv.text(M + 172, y + 82, T['sub'], 19, MID, 500)

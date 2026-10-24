@@ -647,7 +647,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS,
        S_MIXER_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
-       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_COUNT };
+       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_t5", "home_turn", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
@@ -685,7 +685,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys",
     "mixer_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
     "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
-    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2", "ux_theme", "ux_demo", "ux_demo_warn"};
+    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2", "ux_theme", "ux_demo", "ux_demo_warn", "splash_mid"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1908,30 +1908,53 @@ static void draw(int s)
         setup_show("TURN RIGHT", "ALGORITHM");
         return;
     }
-    if (s == S_SPLASH) {                          /* the power-on splash (main.c, before the UI): its lines, the version
-                                                   * shown FELUCCA_VERSION (run_tests.sh: src/felucca.c's) */
-        static const char WANT[] = FELUCCA_VERSION "|by NorfolkHacker";   /* (JIANT 0.5: under the signature, "by Juan Jiant" until ACID FM) */
+    if (s == S_SPLASH || s == S_SPLASH_MID) {     /* the power-on splash (main.c, before the UI): the wordmark (ux_splash.c); the version
+                                                   * shown FELUCCA_VERSION (run_tests.sh: src/felucca.c's). S_SPLASH: whole (spl_anim 0);
+                                                   * S_SPLASH_MID: 450 ms in, the line three quarters across and "ACI" typed */
+        static const char WANT[] = "ACID FM|" FELUCCA_VERSION "|BY NORFOLKHACKER";
+        uint16_t bg;
+        uint32_t x, y, wm = 0, wmr = 0, lbl = 0, ln_l = 0, ln_r = 0, ln_end = 0;
         splash_seen[0] = 0;
         in_splash = 1;
-        draw_splash();
+        if (s == S_SPLASH) {
+            draw_splash();
+        } else {
+            spl_anim = 1;
+            draw_splash();                        /* (the first frame: bare) */
+            splash_write(450u);
+            spl_anim = 0;
+        }
         in_splash = 0;
-        {   /* the signature written whole (spl_anim 0): its ink in its band (y 40 .. 164), the rest of the band BG */
-            uint16_t bg = host_screen[0];
-            uint32_t x, y, ink = 0;
-            for (y = 40; y < 164u; y++)
-                for (x = 0; x < 240u; x++)
-                    ink += host_screen[y * 240u + x] != bg;
-            if (ink < 600u) {
-                if (rep) fprintf(rep, "FIND %-26s the splash's signature has %u pixels of ink (< 600)\n", cur_name, ink);
+        bg = host_screen[0];
+        for (x = 0; x < 240u; x++) {              /* the line: 3 px at y 96 (96 .. 98), the blend across */
+            if (host_screen[96u * 240u + x] != bg && host_screen[98u * 240u + x] != bg) { if (x < 120u) ln_l++; else ln_r++; if (x >= 200u) ln_end++; }
+            if (host_screen[99u * 240u + x] != bg) nfind++;           /* (not a 4th row) */
+        }
+        for (y = 104; y < 164u; y++)              /* the wordmark band: left half, right quarter */
+            for (x = 0; x < 240u; x++) {
+                uint32_t ink = host_screen[y * 240u + x] != bg;
+                if (x < 120u) wm += ink;
+                if (x >= 190u) wmr += ink;
+            }
+        for (y = 166; y < 200u; y++)
+            for (x = 0; x < 240u; x++)
+                lbl += host_screen[y * 240u + x] != bg;
+        if (s == S_SPLASH) {
+            if (ln_l < 110u || ln_r < 110u || wm < 300u || wmr < 100u || lbl < 100u) {
+                if (rep) fprintf(rep, "FIND %-26s the wordmark splash: line %u/%u px, wordmark ink %u/%u, labels %u (too little)\n",
+                                 cur_name, ln_l, ln_r, wm, wmr, lbl);
                 nfind++;
             }
-        }
-        if (strcmp(splash_seen, WANT)) {
-            if (rep) fprintf(rep, "FIND %-26s the splash shows '%s', not '%s'\n", cur_name, splash_seen, WANT);
+            if (strcmp(splash_seen, WANT)) {
+                if (rep) fprintf(rep, "FIND %-26s the splash shows '%s', not '%s'\n", cur_name, splash_seen, WANT);
+                nfind++;
+            } else {
+                static uint8_t said;
+                if (!said++) printf("ui_render: the splash shows the version " FELUCCA_VERSION " (FELUCCA_VERSION) and its lines\n");
+            }
+        } else if (ln_l < 110u || ln_r < 40u || ln_end || wm < 100u || wmr || lbl) {   /* partly across, "ACI" only, no labels yet */
+            if (rep) fprintf(rep, "FIND %-26s the mid-splash: line %u/%u px (%u past 200), wordmark ink %u/%u, labels %u\n", cur_name, ln_l, ln_r, ln_end, wm, wmr, lbl);
             nfind++;
-        } else {
-            static uint8_t said;
-            if (!said++) printf("ui_render: the splash shows the version " FELUCCA_VERSION " (FELUCCA_VERSION) and its lines\n");
         }
         return;
     }

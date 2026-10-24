@@ -260,7 +260,7 @@ static void web_power_on(void)
     prefs_update();                       /* main.c (JIANT 0.6.44): FX LATCH ON by default (0.6.58: here too) */
     usb_serial_apply();
     lcd_init();
-    spl_anim = 1;                         /* main.c (JIANT 0.5): the signature written */
+    spl_anim = 1;                         /* main.c (JIANT 0.5): the splash animated */
     draw_splash();                        /* main.c: the splash (ui_draw.c) */
     memset(&felucca_dbg, 0, sizeof felucca_dbg);
     felucca_dbg.magic = DBG_MAGIC;
@@ -317,7 +317,7 @@ static void web_ms(void)
         }
         web_half ^= 1u;
     }
-    if (web_booted && (int32_t)(fm1_ms - web_boot_ms) < 0 && !(fm1_ms % 20u))   /* main.c: the signature written */
+    if (web_booted && (int32_t)(fm1_ms - web_boot_ms) < 0 && !(fm1_ms % 20u))   /* main.c: the splash animated */
         splash_write(SPL_WRITE + SPL_HOLD - (web_boot_ms - fm1_ms));
     if (!web_booted || (int32_t)(fm1_ms - web_boot_ms) < 0)
         return;

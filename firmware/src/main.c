@@ -154,7 +154,7 @@ static void felucca_init(void)
 }
 
 /* The power-on LED sweep (1.1, hal/fm1_led_anim.h: a soft light over the keys left to right, then the buttons swell
- * and settle on the glow; ~0.70 s), started before the scan and run by it: nothing waits for it, the splash's ~2 s (JIANT 0.5: the signature written, then held)
+ * and settle on the glow; ~0.70 s), started before the scan and run by it: nothing waits for it, the splash's ~1.5 s (the wordmark drawn, then held)
  * and the first ~0.27 s of the UI go by under it (the UI's LEDs from its end, or at once on a key or a button down).
  * Every LEDS setting: it is no idle glow; with DIM HI / DIM LO it ends on that glow (and is drawn over that glow
  * level), with OFF / INV dark. Not with MENU > ANIM OFF (no motion: the LEDs as the UI has them at once), not after a crash (a crash record newer than the last boot saw: the crash screen's
@@ -241,7 +241,7 @@ static void fm1_main(void)
     prefs_update();                                     /* (JIANT 0.6.44) FX LATCH ON by default, once */
     usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
     lcd_init();
-    spl_anim = 1;                                       /* (JIANT 0.5) the signature written: splash_write */
+    spl_anim = 1;                                       /* (JIANT 0.5) the splash animated: splash_write */
     draw_splash();                                      /* ui_draw.c (1.1.5) */
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
@@ -293,7 +293,7 @@ static void fm1_main(void)
 #endif
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
     session_dice(fm1_ticks() ^ (uint32_t)fm1_adc_read(FM1_ADC_BATT) << 16);   /* (JIANT 0.4) this session's macros */
-    {                                         /* the splash, its signature written (JIANT 0.5: was 400 ms); the pot
+    {                                         /* the splash, its wordmark drawn (ux_splash.c; JIANT 0.5: was 400 ms); the pot
                                                * followed (MIDI IN plays under it). (0.5.2) On the clock: drawing the
                                                * beings does not make it longer */
         uint32_t t0 = fm1_ms, n;
