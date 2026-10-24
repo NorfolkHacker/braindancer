@@ -175,7 +175,13 @@ Replaces JIANT's GEN (HOME + SELECT, as in JIANT). Pure C, deterministic.
   warnings), SLIDE `#4CB8FF` (slides), QUEUED `#FFC83C` (queued / pending), knob body `#3A3E44`, knob track `#555A60`.
 - HOME: a music-reactive, colour-cycling scope / kaleidoscope in the palette (Llamasoft style) replaces JIANT's
   beings. Engine pages: a plain scope or waveform replaces each engine's creature (the creature code is removed).
-- JIANT's navigation, page structure and fonts stay.
+- **Complete redesign** (user, 2026-10-24): the splash screen and the whole interface are redesigned, not
+  reskinned: new splash (ACID FM's own art, no JIANT signature), new page layouts, new visual language for knobs,
+  steps and engines, and fonts chosen for it. The navigation model (JIANT's six rules) is a starting point that piece
+  3's own brainstorming may keep or replace; that design gets its own spec before any code.
+- Constraints the redesign must meet: the FM-1's screen and controls as they are; flash and RAM budgets from §2
+  (the removed skins and creatures pay for it); JIANT's UI checks (no clipped or overlapping text on any screen)
+  kept or replaced by equivalent ones.
 - The Pages site and the manual use the same palette.
 
 ## 9. Testing and safety
@@ -207,7 +213,7 @@ One spec → plan → implementation cycle per piece:
 2. **Trim:** remove ANIMAL and WHEEL, slim VOICE, remove the 43 genres' tables, measure the voice ceiling and set `NVOICE` (§5); measure freed flash,
    RAM and CPU; re-lay the flash data region and set the sample area's final bounds (§6.1). (The skins and
    creatures go in piece 3, so the final bounds are confirmed after it.)
-3. **ACID UI** (§8).
+3. **ACID UI** (§8): a complete redesign of the splash and every screen, with its own design spec first.
 4. **BREAK sampler and uploader** (§6).
 5. **Sound:** TAPE, the acid response, FM6 and DRUM-X re-voicing (§4).
 6. **Generator** (§7).
