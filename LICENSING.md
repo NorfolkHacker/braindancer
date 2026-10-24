@@ -11,6 +11,14 @@ and its modifications. A file's header says which: "Copyright (C) 2026 Juan Igna
 file is mostly JIANT's, "Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)" where it is mostly Felucca's
 and JIANT changed it; Felucca's line stays wherever it was. The licence is the same: GPL-3.0-only.
 
+## ACID FM
+
+ACID FM is a fork of JIANT FM (below), by NorfolkHacker: "Copyright (C) 2026 NorfolkHacker" where a file is mostly
+ACID FM's, "Portions Copyright (C) 2026 NorfolkHacker" where ACID FM changed it; every earlier copyright line stays.
+The licence is the same: GPL-3.0-only. ACID FM's own files so far: `tools/gen_about_qr.py`, `tests/about_qr_test.py`,
+`tools/host-cc`, `requirements-dev.txt`, `web/landing/index.html`, `docs/acid-fm/`, `docs/superpowers/`. The ABOUT QR
+code is made with segno (BSD-3-Clause) at build time; segno is not part of the firmware.
+
 ## What is GPL-3.0-only
 
 Every file in this tree that carries an `SPDX-License-Identifier: GPL-3.0-only` header:

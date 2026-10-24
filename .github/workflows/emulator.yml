@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# The site on GitHub Pages: the front page (web/landing) at the root and the browser emulator (web/emu) under emu/: the firmware's sources compiled to WebAssembly, on every push to
-# main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
+# ACID FM's site on GitHub Pages: the landing page (web/landing) at the root, the installer, the editor, the browser emulator under emu/ and the manual.
+# Portions Copyright (C) 2026 NorfolkHacker
+# Runs on every push to main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
 # installer (webapp/installer) and the editor (webapp/editor) need the package, built with JieLi's toolchain (downloaded).
 # Two installers: preview/webapp/installer follows web/PREVIEW when set (otherwise main); webapp/installer follows
 # the approved web/STABLE commit. The browser emulator follows web/PREVIEW too (main without a pin).
@@ -130,22 +131,6 @@ jobs:
           python3 -c 'import json,sys; L=[l.split() for l in open("build/prev/list") if l.strip()]; json.dump([{"version":v,"file":f} for v,f in L], open("build/prev/versions.json","w"))'
           python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site build/prev
           cp -r build/site/webapp build/site/firmware build/emu/
-      # (JIANT 0.7.9) the stems app's phase-0 probe (android/probe), next to the installer: app/jiant-probe.apk
-      - uses: actions/setup-java@v4
-        continue-on-error: true
-        with:
-          distribution: temurin
-          java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
-        continue-on-error: true
-        with:
-          gradle-version: "8.9"
-      - name: the Android probe
-        continue-on-error: true
-        run: |
-          gradle -p android/probe assembleDebug --no-daemon
-          mkdir -p build/emu/app
-          cp android/probe/app/build/outputs/apk/debug/app-debug.apk build/emu/app/jiant-probe.apk
       # (JIANT 0.8.1) the site's front page (web/landing: what JIANT is, install / try / edit, what comes next) at the
       # root, for people who just want to play; the emulator moves to emu/ (its links go up one level)
       - name: the front page and the emulator under emu/
@@ -156,9 +141,6 @@ jobs:
           done
           cp -r build/emu/. build/pages/
           cp web/landing/index.html build/pages/index.html
-          cp web/landing/frecuencia.html build/pages/frecuencia.html
-          # (0.9.12) the front page's animations, recorded from the firmware's drawing code (tools/landing_anim)
-          cp -r web/landing/anim build/pages/anim
           # (0.9.11) old and mistyped links (/installer/, /webapp/, a link with ":1:1" stuck to it) to the page they meant
           cp web/404.html build/pages/404.html
           mkdir -p build/pages/docs && cp docs/cheatsheet-controls.pdf docs/cheatsheet-sound.pdf docs/cheatsheet-controls.png docs/cheatsheet-sound.png build/pages/docs/

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+// Portions Copyright (C) 2026 NorfolkHacker
 //
 // Checks of the interactive manual (web/manual). Run from the repo root:  node web/test_manual.mjs
 // - data.js / nav.js / manual.js load without a browser; nav.js is what tools/gen_manual.py makes from the firmware
@@ -84,7 +85,7 @@ ok(!/<script[^>]+src="https?:/.test(html) && (html.match(/https:\/\/fonts\.googl
    "manual: no external script, only the landing's Google Fonts");
 ok(!/JIANT Stems|Probe|probe/.test(readFileSync(join(DIR, "data.js"), "utf8") + html), "manual: no word of the Stems app beyond 'separate product'");
 ok(readFileSync(join(HERE, "landing/index.html"), "utf8").includes('href="manual/"'), "manual: the landing page links it");
-ok(readFileSync(join(ROOT, "README.md"), "utf8").includes("juanjiant-bit.github.io/JIANT/manual/"), "manual: the README links it");
+ok(readFileSync(join(ROOT, "README.md"), "utf8").includes("norfolkhacker.github.io/acid-fm/manual/"), "manual: the README links it");
 ok(/make_site\.py manual build\/pages/.test(readFileSync(join(ROOT, ".github/workflows/emulator.yml"), "utf8")), "manual: the workflow publishes it");
 
 /* the search */
