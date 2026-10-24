@@ -823,6 +823,34 @@ int main(void)
         bad += gcheck("(0.9.13) a chord progression (two chords or more) in 90 % of the pieces; no retired engine on any genre's part",
                       prog * 10u >= n * 9u && !anim && xtr);
     }
+    {   /* (ACID FM 0.2) NOISE never a bass, a lead or an arp (unpitched: gen_tables.c GX_ENG_W, ANIMAL's retired column
+         * NOISE's on chords and texture only): every genre and RANDOM x 10 seeds, EXPLORE x 1200 at COMPLEX 0 / 50 / 100;
+         * two cores (the FM-1's default: one core's CPU budget swaps most engines for ANALOG / LOFI) */
+        uint32_t gg, sd, pieces = 0, parts = 0, nz = 0;
+        gen_reset();
+        mc_host_v12 = 1;
+        for (gg = 0; gg <= GEN_EXPLORE; gg++)
+            for (sd = 0; sd < (gg == GEN_EXPLORE ? 1200u : 10u); sd++) {
+                gp.genre = (uint8_t)gg; gp.seed = (uint16_t)(sd * 97u + 5u); gp.energy = (uint8_t)(20u + (sd * 29u) % 70u);
+                gp.form = 0;
+                for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
+                gp.complex = (uint8_t)(gg == GEN_EXPLORE ? (sd % 3u) * 50u : 50u); gp.swing = GA_AUTO; gp.human = 30;
+                gen_go();
+                pieces++;
+                for (k = 0; k < NTRK && k < trk_live; k++) {
+                    uint32_t r = gs.role[k];
+                    if (drum_track(&trk[k]) || !gs.act[r] || (r != RL_BASS && r != RL_LEAD && r != RL_ARP)) continue;
+                    parts++;
+                    if (trk[k].eng_req == ENGI_NOISE) {
+                        nz++;
+                        if (nz <= 5u) printf("  NOISE on role %u: %s seed %u T%u\n", r, gs.g->name, gp.seed, k + 1u);
+                    }
+                }
+            }
+        mc_host_v12 = 0;
+        printf("gen: NOISE on %u of %u bass / lead / arp parts (%u pieces)\n", nz, parts, pieces);
+        bad += gcheck("(ACID FM 0.2) NOISE never a bass, a lead or an arp (every genre, RANDOM, EXPLORE x 1200)", !nz && parts > 1500u);
+    }
     {   /* (0.9.17) the dice's variety and its melodies (tests/dice_metrics.c measures them at length): OCT+ pressed 24
          * times a genre (MICRO HOUSE among them: the owner's), a part the same as the press before (90 % of its steps,
          * transposed to the key) seldom, the sounds of a part many, the press before's seldom; the power-on's first

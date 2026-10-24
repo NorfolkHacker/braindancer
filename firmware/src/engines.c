@@ -72,9 +72,9 @@ static inline uint32_t eng_idx(uint32_t e) { return e < NENGINES ? e : 0u; }
  * engine indices, never DIGITAL's reserved 1 (with FELUCCA_FM4 it comes last). The indices stay as they are (the
  * stores and the protocol hold them); only this table orders them. (0.9.9) DRUM-X, VOICE, ANIMAL first, as the parts
  * at power-on (TRK_DEF: T1..T6 are its first six), then PHASE WHEEL NOISE; was ANALOG FM6 PHASE LOFI VOICE WHEEL
- * NOISE DRUM ANIMAL. PROGRAM CHANGE numbers the sounds in this order too (ui.c midi_pc_poll). (ACID FM 0.2) ANIMAL
- * and WHEEL retired, PHASE in ANIMAL's place (T3 at power-on, the parts still the first six): DRUM VOICE PHASE LOFI
- * ANALOG FM6 NOISE */
+ * NOISE DRUM ANIMAL. PROGRAM CHANGE numbers the sounds in this order too (ui.c midi_pc_poll).
+ * (ACID FM 0.2) ANIMAL and WHEEL retired; PHASE takes ANIMAL's place (T3 at power-on, so T1..T6 are still the first
+ * six): DRUM VOICE PHASE LOFI ANALOG FM6 NOISE */
 static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_DRUM,                   /* DRUM (DRUM-X) */
     ENGI_VOICE,                  /* VOICE */

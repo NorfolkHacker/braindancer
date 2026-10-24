@@ -604,16 +604,16 @@ static const uint8_t GX_ARPS[8] = {SR_PLUCK, SR_BELL, SR_CHIP, SR_KEYS, SR_SINEK
 static const uint8_t GX_LEADS[8] = {SR_LEAD, SR_VOXLEAD, SR_CHIP, SR_HOOVER, SR_BELL, SR_PLUCK, SR_WOW, SR_ORGAN};
 static const uint8_t GX_TEX[8] = {SR_NOISE, SR_TEXTURE, SR_DRONE, SR_CHOIR, SR_PAD, SR_ORGAN, SR_BELL, SR_STRINGS};
 /* any engine on any role (the weights a role, RL_BASS .. RL_TEX; NOISE never a bass, a lead or an arp: unpitched).
- * (ACID FM 0.2) WHEEL's column is FM6's, ANIMAL's NOISE's (the engines retired; the shape kept: NOISE so on a bass, a
- * lead or an arp now and then, at ANIMAL's small weight) */
+ * (ACID FM 0.2) WHEEL and ANIMAL retired, the shape kept: WHEEL's column is FM6's; ANIMAL's NOISE's, its weight kept on
+ * the chords and the texture, 0 on the bass, the lead and the arp (dropped, not moved) */
 #define GX_NENG 8u
 static const uint8_t GX_ENG[GX_NENG] = {EG_A, EG_FM, EG_PH, EG_LO, EG_VO, EG_FM, EG_NO, EG_NO};
 static const uint8_t GX_ENG_W[RL_N][GX_NENG] = {
     {0},
-    {20, 14, 14, 12, 8, 8, 0, 2},                       /* bass (0.9.13: ANIMAL a quarter as often; NOISE's now) */
+    {20, 14, 14, 12, 8, 8, 0, 0},                       /* bass (ACID FM 0.2: ANIMAL's 2 dropped) */
     {14, 12, 12, 8, 14, 12, 4, 2},                      /* chords */
-    {14, 10, 12, 12, 16, 6, 0, 4},                      /* lead */
-    {12, 14, 14, 14, 8, 8, 0, 3},                       /* arp */
+    {14, 10, 12, 12, 16, 6, 0, 0},                      /* lead (ACID FM 0.2: ANIMAL's 4 dropped) */
+    {12, 14, 14, 14, 8, 8, 0, 0},                       /* arp (ACID FM 0.2: ANIMAL's 3 dropped) */
     {8, 6, 8, 8, 14, 8, 20, 4},                         /* texture */
 };
 /* a track's own loop (polyrhythm: odd and irregular lengths against the piece's) and its DIV (N_DIV: 0 1/4, 1 1/8,

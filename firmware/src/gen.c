@@ -96,9 +96,8 @@ static char gmut_name[20];
 static void gclear(step_t *s) { memset(s, 0, sizeof *s); s->time = ST_REST; }
 /* (0.8.6) EXPLORE: on (this piece is EXPLORE's), dirty (an EXPLORE piece set DIV and PLAYHEADS, which a genre's piece
  * puts back), the engine gen_sound takes (-1: the recipe's), VOICE tracks so far (two at most, as FM6; ACID FM 0.2:
- * ANIMAL's count gone with it);
- * (0.9.13) w: how wild (the COMPLEX knob: 100 every rule broken, as 0.8.6 .. 0.9.12), nmax: a chord's notes at most
- * (the CPU budget), np: the tracks so far in a loop or DIV of their own */
+ * ANIMAL's count gone with the engine); (0.9.13) w: how wild (the COMPLEX knob: 100 every rule broken, as 0.8.6 ..
+ * 0.9.12), nmax: a chord's notes at most (the CPU budget), np: the tracks so far in a loop or DIV of their own */
 static struct { uint8_t on, dirty, nvo; int8_t eng; uint8_t w, nmax, np; } gx = {0, 0, 0, -1, 100, 4, 0};
 static int gxw(uint32_t pct) { return gch(pct * gx.w / 100u); }   /* (0.9.13) EXPLORE: a chance, as wild as COMPLEX */
 
@@ -1821,8 +1820,7 @@ static void gen_parts(void)
  * chords on any degrees in any order (non-functional: a chord a triad the mode takes, any quality, now and then a
  * borrowed, secondary or flat-side chord: the out-of-key moves), its chords 8 to 48 steps long and the loop 8 to 64
  * (odd metres: 3/4, 5/4, 7/8 ..); each track its own loop and DIV (1/8, 1/32, 8T, 16T: polyrhythm), any engine on any
- * role (VOICE singing words, FM6 twice at most as the genres, VOICE twice at most; ACID FM 0.2: ANIMAL retired),
- * DRUM-X's octaves
+ * role (FM6 and VOICE twice at most, VOICE singing words; NOISE never a bass, a lead or an arp), DRUM-X's octaves
  * per sound on the steps (x2 x4 x8, SHORT GHOST FLAM), hits off the grid, step components scattered (RAND OCT BEND
  * ECHO PULSE WALK CLIMB ARP TONAL JUMP REV, some every other loop), PLAYHEADS, MUTATE, the delay's pitch and spray,
  * any reverb. What it keeps: every note in the key the SCALE page shows but the colours' (the CHORD page as the chords
@@ -2112,6 +2110,9 @@ static void gx_fit_piece(void)
         load_end(&trk[k]);
         pat_sig[k] = steps_sig(&trk[k]);
     }
+    if (gc_cost(1) > gc_budget() && (song.g[G_RTYPE] == 4 || song.g[G_RTYPE] == 2))   /* (ACID FM 0.2) still over: CLOUD /
+                                                         * SHIMMER as ROOM / SPRING, as gx_fit_sounds does on its estimate */
+        song.g[G_RTYPE] = song.g[G_RTYPE] == 4 ? 0 : 1;
 }
 
 /* --------------------------------------------------------------------------------------------- the piece --- */
