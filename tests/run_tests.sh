@@ -248,6 +248,8 @@ if [ -f build/gen/felucca_tables.h ]; then
         "$OUT/fm4_div0_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/theme_test" tests/theme_test.c -lm
     run "theme: ACID's tokens the spec's, contrast, text blending and font metrics" "$OUT/theme_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ux_theme_test" tests/ux_theme_test.c -lm
+    run "ux_theme: the spec's colours, the 256-step blend, gradient text, glow, band" "$OUT/ux_theme_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/text_ref_test" tests/text_ref_test.c -lm
     run "text: pens, kerning and pixels equal the reference renderer" "$OUT/text_ref_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ux_font_test" tests/ux_font_test.c -lm

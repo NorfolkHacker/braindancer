@@ -66,6 +66,7 @@
 #include "libc.c"
 #include "lcd.c"
 #include "gfx.c"
+#include "ux_theme.c"             /* ACID FM: the blend, gradient text, glow, band (ux_theme.h) */
 
 /* ----------------------------------------------------------- sound --- */
 #include "core.h"

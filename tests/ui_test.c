@@ -125,6 +125,7 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #define GFX_HOOK_SENT(n) (ui_sent_px += (n))
 #endif
 #include "../firmware/src/gfx.c"
+#include "../firmware/src/ux_theme.c"
 #include "../firmware/src/panel.c"
 #include "../firmware/src/ui.c"
 #include "../firmware/src/menu_items.c"
