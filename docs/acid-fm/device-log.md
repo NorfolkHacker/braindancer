@@ -17,3 +17,11 @@
 - Proven commit: dcb092c2a7a90f3a8f36bf14a60d62c40d79535a
 - Site / STABLE builds are dev builds (identity FM-1_900, felucca-v0.1-<sha>.fwsc) from the same sources; the
   device-proven release is FM-1_901.
+
+## 2026-10-24 — piece 2, voice ceiling (Task 5)
+
+- Backup before the piece 2 installs: ~/fm1-backups/2026-10-24-acid-fm-0.1/fm1-recovery-20261024-163836/full-flash-before.bin,
+  sha256 226283d774d398764d1776a95c1f4eef28a575a7ff8b3cfbd6379815086db771, both reads identical (device on ACID FM 0.1)
+- Installed build/acid-fm-vc12.fwsc (T 12, NVOICE 8; dev identity FM-1_900): `done: the FM-1 runs FM-1_900`
+- CPU TEST after a power cycle: PEAK 100 %, LATE 113, no clicks heard. T stays 12; 14 and 16 not run
+  (docs/acid-fm/voices.md)

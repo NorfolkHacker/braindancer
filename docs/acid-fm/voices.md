@@ -6,7 +6,7 @@ Two build options, both passed by `tools/build.py` as `-D`:
 - `FELUCCA_VOICES_2CORE=T` (voice.c `VOICES_2CORE`, NVOICE..min(NPART * NVOICE, 16), default 12): the TOTAL voices all
   parts share while the second core plays (the device's default, CORES 2). This is "as many voices as the hardware can
   handle", and what piece 2's device step (Task 5) measures: T = 12, 14, 16 with NVOICE 8, using JIANT's CPU TEST song
-  (SAVE > TOOLS > 6 CPU TEST). Task 5 sets the default T.
+  (SAVE > TOOLS > 6 CPU TEST). Task 5 measured it: T stays 12 (below).
 
 The three caps on the shared total (`voice_cap()`): LOAD ECO 6; one core (REC held at power-on, or core 1 given up)
 NVOICE; two cores VOICES_2CORE. The load governor (`gov_cap`, audio.c `gov_tick`) lowers it further under load; its
@@ -57,6 +57,18 @@ skipped). The device measurement is the authority.
 
 | T | CPU TEST mean load % | PEAK | LATE | SHED | clicks heard (yes/no) |
 |---|----------------------|------|------|------|-----------------------|
-| 12 |  |  |  |  |  |
-| 14 |  |  |  |  |  |
-| 16 |  |  |  |  |  |
+| 12 | not read | 100 % | 113 | not read | no |
+| 14 | not run | | | | |
+| 16 | not run | | | | |
+
+Measured 2026-10-24 on the user's FM-1 (build `acid-fm-vc12.fwsc`, identity FM-1_900, two cores), counters reset by a
+power cycle, then SAVE › LIBRARY › TOOLS › CPU TEST, PLAY about 20 s, STOP, MENU › SYSTEM › ABOUT. (A first reading
+without the power cycle, counting the boot and the song's build too: PEAK 109 %, LATE 1138, SHED 4.)
+
+**Result: T stays 12.** At JIANT's own 12 the worst-case song already fills the render time (PEAK 100 %) and misses
+113 audio blocks in about 20 s (inaudible to the user). More voices only add work to a full CPU in that case, so 14 and
+16 were not run (spec §5: the largest T without dropouts; the overload guard keeps 12 inaudible). `FELUCCA_VOICES_2CORE`
+stays 12 and `FELUCCA_NVOICE` 8; no golden or budget changes.
+
+What it means for later pieces: the CPU, not RAM, is the limit. BREAK (piece 4) and TAPE (piece 5) each re-run this
+test; if LATE grows to audible clicks, T comes down (or the effect is trimmed) rather than the sound breaking up.
