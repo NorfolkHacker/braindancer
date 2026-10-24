@@ -1,4 +1,4 @@
-# The voice budget (NVOICE)
+# The voice budget (VOICES_2CORE and NVOICE)
 
 Two build options, both passed by `tools/build.py` as `-D`:
 
@@ -16,7 +16,8 @@ silently held 14 and 16 to 12).
 History: `NVOICE 8` is in the first commit of the tree (5684e18, "Felucca 0.8-beta source") with no reason recorded in
 the code, README or docs. JIANT 0.9.12 (329aff5) added `VOICES_2CORE 12` in voice.c: the shared budget is 12 while the
 second core takes parts (MENU > SYSTEM > ABOUT says CORES 2), NVOICE otherwise, and ECO 6. So on a two-core device the
-shared cap is already 12 whatever NVOICE is (see Caveat).
+shared cap is already 12 whatever NVOICE is, which is why the option measured on the device is
+`VOICES_2CORE`.
 
 ## Build checks per T (NVOICE 8; packages `build/acid-fm-vc12.fwsc`, `-vc14`, `-vc16`, git-ignored)
 
@@ -28,10 +29,13 @@ shared cap is already 12 whatever NVOICE is (see Caveat).
 
 All build checks passed. T changes only constants (same sizes; the packages differ). target_budget passes the same at
 each T. Per-part NVOICE (earlier measurement, T=12): 10 gives RAM 76212 (+1056), 12 gives 77268 (+2112), app +80 / +96 B,
-all checks passing; nothing hit a ceiling. History: `NVOICE 8` is in the first commit (5684e18) with no reason recorded;
-JIANT 0.9.12 (329aff5) added the 12 with the second core.
+all checks passing; nothing hit a ceiling.
 
 ## What else scales with T (checked)
+
+Governor note: on the one-core and ECO paths at T=14/16 the governor's ceiling `GOV_MAX` sits further above the active cap,
+so after a core-1 give-up it takes a few more halves to bite; read SHED / LATE with that in mind.
+
 
 - `voice_cap()` readers (voice.c voice_room / voice_victim, the MENU > ABOUT cap display): all read the function.
 - audio.c governor: `gov_tick` ceiling was NVOICE + 4; now `GOV_MAX`. `gov_cap` is a byte starting at 16, so T <= 16
