@@ -1005,3 +1005,19 @@ through the device's dictionary (~2100 words; a word it lacks by rough letter ru
 into plain ones (stress is not marked in singing) and ñ into "ny" before sending. A set takes effect at once (RAM: no
 flash write, also while playing): the track's lyric starts over at its next note. Saved with the project (FUNC's
 `L` `Y` block per track that has one; a project without it loads with none) and in the backup's runtime object (id 0).
+
+## ACID FM 0.2: four songs
+
+ACID FM keeps four songs, not JIANT's eight: songs 5..8's flash (0xB8000..0xD7FFF, 128 KiB) is reserved as the sample
+area for breakbeats (nothing writes it yet). Nothing else moved: song 1 is the four project slots, songs 2..4 are
+where JIANT kept them, the song index is at 0xD8000 and keeps its eight rows (`song_index_t` is unchanged: size 1328,
+version 2), so a JIANT index still reads; a stored current song above 4 loads as song 1.
+
+- No protocol field reports a song count (INFO has none); the song layer, MIDI program change on channel 16 (16..19 select
+  projects 1..4) and the device's SAVE KNOB 1 are bounded by four. A number above that is ignored, as before.
+- Backup: `BACKUP_LIST` names 11 + 16 = 27 objects (ids 0..10 and 40..55). `BACKUP_PUT` of 56..71 answers rc 1 at
+  begin, nothing written (as an unknown id), and a restore of the song index (10) still takes all eight rows as stored.
+- The web editor has no song picker (the SONG command is the chain of the current song's sections); its backup restore
+  reads a JIANT archive (43 objects) in full, checks every object, restores songs 1..4 and skips 56..71 without sending
+  a request for them; it reports "songs 5-8 not restored" and the count is `skipped` in `fm1backup.js`. A JIANT device
+  (43 objects) still lists in the installer's Return-to-V15 backup, which saves all of it.

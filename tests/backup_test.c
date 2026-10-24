@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* The editor's full backup (editor_backup.c: LIST / GET / PUT) against simulated NOR flash:
  * CRC before any write, stale runtime copies, USB resets and timeouts, malformed objects, older
  * project formats, settings values and user preset banks kept byte for byte. */
@@ -22,12 +23,14 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 #include "../firmware/src/ui.c"
 static void panel_setup(void) {}
 
+#include "../firmware/hal/fm1_flash_map.h"   /* (ACID FM 0.2) FL_SMP_LO / FL_SMP_HI */
 static uint8_t nor[0x100000], flash_ok = 1;
 static int erase_error;
-static uint32_t erases;
+static uint32_t erases, writes_smp;   /* (ACID FM 0.2) writes landing in the sample area FL_SMP_LO..FL_SMP_HI */
+#define SMP_HIT(off) ((off) >= FL_SMP_LO && (off) < FL_SMP_HI)
 static int st_read(uint32_t off, void *dst, uint32_t n) { memcpy(dst, nor + off, n); return 0; }
-static int st_erase(uint32_t off) { if (erase_error) return -8; memset(nor + off, 0xFF, 4096); erases++; return 0; }
-static int st_prog(uint32_t off, const void *src, uint32_t n) { memcpy(nor + off, src, n); return 0; }
+static int st_erase(uint32_t off) { if (SMP_HIT(off)) writes_smp++; if (erase_error) return -8; memset(nor + off, 0xFF, 4096); erases++; return 0; }
+static int st_prog(uint32_t off, const void *src, uint32_t n) { if (off < FL_SMP_HI && off + n > FL_SMP_LO) writes_smp++; memcpy(nor + off, src, n); return 0; }
 static uint32_t irq_save(void) { return 0; }
 static void irq_restore(uint32_t f) { (void)f; }
 static uint32_t fl_jedec_ram(void) { return 0; }
@@ -176,8 +179,8 @@ int main(void)
 
     reset();
     trk[0].step[0] = (step_t){{60}, 1, ST_NOTE, 0, 96, 0, 0};
-    bad += check("LIST captures the runtime: 13 objects (id 8 empty, id 9 the FM6 patches), runtime 3840 B (FUNB)",
-                 list(0, &len, &crc) == 0 && rep[2] == 43u && len == sizeof(project_store_t) && len == 3840u &&
+    bad += check("LIST captures the runtime: 27 objects (11 + four songs' 16; id 8 empty, id 9 the FM6 patches), runtime 3840 B (FUNB)",
+                 list(0, &len, &crc) == 0 && rep[2] == 27u && len == sizeof(project_store_t) && len == 3840u &&
                  crc == st_crc32(ED_BK_RAW, len));
     bad += check("an empty project slot lists as length 0", list(2, &len, &crc) == 0 && len == 0);
     bad += check("GET of the runtime copy", get(0, 0, 64) == 0);
@@ -297,6 +300,19 @@ int main(void)
                      song_idx.cur == song_cur);
         si.version = 7;
         bad += check("  an index of another version is refused", put_all(10u, &si, sizeof si, st_crc32(&si, sizeof si)) == 2);
+    }
+    {   /* (ACID FM 0.2) 4 songs: ids 56..71 (JIANT's songs 5..8) are refused at begin (rc 1), nothing written; the sample
+         * area stays untouched by any restore; the list has 27 objects */
+        uint32_t id, n0, wr = writes_smp;
+        bad += check("ACID FM 0.2: the LIST names 11 + 16 objects (songs 1..4)", (call(ED_BACKUP_LIST, 0, 0), rep[2] == 27u));
+        n0 = erases;
+        for (id = 56u; id <= 71u; id++)
+            if (put_begin(id, sizeof st, st_crc32(&st, sizeof st)) != 1u) break;
+        bad += check("ACID FM 0.2: songs 5..8's ids (56..71) are refused, no flash touched",
+                     id == 72u && erases == n0 && writes_smp == wr);
+        bad += check("ACID FM 0.2: a restore of song 4 (id 55) lands in song 4's object",
+                     put_all(55u, &st, sizeof st, st_crc32(&st, sizeof st)) == 0 &&
+                     st_load(OBJ_SONG1 + 2u * 4u + 3u, &proj_wire, sizeof proj_wire) == (int)sizeof st && writes_smp == wr);
     }
     {   /* FUN8 of 1.0.x (3584 bytes, 91 parameters, the patches at 3056): restores as FUN9, E0 at P_E0, lanes 100 % */
         static uint8_t v8[3584];

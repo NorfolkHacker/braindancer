@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT (FELUCCA TONIC): the song as SLOOP 2.4.1 plays it (isod89/sloop-fm1, GPL-3.0: arranger.h, arranger_scene.c,
  * its live sections, quick chain and SONG REC), rebuilt on Felucca's sequencer. */
 /* The song (docs/TONIC-SONG-PLAN.md). Four sections A..D, the four saved projects: a section is the whole project, the
@@ -21,7 +22,11 @@
  * (included by project.c): the main loop's. */
 static chain_config_t chain_config;           /* the current song's rows */
 static uint8_t dice_secs;                     /* (JIANT 0.6.81) the sections DICE ALL wrote (bit s; song_dice.c) */
-#define NSONG 8u                              /* songs: four sections each (storage.c: where they are kept) */
+#ifndef NSONG
+#define NSONG 4u                              /* songs in use, four sections each (storage.c: where they are kept). (ACID FM 0.2)
+                                               * JIANT's 8 less 4: songs 5..8's flash is the sample area */
+#define NSONG_INDEX 8u                        /* rows in the stored index (JIANT's layout, size and version kept) */
+#endif
 #define SONG_MAGIC 0x474E4F53u                /* "SONG" */
 /* (JIANT) a row's scene: when the row goes in (a song, not a quick chain) the tracks' mutes, DRUM's group mutes, the
  * macros and the punch-in MIDI effects become what was stored; they stay through the rows after it that have none.
@@ -35,8 +40,8 @@ typedef struct {
 typedef struct {                              /* the song index (flash: OBJ_SONGIDX) */
     uint32_t magic;
     uint8_t version, cur, rsv[2];
-    chain_config_t rows[NSONG];               /* each song's rows (the current one's: chain_config, kept here) */
-    scene_t scene[NSONG][CHAIN_ROWS];         /* (version 2, JIANT) their scenes; a version 1 index: none */
+    chain_config_t rows[NSONG_INDEX];         /* each song's rows (the current one's: chain_config, kept here) */
+    scene_t scene[NSONG_INDEX][CHAIN_ROWS];   /* (version 2, JIANT) their scenes; a version 1 index: none */
 } song_index_t;
 static void song_idx_touch(void);             /* song_main.c: the index changed, into flash soon */
 /* the state now as a scene (main loop: KNOB 4 on SONG; ISR: SONG REC) */

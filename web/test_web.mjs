@@ -1748,7 +1748,7 @@ async function installerFlows() {
   x = await stock("jiant");
   ok(x.r === "ok" && x.c.saved.length === 1 && x.c.saved[0].objects.length === 43 && x.c.asked.join() === "stockConfirm",
     "installer: Return from JIANT: its complete backup, then V15");
-  ok(readBackup(JSON.stringify(x.c.saved[0])).objects.length === 43, "installer: that backup reads back in the JIANT editor");
+  ok(readBackup(JSON.stringify(x.c.saved[0])).objects.length === 27 && readBackup(JSON.stringify(x.c.saved[0])).skipped === 16, "installer: that backup reads back in the editor (ACID FM 0.2: songs 1..4, songs 5..8 skipped)");
   x = await stock("felucca");
   const fa = x.c.saved[0];
   ok(x.r === "ok" && fa && fa.objects.map((o) => o.id).join() === "0,1,2,3,4,5,6,7,8,9,32,33,34" && fa.objects[10].size === 5000,

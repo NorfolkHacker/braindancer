@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Host test of firmware/src/storage.c against a simulated NOR flash:
  * erase -> 0xFF, program can only clear bits, page writes must not wrap. */
 #include <stdint.h>
@@ -41,6 +42,7 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
     }
     return 0;
 }
+#include "../firmware/hal/fm1_flash_map.h"   /* (ACID FM 0.2) FL_SMP_LO / FL_SMP_HI */
 #include "../firmware/src/storage.c"
 
 static int check(const char *what, int ok)
@@ -125,11 +127,11 @@ int main(void)
               !memcmp(got, a, sizeof a) && !memcmp(snap, nor, 0xE5000u) && !memcmp(snap + 0xE7000u, nor + 0xE7000u, 0x19000u);
         bad += check("the autosave in its own sectors 0xE5000 / 0xE6000, nothing else touched", ok);
     }
-    /* JIANT's songs: song 1 is the four project slots; songs 2..8 (28 objects) at 0xA0000..0xD7FFF, the index at
+    /* JIANT's songs: song 1 is the four project slots; songs 2..8 (28 objects) at 0xA0000..0xD7FFF (ACID FM 0.2: songs 2..4, 12 objects, at 0xA0000..0xB7FFF), the index at
      * 0xD8000 / 0xD9000; every object's pair apart from every other one's, all in the store below 0xE0000 */
     {
-        uint32_t o, c, p, q, ok = OBJ_COUNT == OBJ_SONG1 + 28 && st_sector(OBJ_SONG1, 0) == 0xA0000u &&
-                                  st_sector(OBJ_COUNT - 1, 1) + 4096u == 0xD8000u && st_sector(OBJ_SONGIDX, 0) == 0xD8000u &&
+        uint32_t o, c, p, q, ok = OBJ_COUNT == OBJ_SONG1 + 12 && st_sector(OBJ_SONG1, 0) == 0xA0000u &&
+                                  st_sector(OBJ_COUNT - 1, 1) + 4096u == 0xB8000u && st_sector(OBJ_SONGIDX, 0) == 0xD8000u &&
                                   st_sector(OBJ_SONGIDX, 1) == 0xD9000u;
         for (o = OBJ_SONGIDX; o < OBJ_COUNT; o++)
             for (c = 0; c < 2u; c++) {
@@ -139,7 +141,7 @@ int main(void)
                         ok &= (p == o && q == c) || st_sector(p, q) != st_sector(o, c) ||
                               (p == OBJ_FM6BANK && o == OBJ_UPFM6) || (o == OBJ_FM6BANK && p == OBJ_UPFM6);
             }
-        bad += check("songs 2..8 and the song index: their own sectors in the freed sample area", ok);
+        bad += check("songs 2..4 and the song index: their own sectors", ok);
     }
     {
         static uint8_t bank[3472], back[3728], tab[3728];
@@ -217,6 +219,21 @@ int main(void)
         memset(got, 'X', sizeof got);
         bad += check("small destination rejects whole object", st_load(OBJ_PROJECT0, got, sizeof got - 1u) < 0 && got[0] == 'X');
         bad += check("oversized save rejected", st_save(OBJ_PROJECT0, a, ST_PAYLOAD_MAX + 1u) < 0);
+    }
+    /* (ACID FM 0.2) the sample area: no storage object's A or B sector lies in it, and it is where songs 5..8 were */
+    {
+        uint32_t o, bad_objs = 0;
+        for (o = 0; o < OBJ_COUNT; o++) {
+            uint32_t a = st_sector(o, 0), b = st_sector(o, 1);
+            if ((a >= FL_SMP_LO && a < FL_SMP_HI) || (b >= FL_SMP_LO && b < FL_SMP_HI))
+                bad_objs++;
+        }
+        bad += check("no storage object in the sample area 0xB8000..0xD7FFF", bad_objs == 0);
+        bad += check("the sample area is 128 KiB, sector aligned",
+                     FL_SMP_LO == 0xB8000u && FL_SMP_HI == 0xD8000u && (FL_SMP_LO % ST_SECTOR) == 0);
+        bad += check("4 songs, the index keeps 8 rows", NSONG == 4u && NSONG_INDEX == 8u);
+        bad += check("songs 2..4 stay at 0xA0000..0xB7FFF",
+                     st_sector(OBJ_SONG1, 0) == 0xA0000u && st_sector(OBJ_COUNT - 1u, 1) == 0xB7000u);
     }
     printf("%s\n", bad ? "STORAGE TEST FAILED" : "storage test passed");
     return bad != 0;

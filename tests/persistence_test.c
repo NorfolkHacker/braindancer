@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Firmware save flows against NOR flash: deferred settings, retries, and failed-save rollback. */
 #define main hostsim_main
 #include "hostsim.c"
@@ -497,6 +498,28 @@ static int songs_test(void)
         m0 = lib_scan(0, b);
         ok &= (m0 & 1u) != 0u;
         bad += check("songs: the library's scan: project 2's sections A and C and A's name, project 3 empty", ok);
+    }
+    {   /* (ACID FM 0.2) 4 songs, the index keeps 8 rows: an index of JIANT's with song 6 current loads song 1 with rows
+         * 1..4 intact (and 5..8 kept as stored); song 5 cannot be selected */
+        song_index_t si;
+        uint32_t k;
+        reset();
+        memset(&si, 0, sizeof si);
+        si.magic = SONG_MAGIC; si.version = 2; si.cur = 5;
+        for (k = 0; k < NSONG_INDEX; k++) chain_defaults(&si.rows[k]);
+        si.rows[1].count = 2; si.rows[1].row[0] = (chain_row_t){1, 7};
+        si.rows[3].count = 1; si.rows[3].row[0] = (chain_row_t){2, 5};
+        si.rows[6].count = 1; si.rows[6].row[0] = (chain_row_t){3, 9};
+        ok = st_save(OBJ_SONGIDX, &si, sizeof si) == 0;
+        song_cur = 3;
+        song_index_load();
+        ok &= song_cur == 0 && song_idx.cur == 0 && song_idx.rows[1].count == 2u && song_idx.rows[3].row[0].bars == 5u;
+        ok &= song_idx.rows[6].row[0].bars == 9u;
+        bad += check("songs: a stored current song 6 (JIANT's index) loads as song 1, rows 1..4 intact", ok);
+        ok = song_select(4) != 0 && song_cur == 0 && song_select(7) != 0 && song_cur == 0;
+        bad += check("songs: song 5 (and 8) cannot be selected", ok);
+        ok = lib_scan(4, (char[16]){0}) == 0u && lib_scan(7, (char[16]){0}) == 0u;
+        bad += check("songs: the library scan refuses song 5", ok);
     }
     return bad;
 }

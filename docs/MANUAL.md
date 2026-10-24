@@ -1290,7 +1290,7 @@ A track clear says **T3 CLEARED** with **SEQ+REC: ALL TRACKS** under it as a rem
 
 ### The pieces
 
-- A **project** is a song. There are **8 projects**.
+- A **project** is a song. There are **4 projects** (ACID FM 0.2; JIANT had 8: the flash of projects 5–8 is kept for breakbeat samples).
 - Each project has **4 sections, A–D**. A section is a full snapshot of the music: every track's sound, steps and
   automation, the DRUM-X kit and its mutes, the punch-in lane, the SLICER, the macros, plus the tempo and global effects.
 - Each project has one **arrangement**: up to **16 rows**, each a section played for **1–64 bars**, optionally with a
@@ -1896,7 +1896,7 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
 ### The big picture
 
 - **The music** is what's playing now, in RAM: all six tracks' sounds and steps, automation, effects, tempo.
-- **Sections** (A–D of each of the 8 projects) are where you **save** music permanently, in flash.
+- **Sections** (A–D of each of the 4 projects) are where you **save** music permanently, in flash.
 - **The arrangement** (rows, END, scenes) belongs to the project and saves itself.
 - **User presets** (32 slots) save single sounds.
 - **Settings** (the MENU, TRACKS, LOAD) save themselves.
@@ -2051,7 +2051,7 @@ switching off.
 
 **Where's my drum kit in a user preset?** User presets don't store the DRUM-X kit; save the project section instead.
 
-**Can I back everything up?** Yes: the web editor's complete backup includes all 8 projects with their sections,
+**Can I back everything up?** Yes: the web editor's complete backup includes all 4 projects with their sections,
 arrangements and scenes, the user presets and the settings. See [15](#15-web-tools-emulator-installer-editor-backup).
 
 ---
@@ -2318,7 +2318,7 @@ Every parameter from the computer, over USB. Tabs: Sound, 6-OP FM, Sequencer, Tr
 
 ### The complete backup
 
-**Save backup** downloads one file with: the current music, **all 8 projects with their 4 sections each**, the
+**Save backup** downloads one file with: the current music, **all 4 projects with their 4 sections each**, the
 arrangements and scenes, the 32 user presets (with their FM6 patches) and the settings. **Restore backup** replaces
 all of that on the device (keep USB connected). The **FM6 voice bank (B1–B32) is not included**: keep your .syx files.
 

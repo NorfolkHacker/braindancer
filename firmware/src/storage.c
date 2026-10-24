@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Persistent storage on the SPI NOR.
  *
  * Every object has an A/B sector pair. A save goes to the copy that is not
@@ -12,6 +13,11 @@
  * Flash access goes through three hooks (also used by the host test):
  *   st_read(off, dst, n)   st_erase(off)   st_prog(off, src, n)
  */
+#ifndef NSONG                                  /* (song_chain.c defines them, before this file in the firmware; the host tests that
+                                                * include this file alone get them here, the same values) */
+#define NSONG 4u                               /* (ACID FM 0.2) songs in use */
+#define NSONG_INDEX 8u                         /* rows in the stored song index (JIANT's 8, the layout kept) */
+#endif
 #define ST_MAGIC 0x554C4546u                   /* "FELU" */
 #define ST_SECTOR 4096u
 #define ST_PAYLOAD_OFF 256u
@@ -31,10 +37,15 @@
  * commit record of the same kind (type OBJ_FM6VB, not an st_load object); a new bank is first staged in the
  * autosave's older copy (fm6_vbank.c). */
 enum { OBJ_SETTINGS, OBJ_PROJECT0, OBJ_UPRESET0 = OBJ_PROJECT0 + 4, OBJ_FM6BANK = OBJ_UPRESET0 + 2, OBJ_UPFM6,
-       OBJ_AUTOSAVE, OBJ_SONGIDX, OBJ_SONG1, OBJ_COUNT = OBJ_SONG1 + 7 * 4 };
+       OBJ_AUTOSAVE, OBJ_SONGIDX, OBJ_SONG1, OBJ_COUNT = OBJ_SONG1 + (NSONG - 1) * 4 };
 /* JIANT's songs (song_chain.c): song 1's four sections are the four project slots (OBJ_PROJECT0..3, 0x97000..), songs
- * 2..8 four objects each (OBJ_SONG1 + (song - 1) * 4 + section) at 0xA0000..0xD7FFF, the song index (the songs' rows,
- * the current song) at 0xD8000 / 0xD9000; 0xDA000..0xDBFFF free */
+ * 2..4 four objects each (OBJ_SONG1 + (song - 1) * 4 + section) at 0xA0000..0xB7FFF, the song index (the songs' rows,
+ * the current song) at 0xD8000 / 0xD9000; 0xDA000..0xDBFFF free.
+ * (ACID FM 0.2) 4 songs, not JIANT's 8: songs 5..8's sectors, 0xB8000..0xD7FFF (128 KiB, contiguous), are the sample
+ * area (fm1_flash.h FL_SMP_LO..FL_SMP_HI; no object here, nothing writes it yet). The song index keeps its 8 rows
+ * (NSONG_INDEX) so a JIANT index still reads. */
+_Static_assert(OBJ_COUNT - OBJ_SONG1 == (NSONG - 1) * 4 && 0xA0000u + (OBJ_COUNT - OBJ_SONG1) * 2u * ST_SECTOR <= 0xB8000u,
+               "the last song object's B sector ends at or below the sample area (FL_SMP_LO)");
 #define OBJ_FM6VB 64u                          /* the voice bank's commit records (fm6_vbank.c; >= OBJ_COUNT, 39 with
                                                 * the songs: st_load never takes one, no object takes its sector.
                                                 * Felucca's 32 is a song object here) */

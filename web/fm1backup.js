@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 // Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+// Portions Copyright (C) 2026 NorfolkHacker
 // Local, complete musical archives. Requests name whitelisted objects, never flash addresses.
 // 8: the FM6 patch bank of 1.0..1.0.2 (listed empty since 1.0.3: a restore of an older archive's bank moves its patches
 // into the user presets restored before it); 9: the user presets' FM6 patches (1.0.3).
 // 32..34 were the user sample slots (JIANT has none): an older archive's entries for them are skipped on read.
 // JIANT: 10 the song index (every song's rows and scenes), 40..71 every song's sections (40 + 4 x song + section); the
 // sections of each song are restored by its number, after 2..5 (the current song's, as before).
+// (ACID FM 0.2) four songs: 40..55. JIANT's songs 5..8 (56..71) are gone (their flash is the sample area): an archive that
+// holds them still reads, they are left out of the restore and counted in .skipped; a JIANT device (43 objects) still lists.
 const BACKUP_IDS_V3 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];                    // Felucca 1.0.3 .. JIANT 0.2, and their archives
-export const BACKUP_IDS = [...BACKUP_IDS_V3, 10, ...Array.from({ length: 32 }, (_, i) => 40 + i)];
+export const BACKUP_IDS = [...BACKUP_IDS_V3, 10, ...Array.from({ length: 16 }, (_, i) => 40 + i)];
+const BACKUP_IDS_J8 = [...BACKUP_IDS, ...Array.from({ length: 16 }, (_, i) => 56 + i)];   // JIANT / ACID FM 0.1: eight songs
 const BACKUP_RETIRED = (id) => Number.isInteger(id) && id >= 32 && id <= 34;
+const BACKUP_GONE = (id) => Number.isInteger(id) && id >= 56 && id <= 71;   // songs 5..8
 const BACKUP_IDS_V2 = BACKUP_IDS_V3.filter((id) => id !== 9);           // 1.0..1.0.2, and their archives
 const BACKUP_IDS_V1 = BACKUP_IDS_V2.filter((id) => id !== 8);           // firmware before FM6, and its archives
-const idsOf = (n) => [BACKUP_IDS, BACKUP_IDS_V3, BACKUP_IDS_V2, BACKUP_IDS_V1].find((ids) => ids.length === n) || null;
+const idsOf = (n) => [BACKUP_IDS, BACKUP_IDS_J8, BACKUP_IDS_V3, BACKUP_IDS_V2, BACKUP_IDS_V1].find((ids) => ids.length === n) || null;
 export const BACKUP_CMD = { LIST: 65, GET: 66, PUT: 67 };
 const BACKUP_CHUNK = 256;
 export const bkU32 = (n) => Array.from({ length: 5 }, (_, i) => (n >>> (i * 7)) & (i === 4 ? 15 : 127));
@@ -87,7 +92,9 @@ export function readBackup(file) {
     return { ...o, bytes };
   });
   if (!objects[0].size || !objects[1].size) throw new Error("Backup is missing the current music or settings");
-  return { ...file, objects };
+  /* (ACID FM 0.2) songs 5..8 of a JIANT archive: checked above, not restored (nothing is sent for them) */
+  const live = objects.filter((o) => !BACKUP_GONE(o.id));
+  return { ...file, objects: live, skipped: objects.length - live.length };
 }
 /* (0.9.11) a manifest as the device lists it, every object kept: the archive of another firmware (Felucca with its user
  * samples 32..34, Skiff with its pattern bank 16..31), to restore with that firmware's own editor. Ids unique, current

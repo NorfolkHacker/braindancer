@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT (FELUCCA TONIC): after SLOOP 2.4.1's song (isod89/sloop-fm1, GPL-3.0). */
 /* The song, the main loop's part (song_chain.c: what it is). Included by project.c. */
 static project_store_t song_keep __attribute__((section(".pool")));   /* the music as it was before PLAY */
@@ -21,7 +22,7 @@ static void song_index_load(void)
     uint32_t k;
 #if FELUCCA_FLASH
     int n = st_load(OBJ_SONGIDX, &song_idx, sizeof song_idx);
-    if (song_idx.magic == SONG_MAGIC && song_idx.cur < NSONG &&
+    if (song_idx.magic == SONG_MAGIC && song_idx.cur < NSONG_INDEX &&
         ((song_idx.version == 2u && n == (int)sizeof song_idx) ||
          (song_idx.version == 1u && n == (int)__builtin_offsetof(song_index_t, scene)))) {
         if (song_idx.version == 1u) {               /* (before the scenes: none) */
@@ -30,14 +31,15 @@ static void song_index_load(void)
         }
         for (k = 0; k < NSONG; k++)
             song_rows_fix(&song_idx.rows[k]);
-        song_cur = song_idx.cur;
+        song_cur = song_idx.cur < NSONG ? song_idx.cur : 0u;   /* (ACID FM 0.2) JIANT's songs 5..8: song 1 */
+        song_idx.cur = song_cur;
         return;
     }
 #endif
     memset(&song_idx, 0, sizeof song_idx);
     song_idx.magic = SONG_MAGIC;
     song_idx.version = 2;
-    for (k = 0; k < NSONG; k++)
+    for (k = 0; k < NSONG_INDEX; k++)             /* (all 8 rows: the index keeps JIANT's layout) */
         chain_defaults(&song_idx.rows[k]);
     song_cur = 0;
     song_idx.rsv[0] = 1;                          /* (no index yet: song_index_boot takes section A's rows) */

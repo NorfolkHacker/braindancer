@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* FM-1 SPI NOR at runtime: erase / program / read. Used only when
  * FELUCCA_FLASH is 1.
  *
@@ -45,6 +46,7 @@ static inline void *fl_far(void *p) { void *volatile q = p; return q; }
 #define FL_AUTO_HI      0x000E7000u                /* the OTA staging */
 #define FL_VBANK_LO     0x000E7000u                /* (JIANT 0.6.11, Felucca 1.4.1) the FM6 voice bank (fm6_vbank.c), */
 #define FL_VBANK_HI     0x000E8000u                /* the sector above (below the stock OTA's VM backup, 0xE8000) */
+#include "fm1_flash_map.h"                      /* (ACID FM 0.2) FL_SMP_LO / FL_SMP_HI, the sample area */
 /* [off, off + n) inside [lo, hi), without wrapping: off + n can overflow, and
  * the 1 MiB part ignores the high address bits, so a wrapped range lands low. */
 #define FL_IN(off, n, lo, hi) ((uint32_t)(off) >= (lo) && (uint32_t)(off) <= (hi) && \

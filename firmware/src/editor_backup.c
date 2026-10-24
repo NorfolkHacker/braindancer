@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Complete musical archive: no raw addresses are accepted. Small objects are staged
  * in main-loop RAM and fully validated before the existing A/B commit path writes.
  * Ids 32..34 (Felucca's user sample slots) are gone with the slots (JIANT has none).
@@ -8,13 +9,14 @@
  * patches into the user presets restored before it (ids 6, 7), as the first boot after the update does (up_fm6.c).
  * Id 9 is the user presets' FM6 patches (up_fm6.c), appended in 1.0.3.
  * (JIANT) Id 10 is the song index (song_chain.c: every song's rows and scenes), ids 40..71 every song's sections
+ * (ACID FM 0.2: 40..55, four songs; a PUT of 56..71, JIANT's songs 5..8, is refused at begin, rc 1: the web editor skips them)
  * (40 + 4 x song + section: the current song's from RAM, the others read from flash as they are asked for, into the
  * storage driver's own buffer: no RAM of their own). Ids 2..5 stay the current song's sections, as before.
  */
 #define ED_BK_SONG 40u                /* (JIANT) the first song section's id */
 static const uint8_t ED_BK_IDS[11 + NSONG * 4u] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71};
-_Static_assert(NSONG == 8u && sizeof(song_index_t) <= sizeof proj_wire_u.raw, "the songs' ids, the index staged");
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55};   /* (ACID FM 0.2) 4 songs: 56..71 (JIANT's 5..8) are not taken */
+_Static_assert(NSONG == 4u && sizeof(song_index_t) <= sizeof proj_wire_u.raw, "the songs' ids, the index staged");
 static int proj_store_len(uint32_t len);
 /* the flash object of song s's section k (storage.c: song 1 the four project slots) */
 static uint32_t ed_bk_song_obj(uint32_t s, uint32_t k) { return s ? OBJ_SONG1 + (s - 1u) * 4u + k : OBJ_PROJECT0 + k; }

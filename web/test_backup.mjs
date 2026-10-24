@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 // Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+// Portions Copyright (C) 2026 NorfolkHacker
 // fm1backup.js against a simulated device: 7-bit packing, CRC, manifest checks, a full capture,
 // validation before the first write, restore order (live music last) and abort on a failed chunk.
 import { BACKUP_IDS, BACKUP_CMD, bkU32, bkR32, bkPack, bkUnpack, bkCrc, bkManifest, readBackup, captureBackup, restoreBackup } from "./fm1backup.js";
@@ -74,10 +75,10 @@ const order = target.log.filter((x) => typeof x === "number");
 ok(order.at(-1) === 0 && order.at(-2) === 1 && order.indexOf(2) < order.indexOf(1), "backup: restore order: projects, banks, settings, live music last");
 ok([0, 1, 2, 6].every((id) => target.objs.get(id).every((v, i) => v === objs.find((o) => o[0] === id)[1][i])), "backup: restored objects equal the source");
 {   /* the FM6 patch bank (id 8) and the archives of firmware before it (8 objects, no id 8) */
-  ok(BACKUP_IDS.length === 43 && file.objects.some((o) => o.id === 8) && file.objects.some((o) => o.id === 9) &&
-     file.objects.some((o) => o.id === 10) && file.objects.filter((o) => o.id >= 40).length === 32 &&
+  ok(BACKUP_IDS.length === 27 && file.objects.some((o) => o.id === 8) && file.objects.some((o) => o.id === 9) &&
+     file.objects.some((o) => o.id === 10) && file.objects.filter((o) => o.id >= 40).length === 16 &&
      !file.objects.some((o) => o.id >= 32 && o.id <= 34),
-     "backup: 43 objects: id 8 (the retired FM6 bank), 9 (user presets' FM6 patches), 10 the song index, 40..71 every song's sections");
+     "backup: 27 objects: id 8 (the retired FM6 bank), 9 (user presets' FM6 patches), 10 the song index, 40..55 every song's sections (four songs)");
   const v3 = JSON.parse(JSON.stringify(file)); v3.objects = v3.objects.filter((o) => o.id <= 9);
   ok(readBackup(v3).objects.length === 10, "backup: an archive of Felucca 1.0.3 .. JIANT 0.2 (10 objects, no songs) still reads");
   const v2 = JSON.parse(JSON.stringify(v3)); v2.objects = v2.objects.filter((o) => o.id !== 9);
@@ -86,6 +87,19 @@ ok([0, 1, 2, 6].every((id) => target.objs.get(id).every((v, i) => v === objs.fin
   ok(readBackup(old).objects.length === 8, "backup: an archive of the 8 objects before FM6 still reads");
   const odd = JSON.parse(JSON.stringify(file)); odd.objects = odd.objects.filter((o) => o.id !== 5);
   ok(throws(() => readBackup(odd)), "backup: an archive missing another object is refused");
+}
+{   /* (ACID FM 0.2) four songs: a JIANT archive (eight songs, 43 objects) reads, restores songs 1..4 and skips 5..8 */
+  const j8 = JSON.parse(JSON.stringify(file));
+  for (let id = 56; id <= 71; id++) { const v = rnd(100, id); let s = ""; for (const x of v) s += String.fromCharCode(x); j8.objects.push({ id, size: 100, crc: bkCrc(v), data: btoa(s) }); }
+  const r = readBackup(j8);
+  ok(j8.objects.length === 43 && r.objects.length === 27 && r.skipped === 16 && r.objects.every((o) => o.id < 56), "backup: a JIANT archive with songs 5..8 (43 objects) reads: 27 kept, 16 skipped");
+  const to8 = device([]);
+  const done8 = await restoreBackup(to8.request, j8);
+  ok(done8.skipped === 16 && !to8.log.some((x) => typeof x === "number" && x >= 56) && !to8.log.some((x) => typeof x === "string" && /\b(5[6-9]|6\d|7[01])\b/.test(x)) && to8.log.at(-1) === 0,
+    "backup: restoring it sends nothing for songs 5..8 (no request names 56..71), the rest restored");
+  ok(readBackup(JSON.stringify(file)).skipped === 0, "backup: an ACID FM archive has nothing skipped");
+  const m8 = bkManifest([1, 0, 43, ...BACKUP_IDS.concat(Array.from({ length: 16 }, (_, i) => 56 + i)).flatMap((id) => [id, ...bkU32(0), ...bkU32(0)])]);
+  ok(m8.length === 43, "backup: a JIANT device's 43-object manifest still reads (its backup before Return to V15)");
 }
 {   /* archives with the retired user sample slots (ids 32..34, any content): those entries are skipped */
   const smp = (id, n) => { const v = rnd(n, id); let s = ""; for (const x of v) s += String.fromCharCode(x);
