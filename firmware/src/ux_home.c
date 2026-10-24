@@ -346,14 +346,15 @@ static uint32_t ux_tracks_sig(void)
     return h;
 }
 
-/* ---- VISUAL (3a task 7; polish): six thin rings on the dark, one a track's - T1 outside .. T6 at the centre - over a soft
- * glow at the centre. Each ring is a colour of the blend, the blend at (phase - k x UXV_RING_STEP) run there and back (512 a
- * turn, no seam), turning with the bar (a turn every four bars from chain.bar_pos; stopped, a slow drift); its brightness its
- * track's level (the loudest point of ux_levels_tick's history in the last step: no work of its own on the audio), eased half
- * the way each step, a silent track's ring a dim LINE grey; a ring on a hit swells a px each side. Everything moves in steps
- * (fix 1): taken at most every UXV_STEP_MS, so a redraw between two steps paints the same picture and cv_blit_cells sends
- * nothing of it (the LCD's SPI is the cost: a whole panel is ~72 KB). Over them a darker band, the song's name and where it
- * is: readability first (spec 0). The first time on VISUAL the status line says which ring is which (spec 0.7) */
+/* ---- VISUAL (3a task 7; polish, tweaks): six thin rings round the centre, one a track's - T1 outside .. T6 at the centre -
+ * all inside the panel, a faint glow behind them at the centre, the corners plain dark. Each track a colour of its own, spread
+ * along the blend (ux_vis_hue), the six turned together a little with the bar (the phase: a turn every four bars from
+ * chain.bar_pos; stopped, a slow drift); a ring's brightness its track's level (the loudest point of ux_levels_tick's
+ * history in the last step: no work of its own on the audio), eased half the way each step, a silent track's ring a dim
+ * LINE grey; a ring on a hit swells a px each side. Everything moves in steps (fix 1): taken at most every UXV_STEP_MS, so
+ * a redraw between two steps paints the same picture and cv_blit_cells sends nothing of it (the LCD's SPI is the cost: a
+ * whole panel is ~72 KB). Over them a darker band, the song's name and where it is: readability first (spec 0). The first
+ * time on VISUAL the status line says which ring is which (spec 0.7) */
 static uint32_t ux_vis_draws;                           /* VISUAL panels drawn (the host tests count them) */
 static struct {
     uint32_t bars, ms, q_ms, shed, shed_ms, intro_ms;   /* bars passed; the last panel's time; the last step's; load_diag.shed
@@ -365,11 +366,11 @@ static struct {
 } uxv;
 #define UXV_STEP_MS 200u                                /* the rings change at most every 200 ms (5 steps a second) */
 #define UXV_PH_Q 4u                                     /* .. their phase in steps of 4 / 512 (a few a step: smooth) */
-#define UXV_RING_STEP 40u                               /* blend steps (of 512) from one ring to the next */
 #define UXV_IDLE_MS 48u                                 /* stopped: a phase step every 48 ms (a turn in ~25 s) */
 #define UXV_SWELL 160u                                  /* a ring this bright (a hit) is a px wider each side */
 #define UXV_INTRO "RINGS: T1 OUTSIDE \x86 T6 CENTRE"     /* (UF_HDR's arrow, 0x86) */
 #define UXV_INTRO_MS 4000u
+#define UXV_TTL_W 200                                   /* the name in UF_TTL up to 200 px (20 px each side), else UF_VAL */
 static const char *ux_vis_legend(void)                  /* the ring legend while it shows (UXV_INTRO_MS, once), else NULL */
 {
     if (!uxv.intro) {
@@ -397,6 +398,14 @@ static uint32_t ux_vis_level(uint32_t c)                /* track c's loudest poi
         if (ux_hist(c, a) > m) m = ux_hist(c, a);
     return m;
 }
+/* track c's colour: spread along the blend (T1 ACID .. T6 QUEUED, 46 steps apart), all six turned together by the phase
+ * (0 .. UXV_TURN steps there and back): each track keeps a colour of its own, neighbours clearly apart */
+#define UXV_TURN 24u
+static uint16_t ux_vis_hue(uint32_t c)
+{
+    uint32_t p = uxv.qph < 256u ? uxv.qph : 511u - uxv.qph;
+    return UX_BLEND[(c % NTRK) * 46u + p * UXV_TURN / 255u];
+}
 static void ux_vis_step(void)                           /* phase and brightness, at most every UXV_STEP_MS (a page entered: now) */
 {
     uint32_t c;
@@ -411,7 +420,7 @@ static void ux_vis_step(void)                           /* phase and brightness,
     uxv.q_ok = 1;
 }
 /* the song's name (the project's, as loaded or saved; none: ACID FM) into b (16 bytes) and its face: the letters UF_TTL has
- * (capitals, figures, space - . /; another sign a space, in every face), in UF_TTL while it fits 232 px, else UF_VAL, then
+ * (capitals, figures, space - . /; another sign a space, in every face), in UF_TTL while it fits UXV_TTL_W, else UF_VAL, then
  * UF_HDR */
 static const aafont_t *ux_vis_name(char *b)
 {
@@ -427,15 +436,15 @@ static const aafont_t *ux_vis_name(char *b)
     while (i > 1u && b[i - 1u] == ' ')
         i--;
     b[i] = 0;
-    if (text_w(&UF_TTL, b) <= 232)
+    if (text_w(&UF_TTL, b) <= UXV_TTL_W)
         return &UF_TTL;
-    return text_w(&UF_VAL, b) <= 232 ? &UF_VAL : &UF_HDR;
+    return text_w(&UF_VAL, b) <= 224 ? &UF_VAL : &UF_HDR;
 }
 static void ux_vis_sub(char *b) { ux_where_bar(b, 32, 1); }   /* "SECTION B · BAR 3/8", "BAR 1/2" */
 static void ux_visual_panel(void)
 {
-    uint8_t e[2u + 2u * NTRK];
-    uint16_t col[3u + 2u * NTRK], scr[3u + 2u * NTRK];
+    uint8_t e[2u * NTRK];
+    uint16_t col[1u + 2u * NTRK], scr[1u + 2u * NTRK];
     uint32_t k, n = 0, gl = ux_glow_eff(2);
     char nm[16], sub[32];
     const aafont_t *f = ux_vis_name(nm);
@@ -443,19 +452,16 @@ static void ux_visual_panel(void)
     int32_t ch = f == &UF_TTL ? UF_TTL_CAP_H : f == &UF_VAL ? UF_VAL_CAP_H : UF_HDR_CAP_H;
     int32_t top = ((int32_t)UX_H_PANEL - (ch + 9 + UF_LBL_CAP_H)) / 2, ty = top - cy, sy = top + ch + 9 - UF_LBL_CAP_Y, w;
     ux_vis_step();
-    /* the segments from the centre out: the glow's three steps (inside 12, 22, the first ring), then each ring and the gap
-     * outside it (the glow fading over the gaps; past the last ring BG). A segment's glow is the panel glow's colour at its
-     * middle radius (ux_glow_col, ring 0 outermost at ~120 px); ring k is track NTRK - 1 - k (T6 at the centre) */
+    /* the segments from the centre out: the glow inside the innermost ring, each ring and the gap inside the next (the glow),
+     * past the last ring plain BG (no more rings: the corners dark). A segment's glow is the panel glow's colour at its
+     * middle radius (ux_glow_col, ring 0 outermost at ~128 px); ring k is track NTRK - 1 - k (T6 at the centre) */
 #define UXV_GLOW(r) ux_glow_col(gl, UX_GLOW_N - 1u - ((r) * UX_GLOW_N / 128u < UX_GLOW_N ? (r) * UX_GLOW_N / 128u : UX_GLOW_N - 1u))
-    e[n] = 0; col[n++] = UXV_GLOW(6u);
-    e[n] = 1; col[n++] = UXV_GLOW(17u);
     for (k = 0; k < NTRK; k++) {
-        uint32_t c = NTRK - 1u - k, br = uxv.b[c], sw = br >= UXV_SWELL, i = (uxv.qph + 512u - k * UXV_RING_STEP) & 511u;
-        uint16_t bl = UX_BLEND[i < 256u ? i : 511u - i];
-        e[n] = (uint8_t)(2u + 4u * k + (sw ? 0u : 1u));               /* the ring's inner edge (swollen: a px in) */
-        col[n++] = k ? UXV_GLOW(UX_RING_R[2u + 4u * k] - 4u) : UXV_GLOW(27u);   /* (inside it: the gap or the glow) */
-        e[n] = (uint8_t)(2u + 4u * k + (sw ? 3u : 2u));               /* .. its outer edge */
-        col[n++] = ux_mix(UX_LINE, bl, (int32_t)(12u + br * 88u / 255u));     /* silent: LINE with a hint of its colour */
+        uint32_t c = NTRK - 1u - k, br = uxv.b[c], sw = br >= UXV_SWELL;
+        e[n] = (uint8_t)(4u * k + (sw ? 0u : 1u));                    /* the ring's inner edge (swollen: a px in) */
+        col[n++] = UXV_GLOW(k ? UX_RING_R[4u * k] - 2u : 3u);       /* (inside it: the gap or the centre's glow) */
+        e[n] = (uint8_t)(4u * k + (sw ? 3u : 2u));                    /* .. its outer edge */
+        col[n++] = ux_mix(UX_LINE, ux_vis_hue(c), (int32_t)(12u + br * 88u / 255u));   /* silent: LINE, a hint of its colour */
     }
     col[n] = UX_BG;                                     /* past the last ring */
     for (k = 0; k <= n; k++)
@@ -463,7 +469,7 @@ static void ux_visual_panel(void)
     cv_begin_raw(240, UX_H_PANEL, UX_BG);               /* (the rings write every pixel: no fill under them) */
     ux_rings(e, n, col, scr, top - 8, top + ch + 9 + UF_LBL_CAP_H + 8);
     w = text_w(f, nm);
-    GFX_HOOK_CELL(2, ty, 238, ty + f->h);                /* (a name up to 232 px wide: its ink to 2 px of the edges) */
+    GFX_HOOK_CELL(8, ty, 232, ty + f->h);
     cv_text_on((240 - w) / 2, ty, f, nm, UX_TEXT, ux_under(120, top + ch / 2));
     ux_vis_sub(sub);
     w = text_w(&UF_LBL, sub);

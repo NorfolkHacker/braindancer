@@ -11169,7 +11169,8 @@ static int test_ux_visual(void)
     ok = str_eq(b, "ACID FM") && f == &UF_TTL;                      /* no name: ACID FM */
     str_cpy(proj_name, "VELVET PYLON", sizeof proj_name);
     f = ux_vis_name(b);
-    ok &= str_eq(b, "VELVET PYLON") && text_w(f, b) <= 232;
+    ok &= str_eq(b, "VELVET PYLON") && text_w(f, b) <= 200;       /* (a long name: no title edge to edge) */
+    ok &= f != &UF_TTL || text_w(f, b) <= UXV_TTL_W;
     str_cpy(proj_name, "WWWWWWWWWWWW", sizeof proj_name);
     f = ux_vis_name(b);
     ok &= text_w(f, b) <= 232 && str_len(b) == 12u;                 /* (a wide name: a smaller face, all of it) */
@@ -11209,17 +11210,23 @@ static int test_ux_visual(void)
             trk[0].peak = 7000; trk[2].peak = i % 3u ? 0 : 6000; frame();
             p0 += uxv.q_ms != p1;
         }
-        t1 = ux_px(220u, UX_Y_PANEL + 18u);                         /* (T1's ring, r ~115; T6's, r ~34: above the name band) */
-        t6 = ux_px(120u, UX_Y_PANEL + 40u);
+        t1 = ux_px(120u, UX_Y_PANEL + 9u);                          /* (T1's ring, the outermost, r ~65; T6's, r ~9.5: under */
+        t6 = ux_px(120u, UX_Y_PANEL + 65u);                         /* the name band's scrim) */
         ok = uxv.b[0] > 120u && uxv.b[2] > 60u && uxv.b[5] == 0u && uxv.b[1] == 0u;
-        ok &= ux_cdist(t6, UX_LINE) < 12u && ux_cdist(t1, UX_LINE) > 20u;
+        ok &= ux_cdist(t6, ux_mix(UX_BG, UX_LINE, 40)) < 8u && ux_cdist(t1, UX_LINE) > 20u;
+        ok &= ux_px(2u, UX_Y_PANEL + 1u) == UX_BG && ux_px(237u, UX_Y_PANEL + 148u) == UX_BG;   /* (the corners: dark) */
+        for (i = 0; i < 6u; i++) {                                  /* each track its own colour, neighbours clearly apart */
+            uint32_t c;
+            uxv.qph = (uint16_t)(i * 100u);                         /* (the turn: several phases) */
+            for (c = 0; c + 1u < NTRK; c++) ok &= ux_cdist(ux_vis_hue(c), ux_vis_hue(c + 1u)) > 15u;
+        }
         p0 = uxv.q_ms;
         for (i = 0; i < 40u && uxv.q_ms == p0; i++) frame();        /* silence again: a step (its window may still hold hits), */
         b0 = uxv.b[0];
         p0 = uxv.q_ms;
         for (i = 0; i < 40u && uxv.q_ms == p0; i++) frame();        /* .. and the next */
         ok &= uxv.b[0] < b0 && uxv.b[0] >= b0 / 2u - 1u && uxv.b[5] == 0u;   /* (eased: half the way down a step) */
-        bad += check("3a VISUAL: each ring its track's level (T1 outside, T6 inside): a silent track's ring dim; eased", ok);
+        bad += check("3a VISUAL: each ring its track's level and colour (T1 outside, T6 inside): a silent one dim; eased; corners dark", ok);
         uxv.intro = 0;                                              /* the first time on VISUAL: which ring is which */
         ui_power_on(); frame();
         for (i = 0; i < 4u && !ux_home_at(UXH_VISUAL); i++) press(B_HOME);
@@ -11235,9 +11242,10 @@ static int test_ux_visual(void)
     }
     ui_power_on(); frame(); press(B_HOME); ui.force = 1; frame();   /* drawn: every strip, rings over the whole panel */
     ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
-         ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 240u * 100u && ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u &&
+         ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 8000u && ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) < 240u * 110u &&
+         ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u &&
          ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;
-    bad += check("3a VISUAL: drawn (header, knobs, the rings over the panel, status, footer)", ok);
+    bad += check("3a VISUAL: drawn (header, knobs, the rings in the middle, the corners dark, status, footer)", ok);
     ui_power_on();
     return bad;
 }

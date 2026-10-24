@@ -101,15 +101,20 @@ int main(void)
     span_calls = span_px = 0;
     ux_glow(0, 0, 240, 150, 0);
     ck("level 0 writes nothing", span_px == 0);
-    {   /* (3a task 7, polish) VISUAL's rings: the edges chosen from a table of radii (UX_RING_R), every pixel of the 240 x 150
-         * panel written exactly once */
-        static const uint8_t E[14] = {0, 1, 3, 4, 7, 8, 11, 12, 15, 16, 19, 20, 23, 24};   /* glow 12, 22; six rings, not swollen */
-        uint8_t es[14];
-        uint16_t col[15], scr[15];
+    {   /* (3a task 7, tweaks) VISUAL's rings: six track rings round the centre, all inside the 150-row panel with a margin; the
+         * edges chosen from a table of radii (UX_RING_R), every pixel of the 240 x 150 panel written exactly once */
+        static const uint8_t E[12] = {1, 2, 5, 6, 9, 10, 13, 14, 17, 18, 21, 22};   /* six rings */
+        uint8_t es[12];
+        uint16_t col[16], scr[16];
         uint32_t i, sent = 0, sym = 1, mx = 0, mn = 255, asc = 1;
-        for (i = 0; i < 15u; i++) { col[i] = UX_BLEND[i * 17u]; scr[i] = ux_mix(UX_BG, UX_BLEND[i * 17u], 20); }
+        for (i = 0; i < 16u; i++) { col[i] = UX_BLEND[i * 16u]; scr[i] = ux_mix(UX_BG, UX_BLEND[i * 16u], 20); }
         for (i = 1; i < UX_RING_NR; i++) asc &= UX_RING_R[i] > UX_RING_R[i - 1u];
         ck("ring radii ascending; the table <= 2 KiB", asc && sizeof ux_rtab <= 2048u);
+        ck("the six rings (swollen too) inside the panel's 75 rows, 5 px or more to spare", UX_RING_R[23] <= 70u);
+        for (i = 0; i < 6u; i++)
+            asc &= UX_RING_R[4u * i + 2u] - UX_RING_R[4u * i + 1u] == 7u && UX_RING_R[4u * i] + 1u == UX_RING_R[4u * i + 1u] &&
+                   UX_RING_R[4u * i + 3u] == UX_RING_R[4u * i + 2u] + 1u && (i == 0u || UX_RING_R[4u * i + 1u] > UX_RING_R[4u * i - 1u]);
+        ck("each ring 7 px, its swell a px each side, a gap after it", asc);
         cv_begin(240, 150, UX_BG);
         for (i = 0; i < 240u * 150u; i++) cv_px[i] = 0x1234;
         cv_begin_raw(240, 150, UX_BG);
@@ -117,18 +122,20 @@ int main(void)
         ck("cv_begin_raw: the canvas set up, nothing filled", sent == 240u * 150u && cv_w == 240 && cv_h == 150);
         memset(wr, 0, sizeof wr);
         span_calls = span_px = 0;
-        ux_rings(E, 14, col, scr, 100, 120);
+        ux_rings(E, 12, col, scr, 100, 120);
         for (i = 0; i < 240u * 150u; i++) { if (wr[i] > mx) mx = wr[i]; if (wr[i] < mn) mn = wr[i]; }
         sent = 0;
         for (i = 0; i < 240u * 150u; i++) sent += cv_px[i] == 0x1234;
         printf("ux_rings:  240x150: %u spans, %u pixel writes (min %u max %u per pixel)\n", span_calls, span_px, mn, mx);
         ck("rings: every pixel written exactly once (36000 writes)", mn == 1 && mx == 1 && span_px == 240u * 150u && !sent);
 #define RPX(r) swap16(cv_px[75u * 240u + 120u + (r)])
-        ck("rings: the segments by radius (the centre glow, ring 0 at 32..38, its gap, past the last ring)",
-           RPX(5) == col[0] && RPX(15) == col[1] && RPX(25) == col[2] && RPX(33) == col[3] && RPX(38) == col[3] &&
-           RPX(39) == col[4] && RPX(112) == col[13] && RPX(119) == col[14]);
-        ck("rings: rows 100..119 the scrim's colours (ring 0 at 125,110; the glow at 125,99 outside)",
-           swap16(cv_px[110u * 240u + 125u]) == scr[3] && swap16(cv_px[99u * 240u + 125u]) == col[2]);
+        ck("rings: the segments by radius (centre, ring 0 at 7..13, its gap, ring 5 at 62..68, past it one segment)",
+           RPX(3) == col[0] && RPX(7) == col[1] && RPX(13) == col[1] && RPX(14) == col[2] && RPX(62) == col[11] &&
+           RPX(68) == col[11] && RPX(69) == col[12] && RPX(90) == col[12] && RPX(119) == col[12]);
+        ck("rings: the panel's corners past every ring (the last segment)", swap16(cv_px[0]) == col[12] &&
+           swap16(cv_px[149u * 240u + 239u]) == col[12]);
+        ck("rings: rows 100..119 the scrim's colours (ring 2 at 125,110; a gap at 125,99 outside)",
+           swap16(cv_px[110u * 240u + 125u]) == scr[5] && swap16(cv_px[99u * 240u + 125u]) == col[4]);
         for (i = 0; i < 120u; i++) {
             uint32_t y;
             for (y = 0; y < 150u; y++) sym &= cv_px[y * 240u + 120u + i] == cv_px[y * 240u + 119u - i];
@@ -136,15 +143,14 @@ int main(void)
         for (i = 0; i < 25u; i++) sym &= cv_px[(75u + i) * 240u + 200u] == cv_px[(74u - i) * 240u + 200u];
         ck("rings: symmetric about the panel's centre (left / right, up / down)", sym);
         memcpy(es, E, sizeof es);
-        es[2] = 2; es[3] = 5;                                       /* ring 0 swollen: 31 .. 39 */
+        es[0] = 0; es[1] = 3;                                       /* ring 0 swollen: 6 .. 14 */
         cv_begin_raw(240, 150, UX_BG);
         memset(wr, 0, sizeof wr);
-        span_px = 0;
-        ux_rings(es, 14, col, scr, 0, 0);
+        ux_rings(es, 12, col, scr, 0, 0);
         mx = 0; mn = 255;
         for (i = 0; i < 240u * 150u; i++) { if (wr[i] > mx) mx = wr[i]; if (wr[i] < mn) mn = wr[i]; }
         ck("rings: a ring swollen a px each side (its edges the table's neighbours), still each pixel once",
-           RPX(31) == col[3] && RPX(39) == col[3] && RPX(40) == col[4] && RPX(30) == col[2] && mn == 1 && mx == 1);
+           RPX(6) == col[1] && RPX(14) == col[1] && RPX(15) == col[2] && RPX(5) == col[0] && mn == 1 && mx == 1);
     }
     return fails ? 1 : 0;
 }

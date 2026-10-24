@@ -34,17 +34,18 @@ static uint16_t ux_glow_col(uint32_t level, uint32_t ring);   /* ring 0 outermos
 /* the panel glow, the mock-up's radial-gradient(ellipse at 40% 30%, violet .35, slide .12 45%, transparent 70%): level 3 is
  * that, levels 1 and 2 a third and two thirds of its strength; drawn as unhooked spans (not lint cells) */
 static void ux_glow(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t level);   /* level 0..3 (0: none) */
-/* HOME VISUAL's rings (3a task 7, polish): concentric circles round the canvas centre whose edges are radii of UX_RING_R
- * (ascending; a ring's edges and the px either side of them, so a ring can swell). ux_rings(e, ne, col, scrim): the ne edges
- * UX_RING_R[e[0]] < UX_RING_R[e[1]] < .. cut each row into ne + 1 segments, segment s (inside edge s, outside edge s - 1;
- * the last: past e[ne - 1]) coloured col[s], rows sy0 .. sy1 - 1 scrim[s] instead (a darker band under text). Every pixel
- * of the canvas (w even <= 240, h even <= 150, cv_oy 0) written exactly once, by spans from a table of each radius's
- * half-width per row built once (75 x 26 B): no trig, no fill under it (cv_begin_raw) */
-#define UX_RING_NR 26u
+/* HOME VISUAL's rings (3a task 7, polish, tweaks): concentric circles round the canvas centre whose edges are radii of
+ * UX_RING_R (ascending): six rings 7 px wide, 4 px apart, ring k's edges at 4k .. 4k + 3 (inner - 1, inner, outer,
+ * outer + 1: a ring can swell a px each side), the outermost inside the 150-row panel with 5 px to spare (the corners
+ * dark). ux_rings(e, ne, col, scrim): the ne edges UX_RING_R[e[0]] <
+ * UX_RING_R[e[1]] < .. cut each row into ne + 1 segments, segment s (inside edge s, outside edge s - 1; the last: past
+ * e[ne - 1]) coloured col[s], rows sy0 .. sy1 - 1 scrim[s] instead (a darker band under text). Every pixel of the canvas
+ * (w even <= 240, h even <= 150, cv_oy 0) written exactly once, by spans from a table of each radius's half-width per row
+ * built once (75 x 24 B): no trig, no fill under it (cv_begin_raw) */
+#define UX_RING_NR 24u
 static const uint8_t UX_RING_R[UX_RING_NR] = {
-    12, 22,                                              /* the centre glow's steps */
-    31, 32, 39, 40,   47, 48, 55, 56,   63, 64, 71, 72,  /* six rings 7 px wide, 9 px apart: inner - 1, inner, outer, outer + 1 */
-    79, 80, 87, 88,   95, 96, 103, 104, 111, 112, 119, 120,
+    6, 7, 14, 15,   17, 18, 25, 26,   28, 29, 36, 37,    /* T6 (innermost) .. */
+    39, 40, 47, 48, 50, 51, 58, 59,   61, 62, 69, 70,    /* .. T1 (outermost) */
 };
 static void ux_rings(const uint8_t *e, uint32_t ne, const uint16_t *col, const uint16_t *scrim, int32_t sy0, int32_t sy1);
 static void ux_band(int32_t y, int32_t h);               /* the blend as a solid band across the canvas */
