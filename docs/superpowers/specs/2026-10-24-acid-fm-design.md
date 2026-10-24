@@ -51,7 +51,7 @@ Every design choice below stays inside these. Nothing may touch the ROM bootload
 | LOFI (bytebeat, crush) | kept | — |
 | PHASE (CZ-style) | kept | — |
 | NOISE | kept | — |
-| VOICE | **slimmed** | formant / vowel pads and choirs only; the CMU dictionary, lyrics and syllable sequencing are removed. If what remains costs more than 16 KiB of flash, the user is asked before cutting further |
+| VOICE | kept | complete, as JIANT has it (words, lyrics, choirs). Slimmed only if the sample area cannot reach its target without it (§6.1), and then only after asking the user (user, 2026-10-24) |
 | ANIMAL | **removed** | number 14 stays reserved (stores name engines by number) |
 | WHEEL | **removed** | number 7 stays reserved |
 | BREAK | **new** | §6; takes a new number (15), appended |
@@ -210,7 +210,7 @@ One spec → plan → implementation cycle per piece:
 
 1. **Pipeline:** fork, ACID FM identity, native Linux build, tests passing, Pages site on `acid-fm`, a proven
    install of the rebranded build on the user's FM-1 and a proven rollback.
-2. **Trim:** remove ANIMAL and WHEEL, slim VOICE, remove the 43 genres' tables, measure the voice ceiling and set `NVOICE` (§5); measure freed flash,
+2. **Trim:** remove ANIMAL and WHEEL, remove the 43 genres' tables (VOICE stays, §4), measure the voice ceiling and set `NVOICE` (§5); measure freed flash,
    RAM and CPU; re-lay the flash data region and set the sample area's final bounds (§6.1). (The skins and
    creatures go in piece 3, so the final bounds are confirmed after it.)
 3. **ACID UI** (§8): a complete redesign of the splash and every screen, with its own design spec first.
@@ -223,4 +223,4 @@ One spec → plan → implementation cycle per piece:
 - Time-stretching breaks; recording samples on the device.
 - A web-side song generator.
 - More than 6 tracks.
-- Keeping JIANT's skins, creatures, ANIMAL, WHEEL or the VOICE dictionary.
+- Keeping JIANT's skins, creatures, ANIMAL or WHEEL.
