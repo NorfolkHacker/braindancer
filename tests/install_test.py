@@ -221,6 +221,19 @@ def installs():
     rc, out, err = cli(["--info"], dev)
     ok(rc == 0 and "FM-1_015" in out and "update loader" not in out, "--info: a port named 'JIANT' answering FM-1_015 is that firmware")
 
+    # (ACID FM 0.1) "ACID FM" / "ACID FM Update", as Linux, macOS and Windows show them
+    for name in ("ACID FM", "2- ACID FM", "MIDIIN2 (ACID FM)", "ACID FM MIDI 1"):
+        dev = FakeFM1(image, identity="FM-1_900", name=name, loader_name="ACID FM Update", after_name="ACID FM")
+        rc, out, err = cli([p, "--yes"], dev)
+        ok(rc == 0 and dev.bad == 0 and dev.upgrades == 2 and "done: the FM-1 runs FM-1_900" in out,
+           f"install: a port named {name!r} -> 'ACID FM Update' -> 'ACID FM'")
+    dev = FakeFM1(image, identity="ota-FM-1_900", name="ACID FM Update", after_name="ACID FM")
+    rc, out, err = cli(["--info"], dev)
+    ok(rc == 0 and "update loader" in out, "--info: 'ACID FM Update' (ota-FM-1_900) is the update loader")
+    dev = FakeFM1(image, identity="FM-1_900", name="Acidlab Bassline")
+    rc, out, err = cli(["--info"], dev)
+    ok(rc != 0, "--info: other gear with 'acid' in its name is never probed")
+
     dev = FakeFM1(image, identity="\x1b[2J\x1b]0;x\x07FM-1_905", name="Felucca")
     rc, out, err = cli(["--info"], dev)
     ok(rc == 0 and "FM-1_905" in out and not any(c in out for c in "\x1b\x07"),

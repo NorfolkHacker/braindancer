@@ -1,7 +1,8 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only
      Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-     Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) -->
+     Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+     Portions Copyright (C) 2026 NorfolkHacker -->
 <!-- Felucca web editor. One file, no libraries. Protocol: EDITOR_PROTOCOL.md.
      Add ?mock=1 to the URL to use a built-in simulated device. -->
 <html lang="ja">
@@ -2832,7 +2833,7 @@ async function connect() {
       }
       access.onstatechange = onState;
     }
-    const isF = (p) => /felucca|jiant/i.test(p.name || "") && p.state !== "disconnected";
+    const isF = (p) => /felucca|jiant|acid ?fm/i.test(p.name || "") && p.state !== "disconnected";
     const input = [...access.inputs.values()].find(isF);
     const output = [...access.outputs.values()].find(isF);
     if (!input || !output) { sayK("nodevice"); return; }
@@ -2885,7 +2886,7 @@ function disconnect(reasonKey = "disconnected") {
 
 function onState(e) {
   const p = e.port;
-  if (!p || !/felucca|jiant/i.test(p.name || "")) return;
+  if (!p || !/felucca|jiant|acid ?fm/i.test(p.name || "")) return;
   if (dev && p.state === "disconnected" && (p.id === dev.input.id || p.id === dev.output.id)) {
     disconnect("lost");
   } else if (!dev && wantConnected && p.state === "connected" && p.type === "output") {

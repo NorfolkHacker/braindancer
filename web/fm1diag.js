@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+// Portions Copyright (C) 2026 NorfolkHacker
 //
 // (JIANT 0.9.11) The web installer's decisions, out of the page so web/test_web.mjs runs them against simulated FM-1s:
 // what firmware the connected FM-1 runs (fwKind), the two flows (Install, Return to official V15), the browser and
@@ -32,11 +33,12 @@ export function infoVersion(a) {
   const z = a.indexOf(0);
   return z < 0 ? "" : String.fromCharCode(...a.slice(0, z));
 }
-/* (0.6.62) JIANT: its tag 0x4A in INFO, or an older JIANT's six tracks with a v0.x version */
+/* (0.6.62) JIANT: its tag 0x4A in INFO, or an older JIANT's six tracks with a v0.x version
+ * (ACID FM 0.1) ACID FM's INFO: the same tag, the version "ACID FM v.." */
 export function isJiantInfo(a) {
   const z = a.indexOf(0); if (z < 0) return false;
   const version = String.fromCharCode(...a.slice(0, z));
-  if (!/^(FELUCCA|JIANT) /i.test(version)) return false;
+  if (!/^(FELUCCA|JIANT|ACID FM) /i.test(version)) return false;
   let pos = z + 1; const engines = a[pos]; pos += 5;
   for (let i = 0; i < engines; i++) { const end = a.indexOf(0, pos); if (end < 0) return false; pos = end + 1; }
   const ntrk = a[pos], ext = a.slice(pos + 1);
@@ -50,7 +52,7 @@ export function archiveInfo(a) {
   const engines = a[pos]; pos += 5;
   for (let i = 0; i < engines; i++) { const end = a.indexOf(0, pos); if (end < 0) throw new Error("Invalid INFO"); pos = end + 1; }
   const ext = a.slice(pos + 1);
-  const supported = /^(FELUCCA|JIANT) /i.test(version) && ext[0] === 16 && ext[1] === 0x55 && ext[2] === 1 &&
+  const supported = /^(FELUCCA|JIANT|ACID FM) /i.test(version) && ext[0] === 16 && ext[1] === 0x55 && ext[2] === 1 &&
     ext[4] === 0x4d && ext[5] === 1 && ext[8] === 0x42 && ext[9] === 1 && !!(ext[10] & 1);
   return { version, supported };
 }

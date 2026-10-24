@@ -1645,6 +1645,7 @@ const PROFILES = {
   v16: { identity: "FM-1_016", name: "FM-1", after: "FM-1_015" },
   jiant: { identity: "FM-1_900", name: "JIANT", info: infoOf("JIANT v0.9.12", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (0.9.12) USB name "JIANT" */
   jiantFm: { identity: "FM-1_900", name: "JIANT FM", info: infoOf("JIANT v0.9.11", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* 0.7.0..0.9.11 */
+  acidFm: { identity: "FM-1_900", name: "ACID FM", info: infoOf("ACID FM v0.1", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (ACID FM 0.1) */
   felucca: { identity: "FM-1_961", name: "Felucca", info: infoOf("FELUCCA v1.6.1", 4), objs: FELUCCA_OBJS, after: "FM-1_015" },
   felucca10: { identity: "FM-1_910", name: "Felucca", info: infoOf("FELUCCA v1.0", 4, { backup: false }), after: "FM-1_015" },
   skiff: { identity: "FM-1_732", name: "Skiff", info: infoOf("FELUCCA v1.3.2", 6), objs: SKIFF_OBJS, after: "FM-1_015" },
@@ -1674,6 +1675,8 @@ async function installerFlows() {
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.12", "installer: Install over JIANT (USB name 'JIANT', 0.9.12): written");
   x = await run("jiantFm");
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.11", "installer: Install over JIANT 0.9.11 (USB name 'JIANT FM'): written");
+  x = await run("acidFm");
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "ACID FM v0.1", "installer: Install over ACID FM (USB name 'ACID FM'): written");
   x = await run("jiant", { name: "Felucca" });
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant", "installer: JIANT under the name Windows cached ('Felucca'): known by INFO, written");
   for (const name of ["2- JIANT", "JIANT 1", "JIANT MIDI 1"]) {
@@ -1717,11 +1720,11 @@ async function installerFlows() {
   /* (0.9.12) the USB names over the versions, as hosts show them: every one is probed (fm1ota.js PORT_RE) and the
    * editor connects to every JIANT / Felucca one (editor.html's port filter), never to other gear */
   const NAMES = ["JIANT", "2- JIANT", "MIDIIN2 (JIANT)", "MIDIOUT2 (JIANT)", "JIANT MIDI 1", "JIANT 1", "JIANT FM", "JIANT Update",
-    "Felucca", "Felucca Update", "2- Felucca"];
+    "Felucca", "Felucca Update", "2- Felucca", "ACID FM", "2- ACID FM", "MIDIIN2 (ACID FM)", "ACID FM MIDI 1", "ACID FM Update"];
   const edSrc = readFileSync(join(HERE, "editor.html"), "utf8");
-  const edRes = [...edSrc.matchAll(/\/(felucca\|jiant)\/i\.test\(p\.name/g)].map((m) => new RegExp(m[1], "i"));
-  ok(NAMES.every((n) => PORT_RE.test(n)) && !["IAC Driver Bus 1", "Microsoft GS Wavetable Synth", "Arturia KeyStep"].some((n) => PORT_RE.test(n)),
-    "installer: PORT_RE takes JIANT, JIANT FM, Felucca and their update names (not other gear)");
+  const edRes = [...edSrc.matchAll(/\/(felucca\|jiant\|acid \?fm)\/i\.test\(p\.name/g)].map((m) => new RegExp(m[1], "i"));
+  ok(NAMES.every((n) => PORT_RE.test(n)) && !["IAC Driver Bus 1", "Microsoft GS Wavetable Synth", "Arturia KeyStep", "Acidlab Bassline"].some((n) => PORT_RE.test(n)),
+    "installer: PORT_RE takes JIANT, JIANT FM, Felucca, ACID FM and their update names (not other gear)");
   ok(edRes.length === 2 && edRes.every((re) => NAMES.filter((n) => !/update/i.test(n)).every((n) => re.test(n)) && !re.test("IAC Driver Bus 1")),
     "editor: its port filter (connect, reconnect) takes JIANT, JIANT FM and Felucca");
   ok(portBase("2- JIANT") === "jiant" && portBase("MIDIIN2 (JIANT)") === "jiant" && portBase("JIANT 1") === "jiant",
