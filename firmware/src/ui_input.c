@@ -1610,7 +1610,7 @@ static void presets_turn(int32_t s)
             page_flash();
         }
         ui.hot_col = 0;
-        ui.hot_t = 40, ui.knob_ms = fm1_ms;
+        ui.hot_t = 40;
         return;
     }
     preset_step(s);
@@ -2214,7 +2214,7 @@ static void ui_input_frame(void)
         if (ks[k]) {
             layer_knob(k, ks[k]);
             ui.hot_col = (uint8_t)k;
-            ui.hot_t = 40, ui.knob_ms = fm1_ms;
+            ui.hot_t = 40;
         }
     song.grid = (uint8_t)keys_mode();                 /* (the menu, a dialog: the keys play again; NAME: silent) */
     if (home == BT_TAP && ui.menu) {                    /* HOME (pressed, or held) closes the menu, from ABOUT too; */
@@ -2551,7 +2551,7 @@ static void ui_input_frame(void)
         if ((held = lock_held()) != 0u) {               /* a step held on STEP: KNOB k locks (parameter locks) */
             lock_turn(k, s, held);
             ui.hot_col = (uint8_t)k;
-            ui.hot_t = 40, ui.knob_ms = fm1_ms;
+            ui.hot_t = 40;
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
@@ -2560,7 +2560,7 @@ static void ui_input_frame(void)
             || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE ||
             pg->graph == GR_LIVE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
-            ui.hot_t = 40, ui.knob_ms = fm1_ms;
+            ui.hot_t = 40;
         }
         if (ui.home)
             ux_knob_touch(k);                           /* (ACID FM 3a) its column (TRACKS: its line) lit UX_HOT_MS */

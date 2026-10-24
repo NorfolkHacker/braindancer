@@ -10957,10 +10957,12 @@ static int test_ux_tracks(void)
          (uint32_t)trk[2].p[P_LEVEL] == lv[2] && ux_knob_hot() == 1;
     st = ux_home_status(&col);
     ok &= st[0] == 'T' && st[1] == '2' && str_len(st) > 12u && col == UX_TEXT;   /* ("T2 <sound> . LEVEL n") */
-    {
-        char want[12] = "LEVEL ";
-        fmt_int(want + 6, (int32_t)((uint32_t)trk[1].p[P_LEVEL] * 99u / 127u));
-        ok &= str_len(st) > str_len(want) && str_eq(st + str_len(st) - str_len(want), want);
+    {   /* (fix round 1: one scale, the mixer's: "LEVEL -2.1 dB") */
+        char want[32] = "LEVEL ", v[16];
+        const char *u = "";
+        param_format(&TP[P_LEVEL], trk[1].p[P_LEVEL], v, &u);
+        str_cpy(want + 6, v, 16); str_cpy(want + str_len(want), " dB", 8);
+        ok &= str_eq(u, "dB") && str_len(st) > str_len(want) && str_eq(st + str_len(st) - str_len(want), want);
     }
     fm1_ms += UX_HOT_MS; frame();                                   /* the turn's moment over: the hint again */
     st = ux_home_status(&col);
@@ -10972,6 +10974,21 @@ static int test_ux_tracks(void)
           (uint32_t)trk[4].p[P_LEVEL] == lv[4];
     turn(EN_K4, 1); frame();
     ok &= (uint32_t)trk[5].p[P_LEVEL] == lv[5] + 1u;
+    {   /* every LEVEL the mixer can show fits the ridges' number column; a name too long loses its vowels first */
+        char v[16], nm[16];
+        const char *u;
+        int32_t l;
+        for (l = TP[P_LEVEL].min; l <= TP[P_LEVEL].max; l++) {
+            param_format(&TP[P_LEVEL], l, v, &u);
+            ok &= text_w(&UF_LBL, v) <= 232 - (UXR_X0 + (int32_t)UXR_W + 2);
+        }
+        str_cpy(nm, "T4 BYTEBEAT", sizeof nm);
+        ux_fit_name(nm, text_w(&UF_LBL, "T4 BYTBT"));
+        ok &= str_eq(nm, "T4 BYTBT");
+        str_cpy(nm, "T2 PAD", sizeof nm);
+        ux_fit_name(nm, 48);
+        ok &= str_eq(nm, "T2 PAD");
+    }
     bad += check("3a TRACKS: KNOB 1..4 the levels of the four holding the selected track (T5: T3..T6); status the turn", ok);
 
     ui_power_on(); ux_levels_reset(); frame();
@@ -10999,6 +11016,15 @@ static int test_ux_tracks(void)
     ui_power_on(); ux_levels_reset(); ui.force = 1; frame();       /* stopped: flat lines on their baselines */
     ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
          ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u && ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;
+    {   /* the header's right: the bar, the transport (stopped: the square), the tempo */
+        char r[32], w[32] = "BAR 1/1 \xB7 " UX_GL_STOP " ";
+        fmt_int(w + str_len(w), song.g[G_BPM]); str_cpy(w + str_len(w), " BPM", 8);
+        ux_trk_right(r);
+        ok &= str_eq(r, w);
+        song.playing = 1; ux_trk_right(r); song.playing = 0;
+        ok &= strstr(r, UX_GL_PLAY) != 0 && strstr(r, UX_GL_STOP) == 0;   /* (S_HOME_PLAY's header: playing) */
+        ok &= text_w(&UF_HDR, UX_GL_PLAY) > text_w(&UF_HDR, " ") && text_w(&UF_HDR, UX_GL_STOP) > text_w(&UF_HDR, " ");
+    }
     ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(1)) == UX_SLIDE && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) == UX_ACCENT &&
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_SLIDE;
     track_select(4); ui.force = 1; frame();                         /* T5: T3..T6 in the knobs' colours, T1 T2 dimmed */
@@ -12432,7 +12458,7 @@ static int test_card_heat(void)
         if (!d || !vp) continue;
         for (i = 0; i < 3u; i++) {
             *vp = (int16_t)(d->min + (d->max - d->min) * (int32_t)i / 2);
-            ui.knob_ms = fm1_ms; ui.force = 1; frame();
+            ui.force = 1; frame();
             other &= gauge_px(c) == T_K(c);
         }
     }

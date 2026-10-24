@@ -8,8 +8,8 @@ tools/build.py generate() with --preset inter-tight).
 
   gen_aa_font.py OUT.h --preset standin|inter-tight|chakra-petch [--tracking EM] [--gamma G] [--kern-min N]
   gen_aa_font.py ux_fonts.h --preset acid   (ACID FM: UF_LBL 8 px @600, UF_HDR 10 @500, UF_VAL 14 @500, UF_TTL 32 @700,
-                UF_MARK 52 @700 of Inter Tight; code 0x86 = the arrow U+2192; the ASCII range of LBL / TTL / MARK is the space
-                only, their characters are extras)
+                UF_MARK 52 @700 of Inter Tight; code 0x86 = the arrow U+2192, 0x87 / 0x88 = play U+25B6 / stop U+25A0
+                (UF_HDR); the ASCII range of LBL / TTL / MARK is the space only, their characters are extras)
   gen_aa_font.py OUT.h --face NAME=FONT[#index]:PX:FIRST-LAST[+0xNN,...] ...   (explicit faces)
 
 Faces of the presets (S labels, M values/headers, L big numerals / titles):
@@ -45,7 +45,8 @@ import aa_raster as ar  # noqa: E402
 FONTS = Path(__file__).resolve().parents[1] / "fonts"
 LOCAL_INTER = os.path.expanduser("~/Library/Fonts/Inter.ttc")   # 4.001: 0 Regular, 10 Medium, 12 SemiBold
 EXTRAS = [0xA9, 0xB0, 0xB7, 0xC4, 0xD6, 0xDC, 0xE4, 0xF6, 0xFC, 0x2026]  # (c) deg . A: O: U: a: o: u: (Latin-1), ...
-CODE = {0x2026: 0x85, 0x2192: 0x86}                  # characters outside Latin-1 -> their one-byte code in the firmware
+CODE = {0x2026: 0x85, 0x2192: 0x86, 0x25B6: 0x87, 0x25A0: 0x88}   # characters outside Latin-1 -> their one-byte code in the
+                                                   # firmware: ... 0x85, the arrow 0x86, (ACID FM 3a) play 0x87 and stop 0x88 (UF_HDR)
 PHASES, PHASES_L = 2, 2                # horizontal phases per glyph (aa_raster.raster_font): S M, L. (JIANT 0.9.16, flash)
                                        # S M 2, were 4: 12.9 KB less of the glyph tables; a glyph within 1/4 px of its
                                        # place, a gap within 1/2 px (text_spacing_test.py, as L since 0.5)
@@ -65,6 +66,7 @@ UI_PRESET = "jiant-lab"            # the firmware's faces (tools/build.py; tests
 PFX = "AF"                         # the faces' C prefix: AF_<N> (jiant-lab), UF_<N> (acid)
 UF_LBL = " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00b7\u2192"   # (ACID FM) upper-case labels; arrow = code 0x86
 UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7"   # HDR / VAL: ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
+UF_HDR = UF_TEXT + "\u25b6\u25a0"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop (code 0x88)
 UF_TTL = " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 UF_MARK = " ACDFIM"                # the wordmark's letters only
 L_CHARS = " #+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXY"
@@ -100,7 +102,7 @@ def preset(name):
         v = str(FONTS.parent / "assets" / "fonts" / "InterTight[wght].ttf")
         sparse = lambda chars: [ord(c) for c in dict.fromkeys(chars[1:])]
         return [("LBL", v + "@600", 8, (32, 32), sparse(UF_LBL), 0.0, 1),
-                ("HDR", v + "@500", 10, (32, 32), sparse(UF_TEXT), 0.0, 1),
+                ("HDR", v + "@500", 10, (32, 32), sparse(UF_HDR), 0.0, 1),
                 ("VAL", v + "@500", 14, (32, 32), sparse(UF_TEXT), 0.0, 1),
                 ("TTL", v + "@700", 32, (32, 32), sparse(UF_TTL), 0.0, 1),
                 ("MARK", v + "@700", 52, (32, 32), sparse(UF_MARK), 0.0, 1)]

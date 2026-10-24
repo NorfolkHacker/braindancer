@@ -158,7 +158,7 @@ static void vx_arc(const vxf_t *f, int32_t cx, int32_t cy, int32_t rx, int32_t r
 static uint32_t vx_rnd(uint32_t *r) { *r ^= *r << 13; *r ^= *r >> 17; *r ^= *r << 5; return *r; }
 /* the level of track t now (0..256: its part's peak, slewed: a hit at once, a quick fall), k: which drawing; its time
  * runs with it (once a frame) */
-static int32_t vx_level(const track_t *t, uint32_t k, int32_t en_home)
+static int32_t vx_level(const track_t *t, uint32_t k)
 {
     uint32_t dt = ui.frame - vxs.fr[k], dm = fm1_ms - vxs.ms[k];
     int32_t v;
@@ -172,14 +172,10 @@ static int32_t vx_level(const track_t *t, uint32_t k, int32_t en_home)
         vxs.mt[k] += dm * 7680u / 1000u;
     if (ui_prefs & PREF_ANIM_OFF)
         return vxs.en[k] = 0;                            /* (ANIM OFF: at rest) */
-    if (en_home >= 0)
-        v = en_home;                                     /* (HOME: its own, eco_step's) */
-    else {
-        v = ux_trk_peak((uint32_t)(t - trk)) * 256 / 7000;   /* (ACID FM 3a: ux_home.c reads the peaks, once a frame) */
-        v = v > 256 ? 256 : v;
-        v = v > vxs.en[k] ? v : vxs.en[k] + (v - vxs.en[k] - 2) / 3;
-    }
-    v = v > 4 ? v : 0;                                   /* (HOME's level rests a little above 0: silence) */
+    v = ux_trk_peak((uint32_t)(t - trk)) * 256 / 7000;   /* (ACID FM 3a: ux_home.c reads the peaks, once a frame) */
+    v = v > 256 ? 256 : v;
+    v = v > vxs.en[k] ? v : vxs.en[k] + (v - vxs.en[k] - 2) / 3;
+    v = v > 4 ? v : 0;                                   /* (a level that rests a little above 0: silence) */
     vxs.en[k] = v;
     if (v)
         vxs.tm[k] += dt * (uint32_t)(120 + v * 4);
@@ -386,11 +382,11 @@ static VX_CODE void vh_step(int32_t en, int32_t voi)
         }
     }
 }
-static VX_CODE void vx_voice(const track_t *t, int32_t cx, int32_t cy, int32_t s, int32_t en_home)
+static VX_CODE void vx_voice(const track_t *t, int32_t cx, int32_t cy, int32_t s)
 {
     vxf_t f = {cx, cy, s};
     int16_t tg[11], *a = vxs.art;
-    int32_t en = vx_level(t, 0, en_home), voi, asp, fri, i, j, hb, pr, uly, mid, bul[VH_N], ll[2], q[2 * 7], w[2 * VH_N];
+    int32_t en = vx_level(t, 0), voi, asp, fri, i, j, hb, pr, uly, mid, bul[VH_N], ll[2], q[2 * 7], w[2 * VH_N];
     int32_t W[4][2 * VH_N], *R = W[0], *F = W[1];        /* (the walls, roof and floor; their glows) */
     uint32_t cls = vx_voice_target(t, tg, &voi, &asp, &fri), n0 = vxs.nms[0], r, k, nm[2] = {0, 0};
     vx_age(t, 0, 0);                                     /* (a note newer than the last: WORDS off, the nod's onset) */
@@ -674,11 +670,11 @@ static void vx_bug(const vxf_t *f, int32_t x, int32_t y, int32_t rx, int32_t ry,
             ry * 15 / 100, mo > 6 ? mo : 0, ry * 18 / 100 + mo / 5, he, 205, lit < 0 ? -1 : 154);
 }
 /* the kit at (cx, cy) Q4 px, s: a unit's px (Q8); sel: the sound edited (lit), -1 none */
-static void vx_kit(const track_t *t, int32_t cx, int32_t cy, int32_t s, int32_t en_home, int32_t sel)
+static void vx_kit(const track_t *t, int32_t cx, int32_t cy, int32_t s, int32_t sel)
 {
     vxf_t f = {cx, cy, s};
     drum_lane_t *K = drum_kit_of(t);
-    int32_t e[8], lt[8], en = vx_level(t, 2, en_home), i, k;
+    int32_t e[8], lt[8], en = vx_level(t, 2), i, k;
     uint32_t ag[8], now = fm1_ms, dt = now - vxs.kms;
     if (dt > 100u) dt = 100u;                            /* (a pause: no jump) */
     vxs.kms = now;
@@ -889,10 +885,10 @@ static VX_CODE void vx_an_wave(const track_t *t, int32_t en, uint32_t mt, int32_
         for (i = 0; i < 128u; i++) vxs.wv[i] = (int16_t)(vxs.wv[i] * 4096 / mx);
 }
 /* CÉLULA */
-static VX_CODE void vx_analog(const track_t *t, const int32_t *A, int32_t en_home)
+static VX_CODE void vx_analog(const track_t *t, const int32_t *A)
 {
     const int16_t *p = t->p;
-    int32_t en = vx_level(t, 3, en_home), note, j, i, cy = 32;
+    int32_t en = vx_level(t, 3), note, j, i, cy = 32;
     uint32_t mt = vxs.mt[3], age = vx_age(t, 3, &note), a0 = vx_ang(mt, 4), a1 = vx_ang(mt, 100);
     vxf_t f = vx_uf(A, 112, 32);
     int32_t dr = (p[P_E6] * 516 >> 8), cut = (p[P_E4] * 516 >> 8), res = (p[P_E5] * 516 >> 8), hb = (dr * 56 >> 8), nz = (p[P_E3] * 516 >> 8);
@@ -1027,11 +1023,11 @@ static void vx_fm_num(const vxf_t *f, const vxfm_t *o, uint32_t k, int32_t x, in
 }
 /* COLONIA: the operators wired as the algorithm, the carriers standing on the output; sel the operator picked (or 6),
  * op2: OPERATOR 2 (its DETUNE a shimmer) */
-static VX_CODE void vx_fm6(const track_t *t, const int32_t *A, int32_t en_home, uint32_t sel, int op2)
+static VX_CODE void vx_fm6(const track_t *t, const int32_t *A, uint32_t sel, int op2)
 {
     vxfm_t o;
     vxf_t f = vx_uf(A, 100, 0);
-    int32_t en = vx_level(t, 4, en_home), x0 = 9999, x1 = -9999, y0 = 9999, s, l = 9999, r = -9999, k, j, fb;
+    int32_t en = vx_level(t, 4), x0 = 9999, x1 = -9999, y0 = 9999, s, l = 9999, r = -9999, k, j, fb;
     uint32_t mt = vxs.mt[4], age = vx_age(t, 4, 0);
     vxs.kc = 1;
     vx_fm_ops(t, &o);
@@ -1105,7 +1101,7 @@ static VX_CODE void vx_fm6_page(const track_t *t, uint32_t sel, int op2)
     char b[16] = {'A', 'L', 'G', ' ', (char)('0' + (alg + 1u) / 10u), (char)('0' + (alg + 1u) % 10u), 0};
     char fq[16] = {'O', 'P', (char)('1' + sel), ' ', 0};
     cv_oy = 0;
-    vx_fm6(t, A, -1, sel, op2);
+    vx_fm6(t, A, sel, op2);
     if (!t->p[P_E0])
         str_cpy(b + 6, " PAT", 5);
     cv_text(10, 4, &AF_S, b, hot == P_E0 || hot == P_E7 ? T_ACCENT : T_MID);
@@ -1122,7 +1118,7 @@ static VX_CODE void vx_fm6env(const track_t *t)
     const uint8_t *op = fop_bytes((uint32_t)(t - trk));
     vxfm_t o;
     vxf_t f = vx_uf(A, 100, 0);
-    int32_t x[6], y[6], k, i, en = vx_level(t, 4, -1), px, py, e, a, r, u, sg = fop_stg & 3u;
+    int32_t x[6], y[6], k, i, en = vx_level(t, 4), px, py, e, a, r, u, sg = fop_stg & 3u;
     uint32_t mt = vxs.mt[4], age = vx_age(t, 4, 0), ko = fop_op % 6u, st;
     char b[24] = {'O', 'P', (char)('1' + ko), 0};
     (void)en;
@@ -1228,11 +1224,11 @@ static VX_CODE void vx_nz_step(const track_t *t, int32_t en)
     vxs.rs = r;
 }
 /* ENJAMBRE */
-static VX_CODE void vx_noise(const track_t *t, const int32_t *A, int32_t en_home)
+static VX_CODE void vx_noise(const track_t *t, const int32_t *A)
 {
     const int16_t *p = t->p;
     vxf_t f = vx_uf(A, 100, 0);
-    int32_t en = vx_level(t, 6, en_home), md = p[P_E0] & 3, peak = (p[P_E3] * 516 >> 8), i, j, n;
+    int32_t en = vx_level(t, 6), md = p[P_E0] & 3, peak = (p[P_E3] * 516 >> 8), i, j, n;
     uint32_t mt = vxs.mt[6], age = vx_age(t, 6, 0), reg = 0;
     int32_t sq = vx_sq(77 + (en * 154 >> 8), age), sx = 256 + (sq * 77 >> 8), sy = 256 - (sq * 77 >> 8);
     vxs.kc = 1;
@@ -1326,11 +1322,11 @@ static void vx_whorl(const vxf_t *f, const int32_t *c, int32_t u0, int32_t u1, i
     }
 }
 /* CARACOL */
-static VX_CODE void vx_phase(const track_t *t, const int32_t *A, int32_t en_home)
+static VX_CODE void vx_phase(const track_t *t, const int32_t *A)
 {
     const int16_t *p = t->p;
     vxf_t f = vx_uf(A, 110, 48);
-    int32_t en = vx_level(t, 7, en_home), i, k, mx = 1, prev = 0, px = 0, py = 0, q[2 * 13];
+    int32_t en = vx_level(t, 7), i, k, mx = 1, prev = 0, px = 0, py = 0, q[2 * 13];
     uint32_t mt = vxs.mt[7], age = vx_age(t, 7, 0), w1 = (uint32_t)p[P_E0] & 7u, w2 = p[P_E1] ? (uint32_t)(p[P_E1] - 1) & 7u : w1;
     int32_t fb = (p[P_E7] * 516 >> 8), sub = (p[P_E6] * 516 >> 8), det = p[P_E4], ring = p[P_E5], line2 = det || ring;
     int32_t dcw = clamp((p[P_E2] * 516 >> 8) + en * p[P_E3] * 179 / 127 / 256 - (p[P_E3] * 77 >> 8), 0, 255) * 256;
@@ -1568,7 +1564,7 @@ static void vx_lf_sp(const int32_t *X, const int32_t *Y, const int32_t *R, int32
     o[4] = Y[i0 + 1] - Y[i0];
 }
 /* ORGANISMO DE CIRCUITO: the caterpillar flattening, as CHIP has fewer bits, into a DIP seen from above */
-static VX_CODE void vx_lofi(const track_t *t, const int32_t *A, int32_t en_home)
+static VX_CODE void vx_lofi(const track_t *t, const int32_t *A)
 {
     static const uint8_t POW22[8] = {3, 12, 30, 56, 91, 136, 191, 255};   /* ((i / 8) ^ 2.2, Q8: LOOP's curl) */
     const int16_t *p = t->p;
@@ -1576,7 +1572,7 @@ static VX_CODE void vx_lofi(const track_t *t, const int32_t *A, int32_t en_home)
     vxsk_t sk[2];
     int32_t a0 = A[2] * 256 / 124, b0 = (A[3] - 4) * 256 / 94, w = p[P_E1], chip = p[P_E0], BF, step, hold, fresh;
     uint32_t gap = ui.frame - vxs.fr[8], dm = fm1_ms - vxs.ms[8], new_fr = gap != 0u;
-    int32_t en = vx_level(t, 8, en_home), i, j, pk = 6000, jsc, X[9], Y[9], R[9], q[2 * 18], m, e1, e2, e3, e4, legf = 4096, mm = 4096;
+    int32_t en = vx_level(t, 8), i, j, pk = 6000, jsc, X[9], Y[9], R[9], q[2 * 18], m, e1, e2, e3, e4, legf = 4096, mm = 4096;
     uint32_t mt, age = vx_age(t, 8, 0), w0 = scope_w - 256u, byte = 0, cr, tt = 0, va;
     vxf_t g;
     L.f.s = (a0 < b0 ? a0 : b0) * 112 / 100;
@@ -1854,32 +1850,32 @@ static VX_CODE void vx_lofi(const track_t *t, const int32_t *A, int32_t en_home)
 
 /* ------------------------------------------------------------------------------------------------ the glue --- */
 /* the engine's own creature in the rectangle x y w h (px: EDIT's left panel 8 14 108 112, HOME's middle 146 x 112, or a
- * whole panel: each fits itself to it), en_home: HOME's level for the track (-1: its own); 0 when the engine has none
- * (its being then) */
+ * whole panel: each fits itself to it); 0 when the engine has none (its being then). (ACID FM 3a: the level HOME's
+ * BEING passed in, ui_lzhome.c's, gone with it) */
 static int32_t vx_fit(int32_t w, int32_t h, int32_t uw, int32_t uh)   /* a unit's px (Q8): uw x uh units in w x h px */
 {
     return w * 256 / uw < h * 256 / uh ? w * 256 / uw : h * 256 / uh;
 }
-static int vx_draw(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h, int32_t en_home)
+static int vx_draw(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     const engine_t *e = trk_engp(t);
     int32_t A[4] = {x, y, w, h}, cx = x * 16 + w * 8, cy = y * 16 + h * 8, s;
     if (e == &ENG_FORMANT) {                             /* (the tract ~80 x 62 units about (-20, 37): the crown off) */
         s = vx_fit(w, h, 80, 62);
-        vx_voice(t, cx + 5 * s / 4, cy - 37 * s / 16, s, en_home);
+        vx_voice(t, cx + 5 * s / 4, cy - 37 * s / 16, s);
     } else if (trk_eng(t) == ENGI_DRUM) {    /* (the kit ~128 x 92) */
         s = vx_fit(w, h, 128, 92);
-        vx_kit(t, cx - (s >> 4), cy + (48 * s >> 8), s, en_home, -1);
+        vx_kit(t, cx - (s >> 4), cy + (48 * s >> 8), s, -1);
     } else if (e == &ENG_ANALOG)
-        vx_analog(t, A, en_home);
+        vx_analog(t, A);
     else if (trk_eng(t) == ENGI_FM6)
-        vx_fm6(t, A, en_home, 6u, 0);
+        vx_fm6(t, A, 6u, 0);
     else if (e == &ENG_NOISE)
-        vx_noise(t, A, en_home);
+        vx_noise(t, A);
     else if (e == &ENG_PHASE)
-        vx_phase(t, A, en_home);
+        vx_phase(t, A);
     else if (e == &ENG_LOFI)
-        vx_lofi(t, A, en_home);
+        vx_lofi(t, A);
     else
         return 0;
     return 1;
@@ -1890,7 +1886,7 @@ static void vx_kit_page(const track_t *t, int32_t lane)
 {
     char b[16];
     uint32_t l;
-    vx_kit(t, 120 * 16, 73 * 16, 368, -1, lane);
+    vx_kit(t, 120 * 16, 73 * 16, 368, lane);
     l = lane < 0 ? vxs.last & 7u : (uint32_t)lane & 7u;
     str_cpy(b, drum_lane_abbr(t, l), sizeof b);
     str_cpy(b + str_len(b), " \xB7 ", sizeof b - str_len(b));

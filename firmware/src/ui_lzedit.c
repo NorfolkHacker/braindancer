@@ -60,7 +60,7 @@ static void graph_sound_lz(const track_t *t)
     /* (0.8.9, the skins' mock-up) the being large on the left (its tendrils kept on its side), the page's name over it, the
      * sound's under it; on the right the scope bare (BOTTOM, HUD, AIR), the page's four parameters as
      * chips in their knobs' colours (the knob turning: its label TEXT), the other page's names under them */
-    if (!ui_scope && vx_draw(t, 4, 2, 232, (int32_t)cv_h - 4, -1)) {   /* (0.9.7) MENU > DISPLAY > SCOPE
+    if (!ui_scope && vx_draw(t, 4, 2, 232, (int32_t)cv_h - 4)) {   /* (0.9.7) MENU > DISPLAY > SCOPE
                                                          * OFF (the default): the creature on the whole panel, centred, no
                                                          * SCOPE card and no chips (the knobs' cards say them); the page's name
                                                          * and the sound's small in its corners (BOTTOM, HUD, AIR: outlined) */
@@ -71,7 +71,7 @@ static void graph_sound_lz(const track_t *t)
         cv_halo = 0;
         return;
     }
-    if (!vx_draw(t, 8, 14, 108, 112, -1))              /* (0.9.4 / 0.9.6: the engines' own creatures: ui_engvis.c) */
+    if (!vx_draw(t, 8, 14, 108, 112))              /* (0.9.4 / 0.9.6: the engines' own creatures: ui_engvis.c) */
         graph_being_at(t, 60 * 16, 68 * 16, 22 * 16);
     cv_rect(0, 0, 4, (int32_t)cv_h, T_BG);
     cv_rect(116, 0, 60, (int32_t)cv_h, T_SURF);

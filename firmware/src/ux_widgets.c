@@ -88,6 +88,17 @@ static void ux_status(const char *text, uint16_t col)
     cv_blit_cells(0, UX_Y_STATUS);
 }
 
+static void ux_transport(char *b, uint32_t n)
+{
+    char d[8];
+    if (n < 2u)
+        return;
+    str_cpy(b, song.playing ? UX_GL_PLAY " " : UX_GL_STOP " ", n);
+    fmt_int(d, song.g[G_BPM]);
+    str_cpy(b + str_len(b), d, n - str_len(b));
+    str_cpy(b + str_len(b), " BPM", n - str_len(b));
+}
+
 static void ux_footer(const char *where, const char *right)
 {
     int32_t ty = 2;                                     /* (the 6 px capitals centred in 14 rows) */

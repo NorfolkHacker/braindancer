@@ -92,7 +92,29 @@ static void ux_lbl_cpy(char *d, const char *s, uint32_t n)
 
 /* ---- TRACKS */
 static uint32_t ux_trk_first(void) { return trk_base4(); }                     /* the knobs' four: from this track */
-static uint32_t ux_lvl99(uint32_t c) { return (uint32_t)clamp(trk[c].p[P_LEVEL], 0, 127) * 99u / 127u; }
+/* track c's LEVEL as the mixer shows it (params.c param_format, F_DB: "-2.1" and "dB", "OFF"): one scale everywhere */
+static const char *ux_lvl_fmt(uint32_t c, char val[16])
+{
+    const char *unit = "";
+    param_format(&TP[P_LEVEL], trk[c].p[P_LEVEL], val, &unit);
+    return unit ? unit : "";
+}
+/* a name fitted to w px (UF_LBL): first the vowels after each word's first letter go ("T4 BYTEBEAT" -> "T4 BYTBT", still
+ * readable), then letters off its end */
+static void ux_fit_name(char *b, int32_t w)
+{
+    uint32_t i, o;
+    if (text_w(&UF_LBL, b) <= w)
+        return;
+    for (i = o = 0; b[i]; i++) {
+        char ch = b[i];
+        if (!(i > 0u && b[i - 1u] != ' ' && (ch == 'A' || ch == 'E' || ch == 'I' || ch == 'O' || ch == 'U')))
+            b[o++] = ch;
+    }
+    b[o] = 0;
+    while (text_w(&UF_LBL, b) > w && str_len(b) > 3u)
+        b[str_len(b) - 1u] = 0;
+}
 static void ux_trk_name(uint32_t c, char *b, uint32_t n, int full)   /* "T3 ACID": the sound's first word (full: all of it) */
 {
     char s[20];
@@ -125,7 +147,7 @@ static uint32_t ux_trk_page(int32_t *ph)
     }
     return pg * 16u < len ? pg : 0u;
 }
-static void ux_trk_right(char *b)                       /* the header's right: "A · 3/8 · 124 BPM", "BAR 1/2 · 124 BPM" */
+static void ux_trk_right(char *b)                       /* the header's right: "A · 3/8 · ▶ 124 BPM", "BAR 1/2 · ■ 124 BPM" */
 {
     uint32_t n;
     char d[8];
@@ -134,20 +156,19 @@ static void ux_trk_right(char *b)                       /* the header's right: "
         const chain_row_t *r = &chain.config.row[chain.row % CHAIN_ROWS];
         b[0] = (char)('A' + (r->slot & 3u)); b[1] = ' '; b[2] = (char)0xB7; b[3] = ' '; b[4] = 0;
         n = r->bars > chain.remaining ? r->bars - chain.remaining + 1u : 1u;
-        fmt_int(d, (int32_t)n); str_cpy(b + str_len(b), d, 24 - str_len(b));
-        str_cpy(b + str_len(b), "/", 24 - str_len(b));
-        fmt_int(d, r->bars); str_cpy(b + str_len(b), d, 24 - str_len(b));
+        fmt_int(d, (int32_t)n); str_cpy(b + str_len(b), d, 32 - str_len(b));
+        str_cpy(b + str_len(b), "/", 32 - str_len(b));
+        fmt_int(d, r->bars); str_cpy(b + str_len(b), d, 32 - str_len(b));
     } else {
         int32_t ph;
         uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP);
-        str_cpy(b, "BAR ", 24);
-        fmt_int(d, (int32_t)ux_trk_page(&ph) + 1); str_cpy(b + str_len(b), d, 24 - str_len(b));
-        str_cpy(b + str_len(b), "/", 24 - str_len(b));
-        fmt_int(d, (int32_t)((len + 15u) / 16u)); str_cpy(b + str_len(b), d, 24 - str_len(b));
+        str_cpy(b, "BAR ", 32);
+        fmt_int(d, (int32_t)ux_trk_page(&ph) + 1); str_cpy(b + str_len(b), d, 32 - str_len(b));
+        str_cpy(b + str_len(b), "/", 32 - str_len(b));
+        fmt_int(d, (int32_t)((len + 15u) / 16u)); str_cpy(b + str_len(b), d, 32 - str_len(b));
     }
-    str_cpy(b + str_len(b), " \xB7 ", 24 - str_len(b));
-    fmt_int(d, song.g[G_BPM]); str_cpy(b + str_len(b), d, 24 - str_len(b));
-    str_cpy(b + str_len(b), " BPM", 24 - str_len(b));
+    str_cpy(b + str_len(b), " \xB7 ", 32 - str_len(b));
+    ux_transport(b + str_len(b), 32 - str_len(b));
 }
 /* the status line: a message (a refusal in UX_ACCENT), a turned knob's track and level, else what HOME does next */
 #define UX_STOP "STOP TO EDIT"
@@ -160,11 +181,15 @@ static const char *ux_home_status(uint16_t *col)
         return ui.msg;
     }
     if (c >= 0) {
-        char d[8];
-        ux_trk_name((uint32_t)c, b, 26, 1);
+        char d[16];
+        const char *u = ux_lvl_fmt((uint32_t)c, d);
+        ux_trk_name((uint32_t)c, b, 22, 1);
         str_cpy(b + str_len(b), " \xB7 LEVEL ", sizeof b - str_len(b));
-        fmt_int(d, (int32_t)ux_lvl99((uint32_t)c));
         str_cpy(b + str_len(b), d, sizeof b - str_len(b));
+        if (u[0]) {                                     /* "T5 BRASS · LEVEL -2.1 dB" */
+            str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
+            str_cpy(b + str_len(b), u, sizeof b - str_len(b));
+        }
         *col = UX_TEXT;
         return b;
     }
@@ -184,7 +209,10 @@ static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])
         } else {                                        /* TRACKS: the four tracks' LEVELs */
             lbl[c][0] = 'T'; lbl[c][1] = (char)('1' + f + c);
             str_cpy(lbl[c] + 2, " LEVEL", 8);
-            fmt_int(k[c].value, (int32_t)ux_lvl99(f + c));
+            char d[16];
+            (void)ux_lvl_fmt(f + c, d);                 /* the number ("-10.0dB" does not fit a column: "dB" in the status
+                                                         * line on a turn, so every column reads the same way) */
+            str_cpy(k[c].value, d, sizeof k[c].value);
             k[c].bar = (uint8_t)((uint32_t)clamp(trk[f + c].p[P_LEVEL], 0, 127) * 255u / 127u);
         }
         k[c].label = lbl[c];
@@ -231,14 +259,14 @@ static void ux_tracks_panel(void)
         int kn = r >= f && r < f + 4u;
         uint16_t col = kn ? ux_knob_col(r - f) : UX_DIM(UX_MID, 45);
         int32_t y = UXR_BASE(r) - UF_LBL_CAP_Y - UF_LBL_CAP_H, w;
-        char d[4];
+        char d[16];
         if (trk[r].p[P_MUTE]) col = UX_DIM(col, 55);
         ux_trk_name(r, b, sizeof b, 0);
-        while ((w = text_w(&UF_LBL, b)) > UXR_X0 - 10 && str_len(b) > 3u)   /* (fitted to the column: letters off its end) */
-            b[str_len(b) - 1u] = 0;
+        ux_fit_name(b, UXR_X0 - 10);                    /* (fitted to the column) */
+        w = text_w(&UF_LBL, b);
         GFX_HOOK_CELL(8, y, UXR_X0 - 2, y + UF_LBL.h);
         cv_text_on(8, y, &UF_LBL, b, r == song.sel ? UX_TEXT : col, ux_under(8 + w / 2, y + 5));
-        fmt_int(d, (int32_t)ux_lvl99(r));
+        (void)ux_lvl_fmt(r, d);                         /* (the number only: "dB" in the knob row and the status line) */
         w = text_w(&UF_LBL, d);
         GFX_HOOK_CELL(UXR_X0 + (int32_t)UXR_W + 2, y, 232, y + UF_LBL.h);
         cv_text_on(232 - w, y, &UF_LBL, d, (int32_t)r == hot ? UX_TEXT : col, ux_under(232 - w / 2, y + 5));
@@ -301,7 +329,7 @@ static void ux_home_draw(void)
 {
     static uint32_t head_sig, panel_sig, foot_sig, panel_ms;
     ux_knob_t k[4];
-    char lbl[4][10], right[28];
+    char lbl[4][10], right[32];
     uint32_t p = ux_home_page(), all, sig;
     uint16_t sc;
     const char *st = ux_home_status(&sc);

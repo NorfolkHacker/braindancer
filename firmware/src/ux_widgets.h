@@ -46,6 +46,11 @@ static void ux_panel_end(void);                                                 
  * the page margin: UX_MID a hint, UX_TEXT a readout, UX_ACCENT a refusal / warning, UX_QUEUED pending */
 static void ux_status(const char *text, uint16_t col);
 static void ux_footer(const char *where, const char *right);
+/* the transport for a header's right: "\x87 124 BPM" playing, "\x88 124 BPM" stopped (UF_HDR's play / stop glyphs,
+ * tools/gen_aa_font.py CODE: U+25B6 at 0x87, U+25A0 at 0x88), into b (n bytes) */
+#define UX_GL_PLAY "\x87"
+#define UX_GL_STOP "\x88"
+static void ux_transport(char *b, uint32_t n);
 /* a strip of 16 cells at canvas y in the panel: the first n16 are the pattern's (steps[0..n16-1]), the rest drawn
  * dim (BG2); a tie after a rest or an empty step stays EMPTY (nothing to hold); edit / play: the cell to outline / lighten, or -1 */
 static void ux_strip(int32_t y, const step_t *steps, uint32_t n16, int32_t edit, int32_t play);

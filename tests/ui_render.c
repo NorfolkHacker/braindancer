@@ -924,7 +924,7 @@ static void vx_sing(uint32_t ph0, uint32_t n0, uint32_t ph, uint32_t n, int32_t 
         ui.frame++;
         fm1_ms += 33u;
         cv_begin(240, 140, T_SURF);
-        vx_draw(TSEL, 4, 2, 232, 136, -1);
+        vx_draw(TSEL, 4, 2, 232, 136);
     }
     fm1_ms = vxs.ms[0] = ms;
     ui.frame = vxs.fr[0] = fr;
@@ -946,7 +946,7 @@ static void vx_kit_scene(uint32_t lanes, uint32_t dm)
         for (k = 0; K && k < 8u; k++) { K[k].x.live = 0; K[k].age = 255; K[k].fl = 0; }
         vxs.last = 0;
     }
-    vx_kit(TSEL, 0, 0, 256, -1, -1);              /* (the lanes' ages seen once: the hits below are new) */
+    vx_kit(TSEL, 0, 0, 256, -1);              /* (the lanes' ages seen once: the hits below are new) */
     for (k = 0; k < 8u; k++)
         if (lanes >> k & 1u) { dx_in_tch = (uint8_t)dm; trk_note_on(TSEL, N[k], k == 1u ? 127 : 100); }
     dx_in_tch = 0;
@@ -961,7 +961,7 @@ static void vx_bug_scene(uint32_t l, uint32_t dm, uint32_t n)
     uint32_t k;
     vx_kit_scene(0, 0);
     for (k = 0; k < n; k++) {
-        if (k) { vx_kit(TSEL, 0, 0, 256, -1, -1); fm1_ms += 40u; }
+        if (k) { vx_kit(TSEL, 0, 0, 256, -1); fm1_ms += 40u; }
         dx_in_tch = (uint8_t)dm;
         trk_note_on(TSEL, N[l & 7u], 110);
         dx_in_tch = 0;

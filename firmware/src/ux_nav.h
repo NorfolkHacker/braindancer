@@ -24,7 +24,7 @@ static void ux_home_draw(void);                         /* (ux_home.c) TRACKS / 
 #define UXR_N 112u
 #define UXR_MS 18u
 #define UXR_X0 58
-#define UXR_W 160u
+#define UXR_W 148u
 #define UXR_PEAK 24
 #define UXR_BASE(r) (26 + 17 * (int32_t)(r))
 #define UXR_CAP_Y 116
