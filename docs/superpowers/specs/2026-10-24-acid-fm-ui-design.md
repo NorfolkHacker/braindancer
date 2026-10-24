@@ -115,7 +115,7 @@ maths), its brightness breathing with the audio level (§5.3).
 
 | Button | Pages (→ = pressing the button again / SELECT) | Piece |
 |---|---|---|
-| HOME | TRACKS → VISUAL; HOME + SELECT: GEN (JIANT's until piece 6) | 3a |
+| HOME | TRACKS → VISUAL → GEN (user, 2026-10-24: GEN reachable without a combo, spec §0 rule 2); HOME + SELECT jumps straight to GEN as a shortcut. GEN is JIANT's until piece 6; until then SELECT on GEN walks JIANT's GEN 1–3 (a temporary exception to the ≤ 3 pages rule, removed when piece 6 rebuilds GEN) | 3a |
 | EDIT | SOUND → TONE → FOCUS (FM6: OPERATOR; DRUM-X: KIT) → MORE | 3b |
 | ENV | AMP → MOD ENV → MORE | 3b |
 | LFO | LFO → MOD MATRIX → MORE (MSEQ, macros) | 3b |
@@ -144,9 +144,11 @@ a page or a MORE row. Setting ids, stored formats, the editor protocol and MIDI 
   playing step outlined); header right: section and bar. Mockup: `docs/acid-fm/ui-mockups/home-unique.html` option 1.
   Knobs: the levels of four tracks, the window of four that holds the selected track (T1–T4 while T1–T4 is selected,
   T3–T6 for T5–T6; ALGORITHM keeps picking the track, rule 3), their columns marked; glow behind.
+- **GEN** (HOME pressed on VISUAL; or HOME + SELECT): the song generator, JIANT's pages until piece 6; HOME pressed on
+  GEN → TRACKS.
 - **VISUAL** (HOME pressed on TRACKS): the kaleidoscope (concentric rings of the blend, rotating with the bar,
   pulsing with the kick / the master level), the song's name and `SECTION · BAR` over it. Knobs: macros M1–M4 (JIANT's
-  macros). HOME again → TRACKS.
+  macros). HOME again → GEN.
 
 ### 4.4 SEQ STEPS (piece 3c)
 
