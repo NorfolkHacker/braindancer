@@ -68,22 +68,69 @@ static uint32_t ux_isqrt(uint32_t v)
     return r;
 }
 
+/* The rings nest (each ellipse inside the one before and the innermost colour wins), so the glow is drawn as the
+ * pieces that are left: per row, ring i owns the span between its edge and ring i + 1's, one on each side of the
+ * centre, the innermost ring the middle. Every pixel is written once. The edges (half-widths of each ring at each
+ * |dy|, the old isqrt rows) are a table of UX_GLOW_N x UX_GLOW_ROWS bytes (2 KiB) built when the panel's size changes. */
+#define UX_GLOW_ROWS 105u        /* |dy| 0 .. 104: 0.693 x the strip's 150 rows */
+static uint8_t ux_gtab[UX_GLOW_ROWS * UX_GLOW_N] __attribute__((section(".pool")));   /* hw + 1; 0: the ring is not on this row */
+static int16_t ux_gw __attribute__((section(".pool"))), ux_gh __attribute__((section(".pool")));
+#ifndef UX_HOOK_SPAN
+#define UX_HOOK_SPAN(x, y, n) ((void)0)       /* (the host test counts the spans) */
+#endif
+
+static void ux_glow_tab(int32_t w, int32_t h)
+{
+    int32_t ax = w * 594 / 1000, by = h * 693 / 1000, i, dy;
+    for (i = 0; i < (int32_t)UX_GLOW_N; i++) {
+        int32_t ra = ax * (int32_t)(UX_GLOW_N - (uint32_t)i) / (int32_t)UX_GLOW_N, rb = by * (int32_t)(UX_GLOW_N - (uint32_t)i) / (int32_t)UX_GLOW_N;
+        for (dy = 0; dy < (int32_t)UX_GLOW_ROWS; dy++) {
+            uint32_t hw = 0;
+            if (rb >= 1 && dy <= rb)
+                hw = 1u + ux_isqrt((uint32_t)ra * (uint32_t)ra * (uint32_t)(rb * rb - dy * dy) / (uint32_t)(rb * rb));
+            ux_gtab[(uint32_t)dy * UX_GLOW_N + (uint32_t)i] = (uint8_t)hw;
+        }
+    }
+    ux_gw = (int16_t)w;
+    ux_gh = (int16_t)h;
+}
+
+static void ux_gspan(int32_t x0, int32_t x1, int32_t row, int32_t xmin, int32_t xmax, uint16_t sc)   /* [x0, x1] clipped */
+{
+    int32_t k;
+    uint16_t *d;
+    if (x0 < xmin) x0 = xmin;
+    if (x1 >= xmax) x1 = xmax - 1;
+    if (x1 < x0) return;
+    UX_HOOK_SPAN(x0, row, x1 - x0 + 1);
+    d = &cv_px[(uint32_t)row * cv_w];
+    for (k = x0; k <= x1; k++)
+        d[k] = sc;
+}
+
 static void ux_glow(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t level)
 {
+    uint16_t sc[UX_GLOW_N];
     uint32_t i;
-    int32_t cx = x + w * 40 / 100, cy = y + h * 30 / 100, ax = w * 594 / 1000, by = h * 693 / 1000;
-    if (level == 0 || level > 3u || w < 2 || h < 2) return;
-    for (i = 0; i < UX_GLOW_N; i++) {
-        int32_t ra = ax * (int32_t)(UX_GLOW_N - i) / (int32_t)UX_GLOW_N, rb = by * (int32_t)(UX_GLOW_N - i) / (int32_t)UX_GLOW_N, dy;
-        uint16_t c = ux_glow_col(level, i);
-        if (rb < 1) continue;
-        for (dy = -rb; dy <= rb; dy++) {
-            int32_t row = cy + dy, hw, x0, x1;
-            if (row < y || row >= y + h) continue;
-            hw = (int32_t)ux_isqrt((uint32_t)ra * (uint32_t)ra * (uint32_t)(rb * rb - dy * dy) / (uint32_t)(rb * rb));
-            x0 = cx - hw < x ? x : cx - hw;
-            x1 = cx + hw + 1 > x + w ? x + w : cx + hw + 1;
-            if (x1 > x0) cv_rect(x0, row, x1 - x0, 1, c);
+    int32_t cx = x + w * 40 / 100, cy = y + h * 30 / 100, by = h * 693 / 1000, dy, xmin = x < 0 ? 0 : x, xmax = x + w;
+    if (level == 0 || level > 3u || w < 2 || h < 2 || by >= (int32_t)UX_GLOW_ROWS) return;
+    if (w != ux_gw || h != ux_gh) ux_glow_tab(w, h);
+    for (i = 0; i < UX_GLOW_N; i++)
+        sc[i] = swap16(ux_glow_col(level, i));
+    if (xmax > (int32_t)cv_w) xmax = (int32_t)cv_w;
+    for (dy = -by; dy <= by; dy++) {
+        int32_t row = cy + dy, r = row + cv_oy;
+        const uint8_t *t = &ux_gtab[(uint32_t)(dy < 0 ? -dy : dy) * UX_GLOW_N];
+        if (row < y || row >= y + h || r < 0 || r >= (int32_t)cv_h) continue;
+        for (i = 0; i < UX_GLOW_N; i++) {
+            int32_t o = (int32_t)t[i] - 1, in = i + 1u < UX_GLOW_N ? (int32_t)t[i + 1u] - 1 : -1;
+            if (o < 0) continue;
+            if (in < 0)
+                ux_gspan(cx - o, cx + o, r, xmin, xmax, sc[i]);          /* the innermost on this row: all of it */
+            else {
+                ux_gspan(cx - o, cx - in - 1, r, xmin, xmax, sc[i]);
+                ux_gspan(cx + in + 1, cx + o, r, xmin, xmax, sc[i]);
+            }
         }
     }
 }
