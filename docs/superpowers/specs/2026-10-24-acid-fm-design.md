@@ -75,11 +75,14 @@ macro that sets all four together. Off by default except in the generator's BOC 
 
 ## 5. Voices
 
-- `NVOICE` goes from 8 to **6**: the melodic engines' shared voice budget.
+- **6 tracks**, the sequencer as JIANT's: 6 parts, 64 steps each, the song chain over them. Unchanged.
+- **Voices: as many as the hardware allows.** `NVOICE` (the melodic engines' shared budget; JIANT `main` has 8,
+  its 0.9.12 line ran 12 using the second core) is set by measurement on the device, not chosen in advance: the
+  largest value at which the heaviest test song (6 tracks busy, every effect on, BREAK playing) renders without
+  dropouts and stays under the CPU target (§9). Piece 2 measures 8, 10 and 12 and records the result.
 - DRUM-X and BREAK no longer take voices from that budget: each track running one has its own fixed voices
   (DRUM-X as JIANT plays it; BREAK two, §6.3).
 - JIANT's averaged overload guard stays as the safety net.
-- `NVOICE` stays one constant; raising it later is a measured decision (§9).
 
 ## 6. BREAK sampler
 
@@ -159,7 +162,7 @@ Replaces JIANT's GEN (HOME + SELECT, as in JIANT). Pure C, deterministic.
   the song chain (JIANT's, from SLOOP). Tracks enter and leave per section; parts vary between sections by mutation.
 - **Breaks:** if any are loaded, the drum role uses one (chosen by the seed) with generated chops (§6.4); otherwise
   DRUM-X.
-- Respects the 6-voice budget when it assigns poly parts.
+- Respects the `NVOICE` budget when it assigns poly parts.
 - The result is an ordinary project: playable, editable, savable. It gets a name from the seed (adjective + noun,
   as songgen).
 
@@ -189,7 +192,8 @@ Replaces JIANT's GEN (HOME + SELECT, as in JIANT). Pure C, deterministic.
   - UI: every screen in the ACID skin rendered and checked for clipped or overlapping text (JIANT's existing check).
   - Build: the flash budget check (app below the sample area) and RAM-code reach (JIANT's existing check).
 - CPU: measured on the device after each piece (JIANT's MENU > ABOUT / profiler). Target: under 60 % in the
-  heaviest generated song. If 6 voices measure cheap, raising `NVOICE` is proposed to the user, not done silently.
+  heaviest test song. If a later piece (BREAK, TAPE) pushes past it, `NVOICE` is re-measured and lowered rather than
+  letting the sound drop out.
 - Install safety: before the first install the full flash is backed up (JIANT's web backup or Quixotic7's
   MvaveFM1Unbricker). Installs write only the app area. Way back: `~/fm1_rescue.py` (mask-ROM bootloader) or the
   official V15. Every build is played in the browser emulator before it goes on the device.
@@ -200,7 +204,7 @@ One spec → plan → implementation cycle per piece:
 
 1. **Pipeline:** fork, ACID FM identity, native Linux build, tests passing, Pages site on `acid-fm`, a proven
    install of the rebranded build on the user's FM-1 and a proven rollback.
-2. **Trim:** remove ANIMAL and WHEEL, slim VOICE, remove the 43 genres' tables, `NVOICE` 6; measure freed flash,
+2. **Trim:** remove ANIMAL and WHEEL, slim VOICE, remove the 43 genres' tables, measure the voice ceiling and set `NVOICE` (§5); measure freed flash,
    RAM and CPU; re-lay the flash data region and set the sample area's final bounds (§6.1). (The skins and
    creatures go in piece 3, so the final bounds are confirmed after it.)
 3. **ACID UI** (§8).
