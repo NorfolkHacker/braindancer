@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Serial console on the CDC-ACM function (FELUCCA_CDC=1): read-only
  * diagnostics. Runs in the main loop (cdc_task); usb_poll moves the bytes.
  * The baud rate is ignored. Nothing here writes memory or flash; `uboot`
@@ -391,7 +392,7 @@ static void con_exec(const char *p)
 static void cdc_task(void)                              /* main loop */
 {
     if (cdc.dtr && !con.dtr_seen) {
-        con_puts("\r\nJIANT ");
+        con_puts("\r\nACID FM ");
         con_puts(FELUCCA_VERSION);
         con_puts(" console - 'help'\r\n> ");
     }

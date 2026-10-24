@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* FELUCCA: one compilation unit (the HAL is header-only). Each file uses what the files above it
  * define, so the order matters. */
 
@@ -38,7 +39,7 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.9.18" /* JIANT's (based on Felucca 1.1.5.1): the splash, the menu, the console, the editor */
+#define FELUCCA_VERSION "v0.1" /* ACID FM's (a fork of JIANT 0.9.18, on Felucca 1.1.5.1): the splash, the menu, the console, the editor */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH
 #error "FELUCCA_OTA needs FELUCCA_FLASH"

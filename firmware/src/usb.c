@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* USB full-speed device on USB0: a
  * class-compliant USB-MIDI interface. All SIE traffic happens in one place,
  * usb_poll(), called from the TIMER5 ISR at 2 kHz (uac_service at 10 kHz), so INDEX is never shared
@@ -483,13 +484,16 @@ static uint8_t usb_cdc_on = FELUCCA_CDC_DEFAULT != 0;      /* the console is pre
 #endif
 #define UAC_AS_IF (AUD_IF + 2u)
 static const uint8_t STR0[4] = {4, 3, 0x09, 0x04};
-static const uint8_t STR1[] = {22, 3, 'J', 0, 'u', 0, 'a', 0, 'n', 0, ' ', 0, 'J', 0, 'i', 0, 'a', 0, 'n', 0, 't', 0};   /* (0.7.0) the names JIANT's; the editor and the installer match /jiant|felucca/ */
+static const uint8_t STR1[] = {28, 3, 'N', 0, 'o', 0, 'r', 0, 'f', 0, 'o', 0, 'l', 0, 'k', 0, 'H', 0, 'a', 0, 'c', 0,
+                               'k', 0, 'e', 0, 'r', 0};   /* (ACID FM 0.1) the installers match /acid ?fm|jiant|felucca/ */
 /* the product (USB_STR_PRODUCT): Windows names the MIDI port after it, macOS the device and its port; no interface
- * or jack has a name of its own (iInterface / iJack 0). 0.7.0..0.9.11: "JIANT FM" (index 2); Felucca: "Felucca" */
+ * or jack has a name of its own (iInterface / iJack 0). ACID FM 0.1: "ACID FM"; JIANT 0.7.0..0.9.11: "JIANT FM",
+ * 0.9.12..: "JIANT" (index 2 before 0.9.12); Felucca: "Felucca" */
 #ifdef FELUCCA_LOADER
-static const uint8_t STR_PROD[] = {26, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'U', 0, 'p', 0, 'd', 0, 'a', 0, 't', 0, 'e', 0};
+static const uint8_t STR_PROD[] = {30, 3, 'A', 0, 'C', 0, 'I', 0, 'D', 0, ' ', 0, 'F', 0, 'M', 0, ' ', 0, 'U', 0, 'p', 0,
+                                   'd', 0, 'a', 0, 't', 0, 'e', 0};
 #else
-static const uint8_t STR_PROD[] = {12, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0};
+static const uint8_t STR_PROD[] = {16, 3, 'A', 0, 'C', 0, 'I', 0, 'D', 0, ' ', 0, 'F', 0, 'M', 0};
 #endif
 
 static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)

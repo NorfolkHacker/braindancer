@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Editor protocol: SysEx for the web editor (web/EDITOR_PROTOCOL.md; v2 = user presets + live sync,
  * v3 = four tracks: the v1 / v2 commands act on the selected track, cmds 27-30 reach any track;
  * v4 = TRACK_PARAM (31) and the TRACK_CHANGED push (32), enabled by WATCH bit 1).
@@ -408,7 +409,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         break;
     }
     case ED_INFO:
-        ed_str("JIANT " FELUCCA_VERSION, 24);   /* (0.7.0: was "FELUCCA v..": the web tools take both) */
+        ed_str("ACID FM " FELUCCA_VERSION, 24);   /* (ACID FM 0.1; JIANT: "JIANT v..", Felucca "FELUCCA v..": the web tools take all three) */
         ed_b(NENGINES);
         ed_b(P_COUNT);
         ed_b(G_COUNT);

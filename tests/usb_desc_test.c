@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Host test of the USB descriptor layouts in src/usb.c (#67), one build per variant:
  *   -DT_CDC=0/1 (FELUCCA_CDC)  -DT_UAC=0/1 (FELUCCA_UAC)  -DT_LAYOUT=0..3 (FELUCCA_USB_LAYOUT)
  *   -DT_ON=0/1 (usb_cdc_on: the console presented or not)  -DT_48K=0/1 (FELUCCA_UAC_48K, default 1)
@@ -126,15 +127,16 @@ int main(void)
               le16(dev + 2) == 0x0200 && !dev[4] && !dev[5] && dev[6] == (T_LAYOUT == 2));
     check("VID 1209 PID 0001, strings 1 4 (iProduct off Felucca's index 2), one configuration",
           le16(dev + 8) == 0x1209 && le16(dev + 10) == 1 && dev[14] == 1 && dev[15] == 4 && dev[17] == 1);
-    {   /* (0.9.12) the names a host reads: manufacturer "Juan Jiant", product "JIANT" (UTF-16LE), nothing at index 2
-         * (Windows keeps the old "Felucca" / "JIANT FM" under index 2's name GUID), no serial */
-        static const uint8_t PROD[12] = {12, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0};
-        static const uint8_t MANU[22] = {22, 3, 'J', 0, 'u', 0, 'a', 0, 'n', 0, ' ', 0, 'J', 0, 'i', 0, 'a', 0, 'n', 0, 't', 0};
+    {   /* (ACID FM 0.1) the names a host reads: manufacturer "NorfolkHacker", product "ACID FM" (UTF-16LE), nothing at
+         * index 2 (Windows keeps older names under index 2's name GUID), no serial */
+        static const uint8_t PROD[16] = {16, 3, 'A', 0, 'C', 0, 'I', 0, 'D', 0, ' ', 0, 'F', 0, 'M', 0};
+        static const uint8_t MANU[28] = {28, 3, 'N', 0, 'o', 0, 'r', 0, 'f', 0, 'o', 0, 'l', 0, 'k', 0, 'H', 0, 'a', 0,
+                                         'c', 0, 'k', 0, 'e', 0, 'r', 0};
         const uint8_t *s;
         uint16_t sl;
         check("string 0: US English", get_desc(0x0300, &s, &sl) && sl == 4 && s[2] == 0x09 && s[3] == 0x04);
-        check("string 1 (manufacturer): \"Juan Jiant\"", get_desc(0x0301, &s, &sl) && sl == 22 && !memcmp(s, MANU, 22));
-        check("string 4 (product): \"JIANT\"", get_desc(0x0304, &s, &sl) && sl == 12 && !memcmp(s, PROD, 12));
+        check("string 1 (manufacturer): \"NorfolkHacker\"", get_desc(0x0301, &s, &sl) && sl == 28 && !memcmp(s, MANU, 28));
+        check("string 4 (product): \"ACID FM\"", get_desc(0x0304, &s, &sl) && sl == 16 && !memcmp(s, PROD, 16));
         check("strings 2 (the old product) and 3: none", !get_desc(0x0302, &s, &sl) && !get_desc(0x0303, &s, &sl));
         check("no serial number (iSerial 0)", dev[16] == 0);
     }

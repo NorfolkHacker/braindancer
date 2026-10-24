@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* The firmware editor handler, USB framing and UART recovery against RAM flash.
  * Build with the generated tables and the same flags as hostsim.c. */
 static unsigned char host_flash[0x2000];                 /* fl_erase4k / fl_write (OTA staging) over 0xE0000.. */
@@ -165,6 +166,8 @@ static int preferences(void)
         host_wire[n0 - 4] == 0x4A && host_wire[n0 - 3] == 1 && host_wire[n0 - 2] == 1 &&   /* (0.6.62) JIANT: the installer */
         host_wire[n - 7] == 0x4F && host_wire[n - 6] == 1 && host_wire[n - 5] == LM_N &&   /* (0.8.5) DRUM lane modes */
         host_wire[n - 4] == 0x59 && host_wire[n - 3] == 1 && host_wire[n - 2] == LYR_LEN - 1u);   /* (0.8.5) LYRIC, 63 */
+    bad += check("INFO names the firmware \"ACID FM \" + version (the web tools key on the prefix)",
+        !memcmp(&host_wire[5], "ACID FM TEST", 12) && !host_wire[17]);   /* (this harness defines FELUCCA_VERSION "TEST") */
     request(ED_UI_SET, a, 2);
     bad += check("UI_SET updates the actual palette and reports RAM-only saving",
         host_wire[5] == 3 && settings.palette == 7 && T_BG == UI_PALETTES[7].bg);

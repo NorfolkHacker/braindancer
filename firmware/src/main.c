@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* FELUCCA boot and main loop. Boot order: WDT first, boot-loop guard, fatal vectors,
  * guards; then LCD, input (TIMER5 IRQ, 10 kHz), audio (ALNK0 IRQ). */
 extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
@@ -103,7 +104,7 @@ static void fm1_fault(const fm1_crash_t *c)
     fm1_audio_stop();
     scr_wake_now();                                   /* (MENU > SCREEN OFF: the panel on first) */
     lcd_fill(0, 0, 240, 240, UI_CRASH_BG);            /* fixed, outside the palettes */
-    draw_text_line(0, 8, 240, &AF_M, "JIANT CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
+    draw_text_line(0, 8, 240, &AF_M, "ACID FM CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
     str_cpy(b, FELUCCA_VERSION "  CORE ", 20);
     i = str_len(b);
     b[i] = (char)('0' + (fm1_cnum() & 1u));
