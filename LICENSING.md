@@ -13,10 +13,10 @@ and JIANT changed it; Felucca's line stays wherever it was. The licence is the s
 
 ## ACID FM
 
-ACID FM is a fork of JIANT FM (below), by NorfolkHacker: "Copyright (C) 2026 NorfolkHacker" where a file is mostly
+ACID FM is a fork of JIANT FM (above), by NorfolkHacker: "Copyright (C) 2026 NorfolkHacker" where a file is mostly
 ACID FM's, "Portions Copyright (C) 2026 NorfolkHacker" where ACID FM changed it; every earlier copyright line stays.
 The licence is the same: GPL-3.0-only. ACID FM's own files so far: `tools/gen_about_qr.py`, `tests/about_qr_test.py`,
-`tools/host-cc`, `requirements-dev.txt`, `web/landing/index.html`, `docs/acid-fm/`, `docs/superpowers/`. The ABOUT QR
+`tools/host-cc`, `requirements-dev.txt`, `README.md`, `web/landing/index.html`, `docs/acid-fm/`, `docs/superpowers/`. The ABOUT QR
 code is made with segno (BSD-3-Clause) at build time; segno is not part of the firmware.
 
 ## What is GPL-3.0-only

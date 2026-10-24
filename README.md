@@ -1,7 +1,7 @@
 # ACID FM
 
-**IDM / braindance firmware for the M-VAVE FM-1**: virtual analog, FM, chopped breakbeats you load yourself, and a
-generator that writes whole songs on the device. Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and
+**IDM / braindance firmware for the M-VAVE FM-1**. ACID FM is becoming a firmware with virtual analog, FM, chopped
+breakbeats you load yourself, and a generator that writes whole songs on the device (planned, see Status). Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and
 the Rephlex catalogue.
 
 **[Install](https://norfolkhacker.github.io/acid-fm/webapp/installer/)** (Chrome or Edge, over USB) ·
@@ -20,7 +20,7 @@ The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-aci
 5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
 6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, BOC, AMBIENT, GLITCH
 
-Until step 6 the manual and the on-device pages are JIANT's.
+The manual still describes JIANT FM's features, which 0.1 keeps; it is rewritten as ACID FM's features land.
 
 ## Built on
 

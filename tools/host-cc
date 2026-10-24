@@ -2,5 +2,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 NorfolkHacker
 # GCC 14 makes implicit declarations / implicit int / incompatible pointer types errors; JIANT's host tests rely on
-# GCC <= 13 behaviour (CI's ubuntu-24.04 GCC 13 does not need this). Use: CC=tools/host-cc sh tests/run_tests.sh
+# GCC <= 13 behaviour (the host tests are run locally; GCC <= 13 hosts don't need this). Use: CC=tools/host-cc sh tests/run_tests.sh
 exec cc -std=gnu17 -Wno-error=implicit-function-declaration -Wno-error=implicit-int -Wno-error=incompatible-pointer-types "$@"

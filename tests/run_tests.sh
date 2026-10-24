@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 # Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+# Portions Copyright (C) 2026 NorfolkHacker
 # Host tests of the Felucca sources (no hardware). Run from the repo root after ./build.sh:
 #   tests/run_tests.sh
 #

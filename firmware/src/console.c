@@ -197,7 +197,7 @@ static void con_uac(void)                              /* USB audio input: strea
 static void con_status(void)
 {
     const engine_t *e = trk_engp(TSEL);
-    con_puts("jiant ");
+    con_puts("acid-fm ");
     con_puts(FELUCCA_VERSION);
     con_puts("\r\n");
     con_kv("uptime_ms", (int32_t)fm1_ms);
