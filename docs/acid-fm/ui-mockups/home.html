@@ -1,0 +1,74 @@
+<h2>HOME — what should it show?</h2>
+<p class="subtitle">Style C + glow. The screen you see at power-on and while playing. Real 240×240, shown 2×. HOME's knobs in each: what turning them would do.</p>
+
+<style>
+  .scr { width:240px; height:240px; transform:scale(2); transform-origin:top left; position:relative; overflow:hidden; background:#141518; color:#e8eaed; font-family:"Helvetica Neue", Arial, sans-serif; }
+  .wrap { width:480px; height:480px; margin:0 auto; }
+  .hd { display:flex; justify-content:space-between; font-size:10px; padding:6px 8px 2px; letter-spacing:.08em; position:relative; z-index:2; }
+  .gtext { background:linear-gradient(90deg,#b8f53a,#4cb8ff 35%,#a64bff 60%,#ff503c 85%,#ffc83c); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .band { position:absolute; bottom:0; left:0; right:0; height:14px; background:linear-gradient(90deg,#b8f53a,#4cb8ff,#a64bff,#ff503c,#ffc83c); }
+  .ft { position:absolute; bottom:0; left:0; right:0; font-size:8px; padding:3px 8px; color:#141518; font-weight:700; letter-spacing:.12em; display:flex; justify-content:space-between; z-index:3; }
+  .card-image { background:#000; padding:12px 0; }
+  .c6 { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; padding:4px 8px; position:relative; z-index:2; }
+  .col { font-size:7px; color:#9aa0a6; letter-spacing:.08em; text-align:center; }
+  .meter { height:96px; background:#1f2126; position:relative; margin:3px 0; border-radius:2px; }
+  .meter i { position:absolute; left:0; right:0; bottom:0; border-radius:2px; }
+  .pat { display:grid; grid-template-columns:repeat(16,1fr); gap:1px; padding:0 8px; position:relative; z-index:2; }
+  .pat i { height:6px; background:#26282d; } .pat i.on { background:#b8f53a; } .pat i.acc { background:#ff503c; } .pat i.sl { background:#4cb8ff; } .pat i.now { outline:1px solid #fff; }
+  .row { display:flex; align-items:center; gap:6px; padding:0 8px; font-size:8px; color:#9aa0a6; margin:3px 0; position:relative; z-index:2; }
+  .row b { width:46px; color:#e8eaed; font-weight:400; letter-spacing:.05em; }
+</style>
+
+<div class="cards">
+
+  <div class="card" data-choice="tracks" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%, rgba(166,75,255,.30), rgba(76,184,255,.10) 45%, transparent 70%)"></div>
+      <div class="hd"><span class="gtext" style="font-weight:700;font-size:12px">ACID FM</span><span>128 BPM &#9654; A·3/8</span></div>
+      <div class="c6">
+        <div class="col">T1<div class="meter"><i style="height:70%;background:#b8f53a"></i></div>BREAK</div>
+        <div class="col">T2<div class="meter"><i style="height:45%;background:#4cb8ff"></i></div>DRUM</div>
+        <div class="col">T3<div class="meter"><i style="height:85%;background:#a64bff"></i></div>ACID</div>
+        <div class="col">T4<div class="meter"><i style="height:30%;background:#ff503c"></i></div>PAD</div>
+        <div class="col">T5<div class="meter"><i style="height:55%;background:#ffc83c"></i></div>FM</div>
+        <div class="col">T6<div class="meter"><i style="height:10%;background:#dcfa9d"></i></div>LOFI</div>
+      </div>
+      <div class="pat"><i class="on"></i><i></i><i class="sl"></i><i class="on"></i><i class="acc now"></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="sl"></i><i></i><i class="acc"></i><i class="on"></i><i></i><i class="on"></i><i></i></div>
+      <div class="band"></div><div class="ft"><span>HOME</span><span>LVL · LVL · LVL · LVL</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>1 · Six tracks</h3><p>A mixer-like overview: each track's level and what it is, the selected track's 16 steps underneath (accent red, slide blue), section and bar top right. Glow behind. Knobs: levels of 4 tracks (ALGORITHM picks which). The working HOME.</p></div>
+  </div>
+
+  <div class="card" data-choice="visual" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr">
+      <div style="position:absolute;inset:0;background:conic-gradient(from 0deg at 50% 52%, #b8f53a, #4cb8ff, #a64bff, #ff503c, #ffc83c, #b8f53a);opacity:.35"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 52%, transparent 0 18%, #141518 19% 22%, transparent 23% 38%, #141518 39% 42%, transparent 43% 58%, #141518 59% 62%, transparent 63%)"></div>
+      <div class="hd"><span class="gtext" style="font-weight:700;font-size:12px">ACID FM</span><span>128 BPM &#9654;</span></div>
+      <div style="position:absolute;left:0;right:0;top:100px;text-align:center;font-size:30px;font-weight:700;letter-spacing:-.04em;z-index:2">VELVET PYLON</div>
+      <div style="position:absolute;left:0;right:0;top:136px;text-align:center;font-size:9px;letter-spacing:.2em;color:#e8eaed;z-index:2">SECTION B · BAR 3/8 · BRAINDANCE</div>
+      <div class="band"></div><div class="ft"><span>HOME</span><span>MACRO 1–4</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>2 · The visual</h3><p>The music-reactive kaleidoscope fills the screen (rings pulse with the kick, colours rotate with the bar), the song's name and where you are over it. Knobs: 4 performance macros. The "show" HOME — less information.</p></div>
+  </div>
+
+  <div class="card" data-choice="both" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr">
+      <div style="position:absolute;left:0;right:0;top:0;height:120px;background:conic-gradient(from 90deg at 50% 70%, #b8f53a, #4cb8ff, #a64bff, #ff503c, #ffc83c, #b8f53a);opacity:.30"></div>
+      <div style="position:absolute;left:0;right:0;top:0;height:120px;background:radial-gradient(circle at 50% 70%, transparent 0 20%, #141518 21% 25%, transparent 26% 45%, #141518 46% 50%, transparent 51%)"></div>
+      <div class="hd"><span class="gtext" style="font-weight:700;font-size:12px">ACID FM</span><span>128 BPM &#9654; B·3/8</span></div>
+      <div style="position:absolute;left:8px;top:84px;font-size:20px;font-weight:700;letter-spacing:-.03em;z-index:2">VELVET PYLON</div>
+      <div style="position:absolute;left:0;right:0;top:126px">
+        <div class="row"><b>T1 BREAK</b><div style="flex:1;height:4px;background:#26282d"><div style="width:70%;height:4px;background:#b8f53a"></div></div></div>
+        <div class="row"><b>T2 DRUM</b><div style="flex:1;height:4px;background:#26282d"><div style="width:45%;height:4px;background:#4cb8ff"></div></div></div>
+        <div class="row"><b>T3 ACID</b><div style="flex:1;height:4px;background:#26282d"><div style="width:85%;height:4px;background:#a64bff"></div></div></div>
+        <div class="row"><b>T4 PAD</b><div style="flex:1;height:4px;background:#26282d"><div style="width:30%;height:4px;background:#ff503c"></div></div></div>
+        <div class="row"><b>T5 FM</b><div style="flex:1;height:4px;background:#26282d"><div style="width:55%;height:4px;background:#ffc83c"></div></div></div>
+        <div class="row"><b>T6 LOFI</b><div style="flex:1;height:4px;background:#26282d"><div style="width:10%;height:4px;background:#dcfa9d"></div></div></div>
+      </div>
+      <div class="band"></div><div class="ft"><span>HOME</span><span>LVL · LVL · LVL · LVL</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>3 · Split</h3><p>The visual on top half, the six tracks as level lines below with the song name between. Some of both; each half smaller.</p></div>
+  </div>
+
+</div>
+<p class="subtitle">Or "1, and HOME pressed again flips to 2" (two HOME pages). Click one, or tell me in the terminal.</p>

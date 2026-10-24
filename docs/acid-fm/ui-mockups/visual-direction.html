@@ -1,0 +1,76 @@
+<h2>ACID FM — which visual direction?</h2>
+<p class="subtitle">The same screen (T1, an acid bass on the ANALOG engine, its sound page) in three styles. Each is drawn at the FM-1's real 240×240 and shown 2× bigger. Same SidAcid palette in all three: acid green, violet, accent red, slide blue, amber.</p>
+
+<style>
+  .scr { width:240px; height:240px; transform:scale(2); transform-origin:top left; position:relative; overflow:hidden; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .wrap { width:480px; height:480px; margin:0 auto; }
+  /* A: terminal */
+  .a { background:#0b0d0a; color:#b8f53a; }
+  .a .hd { display:flex; justify-content:space-between; font-size:11px; padding:4px 6px; border-bottom:1px solid #2b3a12; }
+  .a .knobs { display:grid; grid-template-columns:repeat(4,1fr); gap:0; padding:6px 4px; }
+  .a .k { font-size:9px; color:#6f8f2a; text-align:left; padding:0 2px; }
+  .a .k b { display:block; font-size:16px; color:#dcfa9d; font-weight:600; }
+  .a .panel { margin:4px 6px; height:104px; border:1px solid #2b3a12; position:relative; background:repeating-linear-gradient(0deg, rgba(184,245,58,.05) 0 1px, transparent 1px 3px); }
+  .a .ft { position:absolute; bottom:0; left:0; right:0; font-size:9px; padding:3px 6px; color:#6f8f2a; border-top:1px solid #2b3a12; display:flex; justify-content:space-between; }
+  /* B: rave */
+  .b { background:#12001f; color:#fff; font-family: "Arial Black", Impact, sans-serif; }
+  .b .hd { display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:4px 6px; background:linear-gradient(90deg,#b8f53a,#4cb8ff,#a64bff,#ff503c,#ffc83c); color:#12001f; }
+  .b .knobs { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; padding:6px; }
+  .b .k { background:#2a0a45; border-radius:8px; text-align:center; font-size:8px; padding:4px 0; color:#d3a5ff; }
+  .b .k b { display:block; font-size:15px; color:#ffc83c; }
+  .b .panel { margin:2px 6px; height:108px; border-radius:10px; background: radial-gradient(circle at 50% 50%, #ffc83c 0 8%, #ff503c 9% 16%, #a64bff 17% 26%, #4cb8ff 27% 36%, #b8f53a 37% 46%, #12001f 47%); position:relative; }
+  .b .ft { position:absolute; bottom:0; left:0; right:0; font-size:9px; padding:4px 6px; color:#b8f53a; display:flex; justify-content:space-between; }
+  /* C: braindance minimal */
+  .c { background:#141518; color:#e8eaed; font-family: "Helvetica Neue", Arial, sans-serif; }
+  .c .hd { display:flex; justify-content:space-between; font-size:10px; padding:6px 8px 2px; letter-spacing:.08em; }
+  .c .big { font-size:34px; font-weight:700; color:#b8f53a; padding:0 8px; line-height:1; letter-spacing:-.04em; }
+  .c .knobs { display:grid; grid-template-columns:repeat(4,1fr); padding:6px 8px 2px; }
+  .c .k { font-size:8px; color:#9aa0a6; letter-spacing:.1em; border-top:2px solid #303338; padding-top:3px; }
+  .c .k b { display:block; font-size:14px; color:#e8eaed; font-weight:400; }
+  .c .k.on { border-top-color:#b8f53a; }
+  .c .panel { margin:6px 8px; height:78px; position:relative; }
+  .c .ft { position:absolute; bottom:0; left:0; right:0; font-size:8px; padding:4px 8px; color:#9aa0a6; letter-spacing:.12em; display:flex; justify-content:space-between; }
+  .card-image { background:#000; padding:12px 0; }
+</style>
+
+<div class="cards">
+
+  <div class="card" data-choice="terminal" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr a">
+      <div class="hd"><span>T1 ANALOG / ACID 303</span><span>&#9654; 128</span></div>
+      <div class="knobs">
+        <div class="k">CUTOFF<b>042</b></div><div class="k">RESO<b>110</b></div><div class="k">ENVMOD<b>088</b></div><div class="k">DECAY<b>031</b></div>
+      </div>
+      <div class="panel"><svg width="226" height="102" viewBox="0 0 226 102"><polyline fill="none" stroke="#b8f53a" stroke-width="1.5" points="0,80 20,30 40,78 60,30 80,78 100,30 120,78 140,30 160,78 180,30 200,78 226,30"/><polyline fill="none" stroke="#a64bff" stroke-width="1" points="0,95 60,60 113,50 170,62 226,90"/></svg></div>
+      <div class="ft"><span>SOUND &gt; FILTER</span><span>2/5</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>A · Acid terminal</h3><p>Green-on-black monospace, thin rules, faint scanlines, raw oscilloscope. Warp / Rephlex test-equipment feel. Calm, very readable, cheap to draw (fast screen updates).</p></div>
+  </div>
+
+  <div class="card" data-choice="rave" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr b">
+      <div class="hd"><span>T1 ACID 303</span><span>&#9654; 128</span></div>
+      <div class="knobs">
+        <div class="k">CUTOFF<b>42</b></div><div class="k">RESO<b>110</b></div><div class="k">ENV<b>88</b></div><div class="k">DECAY<b>31</b></div>
+      </div>
+      <div class="panel"></div>
+      <div class="ft"><span>SOUND · FILTER</span><span>2/5</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>B · Rave psychedelia</h3><p>Rainbow bars, chunky rounded cards, colour-cycling kaleidoscope that pulses with the music (Llamasoft / acid-house flyer). Loudest and most fun; the busiest, and costs more screen time.</p></div>
+  </div>
+
+  <div class="card" data-choice="minimal" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr c">
+      <div class="hd"><span>T1 / ANALOG</span><span>128 BPM &#9654;</span></div>
+      <div class="big">ACID 303</div>
+      <div class="knobs">
+        <div class="k on">CUTOFF<b>42</b></div><div class="k">RESO<b>110</b></div><div class="k">ENV MOD<b>88</b></div><div class="k">DECAY<b>31</b></div>
+      </div>
+      <div class="panel"><svg width="224" height="78" viewBox="0 0 224 78"><path d="M0 60 C 40 60, 60 10, 90 10 S 140 70, 224 70" fill="none" stroke="#b8f53a" stroke-width="2"/><line x1="0" y1="77" x2="224" y2="77" stroke="#303338"/><circle cx="90" cy="10" r="3" fill="#ff503c"/></svg></div>
+      <div class="ft"><span>SOUND — FILTER</span><span>02 / 05</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>C · Braindance minimal</h3><p>Designers Republic / Autechre sleeve: Swiss grid, big type, thin lines, lots of dark space, acid green as the one loud colour, violet and red only for meaning (accent, slide, alerts).</p></div>
+  </div>
+
+</div>
+<p class="subtitle">You can also mix: say e.g. "C's layout with B's HOME visuals". Click one to select, then tell me in the terminal.</p>
