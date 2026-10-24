@@ -610,7 +610,7 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
  * OP LEVEL pages and the algorithm charts, exist only there: fm4_screen) */
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
 
-enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_PLAY, S_HOME_T5, S_HOME_TURN, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
+enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HOME_T5, S_HOME_TURN, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
        S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
        S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT, S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM,
        S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_SAMPLE, S_EDIT_GRAIN,
@@ -648,7 +648,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_PLAY, S_HOME_T5, S_HOME_TURN, 
        S_MIXER_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
        S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_COUNT };
-static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_play", "home_t5", "home_turn", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
+static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_t5", "home_turn", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_voice",
@@ -1078,10 +1078,30 @@ static void setup(int s)
         break;
     }
     case S_HOME_IDLE: song.playing = 0; song.batt_raw = 570; ui.hot_col = 1; ui.hot_t = 30; break;
-    case S_HOME_VISUAL:                          /* (ACID FM 3a) HOME's second page (HOME again), M1..M4, M2 just turned */
+    case S_HOME_VISUAL:                          /* (ACID FM 3a) HOME's second page (HOME again), M1..M4, M2 just turned; */
+    case S_HOME_VISUAL_IDLE: {                   /* (task 7) playing mid-bar, a song chain at B bar 3/8, a named project,
+                                                  * the tracks sounding; _IDLE: stopped, no name (ACID FM), silent */
+        uint32_t i;
         macro_v[0] = 40; macro_v[1] = 90; macro_v[2] = 20; macro_v[3] = 64;
-        nav_go(SEC_HOME, UXH_VISUAL, 0); ux_knob_touch(1);
+        nav_go(SEC_HOME, UXH_VISUAL, 0);
+        ux_levels_reset();
+        if (s == S_HOME_VISUAL) {
+            ux_knob_touch(1);
+            str_cpy(proj_name, "VELVET PYLON", sizeof proj_name);
+            chain.running = 1; chain.row = 0; chain.config.count = 2;
+            chain.config.row[0].slot = 1; chain.config.row[0].bars = 8; chain.remaining = 6;
+            chain.bar_pos = chain_bar() * 5u / 8u;
+            for (i = 0; i < 6u; i++) {               /* (a beat's worth of levels: the rings bright) */
+                trk[0].peak = 6800; trk[2].peak = 5200;
+                fm1_ms += UXR_MS;
+                ux_levels_tick();
+            }
+        } else {
+            song.playing = 0;
+            ux_hot_k = -1;                           /* (no knob turned: the hint) */
+        }
         break;
+    }
     case S_MESSAGE: ui_say("LOADED ", "07 A VERY LONG PATTERN NAME"); break;
     case S_MESSAGE_KEY: ui_message("[SAVE] HOLD TO UNDO"); break;            /* a message with a keycap */
     case S_MESSAGE_NOFILE: ui_message(MSG_NOFILE "NO FILE"); break;   /* a message led by the no-file icon */

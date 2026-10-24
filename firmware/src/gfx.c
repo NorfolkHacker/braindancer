@@ -179,10 +179,9 @@ static int palette_stored_ok(uint32_t v) { return v < 20u || (v >= UI_PAL_TAG &&
 static inline uint16_t swap16(uint32_t c) { return (uint16_t)(((c >> 8) & 0xFFu) | ((c & 0xFFu) << 8)); }
 
 /* ------------------------------------------------------------ canvas --- */
-static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
+/* (ACID FM 3a) the canvas set up, its pixels left as they are: for a drawing that writes every pixel itself (ux_rings) */
+static void cv_begin_raw(uint32_t w, uint32_t h, uint16_t bg)
 {
-    uint32_t i, n;
-    uint16_t s = swap16(bg);
     if (w * h > CV_MAX)
         h = CV_MAX / w;
     lcd_sync();                     /* the last blit may still read cv_px */
@@ -193,7 +192,13 @@ static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
     cv_cy1 = (int16_t)h;
     cv_bg = bg;
     cv_ntxt = 0;
-    n = w * h;
+}
+static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
+{
+    uint32_t i, n;
+    uint16_t s = swap16(bg);
+    cv_begin_raw(w, h, bg);
+    n = cv_w * cv_h;
     for (i = 0; i < n; i++)
         cv_px[i] = s;
 }

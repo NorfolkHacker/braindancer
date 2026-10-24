@@ -15,6 +15,8 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 { (void)x; (void)p; if (bl_n < 64) { bl_y[bl_n] = y; bl_h[bl_n] = h; bl_w[bl_n] = w; bl_n++; } }
 static uint32_t test_ms;
 #define UX_NOW() test_ms
+static uint32_t test_tight;
+#define UX_TIGHT() test_tight                          /* (voice.c load_tight) */
 #include "../firmware/src/gfx.c"
 #include "../firmware/src/ux_theme.c"
 #include "../firmware/src/core.h"
@@ -151,6 +153,41 @@ int main(void)
         ux_glow(0, 0, 240, 400, 3);
         ck("glow: h past the strip is clamped to 150 (draws, no overrun)", px(96, 45) != UX_BG);
         (void)i; (void)mx;
+    }
+    {   /* (3a task 7) VISUAL's pace and every page's glow under load (spec 5.3): one pure rule */
+        ux_pace_t r;
+        r = ux_pace(1000, 1000 - 65, 0, 0, 0, 0, 3);
+        ck("pace: 65 ms after the last draw: not yet (at most every 66 ms)", !r.draw && r.glow == 3);
+        r = ux_pace(1000, 1000 - 66, 0, 0, 0, 0, 3);
+        ck("pace: 66 ms after: draw", r.draw && r.glow == 3);
+        r = ux_pace(5, 0xFFFFFFF0u, 0, 0, 0, 0, 2);
+        ck("pace: the ms clock wrapping round: 21 ms is still 21 ms (not yet)", !r.draw);
+        r = ux_pace(1000, 1000 - 99, 1, 0, 0, 0, 3);
+        ck("pace: load_tight: 99 ms after: not yet (every 100 ms); the glow off", !r.draw && r.glow == 0);
+        r = ux_pace(1000, 1000 - 100, 1, 0, 0, 0, 3);
+        ck("pace: load_tight: 100 ms after: draw; the glow off", r.draw && r.glow == 0);
+        r = ux_pace(1000, 1000 - 5000, 0, 1, 0, 0, 3);
+        ck("pace: the overload guard shed since the last frame: frozen (however long ago)", !r.draw && r.glow == 3);
+        r = ux_pace(1000, 1000 - 5000, 1, 1, 0, 0, 3);
+        ck("pace: shedding while tight: frozen, the glow off", !r.draw && r.glow == 0);
+        r = ux_pace(1000, 1000 - 5000, 0, 0, 1, 0, 1);
+        ck("pace: gov_lite (the governor's LOAD LITE): frozen", !r.draw && r.glow == 1);
+        r = ux_pace(1000, 1000 - 99, 0, 0, 0, 1, 3);
+        ck("pace: MENU LOAD LITE (sys_load 1): every 100 ms, not frozen", !r.draw && r.glow == 3);
+        r = ux_pace(1000, 1000 - 100, 0, 0, 0, 1, 3);
+        ck("pace: MENU LOAD LITE: 100 ms after: draw", r.draw);
+        r = ux_pace(1000, 1000 - 132, 0, 0, 0, 2, 3);
+        ck("pace: MENU LOAD ECO (sys_load 2): every 133 ms", !r.draw);
+        r = ux_pace(1000, 1000 - 133, 1, 0, 0, 2, 3);
+        ck("pace: LOAD ECO and tight: 133 ms after: draw (the slower of the two), the glow off", r.draw && r.glow == 0);
+        r = ux_pace(1000, 1000 - 200, 0, 0, 0, 0, 0);
+        ck("pace: glow 0 asked: 0", r.draw && r.glow == 0);
+        test_tight = 1;
+        ux_panel_begin(3);
+        ck("panel: load_tight: no glow (level 0 on every ux page)", ink_n(UX_BG) == 0);
+        test_tight = 0;
+        ux_panel_begin(3);
+        ck("panel: not tight: the glow", ink_n(UX_BG) > 1000);
     }
     ck("text samples: the spec's footer hint fits (cv_text-based widths)", text_w(&UF_LBL, "LVL \xB7 LVL \xB7 LVL \xB7 LVL") < 140);
     return fails ? 1 : 0;

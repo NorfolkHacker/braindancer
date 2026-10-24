@@ -11054,6 +11054,125 @@ static int test_ux_tracks(void)
     return bad;
 }
 
+/* HOME VISUAL (ACID FM 3a task 7, ux_home.c; spec 4.3, 5.3): rings of the blend round the centre, their colours turning with
+ * the bar (stopped: a slow drift), their brightness the level; the song's name and SECTION . BAR over them; KNOB 1..4 M1..M4,
+ * a turn in the status line. The load rules: the panel redrawn at most every 66 ms, every 100 ms while load_tight (and under
+ * MENU's LOAD LITE; LOAD ECO 133 ms), frozen while the overload guard sheds or gov_lite; a page entered is drawn at once */
+static int test_ux_visual(void)
+{
+    int bad = 0, ok;
+    uint32_t n, p0, p1;
+    uint16_t col;
+    const char *st;
+    char b[40], ft[48];
+    const aafont_t *f;
+    ui_power_on(); frame();
+    press(B_HOME); frame();
+    ok = ux_home_at(UXH_VISUAL);
+    n = ux_vis_draws;
+    fm1_ms += 10u; frame();                                         /* (26 ms after the last) */
+    ok &= ux_vis_draws == n;
+    fm1_ms += 40u; frame();                                         /* 82 ms: drawn */
+    ok &= ux_vis_draws == n + 1u;
+    n = ux_vis_draws;
+    for (p0 = 0; p0 < 4u; p0++) frame();                            /* 64 ms: not yet */
+    ok &= ux_vis_draws == n;
+    frame();                                                        /* 80 ms */
+    ok &= ux_vis_draws == n + 1u;
+    bad += check("3a VISUAL: the panel redrawn at most every 66 ms", ok);
+    load_tight = 1;
+    n = ux_vis_draws; frame();                                      /* (the last draw 16 ms ago) */
+    frames(64);
+    ok = ux_vis_draws == n;                                         /* 80 ms: not yet while tight */
+    frames(32);
+    ok &= ux_vis_draws == n + 1u;                                   /* 112 ms */
+    load_tight = 0;
+    ui_load = LOAD_LITE; n = ux_vis_draws; frame(); frames(64);       /* (MENU > LOAD: ui_input puts it in sys_load) */
+    ok &= ux_vis_draws == n;
+    frames(32);
+    ok &= ux_vis_draws == n + 1u;
+    ui_load = LOAD_ECO; n = ux_vis_draws; frame(); frames(96);
+    ok &= ux_vis_draws == n;
+    frames(48);
+    ok &= ux_vis_draws == n + 1u;
+    ui_load = LOAD_FULL; frame();
+    bad += check("3a VISUAL: every 100 ms while load_tight or MENU LOAD LITE, 133 ms under LOAD ECO", ok);
+    frames(200); fm1_ms += 100u;                                   /* (the next frame due) */
+    load_diag.shed++;                                               /* the guard shed a voice: frozen that frame */
+    n = ux_vis_draws; frame();
+    ok = ux_vis_draws == n;
+    load_diag.shed += 3u; frame();
+    ok &= ux_vis_draws == n;
+    frame();                                                        /* no more shedding: drawn again */
+    ok &= ux_vis_draws == n + 1u;
+    gov_lite = LOAD_LITE; n = ux_vis_draws; frames(800);            /* the governor's LOAD LITE: frozen all along */
+    ok &= ux_vis_draws == n;
+    turn(EN_K2, 2); frame();                                        /* (frozen: the knob row still answers at once) */
+    st = ux_home_status(&col);
+    ok &= ux_vis_draws == n && macro_v[1] == 2u && str_eq(st, "M2 \xB7 1%") && col == UX_TEXT;
+    ui.force = 1; frame();                                          /* a page entered (drawn whole): drawn even frozen */
+    ok &= ux_vis_draws == n + 1u;
+    gov_lite = 0; fm1_ms += 100u; frame();
+    ok &= ux_vis_draws == n + 2u;
+    bad += check("3a VISUAL: frozen while the overload guard sheds or gov_lite (knobs still shown; a page entered drawn)", ok);
+    load_tight = 1;
+    ok = ux_glow_eff(3) == 0u;
+    load_tight = 0;
+    ok &= ux_glow_eff(3) == 3u && ux_glow_eff(2) == 2u;
+    bad += check("3a load: the glow level 0 on every ux page while load_tight", ok);
+
+    ui_power_on(); frame(); press(B_HOME); frame();                 /* the colours turn with the bar */
+    song.playing = 1;
+    chain.bar_pos = 0; p0 = ux_vis_phase();
+    chain.bar_pos = chain_bar() / 2u; p1 = ux_vis_phase();
+    ok = ((p1 - p0) & 511u) == 128u;                                /* (half a bar: a quarter turn, 512 every two bars) */
+    chain.bar_pos = chain_bar() / 4u; p0 = ux_vis_phase();          /* (the bar line passed: the next bar) */
+    ok &= ((p0 - p1) & 511u) == 192u;
+    song.playing = 0;
+    p0 = ux_vis_phase(); fm1_ms += 2400u; p1 = ux_vis_phase();      /* stopped: a slow drift */
+    ok &= p1 != p0 && ((p1 - p0) & 511u) < 160u;
+    bad += check("3a VISUAL: the rings' phase follows the bar position (2 bars a turn); stopped, a slow drift", ok);
+
+    ui_power_on(); frame(); press(B_HOME); frame();
+    f = ux_vis_name(b);
+    ok = str_eq(b, "ACID FM") && f == &UF_TTL;                      /* no name: ACID FM */
+    str_cpy(proj_name, "VELVET PYLON", sizeof proj_name);
+    f = ux_vis_name(b);
+    ok &= str_eq(b, "VELVET PYLON") && text_w(f, b) <= 224;
+    str_cpy(proj_name, "WWWWWWWWWWWW", sizeof proj_name);
+    f = ux_vis_name(b);
+    ok &= text_w(f, b) <= 224 && str_len(b) == 12u;                 /* (a wide name: a smaller face, all of it) */
+    str_cpy(proj_name, "MY_SONG!", sizeof proj_name);
+    f = ux_vis_name(b);
+    ok &= f != &UF_TTL || str_eq(b, "MY SONG");                     /* (a letter UF_TTL lacks: not drawn as a hole) */
+    proj_name[0] = 0;
+    ux_vis_sub(b);
+    ok &= str_eq(b, "BAR 1/1");
+    chain.running = 1; chain.row = 0; chain.config.row[0].slot = 1; chain.config.row[0].bars = 8; chain.remaining = 6;
+    ux_vis_sub(b);
+    ok &= str_eq(b, "SECTION B \xB7 BAR 3/8");
+    chain.running = 0;
+    ux_home_foot(ft, sizeof ft);
+    ok &= str_eq(ft, "2 / 3 \xB7 M1 \xB7 M2 \xB7 M3 \xB7 M4") && str_eq(ux_home_where(), "HOME \xB7 VISUAL");
+    st = ux_home_status(&col);
+    ok &= str_eq(st, "HOME AGAIN: GENERATE") && col == UX_MID;
+    turn(EN_K4, 3); frame();
+    st = ux_home_status(&col);
+    ok &= macro_v[3] == 3u && str_eq(st, "M4 \xB7 2%") && col == UX_TEXT;
+    press(B_HOME); press(B_HOME); frame();                          /* (GEN, then TRACKS: its footer as before) */
+    ux_home_foot(ft, sizeof ft);
+    ok &= ux_home_at(UXH_TRACKS) && str_eq(ft, "1 / 3 \xB7 LVL \xB7 LVL \xB7 LVL \xB7 LVL");
+    bad += check("3a VISUAL: the name (ACID FM when none; fitted), SECTION . BAR, footer M1..M4, a macro's turn in the status", ok);
+
+    ui_power_on(); frame(); press(B_HOME); ui.force = 1; frame();   /* drawn: every strip, rings over the whole panel */
+    ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
+         ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 240u * 100u && ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u &&
+         ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;
+    bad += check("3a VISUAL: drawn (header, knobs, the rings over the panel, status, footer)", ok);
+    ui_power_on();
+    return bad;
+}
+
 /* EDIT (0.9.2, ui_lzedit.c): SOUND . TONE . the detail (FOCUS / OPERATOR / SOUND) one chain; SELECT a page a detent (no
  * wrap), an EDIT tap the next group's first, EDIT from elsewhere the page left; PRESETS the sounds on every page (rule 3:
  * was KNOB 1's on the detail); FOCUS's knobs (PARAM, its value, SRC and AMT of the MOD slot aimed at it); VOICE 2 */
@@ -12312,6 +12431,7 @@ int main(void)
     bad += test_ux_nav_sections();
     bad += test_ux_nav_home();
     bad += test_ux_tracks();
+    bad += test_ux_visual();
     bad += test_lz_edit();
     bad += test_lz_env();
     bad += test_lz_mod();

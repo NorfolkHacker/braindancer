@@ -101,5 +101,34 @@ int main(void)
     span_calls = span_px = 0;
     ux_glow(0, 0, 240, 150, 0);
     ck("level 0 writes nothing", span_px == 0);
+    {   /* (3a task 7) VISUAL's rings: precomputed spans, every pixel of the 240 x 150 panel written exactly once */
+        uint16_t col[UX_RING_N], scr[UX_RING_N];
+        uint32_t i, sent = 0, sym = 1, mx = 0, mn = 255;
+        for (i = 0; i < UX_RING_N; i++) { col[i] = UX_BLEND[i * 32u]; scr[i] = ux_mix(UX_BG, UX_BLEND[i * 32u], 20); }
+        cv_begin(240, 150, UX_BG);
+        for (i = 0; i < 240u * 150u; i++) cv_px[i] = 0x1234;
+        cv_begin_raw(240, 150, UX_BG);
+        for (i = 0; i < 240u * 150u; i++) sent += cv_px[i] == 0x1234;
+        ck("cv_begin_raw: the canvas set up, nothing filled", sent == 240u * 150u && cv_w == 240 && cv_h == 150);
+        memset(wr, 0, sizeof wr);
+        span_calls = span_px = 0;
+        ux_rings(col, scr, 100, 120);
+        for (i = 0; i < 240u * 150u; i++) { if (wr[i] > mx) mx = wr[i]; if (wr[i] < mn) mn = wr[i]; }
+        sent = 0;
+        for (i = 0; i < 240u * 150u; i++) sent += cv_px[i] == 0x1234;
+        printf("ux_rings:  240x150: %u spans, %u pixel writes (min %u max %u per pixel)\n", span_calls, span_px, mn, mx);
+        ck("rings: every pixel written exactly once (36000 writes)", mn == 1 && mx == 1 && span_px == 240u * 150u && !sent);
+        ck("rings: the centre disc band 0", swap16(cv_px[75u * 240u + 125u]) == col[0] && swap16(cv_px[20u * 240u + 120u]) != col[0]);
+        ck("rings: band 3 at radius 3 x UX_RING_W + 8", swap16(cv_px[75u * 240u + 120u + 3u * UX_RING_W + 8u]) == col[3]);
+        ck("rings: the gap before band 2 BG", swap16(cv_px[75u * 240u + 120u + 2u * UX_RING_W - 2u]) == UX_BG);
+        ck("rings: rows 100..119 the scrim's colours (band 3 at 170,110; 170,99 outside)",
+           swap16(cv_px[110u * 240u + 170u]) == scr[3] && swap16(cv_px[99u * 240u + 170u]) == col[3]);
+        for (i = 0; i < 120u; i++) {
+            uint32_t y;
+            for (y = 0; y < 150u; y++) sym &= cv_px[y * 240u + 120u + i] == cv_px[y * 240u + 119u - i];
+        }
+        for (i = 0; i < 25u; i++) sym &= cv_px[(75u + i) * 240u + 200u] == cv_px[(74u - i) * 240u + 200u];
+        ck("rings: symmetric about the panel's centre (left / right, up / down)", sym);
+    }
     return fails ? 1 : 0;
 }

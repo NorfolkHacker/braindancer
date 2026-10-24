@@ -34,6 +34,14 @@ static uint16_t ux_glow_col(uint32_t level, uint32_t ring);   /* ring 0 outermos
 /* the panel glow, the mock-up's radial-gradient(ellipse at 40% 30%, violet .35, slide .12 45%, transparent 70%): level 3 is
  * that, levels 1 and 2 a third and two thirds of its strength; drawn as unhooked spans (not lint cells) */
 static void ux_glow(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t level);   /* level 0..3 (0: none) */
+/* HOME VISUAL's rings (3a task 7): UX_RING_N bands round the canvas centre, UX_RING_W px apart, a UX_RING_GAP px BG line
+ * round each; band k (0 the centre disc) col[k], rows sy0 .. sy1 - 1 scrim[k] instead (a darker band under text). Every
+ * pixel of the canvas (w even <= 240, h even <= 150, cv_oy 0) written exactly once, by spans from a table of the edges'
+ * half-widths per row built once (1200 B): no trig, no fill under it (cv_begin_raw) */
+#define UX_RING_N   8u
+#define UX_RING_W   18           /* 8 x 18 = 144 px: past the 240 x 150 panel's corners (141.5 px from its centre) */
+#define UX_RING_GAP 3
+static void ux_rings(const uint16_t col[UX_RING_N], const uint16_t scrim[UX_RING_N], int32_t sy0, int32_t sy1);
 static void ux_band(int32_t y, int32_t h);               /* the blend as a solid band across the canvas */
 static void ux_topline(void);                            /* the 2 px blend line at canvas y 0 */
 

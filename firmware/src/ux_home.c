@@ -7,7 +7,8 @@
  * scrolling right to left, the nearer (lower) lines hiding the ones behind, pulsar-plot style; the four tracks the knobs
  * control in their knobs' colours, the other two dimmed; the name at the left, the level 0..99 at the right; under them the
  * selected track's 16 steps, the playing one outlined and spelled out. KNOB 1..4: the levels of the four.
- * VISUAL: a placeholder until task 7. Included after ux_widgets.c; ux_home_draw is called by ui_draw.c ui_draw_body,
+ * VISUAL (task 7): the rings of the blend turning with the bar, the song's name over them; KNOB 1..4 M1..M4.
+ * Included after ux_widgets.c; ux_home_draw is called by ui_draw.c ui_draw_body,
  * ux_levels_tick by ui_draw every frame. */
 
 /* ---- the level history: the one reader of trk[c].peak (fx.c holds each track's peak until it is read; read here once a
@@ -147,26 +148,33 @@ static uint32_t ux_trk_page(int32_t *ph)
     }
     return pg * 16u < len ? pg : 0u;
 }
-static void ux_trk_right(char *b)                       /* the header's right: "A · 3/8 · ▶ 124 BPM", "BAR 1/2 · ■ 124 BPM" */
+/* where the music is: "A · 3/8" (long: "SECTION A · BAR 3/8") while a song chain runs, else "BAR 1/2" (the pattern's) */
+static void ux_where_bar(char *b, uint32_t n, int lng)
 {
-    uint32_t n;
     char d[8];
     b[0] = 0;
     if (chain.running) {
         const chain_row_t *r = &chain.config.row[chain.row % CHAIN_ROWS];
-        b[0] = (char)('A' + (r->slot & 3u)); b[1] = ' '; b[2] = (char)0xB7; b[3] = ' '; b[4] = 0;
-        n = r->bars > chain.remaining ? r->bars - chain.remaining + 1u : 1u;
-        fmt_int(d, (int32_t)n); str_cpy(b + str_len(b), d, 32 - str_len(b));
-        str_cpy(b + str_len(b), "/", 32 - str_len(b));
-        fmt_int(d, r->bars); str_cpy(b + str_len(b), d, 32 - str_len(b));
+        uint32_t k = r->bars > chain.remaining ? r->bars - chain.remaining + 1u : 1u;
+        d[0] = (char)('A' + (r->slot & 3u)); d[1] = 0;
+        str_cpy(b, lng ? "SECTION " : "", n);
+        str_cpy(b + str_len(b), d, n - str_len(b));
+        str_cpy(b + str_len(b), lng ? " \xB7 BAR " : " \xB7 ", n - str_len(b));
+        fmt_int(d, (int32_t)k); str_cpy(b + str_len(b), d, n - str_len(b));
+        str_cpy(b + str_len(b), "/", n - str_len(b));
+        fmt_int(d, r->bars); str_cpy(b + str_len(b), d, n - str_len(b));
     } else {
         int32_t ph;
         uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP);
-        str_cpy(b, "BAR ", 32);
-        fmt_int(d, (int32_t)ux_trk_page(&ph) + 1); str_cpy(b + str_len(b), d, 32 - str_len(b));
-        str_cpy(b + str_len(b), "/", 32 - str_len(b));
-        fmt_int(d, (int32_t)((len + 15u) / 16u)); str_cpy(b + str_len(b), d, 32 - str_len(b));
+        str_cpy(b, "BAR ", n);
+        fmt_int(d, (int32_t)ux_trk_page(&ph) + 1); str_cpy(b + str_len(b), d, n - str_len(b));
+        str_cpy(b + str_len(b), "/", n - str_len(b));
+        fmt_int(d, (int32_t)((len + 15u) / 16u)); str_cpy(b + str_len(b), d, n - str_len(b));
     }
+}
+static void ux_trk_right(char *b)                       /* the header's right: "A · 3/8 · ▶ 124 BPM", "BAR 1/2 · ■ 124 BPM" */
+{
+    ux_where_bar(b, 32, 0);
     str_cpy(b + str_len(b), " \xB7 ", 32 - str_len(b));
     ux_transport(b + str_len(b), 32 - str_len(b));
 }
@@ -179,6 +187,14 @@ static const char *ux_home_status(uint16_t *col)
     if (ui.msg_t && ui.msg[0]) {
         *col = str_eq(ui.msg, UX_STOP) ? UX_ACCENT : UX_TEXT;
         return ui.msg;
+    }
+    if (ux_home_page() == UXH_VISUAL && (c = ux_knob_hot()) >= 0) {   /* "M2 · 71%": as the knob row shows it */
+        b[0] = 'M'; b[1] = (char)('1' + c);
+        str_cpy(b + 2, " \xB7 ", sizeof b - 2u);
+        fmt_int(b + str_len(b), macro_v[c] * 100 / 127);
+        str_cpy(b + str_len(b), "%", sizeof b - str_len(b));
+        *col = UX_TEXT;
+        return b;
     }
     if (c >= 0) {
         char d[16];
@@ -325,12 +341,107 @@ static uint32_t ux_tracks_sig(void)
     return h;
 }
 
+/* ---- VISUAL (3a task 7): the rings of the blend round the panel's centre, band k's colour the blend at (phase - k x 44),
+ * the blend run there and back (512 a turn) so the bands flow outward without a seam; the phase a quarter turn a bar while
+ * playing (the bar position, chain.bar_pos: a turn every two bars), a slow drift stopped (a turn in ~12 s); their strength the
+ * tracks' level, 22 .. 52 % of the blend over BG (ux_levels_tick's, read at most every 100 ms: no work of its own on the
+ * audio). Over them a darker band and the song's name and where it is: readability first (spec 0) */
+static uint32_t ux_vis_draws;                           /* VISUAL panels drawn (the host tests count them) */
+static struct {
+    uint32_t bars, ms, lv_ms, shed;                     /* bars passed; the last panel's time; the level's; load_diag.shed seen */
+    uint8_t frac, lv;                                   /* the bar position last seen (0..255); the level (0..255) */
+} uxv;
+#define UXV_RING_STEP 44u                               /* blend steps (of 512) from one band to the next */
+#define UXV_IDLE_MS 24u                                 /* stopped: a phase step every 24 ms */
+static uint32_t ux_vis_phase(void)
+{
+    uint32_t bar = chain_bar(), f;
+    if (!song.playing)
+        return (fm1_ms / UXV_IDLE_MS) & 511u;
+    f = bar ? (uint32_t)(chain.bar_pos * 256u) / bar : 0u;   /* (bar_pos < bar <= ~600000 samples: fits 32 bits x 256) */
+    if (f > 255u) f = 255u;
+    if (f < uxv.frac)                                   /* the bar line passed */
+        uxv.bars++;
+    uxv.frac = (uint8_t)f;
+    return (uxv.bars * 256u + f) & 511u;
+}
+static uint32_t ux_vis_level(void)                      /* the loudest track's level now, read at most every 100 ms */
+{
+    if (fm1_ms - uxv.lv_ms >= 100u || ui.force) {
+        uint32_t c, m = 0;
+        for (c = 0; c < NTRK; c++)
+            if (uxr.lv[c] > m) m = uxr.lv[c];
+        uxv.lv = (uint8_t)m;
+        uxv.lv_ms = fm1_ms;
+    }
+    return uxv.lv;
+}
+/* the song's name (the project's, as loaded or saved; none: ACID FM) into b (16 bytes) and its face: UF_TTL with the letters
+ * it has (capitals, figures, space - . /; another sign a space), else, too wide for the panel, UF_VAL, then UF_HDR */
+static const aafont_t *ux_vis_name(char *b)
+{
+    char s[16];
+    uint32_t i;
+    project_cur_name(s);
+    if (!s[0])
+        str_cpy(s, "ACID FM", sizeof s);
+    for (i = 0; s[i]; i++) {
+        char c = s[i];
+        b[i] = (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ' || c == '-' || c == '.' || c == '/' ? c : ' ';
+    }
+    while (i > 1u && b[i - 1u] == ' ')
+        i--;
+    b[i] = 0;
+    if (text_w(&UF_TTL, b) <= 224)
+        return &UF_TTL;
+    str_cpy(b, s, 16);
+    return text_w(&UF_VAL, b) <= 224 ? &UF_VAL : &UF_HDR;
+}
+static void ux_vis_sub(char *b) { ux_where_bar(b, 32, 1); }   /* "SECTION B · BAR 3/8", "BAR 1/2" */
+static void ux_visual_panel(void)
+{
+    uint16_t col[UX_RING_N], scr[UX_RING_N];
+    uint32_t k, ph = ux_vis_phase(), a = 22u + ux_vis_level() * 30u / 255u;   /* the bands: 22 .. 52 % of the blend */
+    char nm[16], sub[32];
+    const aafont_t *f = ux_vis_name(nm);
+    int32_t cy = f == &UF_TTL ? UF_TTL_CAP_Y : f == &UF_VAL ? UF_VAL_CAP_Y : UF_HDR_CAP_Y;
+    int32_t ch = f == &UF_TTL ? UF_TTL_CAP_H : f == &UF_VAL ? UF_VAL_CAP_H : UF_HDR_CAP_H;
+    int32_t top = ((int32_t)UX_H_PANEL - (ch + 9 + UF_LBL_CAP_H)) / 2, ty = top - cy, sy = top + ch + 9 - UF_LBL_CAP_Y, w;
+    for (k = 0; k < UX_RING_N; k++) {
+        uint32_t i = (ph + 512u - k * UXV_RING_STEP % 512u) & 511u;
+        uint16_t c = UX_BLEND[i < 256u ? i : 511u - i];
+        col[k] = ux_mix(UX_BG, c, (int32_t)a);
+        scr[k] = ux_mix(UX_BG, c, (int32_t)a * 2 / 5);  /* (under the text: TEXT on it stays near its contrast on BG) */
+    }
+    cv_begin_raw(240, UX_H_PANEL, UX_BG);               /* (the rings write every pixel: no fill under them) */
+    ux_rings(col, scr, top - 8, top + ch + 9 + UF_LBL_CAP_H + 8);
+    w = text_w(f, nm);
+    GFX_HOOK_CELL(8, ty, 232, ty + f->h);
+    cv_text_on((240 - w) / 2, ty, f, nm, UX_TEXT, ux_under(120, top + ch / 2));
+    ux_vis_sub(sub);
+    w = text_w(&UF_LBL, sub);
+    GFX_HOOK_CELL(8, sy, 232, sy + UF_LBL.h);
+    cv_text_on((240 - w) / 2, sy, &UF_LBL, sub, UX_TEXT, ux_under(120 + w / 2 + 2, sy + UF_LBL_CAP_Y + 3));
+    ux_vis_draws++;
+}
+
+/* the footer's right: the page of HOME's and the knobs' short names */
+static void ux_home_foot(char *b, uint32_t n)
+{
+    uint32_t p = ux_home_page();
+    str_cpy(b, ux_home_count(), n);
+    if (p == UXH_TRACKS)
+        str_cpy(b + str_len(b), " \xB7 LVL \xB7 LVL \xB7 LVL \xB7 LVL", n - str_len(b));
+    else if (p == UXH_VISUAL)
+        str_cpy(b + str_len(b), " \xB7 M1 \xB7 M2 \xB7 M3 \xB7 M4", n - str_len(b));
+}
+
 static void ux_home_draw(void)
 {
     static uint32_t head_sig, panel_sig, foot_sig, panel_ms;
     ux_knob_t k[4];
     char lbl[4][10], right[32];
-    uint32_t p = ux_home_page(), all, sig;
+    uint32_t p = ux_home_page(), all, sig, shed;
     uint16_t sc;
     const char *st = ux_home_status(&sc);
     dc_frame(ui.force);
@@ -338,6 +449,8 @@ static void ux_home_draw(void)
     right[0] = 0;
     if (p == UXH_TRACKS)
         ux_trk_right(right);
+    else
+        ux_transport(right, sizeof right);              /* (VISUAL: where the music is over the rings) */
     sig = str_hash(p + 1u, right);
     if (all || sig != head_sig) {
         head_sig = sig;
@@ -345,6 +458,11 @@ static void ux_home_draw(void)
     }
     ux_home_knobs(k, lbl);
     ux_knobs(k, -1);
+    {   /* the overload guard's sheds since the last frame (VISUAL freezes while it sheds) */
+        uint32_t sh = load_diag.shed;
+        shed = sh != uxv.shed;
+        uxv.shed = sh;
+    }
     if (p == UXH_TRACKS) {
         sig = ux_tracks_sig();
         if (all || (sig != panel_sig && !(sys_load && fm1_ms - panel_ms < (sys_load == LOAD_ECO ? 70u : 50u)))) {
@@ -354,20 +472,17 @@ static void ux_home_draw(void)
             ux_tracks_panel();
             ux_panel_end();
         }
-    } else if (all || panel_sig != p + 1u) {            /* VISUAL: the placeholder (task 7) */
-        const char *nm = CE_HOME[p].nm;
-        int32_t w = text_w(&UF_TTL, nm), x = (240 - w) / 2, y = (int32_t)(UX_H_PANEL - UF_TTL.h) / 2;
+    } else if (all || panel_sig != p + 1u ||           /* VISUAL: entered at once, then as the load allows (ux_pace) */
+               ux_pace(fm1_ms, uxv.ms, load_tight, shed, gov_lite, sys_load, 0).draw) {
         panel_sig = p + 1u;
-        ux_panel_begin(3);
-        ux_text_grad(x, y, &UF_TTL, nm, swap16(cv_px[(uint32_t)(y + UF_TTL.h / 2) * cv_w + (uint32_t)(x + w / 2)]));
+        uxv.ms = fm1_ms;
+        ux_visual_panel();
         ux_panel_end();
     }
     if (all || foot_sig != p + 1u) {
         char fr[40];
         foot_sig = p + 1u;
-        str_cpy(fr, ux_home_count(), sizeof fr);
-        if (p == UXH_TRACKS)
-            str_cpy(fr + str_len(fr), " \xB7 LVL \xB7 LVL \xB7 LVL \xB7 LVL", sizeof fr - str_len(fr));
+        ux_home_foot(fr, sizeof fr);
         ux_footer(ux_home_where(), fr);
     }
     ux_status(st, sc);
