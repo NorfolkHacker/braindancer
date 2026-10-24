@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 // Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+// Portions Copyright (C) 2026 NorfolkHacker
 //
 // Node checks of the web pages' JS (no browser, no hardware). Run from the repo root:
 //   node web/test_web.mjs
@@ -1896,20 +1897,21 @@ async function installerPage() {
 function siteRedirects() {
   const html = readFileSync(join(HERE, "404.html"), "utf8");
   const src = html.slice(html.indexOf("/*REDIRECT-BEGIN*/"), html.indexOf("/*REDIRECT-END*/"));
-  const go = vm.runInNewContext(src + "\njiantTarget");
+  const go = vm.runInNewContext(src + "\nacidTarget");
   const cases = [
-    ["/JIANT/installer/", "/JIANT/webapp/installer/"], ["/JIANT/installer", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/", "/JIANT/webapp/installer/"], ["/JIANT/webapp", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/installer/:1:1", "/JIANT/webapp/installer/"], ["/JIANT/webapp/installer/index.html:302:15", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/installer/)", "/JIANT/webapp/installer/"], ["/JIANT/webapp/installer/%20", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/installer/foo/bar", "/JIANT/webapp/installer/"], ["/jiant/webapp/installer/", "/JIANT/webapp/installer/"],
-    ["/JIANT/instalador", "/JIANT/webapp/installer/"], ["/JIANT/editor", "/JIANT/webapp/editor/"], ["/JIANT/webapp/editor/x", "/JIANT/webapp/editor/"],
-    ["/JIANT/emulator", "/JIANT/emu/"], ["/JIANT/emu/index.html:1:1", "/JIANT/emu/"], ["/JIANT/preview/", "/JIANT/preview/webapp/installer/"],
-    ["/JIANT/preview/webapp/editor/z", "/JIANT/preview/webapp/editor/"], ["/JIANT/firmware/felucca-v0.6.40.fwsc", "/JIANT/webapp/installer/"],
-    ["/JIANT/nothing-here", "/JIANT/"], ["/JIANT/webapp/installer/", null], ["/JIANT/", null],
+    ["/acid-fm/installer/", "/acid-fm/webapp/installer/"], ["/acid-fm/installer", "/acid-fm/webapp/installer/"],
+    ["/acid-fm/webapp/", "/acid-fm/webapp/installer/"], ["/acid-fm/webapp", "/acid-fm/webapp/installer/"],
+    ["/acid-fm/webapp/installer/:1:1", "/acid-fm/webapp/installer/"], ["/acid-fm/webapp/installer/index.html:302:15", "/acid-fm/webapp/installer/"],
+    ["/acid-fm/webapp/installer/)", "/acid-fm/webapp/installer/"], ["/acid-fm/webapp/installer/%20", "/acid-fm/webapp/installer/"],
+    ["/acid-fm/webapp/installer/foo/bar", "/acid-fm/webapp/installer/"], ["/ACID-FM/webapp/installer/", "/acid-fm/webapp/installer/"],
+    ["/acid-fm/instalador", "/acid-fm/webapp/installer/"], ["/acid-fm/editor", "/acid-fm/webapp/editor/"], ["/acid-fm/webapp/editor/x", "/acid-fm/webapp/editor/"],
+    ["/acid-fm/emulator", "/acid-fm/emu/"], ["/acid-fm/emu/index.html:1:1", "/acid-fm/emu/"], ["/acid-fm/preview/", "/acid-fm/preview/webapp/installer/"],
+    ["/acid-fm/preview/webapp/editor/z", "/acid-fm/preview/webapp/editor/"], ["/acid-fm/firmware/felucca-v0.6.40.fwsc", "/acid-fm/webapp/installer/"],
+    ["/acid-fm/manual/x", "/acid-fm/manual/"], ["/acid-fm/nothing-here", "/acid-fm/"], ["/acid-fm/webapp/installer/", null], ["/acid-fm/", null],
   ];
   const bad = cases.filter(([from, to]) => go(from) !== to);
   ok(!bad.length, `site: 404.html sends old links where they meant${bad.length ? " (" + bad.map(([f]) => f + " -> " + go(f)).join(", ") + ")" : ""}`);
+  ok(!/\/JIANT\/|frecuen|jiant/i.test(html.replace(/<!--[\s\S]*?-->/, "").replace(/github\.com\/[^"]*/g, "")), "site: 404.html names no JIANT path and no frecuencia page");
   const mk = readFileSync(join(HERE, "make_site.py"), "utf8"), wf = readFileSync(join(HERE, "../.github/workflows/emulator.yml"), "utf8");
   ok(/404\.html/.test(mk) && /cp web\/404\.html build\/pages\/404\.html/.test(wf) && /fm1diag\.js/.test(mk), "site: 404.html and fm1diag.js published (make_site.py, the workflow)");
 }
