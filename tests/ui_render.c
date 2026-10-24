@@ -1913,7 +1913,7 @@ static void draw(int s)
                                                    * S_SPLASH_MID: 450 ms in, the line three quarters across and "ACI" typed */
         static const char WANT[] = "ACID FM|" FELUCCA_VERSION "|BY NORFOLKHACKER";
         uint16_t bg;
-        uint32_t x, y, wm = 0, wmr = 0, lbl = 0, ln_l = 0, ln_r = 0, ln_end = 0;
+        uint32_t x, y, wm = 0, wmr = 0, lbl = 0, ln_l = 0, ln_r = 0, ln_end = 0, row4 = 0;
         splash_seen[0] = 0;
         in_splash = 1;
         if (s == S_SPLASH) {
@@ -1928,7 +1928,11 @@ static void draw(int s)
         bg = host_screen[0];
         for (x = 0; x < 240u; x++) {              /* the line: 3 px at y 96 (96 .. 98), the blend across */
             if (host_screen[96u * 240u + x] != bg && host_screen[98u * 240u + x] != bg) { if (x < 120u) ln_l++; else ln_r++; if (x >= 200u) ln_end++; }
-            if (host_screen[99u * 240u + x] != bg) nfind++;           /* (not a 4th row) */
+            if (host_screen[99u * 240u + x] != bg) row4++;           /* (not a 4th row) */
+        }
+        if (row4) {
+            if (rep) fprintf(rep, "FIND %-26s the splash's line is more than 3 px thick (%u pixels on row 99)\n", cur_name, row4);
+            nfind++;
         }
         for (y = 104; y < 164u; y++)              /* the wordmark band: left half, right quarter */
             for (x = 0; x < 240u; x++) {

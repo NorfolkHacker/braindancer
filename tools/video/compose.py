@@ -81,25 +81,9 @@ def paste(img, layer, x, y, alpha=1.0, reveal=1.0):
         L = L.copy(); L.putalpha(L.getchannel('A').point(lambda v: int(v * alpha)))
     img.alpha_composite(L, (int(x), int(y)))
 
-# ---- the signature (firmware/src/ui_signature.h), drawn in heat colours up to a fraction of its length
-_src = (ROOT / 'firmware/src/ui_signature.h').read_text()
-_nums = [int(x) for x in re.findall(r'\b\d+\b', _src.split('{', 1)[1])]
-_pts = [(_nums[i], _nums[i + 1]) for i in range(0, len(_nums) - 1, 2)]
-SEGS, SIGL = [], 0
-for i in range(len(_pts) - 1):
-    if _pts[i + 1][1] & 128: continue
-    a_ = (_pts[i][0], _pts[i][1] & 127); b_ = (_pts[i + 1][0], _pts[i + 1][1] & 127)
-    l_ = max(abs(b_[0] - a_[0]), abs(b_[1] - a_[1])); SEGS.append((a_, b_, SIGL, l_)); SIGL += l_
+# ---- (ACID FM 3a) JIANT's signature is gone from the firmware: a blank layer stands where it was drawn (3d reworks this tool)
 def signature(sc, wd, frac=1.0):
-    w_ = int(max(max(a[0], b[0]) for a, b, _, _ in SEGS) * sc + 2 * wd); h_ = int(130 * sc + 2 * wd)
-    im = Image.new('RGBA', (w_, h_)); d = ImageDraw.Draw(im)
-    lim = SIGL * frac
-    for a, b, acc, l in SEGS:
-        if acc >= lim: break
-        k = min(1.0, (lim - acc) / max(l, 1))
-        e = (a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)
-        d.line([(wd + a[0] * sc, wd + a[1] * sc), (wd + e[0] * sc, wd + e[1] * sc)], fill=heat(0.08 + 0.86 * acc / SIGL) + (255,), width=wd)
-    return im
+    return Image.new('RGBA', (1, 1))
 SIG_SMALL = signature(1.0, 3)
 SIG_BIG = signature(2.4, 5)
 SIG_OUT = signature(1.9, 5)

@@ -78,21 +78,7 @@ def die(n, size):
         d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=WHITE + (255,))
     return im
 def signature(img, ox, oy, sc, wd):
-    src = (ROOT / 'firmware/src/ui_signature.h').read_text()
-    nums = [int(x) for x in re.findall(r'\b\d+\b', src.split('{', 1)[1])]
-    pts = [(nums[i], nums[i + 1]) for i in range(0, len(nums) - 1, 2)]
-    segs, L = [], 0
-    for i in range(len(pts) - 1):
-        if pts[i + 1][1] & 128: continue
-        a = (pts[i][0], pts[i][1] & 127); b = (pts[i + 1][0], pts[i + 1][1] & 127)
-        l = max(abs(b[0] - a[0]), abs(b[1] - a[1])); segs.append((a, b, L)); L += l
-    H_ = [(0, 210, 255), (90, 60, 255), (180, 50, 230), (240, 40, 50), (255, 122, 0), (255, 215, 0), (255, 255, 255)]
-    def heat(v):
-        v = max(0, min(1, v)) * 6; k = min(5, int(v)); f = v - k
-        return tuple(int(H_[k][j] + (H_[k + 1][j] - H_[k][j]) * f) for j in range(3))
-    d = ImageDraw.Draw(img)
-    for a, b, acc in segs:
-        d.line([(ox + a[0] * sc, oy + a[1] * sc), (ox + b[0] * sc, oy + b[1] * sc)], fill=heat(0.08 + 0.86 * acc / L), width=wd)
+    pass                                                  # (ACID FM 3a: JIANT's signature is gone; 3d reworks this tool)
 
 # ---- the DICE ALL film's: the title, a die tumbling, three screens fanned (the dialog, the beings, a piano roll)
 fr = frames(DICE)
