@@ -13,6 +13,8 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 static uint32_t bl_n, bl_y[64], bl_h[64], bl_w[64];
 static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *p)
 { (void)x; (void)p; if (bl_n < 64) { bl_y[bl_n] = y; bl_h[bl_n] = h; bl_w[bl_n] = w; bl_n++; } }
+static uint32_t test_ms;
+#define UX_NOW() test_ms
 #include "../firmware/src/gfx.c"
 #include "../firmware/src/ux_theme.c"
 #include "../firmware/src/core.h"
@@ -36,10 +38,10 @@ static int blitted(uint32_t y, uint32_t h)
 int main(void)
 {
     palette_set(UI_ACID_INDEX);
-    ck("UX_H_* sum to 240", UX_H_LINE + UX_H_HEAD + UX_H_KNOBS + UX_H_PANEL + UX_H_GAP + UX_H_FOOT == 240u);
+    ck("UX_H_* sum to 240", UX_H_LINE + UX_H_HEAD + UX_H_KNOBS + UX_H_PANEL + UX_H_STATUS + UX_H_FOOT == 240u);
     ck("UX_Y_* follow each other with no overlap",
        UX_Y_LINE == 0 && UX_Y_HEAD == UX_Y_LINE + UX_H_LINE && UX_Y_KNOBS == UX_Y_HEAD + UX_H_HEAD
-       && UX_Y_PANEL == UX_Y_KNOBS + UX_H_KNOBS && UX_Y_GAP == UX_Y_PANEL + UX_H_PANEL && UX_Y_FOOT == UX_Y_GAP + UX_H_GAP
+       && UX_Y_PANEL == UX_Y_KNOBS + UX_H_KNOBS && UX_Y_STATUS == UX_Y_PANEL + UX_H_PANEL && UX_Y_FOOT == UX_Y_STATUS + UX_H_STATUS
        && UX_Y_FOOT + UX_H_FOOT == 240u);
     ck("the panel is the canvas strip (240 x 150)", UX_H_PANEL * 240u == CV_MAX);
 
@@ -92,8 +94,16 @@ int main(void)
            px(UX_COL_X0 + UX_COL_PITCH + 4, 33) == UX_SLIDE && px(UX_COL_X0 + UX_COL_W - 4, 33) == UX_LINE);
         ck("knobs: a full bar reaches the column's end", px(UX_COL_X0 + 3 * UX_COL_PITCH + UX_COL_W - 4, 33) != UX_LINE);
         ck("knobs: a cool column's bar is its colour dimmed", px(UX_COL_X0 + 4, 33) == ux_mix(UX_ACID, UX_BG, 35));
+        test_ms = 5000;
         ux_knobs(k, -1);
         ck("knobs: no hot column: every column on BG", px(UX_COL_X0 + UX_COL_PITCH + UX_COL_W - 3, 10) == UX_BG);
+        ux_knob_touch(2);
+        test_ms += UX_HOT_MS - 1u;
+        ux_knobs(k, -1);
+        ck("knobs: a touched knob's column is hot until UX_HOT_MS", px(UX_COL_X0 + 2 * UX_COL_PITCH + UX_COL_W - 3, 10) == UX_BG2);
+        test_ms += 1u;
+        ux_knobs(k, -1);
+        ck("knobs: ... and cool after it", px(UX_COL_X0 + 2 * UX_COL_PITCH + UX_COL_W - 3, 10) == UX_BG);
     }
     {   /* panel */
         bl_n = 0;
@@ -116,6 +126,31 @@ int main(void)
                     if ((px((int32_t)x, (int32_t)y) >> 11) < 6) { if (x < 100) l++; else if (x > 140) r++; }
             ck("footer: dark text on the left (the location) and on the right (the knobs' names)", l > 15 && r > 15);
         }
+    }
+    {   /* status */
+        bl_n = 0;
+        ux_status("5 \xB7 G2 \xB7 ACC", UX_ACCENT);
+        ck("status: one strip 240 x 20 at LCD y 206", bl_n == 1 && bl_y[0] == UX_Y_STATUS && bl_h[0] == UX_H_STATUS && bl_w[0] == 240);
+        ck("status: text in the colour given, on BG", ink_n(UX_BG) > 20 && px(239, 19) == UX_BG);
+        {
+            uint32_t i, hit = 0;
+            for (i = 0; i < cv_w * cv_h; i++) hit += swap16(cv_px[i]) == UX_ACCENT;
+            ck("status: some pixels are fully the colour", hit > 5);
+        }
+        ux_status(NULL, UX_MID);
+        ck("status: NULL text is a plain BG strip (clears the old line)", ink_n(UX_BG) == 0 && bl_n == 2);
+    }
+    {   /* the glow's row limit */
+        uint32_t i, mx = 0;
+        ux_panel_begin(3);
+        ck("glow: a strip of UX_GLOW_ROWS rows draws", px(96, 30) != UX_BG);
+        cv_begin(240, 150, UX_BG);
+        ux_glow(0, 0, 240, (int32_t)UX_GLOW_ROWS, 3);
+        ck("glow: h = UX_GLOW_ROWS draws", px(96, 30) != UX_BG);
+        cv_begin(240, 150, UX_BG);
+        ux_glow(0, 0, 240, 400, 3);
+        ck("glow: h past the strip is clamped to 150 (draws, no overrun)", px(96, 45) != UX_BG);
+        (void)i; (void)mx;
     }
     {   /* meters */
         uint8_t lv[6] = {255, 128, 0, 64, 200, 30};

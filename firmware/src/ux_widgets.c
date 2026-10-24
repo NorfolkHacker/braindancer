@@ -6,6 +6,12 @@
  * down in their rows (GFX_HOOK_ALIGN). */
 #include "ux_widgets.h"
 
+#ifndef UX_NOW
+#define UX_NOW() fm1_ms                                /* the UI's ms clock (tests set their own) */
+#endif
+static int32_t ux_hot_k = -1;
+static uint32_t ux_hot_t;
+
 #define UX_DIM(c, pct) ux_mix((c), UX_BG, (pct))        /* c, pct % of the way to BG */
 
 static void ux_header(uint32_t trk, const char *sound, const char *right)
@@ -26,9 +32,17 @@ static void ux_header(uint32_t trk, const char *sound, const char *right)
     cv_blit_cells(0, UX_Y_LINE);
 }
 
+static void ux_knob_touch(uint32_t k)
+{
+    ux_hot_k = (int32_t)(k & 3u);
+    ux_hot_t = UX_NOW();
+}
+
 static void ux_knobs(const ux_knob_t k[4], int32_t hot)
 {
     int32_t i;
+    if (hot < 0 && ux_hot_k >= 0 && UX_NOW() - ux_hot_t < UX_HOT_MS)
+        hot = ux_hot_k;
     cv_begin(240, UX_H_KNOBS, UX_BG);
     for (i = 0; i < 4; i++) {
         int32_t x = UX_COL_X0 + i * UX_COL_PITCH, on = i == hot, fw;
@@ -56,6 +70,16 @@ static void ux_panel_begin(uint32_t glow_level)
 static void ux_panel_end(void)
 {
     cv_blit_cells(0, UX_Y_PANEL);
+}
+
+static void ux_status(const char *text, uint16_t col)
+{
+    cv_begin(240, UX_H_STATUS, UX_BG);
+    if (text && *text) {
+        GFX_HOOK_ALIGN(0, 0, 0, (int32_t)UX_H_STATUS, AL_V, "status line");
+        cv_text_on(8, 4, &UF_HDR, text, col, UX_BG);       /* (the 8 px capitals centred in 20 rows) */
+    }
+    cv_blit_cells(0, UX_Y_STATUS);
 }
 
 static void ux_footer(const char *where, const char *right)

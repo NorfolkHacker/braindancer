@@ -112,8 +112,10 @@ static void ux_glow(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t level)
 {
     uint16_t sc[UX_GLOW_N];
     uint32_t i;
-    int32_t cx = x + w * 40 / 100, cy = y + h * 30 / 100, by = h * 693 / 1000, dy, xmin = x < 0 ? 0 : x, xmax = x + w;
-    if (level == 0 || level > 3u || w < 2 || h < 2 || by >= (int32_t)UX_GLOW_ROWS) return;
+    int32_t cx, cy, by, dy, xmin = x < 0 ? 0 : x, xmax = x + w;
+    if (h > 150) h = 150;                                /* (the canvas strip is 150 rows: the table's UX_GLOW_ROWS cover 0.693 x that) */
+    cx = x + w * 40 / 100; cy = y + h * 30 / 100; by = h * 693 / 1000;
+    if (level == 0 || level > 3u || w < 2 || h < 2) return;
     if (w != ux_gw || h != ux_gh) ux_glow_tab(w, h);
     for (i = 0; i < UX_GLOW_N; i++)
         sc[i] = swap16(ux_glow_col(level, i));

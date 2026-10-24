@@ -647,7 +647,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
-       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_COUNT };
+       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
@@ -685,7 +685,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
     "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
-    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2", "ux_theme", "ux_demo"};
+    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2", "ux_theme", "ux_demo", "ux_demo_warn"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1863,7 +1863,7 @@ static void draw(int s)
         lcd_sync();
         return;
     }
-    if (s == S_UX_DEMO) {                         /* ux_widgets.c: every piece on one page (the mock-up's glow option) */
+    if (s == S_UX_DEMO || s == S_UX_DEMO_WARN) {                         /* ux_widgets.c: every piece on one page (the mock-up's glow option) */
         static const ux_knob_t K[4] = {{"CUTOFF", "42", 42}, {"RESO", "110", 110}, {"ENV MOD", "88", 88}, {"DECAY", "31", 31}};
         static const uint8_t LV[6] = {200, 140, 90, 230, 60, 20};
         static const char *const NM[6] = {"T1", "T2", "T3", "T4", "T5", "T6"};
@@ -1884,6 +1884,8 @@ static void draw(int s)
         ux_meters(LV, NM, 3, 0);
         ux_strip(110, st, 16, 4, 7);
         ux_panel_end();
+        if (s == S_UX_DEMO) ux_status("5 \xB7 G2 \xB7 ACC", UX_TEXT);
+        else ux_status("NOT A SLIDE STEP", UX_ACCENT);
         ux_footer("EDIT \xB7 TONE", "2 / 4");
         lcd_sync();
         return;
