@@ -1,0 +1,81 @@
+<h2>HOME — a more unique first screen?</h2>
+<p class="subtitle">JIANT's creatures are gone in all three. Same information (six tracks, what plays, the selected track's steps, knobs = levels); a different signature picture. Real 240×240 shown 2×.</p>
+<style>
+  .scr { width:240px; height:240px; transform:scale(2); transform-origin:top left; position:relative; overflow:hidden; background:#141518; color:#e8eaed; font-family:"Helvetica Neue", Arial, sans-serif; }
+  .wrap { width:480px; height:480px; margin:0 auto; }
+  .hd { display:flex; justify-content:space-between; font-size:10px; padding:6px 8px 2px; letter-spacing:.08em; position:relative; z-index:2; }
+  .gtext { background:linear-gradient(90deg,#b8f53a,#4cb8ff 35%,#a64bff 60%,#ff503c 85%,#ffc83c); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .band { position:absolute; bottom:0; left:0; right:0; height:14px; background:linear-gradient(90deg,#b8f53a,#4cb8ff,#a64bff,#ff503c,#ffc83c); }
+  .ft { position:absolute; bottom:0; left:0; right:0; font-size:8px; padding:3px 8px; color:#141518; font-weight:700; letter-spacing:.12em; display:flex; justify-content:space-between; z-index:3; }
+  .card-image { background:#000; padding:12px 0; }
+  .pat { display:grid; grid-template-columns:repeat(16,1fr); gap:1px; padding:0 8px; position:absolute; left:0; right:0; top:196px; z-index:2; }
+  .pat i { height:6px; background:#26282d; } .pat i.on { background:#b8f53a; } .pat i.acc { background:#ff503c; } .pat i.sl { background:#4cb8ff; } .pat i.now { outline:1px solid #fff; }
+  .lbl { position:absolute; font-size:7px; color:#9aa0a6; letter-spacing:.08em; z-index:2; }
+</style>
+<div class="cards">
+
+  <div class="card" data-choice="ridges" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr">
+      <div class="hd"><span class="gtext" style="font-weight:700;font-size:12px">ACID FM</span><span>128 BPM &#9654; A·3/8</span></div>
+      <svg style="position:absolute;left:0;top:22px;z-index:2" width="240" height="170" viewBox="0 0 240 170">
+        <defs><linearGradient id="r1" x1="0" x2="1"><stop offset="0" stop-color="#b8f53a"/><stop offset=".3" stop-color="#4cb8ff"/><stop offset=".55" stop-color="#a64bff"/><stop offset=".8" stop-color="#ff503c"/><stop offset="1" stop-color="#ffc83c"/></linearGradient></defs>
+        <g fill="#141518" stroke="url(#r1)" stroke-width="1.4">
+          <path d="M8 30 L60 30 L70 22 L76 34 L84 8 L92 36 L100 26 L110 30 L232 30"/>
+          <path d="M8 56 L40 56 L48 50 L54 60 L62 44 L70 58 L80 56 L150 56 L158 48 L166 60 L232 56"/>
+          <path d="M8 82 L90 82 L96 60 L102 96 L110 54 L118 92 L126 70 L134 82 L232 82"/>
+          <path d="M8 108 L120 108 L130 102 L140 110 L150 100 L160 108 L232 108"/>
+          <path d="M8 134 L70 134 L80 120 L86 142 L96 116 L106 140 L116 128 L126 134 L232 134"/>
+          <path d="M8 160 L232 160" opacity=".5"/>
+        </g>
+      </svg>
+      <div class="lbl" style="left:8px;top:44px">T1 BREAK</div><div class="lbl" style="left:8px;top:70px">T2 DRUM</div><div class="lbl" style="left:8px;top:96px">T3 ACID</div><div class="lbl" style="left:8px;top:122px">T4 PAD</div><div class="lbl" style="left:8px;top:148px">T5 FM</div><div class="lbl" style="left:8px;top:174px;opacity:.6">T6 LOFI</div>
+      <div class="pat"><i class="on"></i><i></i><i class="sl"></i><i class="on"></i><i class="acc now"></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="sl"></i><i></i><i class="acc"></i><i class="on"></i><i></i><i class="on"></i><i></i></div>
+      <div class="band"></div><div class="ft"><span>HOME</span><span>LVL · LVL · LVL · LVL</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>1 · Ridgelines</h3><p>Each track is a live line of its own sound, stacked like a pulsar plot (Unknown Pleasures, via Warp sleeves): peaks where it's loud, flat when silent, each line hiding the one behind. Instantly recognisable, says "IDM", and shows activity better than bars.</p></div>
+  </div>
+
+  <div class="card" data-choice="orbit" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr">
+      <div class="hd"><span class="gtext" style="font-weight:700;font-size:12px">ACID FM</span><span>128 BPM &#9654; A·3/8</span></div>
+      <svg style="position:absolute;left:0;top:20px;z-index:2" width="240" height="172" viewBox="0 0 240 172">
+        <g fill="none" stroke-width="5" stroke-linecap="round">
+          <circle cx="120" cy="86" r="76" stroke="#26282d" stroke-width="1"/><path d="M120 10 A76 76 0 0 1 192 62" stroke="#b8f53a"/>
+          <circle cx="120" cy="86" r="64" stroke="#26282d" stroke-width="1"/><path d="M120 22 A64 64 0 0 1 176 120" stroke="#4cb8ff"/>
+          <circle cx="120" cy="86" r="52" stroke="#26282d" stroke-width="1"/><path d="M120 34 A52 52 0 1 1 80 120" stroke="#a64bff"/>
+          <circle cx="120" cy="86" r="40" stroke="#26282d" stroke-width="1"/><path d="M120 46 A40 40 0 0 1 158 76" stroke="#ff503c"/>
+          <circle cx="120" cy="86" r="28" stroke="#26282d" stroke-width="1"/><path d="M120 58 A28 28 0 0 1 145 100" stroke="#ffc83c"/>
+          <circle cx="120" cy="86" r="16" stroke="#26282d" stroke-width="1"/><path d="M120 70 A16 16 0 0 1 128 72" stroke="#dcfa9d"/>
+        </g>
+        <text x="120" y="90" text-anchor="middle" font-size="9" fill="#9aa0a6" font-family="Helvetica">BAR 3</text>
+      </svg>
+      <div class="lbl" style="left:8px;top:30px">T1 BREAK</div><div class="lbl" style="left:8px;top:42px">T2 DRUM</div><div class="lbl" style="left:8px;top:54px">T3 ACID</div><div class="lbl" style="left:8px;top:66px">T4 PAD</div><div class="lbl" style="left:8px;top:78px">T5 FM</div><div class="lbl" style="left:8px;top:90px">T6 LOFI</div>
+      <div class="pat"><i class="on"></i><i></i><i class="sl"></i><i class="on"></i><i class="acc now"></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="sl"></i><i></i><i class="acc"></i><i class="on"></i><i></i><i class="on"></i><i></i></div>
+      <div class="band"></div><div class="ft"><span>HOME</span><span>LVL · LVL · LVL · LVL</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>2 · Orbit</h3><p>Six rings, one per track (outer T1 → inner T6); each ring's arc is that track's level, and a dot runs round with the bar. Echoes the kaleidoscope on HOME's second page — HOME as one "machine".</p></div>
+  </div>
+
+  <div class="card" data-choice="bars" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="wrap"><div class="scr">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%, rgba(166,75,255,.30), rgba(76,184,255,.10) 45%, transparent 70%)"></div>
+      <div class="hd"><span class="gtext" style="font-weight:700;font-size:12px">ACID FM</span><span>128 BPM &#9654; A·3/8</span></div>
+      <svg style="position:absolute;left:8px;top:28px;z-index:2" width="224" height="150">
+        <g>
+          <rect x="0" y="30" width="32" height="110" fill="#1f2126"/><rect x="0" y="62" width="32" height="78" fill="#b8f53a"/>
+          <rect x="38" y="30" width="32" height="110" fill="#1f2126"/><rect x="38" y="90" width="32" height="50" fill="#4cb8ff"/>
+          <rect x="76" y="30" width="32" height="110" fill="#1f2126"/><rect x="76" y="44" width="32" height="96" fill="#a64bff"/>
+          <rect x="114" y="30" width="32" height="110" fill="#1f2126"/><rect x="114" y="104" width="32" height="36" fill="#ff503c"/>
+          <rect x="152" y="30" width="32" height="110" fill="#1f2126"/><rect x="152" y="80" width="32" height="60" fill="#ffc83c"/>
+          <rect x="190" y="30" width="32" height="110" fill="#1f2126"/><rect x="190" y="128" width="32" height="12" fill="#dcfa9d"/>
+        </g>
+        <g font-family="Helvetica" font-size="7" fill="#9aa0a6"><text x="2" y="24">T1</text><text x="40" y="24">T2</text><text x="78" y="24">T3</text><text x="116" y="24">T4</text><text x="154" y="24">T5</text><text x="192" y="24">T6</text></g>
+      </svg>
+      <div class="pat"><i class="on"></i><i></i><i class="sl"></i><i class="on"></i><i class="acc now"></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="sl"></i><i></i><i class="acc"></i><i class="on"></i><i></i><i class="on"></i><i></i></div>
+      <div class="band"></div><div class="ft"><span>HOME</span><span>LVL · LVL · LVL · LVL</span></div>
+    </div></div></div>
+    <div class="card-body"><h3>3 · Bars (as chosen)</h3><p>The plain level columns from before, for comparison. Clear and practical, but closest to "any mixer".</p></div>
+  </div>
+
+</div>
+<p class="subtitle">Click one, or describe something else in the terminal — e.g. "ridgelines but with the glow", or your own idea.</p>

@@ -109,9 +109,14 @@ a page or a MORE row. Setting ids, stored formats, the editor protocol and MIDI 
 
 ### 4.3 HOME (piece 3a)
 
-- **TRACKS**: six columns T1–T6, each a level meter (its track's output level, in that track's colour from the blend),
-  the track's role / engine short name under it; under the columns the selected track's 16 steps of the current page
-  (notes ACID, accents ACCENT, slides SLIDE, rest LINE, the playing step outlined); header right: section and bar.
+- **TRACKS** (revised with the user, 2026-10-24: "ridgelines", replacing level columns): six stacked lines T1 (top)
+  … T6 (bottom), like a pulsar plot; each line is its track's level history over the last ≈ 2 s, scrolling right to
+  left (from the per-track peak the audio code already measures — no extra audio-path work), drawn in the blend's
+  colour along x, each line filled below in BG so it hides the line behind; a silent track is flat. The four tracks
+  the knobs control are drawn in their knob colours (ACID, SLIDE, VIOLET, ACCENT) and full brightness, the other two
+  dimmed; each line's name at its left (`T3 ACID`) and its level as a small number at its right end. Under the
+  lines the selected track's 16 steps of the current page (notes ACID, accents ACCENT, slides SLIDE, rest LINE, the
+  playing step outlined); header right: section and bar. Mockup: `docs/acid-fm/ui-mockups/home-unique.html` option 1.
   Knobs: the levels of four tracks, the window of four that holds the selected track (T1–T4 while T1–T4 is selected,
   T3–T6 for T5–T6; ALGORITHM keeps picking the track, rule 3), their columns marked; glow behind.
 - **VISUAL** (HOME pressed on TRACKS): the kaleidoscope (concentric rings of the blend, rotating with the bar,

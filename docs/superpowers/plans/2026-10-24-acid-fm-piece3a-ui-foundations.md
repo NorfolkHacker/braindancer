@@ -217,20 +217,26 @@ page. MACROS / ROUTES / ECO / BEING pages are gone from HOME; JIANT's MACRO laye
 delete `firmware/src/ui_lzhome.c` and its include, and HUD HOME's code paths; tests in ui_render.c (`S_HOME`,
 `S_HOME_PLAY`, `S_HOME_T5`) and ui_test.c (knobs).
 
-**Behaviour (spec §4.3):** header `ACID FM` (gradient) left, `SECTION · BAR` (`A·3/8`) + tempo right; six columns
-T1–T6: a level meter in the blend colour of that column (UX_BLEND[c·51]), the track's short name under it (engine name,
-or the sound's first word); the 4 columns the knobs control marked (a thin line above); below: `ux_strip` of the
-selected track's current 16 steps (`seq_src`), the playing step outlined while playing. Knobs 1–4: track levels
-(the track's level parameter as the mixer sets it — find it in params / GLO MIX) of the window of four holding the
-selected track (T1–T4 for T1–T4 selected, T3–T6 for T5–T6). Footer `HOME · TRACKS` / `LVL · LVL · LVL · LVL`.
-Meters: `ux_home.c` becomes the single reader of `trk[c].peak` (read, smooth into its own `lvl[6]` with fall-off,
-then clear, as ui_lzhome.c did); no other reader remains (grep).
-- [ ] Step 1 — failing tests: render `S_HOME` (stopped), `S_HOME_PLAY` (playing, step 5 of an acid pattern with an
-  accent and a slide), `S_HOME_T5` (T5 selected: knobs control T3–T6); text lint passes; a knob turn on HOME changes
-  the right track's level; meters fall off after peaks stop. RED.
+**Behaviour (spec §4.3, revised: ridgelines):** header `ACID FM` (gradient) left, `SECTION · BAR` (`A·3/8`) +
+tempo right. Six stacked ridgelines T1 (top) … T6 (bottom) in the panel: each is its track's level history (≈ 2 s:
+one sample per UI frame or per 30 ms, a ring buffer of ~112 points per track = 672 B, scrolling right → left), drawn
+as a polyline over a BG fill below it (so each line hides the one behind, pulsar-plot style), baseline per row, peak
+height ≈ 24 px. The four tracks the knobs control are drawn in their knob colours (`ux_knob_col`) at full brightness;
+the other two in UX_MID dimmed. Each row: name at the left (`T3 ACID`, UF_LBL) and the level 0–99 at the right end
+(UF_LBL). Under the lines: `ux_strip` of the selected track's current 16 steps (`seq_src`), the playing step outlined
+while playing. Knobs 1–4: track levels (the track's level parameter as the mixer sets it — find it in params / GLO
+MIX) of the window of four holding the selected track (T1–T4 for T1–T4 selected, T3–T6 for T5–T6). Footer
+`HOME · TRACKS` / `LVL · LVL · LVL · LVL`. Level source: `ux_home.c` becomes the single reader of `trk[c].peak` (read,
+smooth with fall-off into its own history ring, then clear, as ui_lzhome.c did); no other reader remains (grep).
+Mockup: `docs/acid-fm/ui-mockups/home-unique.html` option 1 (`ux_meters` from Task 4 may be replaced by a
+`ux_ridges()` widget here; keep `ux_meters` only if something else uses it).
+- [ ] Step 1 — failing tests: render `S_HOME` (stopped: flat lines), `S_HOME_PLAY` (playing, histories with peaks,
+  step 5 of an acid pattern with an accent and a slide), `S_HOME_T5` (T5 selected: knobs control T3–T6, those four
+  lines in knob colours, T1–T2 dimmed); text lint passes; a knob turn on HOME changes the right track's level; the
+  history scrolls and a silent track's line goes flat. RED.
 - [ ] Step 2 — implement; delete ui_lzhome.c and HUD HOME; GREEN; build; record flash change (deleting should more
   than pay for TRACKS).
-- [ ] Step 3 — commit `feat(ui): HOME TRACKS: six level columns, the selected track's steps, levels on the knobs`.
+- [ ] Step 3 — commit `feat(ui): HOME TRACKS: six ridgelines, the selected track's steps, levels on the knobs`.
 
 ---
 
