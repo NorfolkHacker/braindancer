@@ -10,7 +10,11 @@
 #include <stdint.h>
 
 /* ------------------------------------------------------------ sizes --- */
-#define NVOICE 8                 /* voices per part, and the budget shared by all parts */
+#ifndef FELUCCA_NVOICE
+#define FELUCCA_NVOICE 8         /* (ACID FM 0.2) the voice budget; tools/build.py FELUCCA_NVOICE; docs/acid-fm/voices.md */
+#endif
+#define NVOICE FELUCCA_NVOICE    /* voices per part, and the budget shared by all parts */
+_Static_assert(NVOICE >= 1 && NVOICE <= 16, "FELUCCA_NVOICE: 1..16");
 #define NPART 6                  /* synth parts: tracks 1..6 (JIANT 0.6: was 4) */
 #define NTRK NPART               /* tracks (the formats and the protocol count these): every track is a part */
 #define NSTEP 64
