@@ -50,8 +50,8 @@ The **blend** is ACID → SLIDE → VIOLET → ACCENT → QUEUED, precomputed on
 
 ### 3.2 Type
 
-Inter Tight (already in `assets/fonts`, SIL OFL 1.1), rasterised at build time by `tools/gen_aa_font.py`
-(`--preset inter-tight`), at the sizes the layout needs: about 8 px labels (tracked, upper case), 10 px header, 13–14 px
+Inter Tight (already in `assets/fonts`, SIL OFL 1.1), rasterised at build time by `tools/gen_aa_font.py` into a
+second header beside JIANT's `ui_fonts.h` (whose faces the unmoved sections keep using until they move), at the sizes the layout needs: about 8 px labels (tracked, upper case), 10 px header, 13–14 px
 values, 30–34 px titles, 52 px splash wordmark. Gradient text = glyph coverage × the blend table along x.
 
 ### 3.3 Page anatomy (every page)
@@ -149,9 +149,13 @@ A section moved to `ux_` loses its old page code in the same sub-piece.
 
 ### 5.2 Order
 
-- **3a**: theme, widgets, nav (rules + tables for HOME), HOME, splash, fonts; delete skins, palettes other than ACID,
-  creatures, `ui_signature.h`; MENU › SCREEN › SKIN / COLOR rows removed (their stored settings bytes ignored, not
-  reused).
+- **3a**: theme, widgets, nav (rules + tables for HOME), HOME, splash, fonts; one palette (ACID) replaces JIANT's 11
+  and one skin replaces COLORS / HUD / AIR, so the sections still on JIANT's code are drawn in ACID colours until they
+  move; HOME's creatures (`ui_lzhome.c` ECO / BEING) and the splash signature (`ui_signature.h`) deleted. MENU ›
+  SCREEN's COLOR / SKIN / STYLE rows keep their editor ids (append-only protocol) but do nothing and are hidden.
+- The EDIT pages' creatures (`ui_engvis.c` `vx_draw`, `graph_being`, `graph_colony`) go in **3b** with EDIT; the FM6
+  OPERATOR / DRUM-X KIT pictures in `ui_engvis.c` are real pages and are redrawn there, not deleted. Shared helpers
+  (`og_*` lines, `bg_energy`, `heat_col`) stay while any caller does.
 - **3b**: EDIT (all engines), ENV, LFO, FX, ARP, SCL.
 - **3c**: SEQ, SAVE (songs, arrange, projects, tools), GLO, MENU and ABOUT; the LENTE lens code removed.
 - **3d**: manual (`docs/MANUAL.md`, `web/manual`), cheatsheets, website screenshots, emulator labels; piece 1/2
