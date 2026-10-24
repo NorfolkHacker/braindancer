@@ -64,7 +64,7 @@ area or update records on its front page; its docs/ folder was not read.
 - `ldr_core.c` after a successful update scans, for `s` from `LDR_REC_HI 0xFC000` down to (excluding) `LDR_REC_LO 0x93000`
   in 0x1000 steps, the 80 bytes at `s - 0x100`: the last 256 bytes of the sector below `s`, so the slot offset inside
   each sector is 0xF00. That is 105 candidate slots (`0x93F00`, `0x94F00`, ... `0xFBF00`), 73 of them skipped
-  (sectors inside the store window below), 32 read. It erases the whole sector below any 80-byte record that looks like an
+  (sectors inside the store window below), 32 read. The scan `break`s (does not `continue`) on a flash read error. It erases the whole sector below any 80-byte record that looks like an
   update record (bytes 6..7 = `0x5441`, first CRC16 matches bytes 2..79). It skips only `[LDR_DATA_LO 0x97000,
   LDR_DATA_HI 0xE0000)`, "Felucca's store".
 - Consequences: gap 2 and the sample area are inside the skipped window, so the loader never erases them. Gap 1
@@ -89,7 +89,7 @@ a 16 KiB island between the app region and the projects, not contiguous with the
 
 What would settle it: lower `LDR_DATA_LO` to 0x93000 in `ldr_core.c` (so the loader skips it like the rest of the
 store) and, in piece 4, have the sample writer refuse a sector whose `+0xF00` 80 bytes look like a record (CRC16/`AT`
-magic: probability about 2^-17 per sector for random data, but a cheap guard). Then it is free on the same footing as
+magic: probability about 2^-32 per sector for random data: negligible but cheap to guard, so guard it). Then it is free on the same footing as
 the rest of `VM`. Official V15, if the user goes back to stock, may use `VM` (it is the SDK config store); in the
 backup it did not use this part.
 
@@ -163,7 +163,7 @@ The SPL looks for an update record at power-on in slots at `sector + 0xF00` (4K 
 - `r[6] == 0x41 and r[7] == 0x54` (little-endian 16-bit `0x5441`, "AT"),
 - `crc16(r[2:80]) == LE16(r[0:2])` (CRC-CCITT, poly 0x1021, init 0, MSB first, as `fm1pkg_make.crc16` / `ota_crc16(p, 78, 0)`).
 
-For random data the chance is about 2^-24 for the magic times 2^-16 for the CRC, per sector, negligible, but the
+For random data the chance is about 2^-32 per sector (2^-16 for the 2-byte magic times 2^-16 for the 2-byte CRC; the nonzero test barely changes it), negligible but cheap to guard, so guard it. The
 SPL then runs the loader on a sample. This applies to every sector of 0xB8000..0xD7FFF (32 slots) and gap 2 (2 slots).
 Requirement for piece 4, plainly: the sample writer must ensure no sample sector's `+0xF00` slot can be taken for an
 update record. Either reject and alter any 256-byte tail block that matches the test above (flip a bit of the sample
