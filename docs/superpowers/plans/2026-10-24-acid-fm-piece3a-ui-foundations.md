@@ -287,6 +287,10 @@ splash, one palette; the other sections restyle in 0.4 / 0.5), regenerate what t
 `docs/superpowers/plans/2026-10-24-acid-fm-piece3a-deferred.txt` (items for 3b / 3c / 3d).
 
 - [ ] Step 1 — version + docs; full suite; commit `release prep: ACID FM 0.3 (UI foundations, HOME, splash)`; tree clean.
+- [ ] Step 1b (controller + user) — the no-manual check (spec §0): after the push to a branch build is not available,
+  build the emulator locally if emsdk is present, otherwise use the device: the user, without the manual, (a) finds
+  which track is loudest on HOME, (b) turns T5's level down from HOME, (c) flips HOME to the visual and back, (d) sees
+  the splash's version. Anything they hesitate over is noted and fixed (or filed for 3b/3c) before Step 2.
 - [ ] Step 2 (controller + user) — `./build.sh --release 0.3` on the clean HEAD, sha256, install, `status` over
   serial (version, `audio_late` after a power cycle), then the CPU check: CPU TEST song playing 20 s with HOME
   TRACKS, read `audio_late` / `audio_max_us`; power-cycle; the same with HOME VISUAL: VISUAL must not add late

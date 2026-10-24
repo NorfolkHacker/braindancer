@@ -4,6 +4,31 @@ Date: 2026-10-24. Status: approved in brainstorming (visual choices made in the 
 review. Parent spec: `docs/superpowers/specs/2026-10-24-acid-fm-design.md` §8 (complete redesign) and §10 item 3.
 Mockups: `docs/acid-fm/ui-mockups/` (the browser companion's screens, kept for reference).
 
+## 0. The first rule: intuitive and easy to use
+
+The user's top requirement (2026-10-24): "the whole app is intuitive and easy to use, as most firmwares like this
+aren't". Every screen and every later piece is judged against it before its looks:
+
+1. **The screen says what the controls do.** Every page names what its four knobs do, and the footer says where you
+   are and what the next press goes to. No page needs the manual to operate.
+2. **The core jobs never need a held-button combo.** Making a beat, changing a sound, writing steps, saving, loading
+   a project, generating a song and (piece 4) loading and chopping a break are all reachable by pressing labelled
+   buttons and turning knobs. Combos and held layers are shortcuts only, never the only way.
+3. **One rule everywhere.** The seven rules of §4.1 have no exceptions; a section never invents its own navigation.
+4. **Plain words.** Labels say what a thing does (`CUTOFF`, `DECAY`, `SLIDE`), not internal names; abbreviations only
+   where space forces them, and the same abbreviation everywhere.
+5. **Nothing destructive by surprise.** Anything that loses work asks first (OCT+ yes / OCT− no) and is undoable
+   (GLO + G4 UNDO, kept); the dialog says what will be lost.
+6. **Feedback at once.** A knob turn shows its new value on screen immediately; a press that changes page shows the
+   new page within one frame; a refused action says why in a short message.
+7. **Discoverable.** The first time a section is opened, its footer shows a one-line hint (JIANT's once-only hints,
+   restyled); MORE lists everything else so nothing is hidden.
+
+**Checked every sub-piece:** besides the automated tests, the user does a short task list in the browser emulator
+**without the manual** (e.g. "make a 4-bar acid line with two slides and an accent", "change T3's sound and save it",
+"make the HOME screen show T5's level") and anything confusing is fixed before the device install. A page that needs
+a sentence of explanation gets that sentence on screen or gets redesigned.
+
 ## 1. Decisions (user, 2026-10-24)
 
 | Question | Decision |
