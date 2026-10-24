@@ -32,6 +32,14 @@ static void song_index_load(void)
         for (k = 0; k < NSONG; k++)
             song_rows_fix(&song_idx.rows[k]);
         song_cur = song_idx.cur < NSONG ? song_idx.cur : 0u;   /* (ACID FM 0.2) JIANT's songs 5..8: song 1 */
+        if (song_idx.cur != song_cur) {
+            /* the retained slots (.noinit: an update without a power cut keeps them) hold that song's sections:
+             * dropped, so persist_boot reads song 1's from flash; the index with song 1 current written once */
+            for (k = 0; k < 4u; k++)
+                memset(proj_slot[k].raw, 0, 4);
+            song_idx_dirty = 1;
+            song_idx_t = fm1_ms;
+        }
         song_idx.cur = song_cur;
         return;
     }

@@ -53,7 +53,8 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 }
 static uint32_t irq_save(void) { return 0; }
 static void irq_restore(uint32_t f) { (void)f; }
-static uint32_t fl_jedec_ram(void) { return 0; }
+static uint32_t fl_jedec;                         /* (0: persist_boot stays RAM-only; 0x856014: the FM-1's part) */
+static uint32_t fl_jedec_ram(void) { return fl_jedec; }
 static void fl_plain_window_init(void) {}
 #define FL_FAR(fn) (fn)
 #include "../firmware/src/storage.c"
@@ -520,6 +521,35 @@ static int songs_test(void)
         bad += check("songs: song 5 (and 8) cannot be selected", ok);
         ok = lib_scan(4, (char[16]){0}) == 0u && lib_scan(7, (char[16]){0}) == 0u;
         bad += check("songs: the library scan refuses song 5", ok);
+    }
+    {   /* (ACID FM 0.2) an update from JIANT with song 6 current, no power cut: the retained slots still hold song 6's
+         * sections. The boot (persist_boot) must read song 1's from flash, not show song 6 as song 1 (nor save over
+         * song 1 with it), and write the index's current song 1 once */
+        song_index_t si;
+        char b[PROJ_NAME_LEN + 1];
+        static const char *const one[4] = {"ONE A", "ONE B", "ONE C", "ONE D"};
+        uint32_t k;
+        reset();
+        song_cur = 0;
+        for (k = 0, ok = 1; k < 4u; k++) ok &= project_save_as(k, one[k]) == 0;   /* song 1's sections in flash */
+        song_cur = 1;                                   /* (another song's valid sections into the retained slots) */
+        for (k = 0; k < 4u; k++) ok &= project_save_as(k, "SIX") == 0;
+        ok &= project_used(0) && project_name(0, b) && str_eq(b, "SIX");
+        memset(&si, 0, sizeof si);
+        si.magic = SONG_MAGIC; si.version = 2; si.cur = 5;
+        for (k = 0; k < NSONG_INDEX; k++) chain_defaults(&si.rows[k]);
+        ok &= st_save(OBJ_SONGIDX, &si, sizeof si) == 0;
+        song_cur = 0;                                   /* (a fresh start: .bss) */
+        song_idx_dirty = 0;
+        fl_jedec = 0x856014u;
+        persist_boot();
+        fl_jedec = 0;
+        ok &= flash_ok && song_cur == 0 && song_idx.cur == 0;
+        for (k = 0; k < 4u; k++)
+            ok &= project_name(k, b) && str_eq(b, one[k]);
+        bad += check("songs: JIANT's current song 6 after an update: the slots hold song 1", ok);
+        bad += check("songs: .. and the index is written with song 1 current", song_idx_dirty == 1);
+        flash_ok = 1;
     }
     return bad;
 }

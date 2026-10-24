@@ -161,6 +161,8 @@ static uint32_t ed_bk_commit(void)
         if (ed_bk_len != sizeof *p || p->magic != SONG_MAGIC || p->version != 2u) return 2;
         for (k = 0; k < NSONG; k++)
             if (!chain_valid(&p->rows[k])) return 2;
+        ((song_index_t *)raw)->cur = song_cur;      /* (ACID FM 0.2) the device's current song stored, not the archive's
+                                                     * (its slots hold that song; JIANT's 5..8 would open as song 1) */
         obj = OBJ_SONGIDX;
     } else if (ed_bk_id >= ED_BK_SONG && ed_bk_id < ED_BK_SONG + NSONG * 4u) {   /* (JIANT) a song's section */
         uint32_t s = (ed_bk_id - ED_BK_SONG) / 4u, k = (ed_bk_id - ED_BK_SONG) % 4u;

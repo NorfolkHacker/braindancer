@@ -298,6 +298,13 @@ int main(void)
         bad += check("  the song index restores (a scene of song 3), the song playing stays",
                      put_all(10u, &si, sizeof si, st_crc32(&si, sizeof si)) == 0 && song_idx.scene[2][0].mac[3] == 99 &&
                      song_idx.cur == song_cur);
+        {   /* (ACID FM 0.2) the archive's current song (here 6: JIANT's songs 5..8) is not written: the flash copy
+             * keeps the device's, so the next boot opens the song whose sections the slots hold */
+            song_index_t got;
+            bad += check("  .. and in flash too (the archive's current song 6 not stored)",
+                         st_load(OBJ_SONGIDX, &got, sizeof got) == (int)sizeof got && got.cur == song_cur &&
+                         got.scene[2][0].mac[3] == 99);
+        }
         si.version = 7;
         bad += check("  an index of another version is refused", put_all(10u, &si, sizeof si, st_crc32(&si, sizeof si)) == 2);
     }
