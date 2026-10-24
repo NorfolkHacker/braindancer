@@ -1,7 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Optional device preferences, advertised in INFO. No preset format changes. The font weight
- * (ED_UI_FONT) is gone: one weight; UI_SET of it answers rc 2 (not supported), UI_STATE 127. */
+ * (ED_UI_FONT) is gone: one weight; UI_SET of it answers rc 2 (not supported), UI_STATE 127.
+ * (ACID FM 0.3) One palette: UI_PALETTES lists "ACID" alone, UI_STATE's palette is 0, a UI_SET of palette 0 is taken,
+ * of any other index (an older editor's) refused, rc 1, as an index past the list always was. */
 enum { ED_UI_PALETTE = 1, ED_UI_FONT = 2, ED_UI_MONITOR = 4, ED_UI_FAVORITES = 8 };
 static uint32_t ed_ui_caps(void)
 {

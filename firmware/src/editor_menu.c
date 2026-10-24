@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* MENU's settings for the editor (EDITOR_PROTOCOL.md "MENU settings"): MENU_DESC describes one, MENU_SET sets one;
  * INFO 4E 01 count. The editor builds its settings from these; the values, names and the apply path are the menu's
  * own (menu_items.c), so the two cannot differ. CALIBRATION and ABOUT are not offered (no value). 1.0.5: each reply
@@ -9,7 +10,8 @@
  * COUNT-IN, rows of AUDIO; 1.2: RESTORE LAST, SYSTEM; SCALE LEDS, CONTROL; 1.1.5: SCREEN OFF, DISPLAY): an index keeps its
  * setting too, so an older editor lists what it knew where it was (the
  * editor groups them by their tab). An id keeps its meaning for good: a new setting takes the next free id
- * (append-only), wherever its row goes; ids 0..126 (127: none). */
+ * (append-only), wherever its row goes; ids 0..126 (127: none). (ACID FM 0.3) COLOR (0), STYLE (1) and SKIN (21) keep their ids,
+ * inert: one value, "ACID", 0; a MENU_SET of any value answers as any other (rc, the value 0) and changes nothing */
 enum { ED_MENU_DESC = 72, ED_MENU_SET };
 enum { EDM_ENUM, EDM_INT };                            /* kind: names follow; or a unit (none yet) */
 static const uint8_t ED_MENU[][2] = {
@@ -23,7 +25,7 @@ static const uint8_t ED_MENU[][2] = {
     {MI_LOAD, 19},                                     /* (JIANT 0.6.30) LOAD ECO / LITE / FULL, SYSTEM (0.9.12: AUDIO) */
     {MI_MIDIOUT, 20},                                  /* (JIANT 0.6.72) MIDI OUT KEYS / CLOCK / ALL / OFF, CONTROL (0.9.12: MIDI) */
     {MI_SKIN, 21},                                     /* (JIANT 0.8.9) SKIN COLORS / BOTTOM / HUD (0.9.7: AIR COLORS BOTTOM
-                                                        * HUD; 0.9.17: AIR COLORS HUD), a row of DISPLAY */
+                                                        * HUD; 0.9.17: AIR COLORS HUD; ACID FM 0.3: ACID, inert), DISPLAY */
     {MI_SCOPE, 22},                                    /* (0.9.7) SCOPE OFF / ON, a row of DISPLAY */
     {MI_CPU, 23}, {MI_CLOCK, 24},                      /* (0.9.12) CPU 1 CORE / 2 CORES, CPU CLOCK 360 / 320 MHZ, SYSTEM */
 };

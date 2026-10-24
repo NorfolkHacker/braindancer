@@ -44,12 +44,8 @@ static const genome_t LANE_G_HOME = {12, 0, 10, 3, 18, 0, 6};   /* HOME: a DRUM-
 typedef struct {
     int32_t spikes, len, wob, lob, nuc, sep, fray, ripple;   /* len wob sep fray ripple 0..256 */
 } bfeat_t;
-/* a line's colour: heat v; GREY and MONO its grey (their lines blend grey on grey: og_plot) */
-static uint16_t bg_col(int32_t v)
-{
-    uint16_t c = heat_col(v);
-    return settings.palette == UI_GREY_INDEX || settings.palette == UI_BW_INDEX ? ux_gray(ux_luma(c) >> 3) : c;
-}
+/* a line's colour: heat v (until ACID FM 0.3 GREY and MONO its grey) */
+static uint16_t bg_col(int32_t v) { return heat_col(v); }
 static int32_t bg_sin(uint32_t ang) { return sine_i(ang << 16); }   /* Q15 */
 /* the output's level now, 0..256, slewed (fast up, slow down) */
 static int32_t bg_energy(void)
@@ -226,7 +222,7 @@ static void graph_colony(const track_t *t, int32_t sel)
         const genome_t *g = &LANE_G[l];
         bfeat_t f = {g->k0, g->ss * 6, 40, g->lob, l == 2u ? 3 : 1, 160, 0, 0};
         if (muted)
-            bg_outline(g, &f, x * 16, y * 16, 8 * 16, 1, l * 9000u, ux.mono || settings.palette == UI_BW_INDEX ? ux_gray(ux_luma(T_DIM) >> 3) : T_DIM);
+            bg_outline(g, &f, x * 16, y * 16, 8 * 16, 1, l * 9000u, T_DIM);
         else if (e) {
             f.len = g->ss * 6 + e;
             f.wob = 40 + e * 3 / 4;

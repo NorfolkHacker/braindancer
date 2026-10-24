@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT 0.5: the technical graphs of the pages that had none (they showed the scope): what the four knobs do, drawn
- * as an engineer would, live where the sound is (thermal colours: heat_col / heat_y).
+ * as an engineer would, live where the sound is (heat_col: the surface toward the accent and the text).
  *   DIST       tk_dist_y: the drive TYPE's transfer (the FX lens draws it, ui_lzfx.c; 0.8.5: DIST, DLY, REVERB, CHORUS,
  *              MASTER and AUTOPAN live there, their old drawings gone)
  *   ENV DEST   the source now (the envelope's level) into four bipolar columns under the cards, each as long as its
@@ -117,7 +118,7 @@ static void tech_retrig(const track_t *t)
         int32_t ph = on ? (i % (w / 4)) * 1000 / (w / 4) : i * 1000 / w;
         int32_t y = base - ph * (base - top) / 1000;
         if (i && !(on && i % (w / 4) == 0))
-            cv_line_t(x0 + i - 1, py, x0 + i, y, heat_y(y, base, top, T_THEME), 2);
+            cv_line_t(x0 + i - 1, py, x0 + i, y, T_THEME, 2);
         else if (i)
             cv_rect(x0 + i, y, 1, py - y + 1, T_RAISE);  /* (back to 0) */
         py = y;

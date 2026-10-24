@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The palettes and the real canvas/text renderer (src/gfx.c): GREY stays gray in every token and blend, MONO is
- * black and white in every token (one grey: DIM LINE RAISE LANE) and neutral in every blend,
- * every palette's text contrast, the alpha blend, the ramp cache, the fonts' metrics and the ellipsis.
+/* The palette and the real canvas/text renderer (src/gfx.c): (ACID FM 0.3) one palette, ACID, its tokens the spec's,
+ * its text contrast, the alpha blend, the ramp cache, the fonts' metrics and the ellipsis.
  * Optional: a palette sheet (PPM). */
 #include <stdint.h>
 #include <stdio.h>
@@ -21,10 +20,6 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 static uint16_t sheet[SHEET_W * SHEET_H];
 static unsigned channel(uint16_t c, unsigned n)
 { return n == 0 ? c >> 11 : n == 1 ? (c >> 5) & 63 : c & 31; }
-static int gray(uint16_t c) { return channel(c, 0) == channel(c, 2) && channel(c, 1) == channel(c, 0) * 2u; }
-/* MONO's blends: R = B, G within 2 of 2 R (blended per channel, the 5-6-5 rounding) */
-static int neutral(uint16_t c)
-{ return channel(c, 0) == channel(c, 2) && (int)channel(c, 1) - 2 * (int)channel(c, 0) >= -2 && (int)channel(c, 1) - 2 * (int)channel(c, 0) <= 2; }
 static double luminance(uint16_t color)
 {
     const double weight[] = {0.2126, 0.7152, 0.0722};
@@ -48,31 +43,35 @@ int main(int argc, char **argv)
     static const uint8_t pd[] = {0x08, 0xf0};
     const aafont_t probe = {1, 1, 'A', 'A', 0, 0, pg, pp, pd, 0, 0, 0};
     double worst = 100;
-    assert(NPALETTES == 11u && !strcmp(UI_PALETTES[0].name, "GREY") && !strcmp(UI_PALETTES[7].name, "HI-CON") &&
-           !strcmp(UI_PALETTES[8].name, "NIGHT") && !strcmp(UI_PALETTES[9].name, "MONO") && UI_BW_INDEX == 9u &&
-           !strcmp(UI_PALETTES[10].name, "JIANT") && UI_JIANT_INDEX == 10u);   /* (JIANT 0.1: appended) */
-    /* (#50, 1.0.2: appended, the ids stay; GREY is the MONO of 1.0.1, id 0) */
-    for (unsigned st = ST_FLAT; st <= ST_LINE; st++) {   /* MONO: every token black or white, in FLAT and LINE */
-        uint16_t *tok = &ux.bg;
-        ux.style = (uint8_t)st;
-        palette_set(UI_BW_INDEX);
-        assert(&ux.grid - tok == 15);
-        for (unsigned i = 0; i < 16; i++) {
-            /* the one grey: DIM (inactive), LINE (tracks), RAISE (wells under white text), LANE (the piano roll) */
-            int grey_ok = tok[i] == UI_BW_GREY && (&tok[i] == &ux.dim || &tok[i] == &ux.line || &tok[i] == &ux.raise ||
-                                                   &tok[i] == &ux.lane);
-            if (!(tok[i] == 0x0000u || tok[i] == 0xFFFFu || grey_ok))
-                printf("MONO (%s): token %u = %04x is not black or white\n", st ? "LINE" : "FLAT", i, tok[i]);
-            assert(tok[i] == 0x0000u || tok[i] == 0xFFFFu || grey_ok);
+    /* ACID FM 0.3: one palette, ACID (index 0), its stored and derived tokens the spec's (docs/superpowers/specs/
+     * 2026-10-24-acid-fm-ui-design.md 3.1) within one RGB565 step a channel; the knobs ACID SLIDE VIOLET ACCENT */
+    {
+        static const struct { const char *what; const uint16_t *tok; uint32_t rgb; } SPEC[] = {
+            {"BG", &ux.bg, 0x141518}, {"BG2 (stored SURF)", &UI_PALETTES[0].surf, 0x1A1C20}, {"LINE", &ux.line, 0x303338},
+            {"TEXT", &ux.text, 0xE8EAED}, {"MID", &ux.mid, 0x9AA0A6}, {"ACID (THEME)", &ux.theme, 0xB8F53A},
+            {"ACCENT", &ux.accent, 0xFF503C}, {"EMPTY (RAISE)", &ux.raise, 0x26282D},
+            {"KNOB 1 ACID", &ux.k[0], 0xB8F53A}, {"KNOB 2 SLIDE", &ux.k[1], 0x4CB8FF},
+            {"KNOB 3 VIOLET", &ux.k[2], 0xA64BFF}, {"KNOB 4 ACCENT", &ux.k[3], 0xFF503C}};
+        assert(NPALETTES == 1u && UI_ACID_INDEX == 0u && !strcmp(UI_PALETTES[0].name, "ACID"));
+        palette_set(UI_ACID_INDEX);
+        for (unsigned i = 0; i < sizeof SPEC / sizeof SPEC[0]; i++) {
+            uint16_t want = RGB(SPEC[i].rgb >> 16, (SPEC[i].rgb >> 8) & 255u, SPEC[i].rgb & 255u), got = *SPEC[i].tok;
+            int ok = 1;
+            for (unsigned k = 0; k < 3; k++) {
+                int d = (int)channel(got, k) - (int)channel(want, k);
+                ok &= d >= -1 && d <= 1;
+            }
+            if (!ok) printf("ACID %s = %04x, the spec's %06X is %04x\n", SPEC[i].what, got, (unsigned)SPEC[i].rgb, want);
+            assert(ok);
         }
-        assert(T_BG == 0u && T_SURF == 0u && T_TEXT == 0xFFFFu && T_SEL == 0xFFFFu && T_INK == 0u && T_REC == 0xFFFFu);
+        assert(T_SURF == T_BG && luminance(T_BG) < 0.05);              /* one skin, AIR's look: no boxes (SURF is BG); dark */
+        for (unsigned v = 0; v < 128u; v++) palette_set(v);             /* any index is ACID */
+        assert(T_BG == UI_PALETTES[0].bg && T_THEME == UI_PALETTES[0].theme);
     }
-    ux.style = ST_FLAT;
-    for (unsigned p = 0; p < NPALETTES; p++) {
+    {
         uint16_t *tok = &ux.bg;
+        unsigned p = UI_ACID_INDEX;
         palette_set(p);
-        if (p == UI_GREY_INDEX)
-            for (unsigned i = 0; i < 14; i++) assert(gray(tok[i]));      /* every token, derived ones too (RAISE, KEY the last) */
         /* text and the things read on the screen; the generator checks the same (tools/gen_ui_palettes.py) */
         struct { uint16_t fg, bg; double min; } c[] = {
             {T_TEXT, T_BG, 12.0}, {T_TEXT, T_SURF, 9.0}, {T_MID, T_BG, 5.0}, {T_MID, T_SURF, 4.0},
@@ -90,8 +89,9 @@ int main(int argc, char **argv)
         if (min < worst) worst = min;
         printf("%-7s text %.1f:1, labels %.1f:1, values %.1f:1, selection %.1f:1\n", UI_PALETTES[p].name,
                contrast(T_TEXT, T_BG), contrast(T_MID, T_BG), contrast(T_THEME, T_BG), contrast(T_INK, T_SEL));
-        assert((p == 6u) == ux.light);                         /* PAPER is the light one */
-        assert(T_REC == (p == UI_GREY_INDEX || p == UI_BW_INDEX ? T_ACCENT : ux.light ? UI_REC_LIGHT : UI_REC_DARK));
+        assert(T_REC == UI_REC_DARK);
+        /* the crash screen and the QR code (fixed colours, outside the palette) stay readable */
+        assert(contrast(UI_CRASH_INK, UI_CRASH_BG) >= 4.5 && contrast(UI_QR_LIGHT, UI_QR_DARK) >= 15.0);
         /* the blend: transparent, solid and an edge between the two, on two backgrounds */
         for (unsigned b = 0; b < 2; b++) {
             uint16_t under = b ? T_SEL : T_BG, ink = b ? T_INK : T_THEME;
@@ -102,13 +102,12 @@ int main(int argc, char **argv)
                 unsigned a = channel(under, k), z = channel(ink, k), m = channel(swap16(cv_px[1]), k);
                 assert(m >= (a < z ? a : z) && m <= (a > z ? a : z));   /* no halo */
             }
-            if (p == UI_GREY_INDEX) assert(gray(swap16(cv_px[1])));
-            if (p == UI_BW_INDEX) assert(neutral(swap16(cv_px[1])));
         }
         assert(text_w(&AF_S, UI_PALETTES[p].name) <= 60);     /* the COLOR row's value */
         cv_begin(240, 124, T_BG);
         cv_text(4, 2, &AF_M, UI_PALETTES[p].name, T_TEXT);
         for (unsigned k = 0; k < 5; k++) cv_rect(150 + k * 16, 4, 12, 12, tok[k]);
+        for (unsigned k = 0; k < 4; k++) cv_rect(150 + k * 16, 20, 12, 4, T_K(k));
         cv_text(4, 26, &AF_S, "LABEL", T_MID);
         cv_text(70, 22, &AF_M, "VALUE 127", T_THEME);
         cv_text(170, 22, &AF_M, "HOT", T_ACCENT);
@@ -125,20 +124,17 @@ int main(int argc, char **argv)
         cv_key_hint(80, 108, KC_OCTUP, "LOAD", 1, T_BG);          /* keycaps: available, unavailable */
         cv_key_hint(150, 108, KC_OCTDN, "BACK", 0, T_BG);
         for (unsigned y = 0; y < 124; y++)
-            for (unsigned x = 0; x < 240; x++) {
-                uint16_t v = swap16(cv_px[y * 240 + x]);
-                if (p == UI_GREY_INDEX) assert(gray(v));          /* every blended pixel of GREY */
-                if (p == UI_BW_INDEX) assert(neutral(v));         /* and of MONO */
-                sheet[(p / 4 * 124 + y) * 960 + p % 4 * 240 + x] = v;
-            }
+            for (unsigned x = 0; x < 240; x++)
+                sheet[(p / 4 * 124 + y) * 960 + p % 4 * 240 + x] = swap16(cv_px[y * 240 + x]);
     }
-    /* the ramp cache follows the palette (a stale ramp would blend toward the old background) */
-    palette_set(1);
+    /* the ramp cache follows the palette (a stale ramp would blend toward the old background): palette_set marks it */
+    palette_set(0);
     cv_begin(3, 1, T_BG); cv_text(0, 0, &probe, "A", T_THEME);
-    uint16_t green = swap16(cv_px[1]);
-    palette_set(6);
+    assert(rc.gen == ux.gen && rc.n);
+    palette_set(0);
+    assert(rc.gen != ux.gen);
     cv_begin(3, 1, T_BG); cv_text(0, 0, &probe, "A", T_THEME);
-    assert(swap16(cv_px[1]) != green);
+    assert(rc.gen == ux.gen && rc.n == 1u);
     /* fonts: Chakra Petch (JIANT 0.5) S 12 px; (0.8.9) M Inter Tight SemiBold 15 px (the values, as the 0.6), L Michroma
      * 18 px; tabular digits; the ellipsis; L has capitals only */
     assert(AF_S.h == 16 && AF_S.asc == 12 && AF_M.h == 19 && AF_M.asc == 15 && AF_L.h == 26 && AF_L.asc == 21);
@@ -162,6 +158,6 @@ int main(int argc, char **argv)
         }
         fclose(f);
     }
-    printf("Palettes: GREY gray, MONO black and white, contrast (worst margin x%.2f), blending, ramp cache, font metrics and ellipsis passed.\n", worst);
+    printf("Palette: ACID the spec's tokens, contrast (worst margin x%.2f), blending, ramp cache, font metrics and ellipsis passed.\n", worst);
     return 0;
 }

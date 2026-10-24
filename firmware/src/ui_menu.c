@@ -302,7 +302,7 @@ static int32_t menu_scroll_max(void)
  * SELECT a row): the header "MENU . SCREEN", the tabs the groups (SCREEN AUDIO MIDI USB SYSTEM, a dot a page), the
  * page's four settings as the four cards (KNOB n the card n's value, each value in its heat as every card's), the panel
  * their rows (the knob's number, the full name, the value, one plain line on what it does: the value's own where the
- * values differ in kind), the footer MENU . TAB . page n/9 (MENU . page where the page is named as its tab). SELECT walks the pages (no wrap), ALGORITHM jumps to the next
+ * values differ in kind), the footer MENU . TAB . page n/8 (ACID FM 0.3; 0.9.18: n/9) (MENU . page where the page is named as its tab). SELECT walks the pages (no wrap), ALGORITHM jumps to the next
  * / previous tab's first page, PRESETS does nothing (rule 3). The last setting turned (ui.menu_sel, a row) is framed in
  * the panel; OCT+ / OCT- step it too (the LEDs breathe where it can go). An action (LEARN CLEAR, CALIBRATION, ABOUT):
  * its knob arms it (its card TINT, OCT+ its value, as every action card), OCT+ does it. Messages: the toast pill. The
@@ -348,11 +348,6 @@ static const char *menu_short(uint32_t row)          /* a card's label: a whole 
 }
 /* the panel's line under a row: what it does, in plain words; a value's own (v) where the values differ in kind */
 static const struct { uint8_t row, v; const char *s; } MI_HELP[] = {
-    {MI_COLOR, 255, "THE SCREEN'S COLOURS"},
-    {MI_SKIN, 0, "VALUES ON TOP, THE PICTURE BELOW"},
-    {MI_SKIN, 1, "CARDS AND A PANEL, AS 0.6"},
-    {MI_SKIN, 2, "PICTURE FULL, VALUES AT THE FOOT"},
-    {MI_STYLE, 255, "FILLED CARDS, OR LINES"},
     {MI_LARGE, 255, "BIG LABELS AND VALUES"},
     {MI_SCOPE, 255, "EDIT PAGES: A SCOPE BY THE BEING"},
     {MI_ANIM, 255, "OFF: VALUES SNAP, NOTHING ROLLS"},
@@ -405,7 +400,7 @@ static uint16_t menu_vcol(uint32_t c, uint32_t row)   /* a value's colour, as it
 {
     int32_t r = menu_ratio(row);
     uint16_t k = knob_col(c, r, 0);
-    return r < 0 ? T_MID : heat_on(r) ? ux_mix(k, T_TEXT, 20) : k;
+    return r < 0 ? T_MID : k;
 }
 static void menu_cards(void)
 {

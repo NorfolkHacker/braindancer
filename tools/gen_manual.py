@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+# Portions Copyright (C) 2026 NorfolkHacker
 """(JIANT 0.9.12) The interactive manual's generated half (web/manual): the navigation chains, read from the firmware
 through tools/gen_nav_map.py's own data model (parse(), its rules / layers / combos in English and Spanish, COND), and
 the firmware's real screens (tests/ui_render.c's renders) that the manual shows.
 
   python3 tools/gen_manual.py [RENDERS]   web/manual/nav.js, and web/manual/shots/*.png copied from RENDERS
-                                          (default build/ui_new/AIR_JIANT: run tests/run_tests.sh, or ui_render alone)
+                                          (default build/ui_new/ACID: run tests/run_tests.sh, or ui_render alone)
   python3 tools/gen_manual.py --check     exit 1 if nav.js differs from what the firmware's chains give, or a screen
                                           the manual names (nav.js or web/manual/data.js) is missing in shots/
 
-The screens are the AIR skin (the default of new settings) in the JIANT palette. Only the ones the manual names are
+The screens are the one skin (AIR's look) in the one palette, ACID (ACID FM 0.3; until then AIR in JIANT's palette). Only the ones the manual names are
 copied (the page each nav pill opens, PAGE_SHOT below, and every shot:'name' in data.js); stale ones are removed.
 """
 import json
@@ -100,7 +101,7 @@ def main(argv):
         for b in bad:
             print('gen_manual:', b)
         sys.exit(1 if bad else 0)
-    src = Path(argv[0]) if argv else R / 'build/ui_new/AIR_JIANT'
+    src = Path(argv[0]) if argv else R / 'build/ui_new/ACID'
     (OUT / 'nav.js').write_text(navjs, encoding='utf-8')
     names = wanted(navjs)
     SHOTS.mkdir(exist_ok=True)

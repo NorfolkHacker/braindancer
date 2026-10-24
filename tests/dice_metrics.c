@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * (0.9.17) the dice measured (not a test: numbers): consecutive presses of every DICE path from a fresh power-on and
  * mid-session, as the owner presses them. GEN (HOME + SELECT, OCT+ again: a new seed) per genre and EXPLORE; SEQ +
  * SELECT (the selected track's sequence); EDIT + SELECT (its sound). Per role: the share of a press's part the same as
@@ -139,7 +140,7 @@ static void dm_reset(void)
 {
     ui_power_on();
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();
-    settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
     memset(dm_nh, 0, sizeof dm_nh);
 }
 static void dm_wait(void) { uint32_t d = 600000u + dm_rnd() % 2400000u; host_ticks += d * 2u; fm1_ms += d / 1000u; }

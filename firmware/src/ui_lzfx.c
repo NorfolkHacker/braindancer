@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* (0.8.5) FX's lens (ui.c fx_*): the panels of its three levels, drawn as the approved HTML mock-up (FX, the proposal
  * "LENTE"), in the lens's panel (240 x 140 at y 84; the mock-up's coordinates less 84). Included by ui_graph.c.
  *   TRACK   the track's set (SENDS, DIST, AUTO PAN): its place as dots and its name at the top, its picture (the sends
@@ -316,10 +317,9 @@ static void graph_fx_lz(const track_t *t, const page_t *pg)
             int sel = m == ui.fxmod, ok = fx_mod_ok(m);
             uint16_t bg = lz_tile_bg();                 /* (0.8.9, the skins: COLORS a rounded card, the one picked framed
                                                          * THEME; BOTTOM, HUD bare, its name underlined) */
-            lz_tile(x, y, 76, 68, sel, T_THEME);
             cv_bg = bg;
             GFX_HOOK_ALIGN(0, y + 3, 0, y + 12, AL_V | AL_PASS, "FX module name");
-            cv_text_on(x + 4, y + 3, &AF_X, FX_MOD[m], sel ? T_THEME : ux.skin ? T_MID : T_TEXT, bg);
+            cv_text_on(x + 4, y + 3, &AF_X, FX_MOD[m], sel ? T_THEME : T_MID, bg);
             if (sel)
                 lz_uline(x + 4, y + 12, &AF_X, FX_MOD[m], T_THEME);
             if (ok)

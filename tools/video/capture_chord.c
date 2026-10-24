@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * (JIANT 0.6.84) the story announcing that CHORD is back (1080 x 1920, tools/video/stories.html): a soft lo-fi song in
  * A minor at 96 BPM played by the real engines, a key at a time on the CHORD track, while the script shows what CHORD
  * does: one key one chord, always in key (TRIAD, 7TH, SUS4), VOICING LEAD, STRUM, recorded whole into the piano roll
@@ -115,7 +116,7 @@ static void song_build(void)
 {
     uint32_t k;
     ui_power_on();
-    settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
     song.g[G_BPM] = BPM;
     song.master_q12 = 4096;
     sound(T_KEYS, "FM6", "TINE EP");

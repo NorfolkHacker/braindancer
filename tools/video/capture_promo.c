@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * (JIANT 0.6.68) the presentation film's footage: a dark hypnotic techno / IDM piece in F minor at 128 BPM played by
  * the real engines (a huge mono FM6 bass with a long release and a driven glide, a punk lead in octaves on a sync saw
  * through FOLD, DRUM-X techno, LOFI blips made of step components, a choir and wind for the mysteries, a CLOUD reverb
@@ -133,7 +134,7 @@ static void song_build(void)
 {
     uint32_t k;
     ui_power_on();
-    settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();
     song.g[G_BPM] = BPM;
     song.master_q12 = 4096;

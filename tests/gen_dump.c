@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * The generator audited (firmware/src/gen.c): a piece as text, to read its harmony as a musician reads a lead sheet:
  * the key and the SCALE / CHORD pages as GEN wrote them, the chords bar by bar (a symbol and its roman numeral), every
  * part a line a bar (the notes by name, '=' held, '.' rest, a chord's notes joined by '/'), each section of a FORM
@@ -116,7 +117,7 @@ int main(int argc, char **argv)
     double secs = argc > 6 ? atof(argv[6]) : 30.0;
     uint32_t from = genre ? genre : 1, to = genre ? genre : NGENRE, g, k, s;
     ui_power_on(); go_home(); frames(4);
-    settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();
     song.master_q12 = 4096;
     for (g = from; g <= to; g++) {

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Physical panel: which matrix button / encoder carries which printed label.
  * The matrix ids are known, the printed labels are not, so
  * the mapping is a table with a best guess, overridable by HARDWARE CALIBRATION
@@ -120,12 +121,13 @@ static void settings_init(void)
         settings.magic = SETTINGS_MAGIC;
         settings.palette = palette_from_stored(settings.palette);
     }
-    if (settings.magic != SETTINGS_MAGIC || settings.palette >= NPALETTES) {
+    if (settings.magic != SETTINGS_MAGIC || settings.palette >= 63u) {   /* (an index of JIANT's 11 palettes is not
+                                                                           * garbage: ACID, the rest kept) */
         settings.magic = SETTINGS_MAGIC;
-        settings.palette = UI_JIANT_INDEX;     /* JIANT FM (the default since JIANT 0.1; Felucca: GREY) */
         settings.lowcut = 0;
         settings.zoom = 0;                     /* (retired: the LEDS setting, settings_persist.c) */
     }
+    settings.palette = UI_ACID_INDEX;          /* ACID (ACID FM 0.3: the one palette; JIANT: JIANT; Felucca: GREY) */
     palette_set(settings.palette);
     fx_lowcut = (uint8_t)(settings.lowcut % 3u);
 }

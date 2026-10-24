@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Shared PER4 layout: each feature updates only its own fields, preserving
  * the other feature's saved preferences when either is built independently.
  * PER1/PER2 are upstream; PER3 added bold; PER4 added favorites.
@@ -101,21 +102,22 @@ static int settings_import(persist_t *p, int n)
 
 /* (JIANT 0.6.81) at power-on (persist_boot, not a backup's restore): settings saved by Felucca or an earlier JIANT keep
  * their palette, often GREY or MONO (a black and white screen after installing): set to JIANT once, marked (the mark
- * saved with the next settings: a palette picked after this is kept) */
+ * saved with the next settings: a palette picked after this is kept). (ACID FM 0.3: every palette reads as ACID; the
+ * mark is still set, the palette ACID) */
 static void settings_jiant_once(persist_t *p)
 {
     if (p->favorites.factory[15][23] == JIANT_PAL_SEEN)
         return;
     p->favorites.factory[15][23] = JIANT_PAL_SEEN;
-    p->palette = palette_to_stored(UI_JIANT_INDEX);
-    settings.palette = UI_JIANT_INDEX;
+    p->palette = palette_to_stored(UI_ACID_INDEX);
+    settings.palette = UI_ACID_INDEX;
 #ifdef FELUCCA_FAVORITES
     favorites.factory[15][23] = JIANT_PAL_SEEN;
 #endif
 }
 
 /* (0.9.7) at power-on with no settings saved (a new FM-1, an erased store): the defaults of new settings, SKIN AIR (settings
- * saved before keep what they hold: 0 COLORS ..) */
+ * saved before keep what they hold: 0 COLORS ..). (ACID FM 0.3: the byte is not read, one skin; written as JIANT's) */
 static void settings_fresh(void)
 {
 #ifdef FELUCCA_FAVORITES

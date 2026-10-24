@@ -41,24 +41,13 @@ static uint32_t hud_fade(void)
     return el >= 3600u ? 22u : 100u - (el - 3000u) * 78u / 600u / 13u * 13u;
 }
 
-/* (0.8.9) a tile in a lens's panel (FX's modules, the menu's tabs, ENV's tracks, MOD's slots): COLORS a rounded RAISE box
- * (r 4), the one picked framed in fc (the mock-up's card and its stroke); BOTTOM and HUD none (the words on the background;
- * the one picked: its name underlined, lz_uline). What lies under its words: lz_tile_bg */
-static uint16_t lz_tile_bg(void) { return ux.skin ? T_SURF : T_RAISE; }
-static void lz_tile(int32_t x, int32_t y, int32_t w, int32_t h, int sel, uint16_t fc)
+/* (0.8.9) a tile in a lens's panel (FX's modules, the menu's tabs, ENV's tracks, MOD's slots): BOTTOM, HUD and AIR none
+ * (the words on the background; the one picked: its name underlined, lz_uline; COLORS's rounded RAISE box gone with it,
+ * ACID FM 0.3). What lies under its words: lz_tile_bg */
+static uint16_t lz_tile_bg(void) { return T_SURF; }
+static void lz_uline(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t c)   /* under a name */
 {
-    if (ux.skin)
-        return;
-    if (sel) {
-        cv_rrect(x, y, w, h, 4, fc, cv_bg);
-        cv_rrect(x + 1, y + 1, w - 2, h - 2, 3, T_RAISE, fc);
-    } else
-        cv_rrect(x, y, w, h, 4, T_RAISE, cv_bg);
-}
-static void lz_uline(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t c)   /* BOTTOM, HUD: under a name */
-{
-    if (ux.skin)
-        cv_rect(x, y, text_w(f, s) - 1, 1, c);
+    cv_rect(x, y, text_w(f, s) - 1, 1, c);
 }
 
 /* the height ADSR and LFO are drawn on: 100 px, or (MENU > LARGE's strip: draw_graph) the strip's ~ 56 */
@@ -66,26 +55,12 @@ static int32_t graph_ht = 100;
 #include "ui_organic.c"                              /* JIANT FM's organic line art (drawn by code) */
 #include "ui_fm6op.c"                                /* (0.6.10, from Felucca 1.5) EDIT > OPERATOR, OP ENV, OPERATOR 2 */
 static uint16_t heat_col(int32_t v);
-/* (0.9.5, as the 0.6.36) JIANT (thermal): a card's colour its value as heat (ratio 0..1000, -1 none); bipolar (its range
- * across 0): by the distance from the centre, cold in the middle */
-static int heat_on(int32_t ratio) { return settings.palette == UI_JIANT_INDEX && ratio >= 0; }
-static uint16_t card_heat(int32_t ratio, int bip)
-{
-    int32_t r = clamp(ratio, 0, 1000);
-    if (bip)
-        r = (r > 500 ? r - 500 : 500 - r) * 2;
-    return heat_col(r * 256 / 1000);
-}
-/* knob c's colour on a lens card, a layer's KNOBS, EDIT's chips: JIANT its value's heat; another palette the knob's own
- * (UI_KNOBS) */
+/* knob c's colour on a lens card, a layer's KNOBS, EDIT's chips: the knob's own (UI_KNOBS: ACID SLIDE VIOLET ACCENT;
+ * until ACID FM 0.3 JIANT's palette its value's heat) */
 static uint16_t knob_col(uint32_t c, int32_t ratio, int bip)
 {
-    return heat_on(ratio) ? card_heat(ratio, bip) : T_K(c);
-}
-/* JIANT (thermal): a curve's colour at canvas row y, hot at the top (y0) and cold at the bottom (y1); else c */
-static uint16_t heat_y(int32_t y, int32_t y0, int32_t y1, uint16_t c)
-{
-    return settings.palette == UI_JIANT_INDEX && y1 > y0 ? heat_col(24 + (y1 - y) * 232 / (y1 - y0)) : c;
+    (void)ratio; (void)bip;
+    return T_K(c);
 }
 #include "ui_being.c"                                /* (JIANT 0.5) the beings: the engine pages' creatures */
 #include "ui_engvis.c"                               /* (0.9.4) VOICE's head, DRUM-X's kit */
@@ -102,24 +77,24 @@ static void graph_adsr(const track_t *t, uint16_t c)
     int32_t e = 32768;                                                  /* exp(-4.6 u), Q15 */
 #define EGY(lvl) (bot - (lvl) * (bot - top) / 1000)
     cv_rect(PANEL_X0, bot + 2, PANEL_W, 1, T_RAISE);
-    cv_line_t(x0, bot, x1, top, heat_y((bot + top) / 2, top, bot, c), 2);                                  /* attack: linear */
+    cv_line_t(x0, bot, x1, top, c, 2);                                  /* attack: linear */
     px = x1;
     py = top;
     for (i = 1; i <= d; i++) {                                          /* decay: exponential to SUS */
         int32_t lvl;
         e = (e * (32768 - 150733 / d)) >> 15;           /* k^d = exp(-4.6) */
         lvl = sus + ((1000 - sus) * e >> 15);
-        cv_line_t(px, py, x1 + i, EGY(lvl), heat_y(py, top, bot, c), 2);
+        cv_line_t(px, py, x1 + i, EGY(lvl), c, 2);
         px = x1 + i;
         py = EGY(lvl);
     }
-    cv_line_t(px, py, x3, EGY(sus), heat_y(py, top, bot, c), 2);                               /* sustain */
+    cv_line_t(px, py, x3, EGY(sus), c, 2);                               /* sustain */
     px = x3;
     py = EGY(sus);
     e = 32768;
     for (i = 1; i <= r; i++) {                                          /* release: exponential to 0 */
         e = (e * (32768 - 150733 / r)) >> 15;
-        cv_line_t(px, py, x3 + i, EGY(sus * e >> 15), heat_y(py, top, bot, c), 2);
+        cv_line_t(px, py, x3 + i, EGY(sus * e >> 15), c, 2);
         px = x3 + i;
         py = EGY(sus * e >> 15);
     }
@@ -159,7 +134,7 @@ static void graph_lfo(const track_t *t, uint16_t c)
             y = cy - ((int32_t)((((px >> 29) + 1u) * 2654435761u) >> 16) - 32768) * a / 32768;
         if (x)
             cv_line_t(PANEL_X0 + x - 1, py, PANEL_X0 + x, y,
-                      x < xp ? ux_mix(T_SURF, heat_y(y, cy - a, cy + a, c), 45) : heat_y(y, cy - a, cy + a, c), 2);
+                      x < xp ? ux_mix(T_SURF, c, 45) : c, 2);
         py = y;
     }
     cv_rect(PANEL_X0 + xp, cy - a - 4, 1, 2 * a + 8, T_MID);   /* the playhead */
@@ -441,13 +416,11 @@ static void pr_split(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uin
     for (k = 0; k < (int32_t)hits; k++)
         cv_rect(x + k * (pw + 1), y, pw, h, c);
 }
-/* a note's colour in the lens's pictures, as the mock-up's: JIANT on the heat ramp, a note warm (115; a chord's a
- * little warmer), an accent near white (243); another palette the notes ACCENT, an accent TEXT (the highlight) */
+/* a note's colour in the lens's pictures: the notes ACCENT, an accent TEXT (the highlight); (until ACID FM 0.3 JIANT's
+ * palette on the heat ramp) */
 static uint16_t lz_note(const step_t *st, int acc, uint16_t c)
 {
-    (void)c;
-    if (settings.palette == UI_JIANT_INDEX)
-        return heat_col(acc ? 243 : st->n > 1u ? 146 : 115);
+    (void)c; (void)st;
     return acc ? T_TEXT : T_ACCENT;
 }
 /* a step's component mark (3 x 3 at y): an arpeggio ACCENT, another THEME; none: nothing */
@@ -487,19 +460,14 @@ static void bar_cell(const track_t *t, uint32_t b, int32_t x, int32_t y, int32_t
     uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, l, dr = drum_track(t);
     int sel = b == ui.bank;
     int32_t sw = w - 4, top = y + (h > 20 ? 14 : 3), nh = h - (h > 20 ? 17 : 5);
-    uint16_t bg = ux.skin ? T_SURF : T_RAISE, nc;
+    uint16_t bg = T_SURF, nc;
     char s[2];
     if (b * 16u >= len) {                            /* past LEN: a dark cell */
         cv_rect(x, y, w, h, T_BG);
         return;
     }
-    if (ux.skin)                                     /* (0.8.9) BOTTOM, HUD: bare, a line under it (the bar edited THEME) */
-        cv_rect(x, y + h - 1, w, 1, sel ? T_THEME : T_LINE);
-    else if (sel) {                                  /* COLORS: a rounded card, the bar edited framed THEME */
-        cv_rrect(x, y, w, h, 3, T_THEME, cv_bg);
-        cv_rrect(x + 1, y + 1, w - 2, h - 2, 2, T_RAISE, T_THEME);
-    } else
-        cv_rrect(x, y, w, h, 3, T_RAISE, cv_bg);
+    cv_rect(x, y + h - 1, w, 1, sel ? T_THEME : T_LINE);   /* (0.8.9) BOTTOM, HUD, AIR: bare, a line under it (the bar edited
+                                                     * THEME) */
     for (i = 0; i < 16u && b * 16u + i < len; i++) {
         const step_t *st = &seq_steps(t)[b * 16u + i];
         int32_t sx = x + 2 + (int32_t)i * sw / 16, mw = sw / 16 - 1 > 1 ? sw / 16 - 1 : 1;
@@ -562,7 +530,7 @@ static void pr_bars(const step_t *st, int32_t x, int32_t w, uint16_t c, int acc_
 }
 static void graph_roll(const track_t *t, uint16_t c)
 {
-    uint32_t i, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u, ncol, mask = scale_mask(t), held = pr_held();
+    uint32_t i, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u, ncol, held = pr_held();
     uint64_t locks = motion_lock_steps(trk_index(t));
     int32_t r, ybot, trw = 0, note_pg = cur_page()->id[0] == 4u;
     int pat_pg = lens_on() && cur_page()->graph == GR_STEPS && cur_page()->id[0] == P_SLEN;   /* (0.9.17) PATTERN: GATE, SWING */
@@ -585,17 +553,9 @@ static void graph_roll(const track_t *t, uint16_t c)
     }
     ncol = base < len ? (len - base < 16u ? len - base : 16u) : 0u;
     cv_rect(PR_RX, PR_Y0, PR_RW, ybot - PR_Y0, T_BG);
-    for (r = 0; r < PR_ROWS; r++) {                 /* rows: the scale's tinted */
-        int32_t n = (int32_t)proll.lo + PR_ROWS - 1 - r, y = PR_Y0 + r * PR_RH;
-        uint32_t pc = (uint32_t)n % 12u;
-        static const uint8_t KB[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-        int in = mask == 0xFFFu ? !KB[pc] : (int)((mask >> ((uint32_t)(n - t->p[P_ROOT] + 120) % 12u)) & 1u);
-        if (in && !ux.skin)                          /* ((0.8.9) BOTTOM, HUD: no rows, the beats only) */
-            cv_rect(PR_RX, y, PR_CX(ncol) - PR_RX, PR_RH, T_LANE);
-    }
-    for (i = 0; i < 16u; i++)                         /* step lines, the beats brighter */
-        if (!ux.skin || !(i % 4u))
-            cv_rect(PR_CX(i), PR_Y0, 1, ybot - PR_Y0, i % 4u ? T_GRID : T_LINE);
+    for (i = 0; i < 16u; i += 4u)                     /* the beats' lines ((0.8.9) BOTTOM, HUD, AIR: no rows, no step lines;
+                                                       * COLORS's scale rows gone with it, ACID FM 0.3) */
+        cv_rect(PR_CX(i), PR_Y0, 1, ybot - PR_Y0, T_LINE);
     if (ncol < 16u)                                   /* past LEN: dark */
         cv_rect(PR_CX(ncol), PR_Y0, PR_RX + PR_RW - PR_CX(ncol), ybot - PR_Y0, T_BG);
     for (r = 0; r < PR_ROWS; r++)                     /* the keys held: their rows marked at the left */
@@ -940,19 +900,12 @@ static void page_title(char *ti)
     }
 }
 /* the strip's title: L centred (M when L lacks a glyph or is too wide) */
-/* the thermal ramp (JIANT): a value 0..256 as heat, as a thermal camera sees it: cyan (cold) .. blue .. violet .. red
- * .. orange .. yellow .. white (other palettes: their surface toward their accent and text) */
+/* a value 0..256 as heat: the surface toward the accent, then the text (ACID FM 0.3; until then JIANT's palette a thermal
+ * camera's ramp, indigo violet red orange amber cream white) */
 static uint16_t heat_col(int32_t v)
 {
-    static const uint16_t H[7] = {0x3955u, 0x82DFu, 0xFA09u, 0xFBA3u, 0xFDEBu, 0xFF99u, 0xFFFFu};   /* (0.8.9, the skins' mock-up: the 0.6's
-                                                         * ramp, indigo violet red orange amber cream white; was cyan blue violet
-                                                         * red orange yellow white) */
-    int32_t k;
     v = clamp(v, 0, 256);
-    if (settings.palette != UI_JIANT_INDEX)
-        return v < 128 ? ux_mix(T_SURF, T_ACCENT, v * 100 / 128) : ux_mix(T_ACCENT, T_TEXT, (v - 128) * 100 / 128);
-    k = v * 6 / 257;
-    return ux_mix(H[k], H[k + 1], (v * 6 - k * 256) * 100 / 256);
+    return v < 128 ? ux_mix(T_SURF, T_ACCENT, v * 100 / 128) : ux_mix(T_ACCENT, T_TEXT, (v - 128) * 100 / 128);
 }
 
 /* DRUM (DRUM-X): the eight sounds as columns, each as high and as hot as its hit now (a muted one crossed); the MORPH
@@ -1491,7 +1444,7 @@ static void track_strip(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, ui
         cv_keycap(5, 22 + AF_S_CAP_Y + HALF_UP(AF_S_CAP_H - KC_H), KC_MUTE, T_KEY, T_INK, T_SURF);
     else
         cv_free_text(5, 22, &AF_S, b, mute ? T_DIM : sel ? T_TEXT : T_MID, T_SURF, CARD_W - 10);
-    cv_rrect(5, TSS_GY, gw, 3, 1, ux.style ? T_LINE : T_BG, T_SURF);
+    cv_rrect(5, TSS_GY, gw, 3, 1, T_BG, T_SURF);
     cv_rrect(5, TSS_GY, fx < 3 ? 3 : fx, 3, 1, hot == 1u ? T_ACCENT : vc, T_BG);
     cv_rrect(5, TSS_MY, gw, 3, 1, T_RAISE, T_SURF);
     if (m)
@@ -1535,7 +1488,7 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
             cv_rect(4 + k * 8, 38, 6, 62, T_RAISE);
             if (v)
                 cv_rect(4 + k * 8, 100 - v, 6, v, mute ? T_DIM : sel && hot == (uint32_t)k + 1u ? T_ACCENT :
-                        settings.palette == UI_JIANT_INDEX ? heat_col(60 + v * 3) : T_THEME);
+                        T_THEME);
             cv_text(4 + k * 8, 106 - AF_X_CAP_Y, &AF_X, SN[k], T_DIM);
         }
         cv_blit((uint32_t)T6_X(c), lz_on() ? graph_y() + 9u : Y_GRAPH);
@@ -1572,8 +1525,6 @@ static void draw_tracks(void)
     uint32_t b4 = six ? 0u : trk_base4(), n = six ? NTRK : 4u;
     if (ui.force) {
         lcd_fill(0, graph_y(), 240, graph_h(), T_BG);
-        if (ux.style && !six)                        /* LINE: the strips divided as the cards above (four) */
-            draw_rules(graph_y(), graph_h());
         if (ui.frame - ts.frame > 1u)                /* (0.9.0) a redraw while they fall (a toast, a knob's page)
                                                       * keeps them falling: only meters left long ago start at 0
                                                       * (they jumped to 0 and the panel kept the old segments lit) */
@@ -1697,9 +1648,8 @@ static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c)
     cv_rect(x0, cy, pw, 1, T_RAISE);
     for (x = 0; x < pw; x++) {
         int32_t y = cy - snap[trig + (uint32_t)x] * a / peak;    /* auto-scaled */
-        if (x)                                                   /* JIANT: each stroke as hot as it is loud */
-            cv_line_t(x0 - 1 + x, py, x0 + x, y, settings.palette == UI_JIANT_INDEX ?
-                      heat_col(40 + (y > cy ? y - cy : cy - y) * 216 / a) : c, 2);
+        if (x)
+            cv_line_t(x0 - 1 + x, py, x0 + x, y, c, 2);
         py = y;
     }
 }
@@ -1714,8 +1664,7 @@ static void graph_mseq(const track_t *t, uint16_t c)
     int32_t y0 = 92, hmax = 80;
     for (i = 0; i < 16u; i++) {
         int32_t x = 13 + (int32_t)i * 13, h = t->p[P_MS0 + i] * hmax / 127;
-        uint16_t col = i >= len ? T_RAISE : i == now ? T_ACCENT : settings.palette == UI_JIANT_INDEX ?
-                       heat_col(48 + t->p[P_MS0 + i] * 200 / 127) : c;
+        uint16_t col = i >= len ? T_RAISE : i == now ? T_ACCENT : c;
         cv_rrect(x, y0 - hmax, 10, hmax, 2, T_RAISE, T_SURF);
         if (h > 0)
             cv_rrect(x, y0 - (h < 3 ? 3 : h), 10, h < 3 ? 3 : h, 2, col, T_RAISE);
@@ -1732,9 +1681,8 @@ static void graph_mseq(const track_t *t, uint16_t c)
  * the bars in all. KNOB 1 the row, 2 its section (on END: STOP / x2 .. / LOOP), 3 its bars, 4 its scene */
 static uint16_t sec_col(uint32_t s)
 {
-    static const uint8_t HJ[4] = {0, 85, 171, 213}, HO[4] = {120, 160, 200, 240};   /* (0.8.5: JIANT the mock-up's cyan
-                                                         * violet orange yellow; was 60 115 175 230) */
-    return heat_col(settings.palette == UI_JIANT_INDEX ? HJ[s & 3u] : HO[s & 3u]);
+    static const uint8_t HO[4] = {120, 160, 200, 240};   /* (ACID FM 0.3: JIANT's palette's 0 85 171 213 gone) */
+    return heat_col(HO[s & 3u]);
 }
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */

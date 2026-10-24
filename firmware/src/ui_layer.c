@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Felucca quick layers: while a page button is held, the keys and KNOB 1..4
  * are its shortcuts and its map shows over the page. One table (LAYERS) drives the gesture, the keys, the knobs,
  * the LEDs and the overlay:
@@ -1174,7 +1175,7 @@ static uint32_t lst_n __attribute__((section(".pool")));
 static void lst_chip(const char *a, const char *v, int on)
 {
     int32_t x = 4 + (int32_t)(lst_n & 1u) * 117, y = 16 + (int32_t)(lst_n >> 1) * 15;
-    uint16_t bg = ux.skin ? T_SURF : on ? T_TINT : T_RAISE;
+    uint16_t bg = T_SURF;                               /* (BOTTOM, HUD, AIR: no chip box) */
     char b[24];
     if (lst_n >= 16u)
         return;
@@ -1184,8 +1185,6 @@ static void lst_chip(const char *a, const char *v, int on)
         str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
         str_cpy(b + str_len(b), v, sizeof b - str_len(b));
     }
-    if (!ux.skin)
-        cv_rrect(x, y, 114, 13, 3, bg, T_SURF);
     if (on)
         cv_rect(x, y + 2, 2, 9, T_THEME);
     cv_clip_text(x + 6, y + 3 - AF_X_CAP_Y, &AF_X, b, on ? T_TEXT : T_DIM, bg, 104);
@@ -1302,8 +1301,7 @@ static void draw_layer(void)
     if (ui.force || sig != ui.layer_sig) {
         ui.layer_sig = sig;
         cv_begin(240, graph_h(), T_BG);
-        if (!ux.skin)                                   /* (0.8.5: the lens's panel; 0.8.9 COLORS rounded, BOTTOM / HUD none) */
-            cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);
+        /* (0.8.5: the lens's panel; 0.8.9 COLORS rounded; BOTTOM / HUD / AIR, the one skin since ACID FM 0.3: none) */
         cv_bg = T_SURF;
         if (ui.lylv % 3u == 1u)                         /* KNOBS: the four as gauges */
             layer_knobs(l);

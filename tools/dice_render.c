@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * (JIANT 0.6.80) DICE ALL heard: pieces from the generator (firmware/src/song_dice.c) on the host build of the tests,
  * the real engines playing each at its tempo, written as WAV files, to compare the generator before and after a
  * change by ear. Each argument is STYLE:ENERGY:SEED (the genre's index in GENRE (gen_tables.c), the energy 0..2, any seed: the same
@@ -24,7 +25,7 @@ int main(int argc, char **argv)
         FILE *wav;
         if (sscanf(argv[a], "%d:%d:%u", &st, &en, &seed) < 2) { fprintf(stderr, "STYLE:ENERGY:SEED, not %s\n", argv[a]); return 1; }
         ui_power_on();
-        settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+        settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
         ui_rec_prefs |= PREF_SIX >> 8; rp_apply();      /* TRACKS 6 */
         song.master_q12 = 4096;
         host_ticks = seed * 7919u;

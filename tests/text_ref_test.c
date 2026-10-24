@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* The firmware's text (src/gfx.c cv_text) against the reference text path of the UI-redesign prototype that
  * drew the UI design screens (its aa_text / aa_blit4 / ramp_make,
  * restated below): pen in 1/16 px accumulated over the string, pair kerning by binary search, no extra tracking,
@@ -43,14 +44,9 @@ static uint16_t rv[16];
 static void ref_ramp(uint16_t fg, uint16_t bg)
 {
     static const uint8_t SH[3] = {11, 5, 0}, MK[3] = {31, 63, 31};
-    const uint8_t *cv = ux.light ? CURVE_LIGHT : CURVE_DARK;
+    const uint8_t *cv = CURVE_DARK;                      /* (ACID FM 0.3: one palette, dark; no PAPER, no GREY) */
     for (uint32_t a = 0; a < 16u; a++) {
         uint32_t out = 0;
-        if (ux.mono) {
-            int32_t x = bg >> 11, y = fg >> 11;
-            rv[a] = ux_gray((uint32_t)(x + (((y - x) * (int32_t)cv[a] + 128) >> 8)));
-            continue;
-        }
         for (uint32_t k = 0; k < 3u; k++) {
             int32_t x = (bg >> SH[k]) & MK[k], y = (fg >> SH[k]) & MK[k];
             out |= (uint32_t)(x + (((y - x) * (int32_t)cv[a] + 128) >> 8)) << SH[k];

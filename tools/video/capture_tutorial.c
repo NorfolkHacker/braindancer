@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * (JIANT 0.8.0) the tutorial film's footage (tools/video/tutorial.html, in Spanish): a dark, evolving, spacious but
  * percussive piece in F minor at 116 BPM played by the real engines (TECHNO RAW drums, a REESE bass, a DARK PAD, a
  * PD LEAD with its filter envelope and a dotted delay, an FM PLUCK arpeggio, METAL hits in the reverb), arranged by the
@@ -177,7 +178,7 @@ static void song_build(void)
 {
     uint32_t k;
     ui_power_on();
-    settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();
     song.g[G_BPM] = BPM;
     song.master_q12 = 4096;

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * (JIANT 0.6.34; 0.6.35 short, no names) the DICE ALL film's footage: the generator thrown live on the host build of the
  * tests (tests/ui_test.c), the real engines playing each piece at its own tempo, the FM-1's screen at 30 fps. About a
  * minute: a first piece under the splash, then a throw every four seconds or so, each one HOME + SELECT (the dialog),
@@ -97,7 +98,7 @@ int main(int argc, char **argv)
     snprintf(p, sizeof p, "%s/intro.txt", dir);
     { FILE *it = fopen(p, "w"); if (it) { fputs("DICE ALL|one press, a whole new piece", it); fclose(it); } }
     ui_power_on();
-    settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();          /* TRACKS 6 */
     song.master_q12 = 4096;
     host_ticks = 777u;

@@ -28,39 +28,47 @@ int main(void)
 {
     persist_t original = {0}, p;
     original.magic = PERSIST_MAGIC;
-    original.palette = 4; original.bold = original.lowcut = original.zoom = 1;   /* old id 4: MONO, now GREY */
+    original.palette = 4; original.bold = original.lowcut = original.zoom = 1;   /* old id 4 (MONO, later GREY): ACID */
     original.panel = PANEL_DEFAULT; original.panel.enc[0] = 3;
     original.favorites.factory[8][0] = 1;
     original.favorites.user = 1u << 31; original.favorites.filter = 1;
-    p = original;                                 /* (JIANT 0.6.81) at power-on, no mark yet: the palette set to JIANT once,
-                                                   * marked; marked: kept */
+    p = original;                                 /* (JIANT 0.6.81) at power-on, no mark yet: the palette set once (ACID FM
+                                                   * 0.3: to ACID, the only one), marked; marked: kept */
     assert(settings_import(&p, sizeof p) == 1);
     settings_jiant_once(&p);
-    assert(settings.palette == UI_JIANT_INDEX && p.favorites.factory[15][23] == JIANT_PAL_SEEN &&
-           p.palette == palette_to_stored(UI_JIANT_INDEX));
-    p.palette = palette_to_stored(5);
+    assert(settings.palette == UI_ACID_INDEX && p.favorites.factory[15][23] == JIANT_PAL_SEEN &&
+           p.palette == palette_to_stored(UI_ACID_INDEX));
+    p.palette = UI_PAL_TAG + 5u;                  /* (JIANT's ROSE) */
     assert(settings_import(&p, sizeof p) == 1);
     settings_jiant_once(&p);
-    assert(settings.palette == 5u);
+    assert(settings.palette == UI_ACID_INDEX);
     p = original;
     assert(settings_import(&p, sizeof p) == 1); settings_init();
-    assert(settings.palette == UI_GREY_INDEX && fx_lowcut && settings.zoom && panel.enc[0] == 3);
-    assert(p.palette == palette_to_stored(UI_GREY_INDEX));        /* migrated in place */
-    {   /* every old id maps to a palette; tagged ids round trip; anything else is GREY */
+    assert(settings.palette == UI_ACID_INDEX && fx_lowcut && settings.zoom && panel.enc[0] == 3);
+    assert(p.palette == palette_to_stored(UI_ACID_INDEX));        /* migrated in place */
+    {   /* ACID FM 0.3: one palette. Every stored value loads as ACID: the 20 ids of older firmware (0..19), JIANT's tagged
+         * ids (UI_PAL_TAG + 0..10: GREY .. JIANT) and anything else; the ids a backup may hold stay valid */
         persist_t q = original;
-        for (uint32_t i = 0; i < 20u; i++) assert(palette_from_stored(i) < NPALETTES);
-        assert(palette_from_stored(13) == 6u && palette_from_stored(11) == 7u && palette_from_stored(19) == 7u);
-        for (uint32_t i = 0; i < NPALETTES; i++) assert(palette_from_stored(palette_to_stored(i)) == i);
-        assert(palette_from_stored(40) == UI_GREY_INDEX && !palette_stored_ok(40) && palette_stored_ok(3));
-        /* 1.0.2: the old MONO keeps its id as GREY (a saved MONO looks the same); the new black and white MONO is
-         * appended, a new id */
-        assert(palette_from_stored(UI_PAL_TAG + 0u) == UI_GREY_INDEX && !strcmp(UI_PALETTES[UI_GREY_INDEX].name, "GREY"));
-        assert(UI_BW_INDEX == NPALETTES - 2u && UI_JIANT_INDEX == NPALETTES - 1u && !strcmp(UI_PALETTES[UI_BW_INDEX].name, "MONO") &&
-               palette_from_stored(UI_PAL_TAG + UI_BW_INDEX) == UI_BW_INDEX && palette_stored_ok(UI_PAL_TAG + UI_BW_INDEX));
-        q.palette = palette_to_stored(5);
-        assert(settings_import(&q, sizeof q) == 1 && settings.palette == 5u);
-        settings.magic = SETTINGS_MAGIC_OLD; settings.palette = 13; settings_init();   /* retained SET3 */
-        assert(settings.magic == SETTINGS_MAGIC && settings.palette == 6u);
+        assert(NPALETTES == 1u && UI_ACID_INDEX == 0u && !strcmp(UI_PALETTES[UI_ACID_INDEX].name, "ACID"));
+        for (uint32_t i = 0; i < 20u; i++) assert(palette_from_stored(i) == UI_ACID_INDEX && palette_stored_ok(i));
+        for (uint32_t i = 0; i <= 10u; i++)
+            assert(palette_from_stored(UI_PAL_TAG + i) == UI_ACID_INDEX && palette_stored_ok(UI_PAL_TAG + i));
+        for (uint32_t i = 0; i < 256u; i++) assert(palette_from_stored(i) == UI_ACID_INDEX);
+        assert(palette_to_stored(UI_ACID_INDEX) == UI_PAL_TAG && !palette_stored_ok(40));
+        for (uint32_t i = 0; i < 20u; i++) {          /* each old id through an import: ACID, saved back as ACID's id */
+            q.palette = i;
+            assert(settings_import(&q, sizeof q) == 1 && settings.palette == UI_ACID_INDEX && q.palette == UI_PAL_TAG);
+        }
+        for (uint32_t i = 0; i <= 10u; i++) {         /* each of JIANT's 11 */
+            q.palette = UI_PAL_TAG + i;
+            assert(settings_import(&q, sizeof q) == 1 && settings.palette == UI_ACID_INDEX && q.palette == UI_PAL_TAG);
+        }
+        for (uint32_t i = 0; i < 20u; i++) {          /* retained SET3 of earlier firmware */
+            settings.magic = SETTINGS_MAGIC_OLD; settings.palette = i; settings_init();
+            assert(settings.magic == SETTINGS_MAGIC && settings.palette == UI_ACID_INDEX);
+        }
+        settings.palette = 7; settings_init();        /* (a RAM value past the one palette: ACID) */
+        assert(settings.palette == UI_ACID_INDEX);
         p = original; assert(settings_import(&p, sizeof p) == 1); settings_init();
     }
 #ifdef FELUCCA_FAVORITES

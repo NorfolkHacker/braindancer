@@ -803,7 +803,8 @@ advertises 9 (palette and favorites).
 | 38 FAV_SET | engine, preset v14, on/off | rc; when applied: engine, preset v14, on/off |
 
 UI_SET ids: 0 palette (0..count-1, the order of UI_PALETTES: GREY GREEN AMBER ICE VIOLET ROSE PAPER
-HI-CON NIGHT MONO; 1.0.2: GREY is the MONO of 1.0.1, MONO a new black and white palette), 1 font (retired: rc 2), 2 reserved, 3 preset filter (0 all, 1 favorites). Unsupported state
+HI-CON NIGHT MONO; 1.0.2: GREY is the MONO of 1.0.1, MONO a new black and white palette; ACID FM 0.3: one, ACID, see
+"ACID FM 0.3: one palette"), 1 font (retired: rc 2), 2 reserved, 3 preset filter (0 all, 1 favorites). Unsupported state
 fields are 127.
 Both u28 signatures are four least-significant-first 7-bit bytes; compare them
 to refresh changed favorites and user slots. Factory references use stable
@@ -1021,3 +1022,20 @@ version 2), so a JIANT index still reads; a stored current song above 4 loads as
   reads a JIANT archive (43 objects) in full, checks every object, restores songs 1..4 and skips 56..71 without sending
   a request for them; it reports "songs 5-8 not restored" and the count is `skipped` in `fm1backup.js`. A JIANT device
   (43 objects) still lists in the installer's Return-to-V15 backup, which saves all of it.
+
+## ACID FM 0.3: one palette
+
+ACID FM draws every screen in one palette, ACID, and one skin (AIR's look: no boxes, the knobs' row on top), in place
+of JIANT's eleven palettes (GREY GREEN AMBER ICE VIOLET ROSE PAPER HI-CON NIGHT MONO JIANT), its skins (COLORS HUD AIR)
+and its styles (FLAT LINE). The protocol keeps its shape; only the values change:
+
+- `UI_PALETTES` (36) answers one name: count 1, `ACID`. `UI_STATE`'s palette is 0. `UI_SET` id 0 (palette) takes 0 (rc as
+  before: 0 saved, 3 RAM only, 4 queued) and refuses any other value with rc 1, as an index past the list always was
+  (an older editor's 1..10 included); the display stays ACID.
+- MENU settings: COLOR (id 0), STYLE (id 1) and SKIN (id 21) keep their ids (append-only) and stay in `MENU_DESC`'s list
+  (tab 0 SCREEN), but are inert: one value (`max` 0), named `ACID`, value 0. A `MENU_SET` of any value answers as any other
+  set (rc, the id, the value 0) and changes nothing. They are on no page of the device's MENU (SCREEN's first page is now
+  LARGE, SCOPE, ANIMATION, SCREEN SLEEP; the MENU has 8 pages, SCREEN 2 is gone). SCOPE (id 22) is unchanged.
+- Saved settings and backups: every stored palette id (an older firmware's 0..19, JIANT's tagged 64..74) is accepted and
+  loads as ACID (saved back as 64); the SKIN and STYLE bytes are kept as stored (still in JIANT's range: an unknown SKIN 0,
+  the retired BOTTOM 1 as AIR 3, an unknown STYLE 0, PIXEL 2 as LINE 1) and read by nothing. New settings store SKIN AIR (3).

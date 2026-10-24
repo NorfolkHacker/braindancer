@@ -169,19 +169,15 @@ static void rp_put(uint32_t f, uint32_t v)
     ui_rec_prefs = (uint8_t)((ui_rec_prefs & ~(3u << (2u * f))) | st << (2u * f));
     rp_apply();
 }
-/* MENU > STYLE (ui_menu.c): ST_FLAT ST_LINE (gfx.c) in another byte no engine uses, saved with the settings;
- * 0 in older ones = FLAT; 2, the retired PIXEL (1.0.1), reads as LINE; anything else unknown as FLAT (settings_persist.c). gfx.c draws from its copy, ux.style
- * (ui_draw.c style_apply) */
+/* MENU > STYLE, (0.8.9) MENU > DISPLAY > SKIN: bytes no engine uses (engine 15, bytes 29 and 20), saved with the
+ * settings (settings_persist.c keeps them in range for a firmware that reads them). (ACID FM 0.3) One style, one skin
+ * (gfx.c): their values are not read; the editor's ids for them answer 0 (menu_items.c menu_hidden) */
 #define ui_style (favorites.factory[15][29])
-/* (0.8.9) MENU > DISPLAY > SKIN (ui_menu.c): SKIN_COLORS SKIN_HUD SKIN_AIR (gfx.c; 0.9.17 BOTTOM's 1 reads as AIR) in a byte no engine uses (engine 15,
- * byte 20), saved with the settings; 0 in older ones = COLORS, unknown = COLORS (settings_persist.c). gfx.c draws from its
- * copy, ux.skin (ui_draw.c style_apply) */
 #define ui_skin (favorites.factory[15][20])
 /* (0.9.7) MENU > DISPLAY > SCOPE (ui_lzedit.c graph_sound_lz): 1 ON, an engine's EDIT pages as before (the creature on the left,
  * the SCOPE card, the chips); 0 OFF (the default: new settings and older ones, which never held it), the creature on the
  * whole panel, centred, the page's and the sound's names in its corners. A byte no engine uses (engine 15) */
 #define ui_scope (favorites.factory[15][19])
-static void draw_rules(uint32_t y, uint32_t h);       /* (ui_draw.c) */
 
 static uint8_t sync_reload;                  /* engine / preset / project / user preset loaded: editor RELOAD push */
 
@@ -189,7 +185,7 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 static uint16_t val_col(uint32_t c);
 #define VAL(c) val_col(c)                  /* the knob just turned: accent (0.9.7, flash: a call, was in place) */
 /* a parameter's value as 0..1000 (-1: none). (0.9.5) It notes whether the parameter is bipolar (its range across 0: PAN,
- * DETUNE, a MOD amount ...): JIANT's cards heat by the distance from the centre then (ui_draw.c card_heat) */
+ * DETUNE, a MOD amount ...): (until ACID FM 0.3 JIANT's palette heated such a card by the distance from the centre) */
 static struct { int32_t r; uint8_t bip; } ratio_last;
 static int32_t ratio_of(int32_t min, int32_t max, int32_t v)
 {
@@ -507,24 +503,23 @@ static uint32_t large_kind(void)
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
-/* (0.8.9) a lens page in SKIN BOTTOM / HUD's layout (LARGE: COLORS'); HUD's HOME (ECO): the beings full screen */
-static int lz_low(void) { return ux.skin && lz_on() && !(ui_prefs & PREF_LARGE); }
-/* (0.9.17) .. with the knobs' row on top, under the tabs: AIR; HUD on the SEQ pages (the values over the pattern's pictures,
- * as AIR and COLORS: the owner's "parameters on top") */
-static int lz_top(void);
+/* (0.8.9) a lens page in SKIN BOTTOM / HUD's layout (LARGE: COLORS'); HUD's HOME (ECO): the beings full screen. (ACID FM
+ * 0.3: the one skin, AIR's: every lens page but in LARGE) */
+static int lz_low(void) { return lz_on() && !(ui_prefs & PREF_LARGE); }
+/* (0.9.17) .. with the knobs' row on top, under the tabs: AIR (ACID FM 0.3: lz_top, AIR's or HUD's SEQ pages', is lz_low:
+ * BOTTOM / HUD's knobs at the foot are gone) */
 static int hud_home(void);
 static uint32_t card_y(void)
 {
-    return lz_low() ? (lz_top() ? (hud_home() ? LA_HOME_CARD_Y : LA_CARD_Y) : LB_CARD_Y) : lz_on() ? LZ_CARD_Y : Y_LABEL;
+    return lz_low() ? (hud_home() ? LA_HOME_CARD_Y : LA_CARD_Y) : lz_on() ? LZ_CARD_Y : Y_LABEL;
 }
 static uint32_t foot_y(void) { return hud_home() ? LZ_FOOT_Y - 1u : lz_on() ? LZ_FOOT_Y : Y_FOOT; }
 static uint32_t foot_h(void) { return hud_home() ? LZ_FOOT_H + 1u : lz_on() ? LZ_FOOT_H : H_FOOT; }
 static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : lz_low() ? LB_CARD_H : lz_on() ? LZ_CARD_H : CARD_H; }
 static uint32_t graph_y(void)
 {
-    int air = lz_top();
-    return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : hud_home() ? (air ? LA_HOME_GRAPH_Y : LB_GRAPH_Y - 1u) :
-           lz_low() ? (air ? LA_GRAPH_Y : LB_GRAPH_Y) : lz_on() ? LZ_GRAPH_Y : Y_GRAPH;
+    return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : hud_home() ? LA_HOME_GRAPH_Y :
+           lz_low() ? LA_GRAPH_Y : lz_on() ? LZ_GRAPH_Y : Y_GRAPH;
 }
 static uint32_t graph_h(void)
 {
@@ -677,12 +672,11 @@ static uint32_t lz_fam(void)                            /* which lens */
     return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ;
 }
 static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
-static int lz_top(void) { return lz_low() && (ux.skin == SKIN_AIR || lz_fam() == LZ_SEQ); }   /* (0.9.17, card_y) */
 /* (MENU > LARGE: their cards as they are; 0.9.0: not under the count-in or UPDATE MODE's countdown, which cover the page:
  * their header on BG, as every other page's) */
 static int hud_home(void)
 {
-    return skin_hud() && !ui.uboot && !seq_counting() && lz_low() && lz_fam() == LZ_HOME && home_level() == 0u;   /* (0.9.7 AIR too) */
+    return !ui.uboot && !seq_counting() && lz_low() && lz_fam() == LZ_HOME && home_level() == 0u;   /* (0.9.7 AIR too) */
 }
 /* the tab lit: the section's group shown, the menu's tab, a layer's view */
 static uint32_t menu_tab(void);

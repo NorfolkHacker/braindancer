@@ -58,7 +58,7 @@ typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #define GFX_HOOK_COVER(x0, y0, x1, y1) ((void)0)   /* (0.9.5) an overlay (a toast's pill) hides what its canvas holds there */
 #endif
 #ifndef GFX_HOOK_RULE
-#define GFX_HOOK_RULE(x, y, w, h) ((void)0)        /* a divider drawn on the screen (ui_draw.c lcd_rule): no box may touch it */
+#define GFX_HOOK_RULE(x, y, w, h) ((void)0)        /* a divider drawn on the screen (until ACID FM 0.3 STYLE LINE's ui_draw.c lcd_rule): no box may touch it */
 #endif
 /* the alignment check (tests/ui_render.c): GFX_HOOK_ALIGN declares that the next item(s) drawn (a text, an icon, a
  * keycap, a cushion) are meant to sit centred in the box x0..x1, y0..y1 (canvas drawing coordinates, x1 y1 past it)
@@ -94,8 +94,8 @@ static uint8_t cv_flip;          /* cv_alpha_hc: the cell mirrored left <-> righ
 #define CV_NTXT 32u
 static int16_t cv_txt[CV_NTXT][4] __attribute__((section(".pool")));
 static uint8_t cv_ntxt __attribute__((section(".pool")));
-static uint8_t cv_halo __attribute__((section(".pool")));   /* (0.8.9) SKIN HUD: text drawn with a 1 px BG outline under it
-                                 * (cv_text_flags), over a picture (the pool: the audio's data stays where it was) */
+static uint8_t cv_halo __attribute__((section(".pool")));   /* (0.8.9) text drawn with a BG outline under it (cv_text_flags),
+                                 * over a picture: HUD's HOME, AIR's too (the pool: the audio's data stays where it was) */
 
 /* (0.9.0) the outline's offsets: every pixel within 2 px (dx^2 + dy^2 <= 5), as the 2 px halo of HUD's words over the beings
  * (the 0.8.9 1 px one left them hard to read on a busy picture) */
@@ -106,38 +106,23 @@ static const int8_t HALO_Y[HALO_N] = {-2, -2, -2, -1, -1, -1, -1, -1, 0, 0, 0, 0
 #define RGB(r, g, b) ((uint16_t)((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)))
 
 /* ------------------------------------------------------------- theme --- */
-/* Five stored colours per palette, the rest derived with fixed blends (tools/gen_ui_palettes.py) */
+/* (ACID FM 0.3) One palette, ACID (tools/gen_ui_palettes.py: five stored colours, the rest derived with fixed blends), in
+ * place of JIANT's eleven, and one skin, AIR's look (JIANT 0.9.7: no boxes, SURF is BG; the words float, no rules; the
+ * knobs' row on top, the breadcrumb at the foot), in place of COLORS / HUD / AIR and the FLAT / LINE styles. MENU's
+ * COLOR, SKIN and STYLE keep their editor ids but do nothing (menu_items.c) */
 static struct {
     uint16_t bg, surf, text, theme, accent;
-    uint16_t mid, dim, line, sel, tint, ink, rec, raise, key, lane, grid;
-    uint16_t k[4];               /* (0.8.9) KNOB 1..4's colours (tools/gen_ui_palettes.py KNOBS): the skins' cards, as 0.6 */
-    uint8_t light, mono;
-    uint8_t chamfer;             /* (JIANT 0.5) the JIANT palette: corners cut on the diagonal (cv_rrect), not rounded */
-    uint8_t style;               /* MENU > STYLE (ui.c style_apply): ST_FLAT, ST_LINE */
-    uint8_t skin;                /* (0.8.9) MENU > SKIN (ui_draw.c style_apply): SKIN_COLORS, SKIN_HUD, SKIN_AIR */
+    uint16_t mid, dim, line, sel, tint, ink, rec, raise, key;
+    uint16_t k[4];               /* (0.8.9) KNOB 1..4's colours (tools/gen_ui_palettes.py KNOBS): ACID SLIDE VIOLET ACCENT */
     uint32_t gen;                /* bumped by palette_set (the text ramps follow) */
 } ux;
-/* STYLE: FLAT, the filled SURF cards and panels; LINE, no SURF (it is BG) and 1 px T_RULE dividers between the
- * areas instead (ui_draw.c draw_frame). (1.0.2: PIXEL, LINE un-antialiased, retired; a saved PIXEL reads as LINE.)
- * Selections, accents, keys and gauges keep their fills in every style */
-#define ST_FLAT 0u
-#define ST_LINE 1u
-/* (0.8.9) SKIN (the approved mock-up opciones_skin.html): COLORS, the lens's cards and panel in the 0.6 colours; BOTTOM, the
- * knobs a slim row at the foot and the middle free (no panel, no boxes: SURF is BG); HUD, the picture full screen and the
- * words floating over it. (0.9.7) AIR (the default of new settings): HUD's look everywhere, the knobs' row on top, right
- * under the tabs, the middle free for the pictures, the breadcrumb at the foot (stored 3: older settings keep theirs).
- * (0.9.17) BOTTOM retired (its premise, the knobs at the foot, put the SEQ pages' values under their pictures): a stored 1
- * reads as AIR (settings_persist.c, ui_draw.c style_apply); HUD's SEQ pages take AIR's knobs' row on top too (ui.c lz_top) */
-#define SKIN_COLORS 0u
-#define SKIN_BOTTOM_OLD 1u           /* (0.9.17: retired, reads as AIR) */
-#define SKIN_HUD 2u
+/* (0.8.9) SKIN's stored byte (ui.c ui_skin): JIANT's new settings wrote AIR, 3 (settings_persist.c settings_fresh: so
+ * still, for a firmware that reads it); its value is otherwise not read */
 #define SKIN_AIR 3u
-#define SKIN_N 4u                    /* the stored values (0..3) */
-static int skin_hud(void) { return ux.skin == SKIN_HUD || ux.skin == SKIN_AIR; }   /* (0.9.7) HUD's look: no rules, words float */
 #define T_K(c) ux.k[(c) & 3u]    /* KNOB c's colour */
-#define T_RULE ux.dim            /* LINE: the dividers (DIM: visible on NIGHT, GREY, MONO and PAPER, quieter than labels) */
+#define T_RULE ux.dim            /* LINE: the dividers (DIM: quieter than labels) */
 #define T_BG ux.bg               /* background */
-#define T_SURF ux.surf           /* dialogs, menu rows, mixer strips */
+#define T_SURF ux.surf           /* dialogs, menu rows, mixer strips (the one skin: BG) */
 #define T_TEXT ux.text           /* primary text */
 #define T_THEME ux.theme         /* values, curves, the gauge's end line */
 #define T_ACCENT ux.accent       /* the one active thing: hot knob, cursor, playhead */
@@ -147,72 +132,49 @@ static int skin_hud(void) { return ux.skin == SKIN_HUD || ux.skin == SKIN_AIR; }
 #define T_SEL ux.sel             /* selection and gauge fill */
 #define T_TINT ux.tint           /* a faint theme area */
 #define T_INK ux.ink             /* text on T_SEL / T_THEME */
-#define T_REC ux.rec             /* REC: fixed red (GREY, MONO: the accent) */
+#define T_REC ux.rec             /* REC: fixed red */
 #define T_RAISE ux.raise         /* a raised area on a surface: stubs, guides, slots, chips, button wells */
 #define T_KEY ux.key             /* a keycap's fill (its label: T_INK; unavailable: a T_DIM fill) */
-#define T_LANE ux.lane           /* the piano roll: an in-scale row (SURF -> THEME 10 %) */
-#define T_GRID ux.grid           /* the piano roll: a step line (SURF -> TEXT 6 %; beats and C rows: RAISE) */
 #define NPALETTES UI_NPALETTES
 
-static inline uint16_t ux_gray(uint32_t x5) { return (uint16_t)((x5 << 11) | (x5 << 6) | x5); }
-/* a + (b - a) * pct / 100 per channel, rounded; GREY on the red channel, so it stays gray */
+/* a + (b - a) * pct / 100 per channel, rounded */
 static uint16_t ux_mix(uint16_t a, uint16_t b, int32_t pct)
 {
     static const uint8_t SH[3] = {11, 5, 0}, MK[3] = {31, 63, 31};
     uint32_t out = 0, k;
-    if (ux.mono) {
-        int32_t x = a >> 11, d = ((b >> 11) - x) * pct;
-        return ux_gray((uint32_t)(x + (d + (d >= 0 ? 50 : -50)) / 100));
-    }
     for (k = 0; k < 3u; k++) {
         int32_t x = (a >> SH[k]) & MK[k], d = (((b >> SH[k]) & MK[k]) - x) * pct;
         out |= (uint32_t)(x + (d + (d >= 0 ? 50 : -50)) / 100) << SH[k];
     }
     return (uint16_t)out;
 }
-static uint32_t ux_luma(uint16_t c)        /* 0..255 */
-{
-    return ((c >> 11) * 255u / 31u * 54u + ((c >> 5) & 63u) * 255u / 63u * 183u + (c & 31u) * 255u / 31u * 19u) >> 8;
-}
 
-static void palette_set(uint32_t i)
+static void palette_set(uint32_t i)        /* (ACID FM 0.3: any i is ACID, the one palette) */
 {
-    const ui_pal_t *p = &UI_PALETTES[i % NPALETTES];
+    const ui_pal_t *p = &UI_PALETTES[UI_ACID_INDEX];
     uint32_t k;
-    i %= NPALETTES;
-    ux.mono = i == UI_GREY_INDEX;
-    ux.chamfer = i == UI_JIANT_INDEX;
-    ux.bg = p->bg; ux.surf = ux.style || ux.skin ? p->bg : p->surf; ux.text = p->text; ux.theme = p->theme; ux.accent = p->accent;
+    (void)i;
+    ux.bg = p->bg; ux.surf = p->bg; ux.text = p->text; ux.theme = p->theme; ux.accent = p->accent;   /* (no boxes: SURF BG) */
     ux.mid = ux_mix(p->bg, p->text, UI_MID_PCT);
     ux.dim = ux_mix(p->bg, p->text, UI_DIM_PCT);
     ux.line = ux_mix(p->bg, p->text, UI_LINE_PCT);
     ux.sel = ux_mix(p->bg, p->theme, UI_SEL_PCT);
     ux.tint = ux_mix(p->bg, p->theme, UI_TINT_PCT);
     ux.ink = p->bg;
-    ux.raise = ux_mix(p->surf, p->text, UI_RAISE_OF[i]);
+    ux.raise = ux_mix(p->surf, p->text, UI_RAISE_PCT);
     for (k = 0; k < 4u; k++)
-        ux.k[k] = UI_KNOBS[i][k];
+        ux.k[k] = UI_KNOBS[UI_ACID_INDEX][k];
     ux.key = ux_mix(p->bg, p->text, UI_KEY_PCT);
-    ux.lane = ux_mix(ux.surf, p->theme, 10);
-    ux.grid = ux_mix(ux.surf, p->text, 6);
-    ux.light = ux_luma(p->bg) > 128u;
-    ux.rec = ux.mono ? p->accent : ux.light ? UI_REC_LIGHT : UI_REC_DARK;
-    if (i == UI_BW_INDEX) {                      /* MONO: black and white, set, not blended (tools/gen_ui_palettes.py) */
-        ux.mid = ux.sel = ux.key = ux.rec = p->text;   /* a selection, a keycap, REC: white, its INK black */
-        ux.dim = ux.line = ux.raise = ux.lane = UI_BW_GREY;   /* the one grey: inactive, tracks, wells */
-        ux.tint = ux.grid = p->bg;
-    }
-    ux.gen++;                                    /* the text ramps change with the coverage curve */
+    ux.rec = UI_REC_DARK;
+    ux.gen++;                                    /* the text ramps follow */
 }
 
-/* settings store a tagged id; ids below 20 are the palettes of earlier firmware */
-static uint32_t palette_from_stored(uint32_t v)
-{
-    if (v >= UI_PAL_TAG && v - UI_PAL_TAG < NPALETTES) return v - UI_PAL_TAG;
-    return v < 20u ? UI_PALETTE_MIGRATE[v] : UI_GREY_INDEX;
-}
-static uint32_t palette_to_stored(uint32_t i) { return UI_PAL_TAG + i % NPALETTES; }
-static int palette_stored_ok(uint32_t v) { return v < 20u || (v >= UI_PAL_TAG && v - UI_PAL_TAG < NPALETTES); }
+/* settings store a tagged id (UI_PAL_TAG + index; JIANT's 0..10); ids below 20 are the palettes of earlier firmware.
+ * (ACID FM 0.3) Every one reads as ACID; the ids a saved record or a backup may hold (below 20, a tag and up to 62) stay
+ * valid */
+static uint32_t palette_from_stored(uint32_t v) { (void)v; return UI_ACID_INDEX; }
+static uint32_t palette_to_stored(uint32_t i) { (void)i; return UI_PAL_TAG + UI_ACID_INDEX; }
+static int palette_stored_ok(uint32_t v) { return v < 20u || (v >= UI_PAL_TAG && v - UI_PAL_TAG < 63u); }
 
 static inline uint16_t swap16(uint32_t c) { return (uint16_t)(((c >> 8) & 0xFFu) | ((c & 0xFFu) << 8)); }
 
@@ -508,8 +470,7 @@ static void cv_rrect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint
 {
     int32_t i, j;
     GFX_HOOK_CELL(x, y + cv_oy, x + w, y + h + cv_oy);   /* (the lint: what is drawn on it stays inside it) */
-    if (r < 0) r = -r;                           /* (-r: rounded in every style: a keycap-like cushion) */
-    else if (ux.style == ST_LINE) r = 0;         /* LINE: square cursors, selections and fills (FLAT: rounded) */
+    if (r < 0) r = -r;                           /* (-r: a keycap-like cushion; until ACID FM 0.3 rounded in STYLE LINE too) */
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
     if (r < 1) {
@@ -558,9 +519,8 @@ static void cv_keep(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t *buf, i
 }
 
 /* ------------------------------------------------- 4-bit alpha blit --- */
-/* coverage curves: a little heavier for light ink on dark, lighter for dark ink on light */
+/* the coverage curve: a little heavier for light ink on dark (ACID is dark; until 0.3 a lighter one for PAPER) */
 static const uint8_t CURVE_DARK[16] = {0, 24, 43, 62, 80, 97, 114, 130, 147, 163, 178, 194, 210, 225, 240, 255};
-static const uint8_t CURVE_LIGHT[16] = {0, 12, 27, 42, 58, 75, 91, 109, 126, 144, 162, 180, 199, 217, 236, 255};
 #define NRAMP 6u
 static struct {
     uint16_t fg[NRAMP], bg[NRAMP], v[NRAMP][16];   /* v: byte-swapped panel values */
@@ -571,10 +531,10 @@ static struct {
 static const uint16_t *ramp(uint16_t fg, uint16_t bg)
 {
     static const uint8_t SH[3] = {11, 5, 0}, MK[3] = {31, 63, 31};
-    const uint8_t *cv = ux.light ? CURVE_LIGHT : CURVE_DARK;
+    const uint8_t *cv = CURVE_DARK;
     uint32_t i, a, k;
     uint16_t *v;
-    if (fg == bg)                                /* MONO: DIM on a RAISE well (one grey): black, recessed */
+    if (fg == bg)                                /* ink on its own colour (until 0.3 MONO's DIM on a RAISE well): BG */
         fg = ux.bg;
     GFX_HOOK_INK(fg, bg);
     if (rc.gen != ux.gen) {
@@ -594,14 +554,9 @@ static const uint16_t *ramp(uint16_t fg, uint16_t bg)
     for (a = 0; a < 16u; a++) {
         uint32_t out = 0;
         int32_t w = cv[a];
-        if (ux.mono) {
-            int32_t x = bg >> 11;
-            out = ux_gray((uint32_t)(x + ((((fg >> 11) - x) * w + 128) >> 8)));
-        } else {
-            for (k = 0; k < 3u; k++) {
-                int32_t x = (bg >> SH[k]) & MK[k], y = (fg >> SH[k]) & MK[k];
-                out |= (uint32_t)(x + (((y - x) * w + 128) >> 8)) << SH[k];
-            }
+        for (k = 0; k < 3u; k++) {
+            int32_t x = (bg >> SH[k]) & MK[k], y = (fg >> SH[k]) & MK[k];
+            out |= (uint32_t)(x + (((y - x) * w + 128) >> 8)) << SH[k];
         }
         v[a] = swap16(out);
     }

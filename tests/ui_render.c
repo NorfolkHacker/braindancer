@@ -2,10 +2,11 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * Portions Copyright (C) 2026 NorfolkHacker */
-/* Renders of the firmware UI (firmware/src/ui*.c on tests/ui_test.c's stubs), the layout lint, the GREY and MONO
- * checks and the host draw cost.
+/* Renders of the firmware UI (firmware/src/ui*.c on tests/ui_test.c's stubs), the layout lint and the host draw cost.
+ * (ACID FM 0.3: one palette, ACID, and one skin, AIR's look; until then every screen in each of JIANT's 11 palettes,
+ * in STYLE FLAT and LINE and in SKIN COLORS, HUD and AIR, with GREY's gray and MONO's neutral checks.)
  *   ui_render OUTDIR [SLOTDIR]   (run by tests/run_tests.sh; tests/ui_render.py makes the PNGs;
- *                                 SLOTDIR: filmstrips of the rolling digits, GREY MONO and GREEN)
+ *                                 SLOTDIR: filmstrips of the rolling digits, ACID)
  * Layout lint, over every screen below in every palette, every page of every engine and every value of every
  * column: the ink box of every text and icon drawn (gfx.c GFX_HOOK_TEXT) as it lands on the screen. A finding:
  * a box off the screen, cut by its canvas, partly covered by a later strip or fill, overlapping another box, or
@@ -14,25 +15,22 @@
  * GFX_HOOK_CELL) without lying inside it, though still on the screen (the FX map's REVERSE), or drawn in the
  * colour it is drawn on (gfx.c GFX_HOOK_INK: a text, icon or keycap label that cannot be seen; MONO's tokens share
  * values, DIM and RAISE its one grey).
- * GREY: every pixel of every screen is RGB565 gray (R = B, G = 2 R). MONO (black and white, blended per channel):
- * every pixel is neutral (R = B, G within 2 of 2 R).
- * MENU > STYLE LINE: every screen again in every palette, the same lint; a text or icon on a divider
- * (ui_draw.c lcd_rule, GFX_HOOK_RULE: the rules between the strips; cv_rule's are cells) is a finding too.
- * Rolling digits: every frame of a header BPM roll and a card roll, up and down, in every palette (lint, GREY, MONO).
+ * A text or icon on a divider (GFX_HOOK_RULE: a rule between the strips; cv_rule's are cells) is a finding too.
+ * Rolling digits: every frame of a header BPM roll and a card roll, up and down (lint).
  * FM6 colonies (0.9.6, ui_engvis.c vx_fm6 on OPERATOR, each bicho through VX_FM6_HOOK), every algorithm: no two
  * operators' bichos overlapping or touching (as large as a full envelope makes them), every one inside the panel.
- * Output: OUTDIR/ppm/<PALETTE>_<screen>.ppm for GREY MONO GREEN PAPER NIGHT, OUTDIR/report.txt (findings, ellipsised
- * free text, the draw cost), OUTDIR/text_audit.tsv (GREY, per screen: texts, icons and keycaps with their ink-box px,
+ * Output: OUTDIR/ppm/ACID_<screen>.ppm, OUTDIR/report.txt (findings, ellipsised
+ * free text, the draw cost), OUTDIR/text_audit.tsv (per screen: texts, icons and keycaps with their ink-box px,
  * the ellipsised ones, the texts closer than 2 px to their cell's edge, the words).
  * Alignment (gfx.c GFX_HOOK_ALIGN): every place where a text, icon or keycap is meant to sit centred (in a cell, a
  * chip, a button, a row, a column, a knob, a strip) or on a line shared with its neighbours (an icon on its label's
  * line, a word on its keycap's, a unit on its value's baseline) declares its box; the ink drawn there (a text: its
  * glyphs' boxes across, its capitals' band up and down; an icon: its cell's nibbles; a keycap: its pill; also the
  * keycaps' labels in their pills, from the data, and rows of keys or bars against their panel) is measured against
- * it, on every screen above in FLAT and LINE and every palette, the page / value sweep, and align_sweeps (every value
+ * it, on every screen above, the page / value sweep, and align_sweeps (every value
  * each place can show). 0.5 px is the odd pixel left over (it goes left / up); 1 px or more is a finding.
  * OUTDIR/align.txt: per place, how often measured, the worst offsets and where.
- * Exit 1 on a finding, a GREY pixel off gray, a MONO one off neutral, or an alignment 1 px or more off. */
+ * Exit 1 on a finding or an alignment 1 px or more off. */
 #define KC_REF 1                 /* (0.9.0) ui_keycaps.h: the pills as nibbles too (al_keycaps; KC_DATA is Huffman-coded) */
 #include <stdio.h>
 #include <string.h>
@@ -541,23 +539,6 @@ static void audit_scene(const char *name)
             snprintf(words + strlen(words), sizeof words - strlen(words), "%s%s", words[0] ? " | " : "", b->s);
     }
     fprintf(audf, "%s\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%s\t%s\n", name, nt, at, ni, ai, nk, ak, ne, ntight, words, tight);
-}
-/* GREY: every pixel RGB565 gray (R = B, G = 2 R); MONO (black and white, its edges blended per channel): neutral
- * (R = B, G within 2 of 2 R, the 5-6-5 rounding). Other palettes: nothing */
-static uint32_t mono_bad;
-static void mono_check(void)
-{
-    uint32_t i, bw = settings.palette == UI_BW_INDEX;
-    if (settings.palette != UI_GREY_INDEX && !bw) return;
-    for (i = 0; i < 240u * 240u; i++) {
-        uint16_t c = swap16(host_screen[i]);
-        int32_t d = (int32_t)((c >> 5) & 63u) - (int32_t)(c >> 11) * 2;
-        if ((c >> 11) != (c & 31u) || (bw ? d < -2 || d > 2 : d != 0)) {
-            if (!mono_bad) fprintf(rep, "%s %s: pixel %u,%u = %04x off %s\n", bw ? "MONO" : "GREY", cur_name, i % 240u, i / 240u, c,
-                                   bw ? "neutral" : "gray");
-            mono_bad++;
-        }
-    }
 }
 static void hk_ink(uint16_t ink, uint16_t bg)
 {
@@ -1937,7 +1918,7 @@ static void sweep_columns(void)
             continue;                                    /* (DIGITAL without FELUCCA_FM4: no track has it) */
         for (i = 0; i < NPAGES; i++) {
             state();
-            pal(UI_GREY_INDEX);
+            pal(UI_ACID_INDEX);
             eng(e);
             ui.home = 0; ui.page = (uint8_t)i; page_entered();
             if (!page_visible(i)) continue;
@@ -1993,7 +1974,7 @@ static void sweep_columns(void)
             lint();
             sweep_motion();
         }
-        state(); pal(UI_GREY_INDEX); eng(e); go_home();   /* HOME's four knobs of this engine */
+        state(); pal(UI_ACID_INDEX); eng(e); go_home();   /* HOME's four knobs of this engine */
         snprintf(name, sizeof name, "%s%s/HOME", large_on ? "LARGE " : "", ENGINES[e]->name);
         cur_name = name;
         draw(-1);
@@ -2002,7 +1983,7 @@ static void sweep_columns(void)
     }
     for (e = 0; e < 4u; e++) {                           /* the MOD page: every source and destination */
         int32_t v;
-        state(); pal(UI_GREY_INDEX); go_title("MOD");
+        state(); pal(UI_ACID_INDEX); go_title("MOD");
         cur_name = large_on ? "LARGE MOD sweep" : "MOD sweep";
         for (v = 0; v < MD_N; v++) {
             TSEL->p[P_M1SRC] = (int16_t)(v % MS_N); TSEL->p[P_M1DST] = (int16_t)v; TSEL->p[P_M1AMT] = (int16_t)(e * 40 - 64);
@@ -2079,7 +2060,6 @@ static void roll_frames(const char *dir)
                 if (k == 1u) roll_turns(row ? -1 : 1);
                 else ui_draw();
                 lint();
-                mono_check();
                 roll_film_put(bimg, biw, row, k, HX, 0, HW, HH);
                 roll_film_put(cimg, ciw, row, k, CARD_X(3), Y_LABEL, COL_W, COL_H);
             }
@@ -2090,7 +2070,7 @@ static void roll_frames(const char *dir)
             }
             for (k = 0; k < 8u; k++) ui_draw();
         }
-        if (dir && (p == UI_GREY_INDEX || p == UI_BW_INDEX || !strcmp(UI_PALETTES[p].name, "GREEN"))) {
+        if (dir && p == UI_ACID_INDEX) {
             roll_film_save(dir, UI_PALETTES[p].name, "bpm_roll", bimg, biw, bih);
             roll_film_save(dir, UI_PALETTES[p].name, "card_roll", cimg, ciw, cih);
         }
@@ -2141,10 +2121,9 @@ static void align_sweeps(void)
     FILE *r0 = rep, *nul = fopen("/dev/null", "w");
     int32_t v;
     if (nul) rep = nul;                              /* (not lint scenes: their draws pile up) */
-    for (st = ST_FLAT; st <= ST_LINE; st++) {
-        state(); pal(UI_GREY_INDEX);
-        ui_style = (uint8_t)st; style_apply();
-        cur_name = st ? "sweep LINE: cushions" : "sweep FLAT: cushions";
+    for (st = 0; st < 1u; st++) {                    /* (ACID FM 0.3: one style; until then FLAT and LINE) */
+        state(); pal(UI_ACID_INDEX);
+        cur_name = "sweep: cushions";
         for (k = 0; k < NTRK; k++)
             for (i = 0; i < 3u; i++) {
                 cv_begin(40, 40, T_SURF);
@@ -2209,7 +2188,7 @@ static void align_sweeps(void)
                 draw_countin();
             }
         cin_total = cin_left = 0;
-        state(); pal(UI_GREY_INDEX);
+        state(); pal(UI_ACID_INDEX);
         cur_name = st ? "sweep LINE: NAME" : "sweep FLAT: NAME";
         song.playing = 0; go_page(GR_USER); name_open(NK_USER_SAVE, 6);
         for (k = 0; k < 2u; k++) {                       /* ABC, 123: every key cycling, every letter typed next */
@@ -2236,7 +2215,7 @@ static void align_sweeps(void)
             cv_begin(240, H_GRAPH, T_SURF);
             graph_roll(TSEL, T_THEME);
         }
-        state(); pal(UI_GREY_INDEX);
+        state(); pal(UI_ACID_INDEX);
         cur_name = st ? "sweep LINE: drum kits" : "sweep FLAT: drum kits";
         for (k = 0; k < 4u; k++) {
             drum(k);
@@ -2246,7 +2225,7 @@ static void align_sweeps(void)
                 graph_grid(TSEL, T_THEME);
             }
         }
-        state(); pal(UI_GREY_INDEX);
+        state(); pal(UI_ACID_INDEX);
         cur_name = st ? "sweep LINE: mixer" : "sweep FLAT: mixer";
         go_page(GR_TRK);
         for (v = 0; v < 256; v++) {                    /* (then with LARGE: the strip) */
@@ -2260,7 +2239,6 @@ static void align_sweeps(void)
         ui_prefs = 0; ui.hot_t = 0;
         ui.force = 0;
     }
-    ui_style = ST_FLAT; style_apply();
     state();
     nscr = npend = nrules = 0;
     nfind = nf;
@@ -2313,7 +2291,8 @@ int main(int argc, char **argv)
     const char *out = argc > 1 ? argv[1] : "build/ui_new";
     char path[600];
     uint32_t p, s;
-    static const char *const SHOW[] = {"GREY", "MONO", "GREEN", "PAPER", "NIGHT", "JIANT"};   /* (NIGHT: #50, to review) */
+    static const char *const SHOW[] = {"ACID"};    /* (ACID FM 0.3: the one palette) */
+    uint32_t nlow = 0, nhud = 0;
     snprintf(path, sizeof path, "%s/report.txt", out);
     rep = fopen(path, "w");
     if (!rep) { fprintf(stderr, "cannot write %s\n", path); return 1; }
@@ -2342,8 +2321,9 @@ int main(int argc, char **argv)
         cv_text(4, 31, &AF_S, "SPILL", T_TEXT);
         cv_blit(4, Y_LABEL);
         lint();
-        nrules = 0;                                         /* a word on a divider (STYLE LINE) */
-        lcd_rule(0, 120, 240, 1);
+        nrules = 0;                                         /* a word on a divider (until ACID FM 0.3 STYLE LINE's: none now) */
+        lcd_fill(0, 120, 240, 1, T_RULE);
+        GFX_HOOK_RULE(0, 120, 240, 1);
         cv_begin(40, 16, T_BG);
         cv_text(2, 0, &AF_S, "RULE", T_TEXT);
         cv_blit(8, 112);
@@ -2375,50 +2355,24 @@ int main(int argc, char **argv)
             cur_name = name;
             setup((int)s);
             pal(p);
-            if (p == UI_GREY_INDEX) aud = audf;
+            if (p == UI_ACID_INDEX) aud = audf;
             draw((int)s);
+            nlow += (uint32_t)lz_low();                 /* (the one skin, AIR's: the knob row on top of the lens pages) */
+            nhud += (uint32_t)hud_home();               /* (.. HOME the beings under every strip) */
             lint();
-            if (p == UI_GREY_INDEX) { audit_scene(S_NAME[s]); aud = 0; }
-            mono_check();
+            if (p == UI_ACID_INDEX) { audit_scene(S_NAME[s]); aud = 0; }
             for (k = 0; k < sizeof SHOW / sizeof SHOW[0]; k++)
                 if (!strcmp(UI_PALETTES[p].name, SHOW[k])) write_ppm(out, SHOW[k], S_NAME[s]);
         }
-    {   /* STYLE LINE (gfx.c ST_*): every screen in every palette, linted (GREY: gray, MONO: neutral); GREY MONO NIGHT
-         * PAPER as OUTDIR/ppm/<STYLE>_<PALETTE>_<screen>.ppm (ui_render.py: sheet_<STYLE>_<PALETTE>.png) */
-        static const char *const ST_N[2] = {"FLAT", "LINE"}, *const ST_PAL[] = {"GREY", "MONO", "NIGHT", "PAPER"};
-        uint32_t st, k, n0 = nfind, nruled = 0;
-        for (st = ST_LINE; st <= ST_LINE; st++)
-            for (p = 0; p < NPALETTES; p++) {
-                for (k = 0; k < sizeof ST_PAL / sizeof ST_PAL[0] && strcmp(UI_PALETTES[p].name, ST_PAL[k]); k++) ;
-                for (s = 0; s < S_COUNT; s++) {
-                    char name[64], tag[24];
-                    if (!FELUCCA_FM4 && (s == S_OP_ENV || (s >= S_ALG1 && s <= S_OP_LEVEL)))
-                        continue;
-                    snprintf(tag, sizeof tag, "%s_%s", ST_N[st], UI_PALETTES[p].name);
-                    snprintf(name, sizeof name, "%s/%s", tag, S_NAME[s]);
-                    cur_name = name;
-                    setup((int)s);
-                    pal(p);
-                    ui_style = (uint8_t)st; style_apply();
-                    draw((int)s);
-                    if (ux.style != st) { fprintf(stderr, "ui_render: %s drawn in style %u\n", name, ux.style); return 1; }
-                    nruled += nrules != 0u;
-                    lint();
-                    mono_check();
-                    if (k < sizeof ST_PAL / sizeof ST_PAL[0]) write_ppm(out, tag, S_NAME[s]);
-                }
-            }
-        ui_style = ST_FLAT; style_apply();
-        if (nruled < 100u) { fprintf(stderr, "ui_render: dividers on %u STYLE screens only\n", nruled); return 1; }
-        fprintf(rep, "STYLE LINE (every palette): %u lint findings\n", nfind - n0);
-    }
-    {   /* MENU > LARGE (ui.c large_kind): every screen in every palette in FLAT and LINE, linted (GREY: gray, MONO:
-         * neutral); GREY MONO in FLAT as OUTDIR/ppm/LARGE_<PALETTE>_<screen>.ppm (ui_render.py: sheet_LARGE_<PALETTE>.png),
-         * LINE GREY as LARGE-LINE_GREY; the tall cards' value faces counted (lg_hook) */
-        static const char *const ST_N[2] = {"LARGE", "LARGE-LINE"};
+    if (nlow < 250u || nhud < 10u) { fprintf(stderr, "ui_render: the one skin drew %u screens low, %u HUD HOMEs only\n", nlow, nhud); return 1; }
+    fprintf(rep, "the one skin (AIR's): %u screens with the knob row on top, %u HUD HOMEs\n", nlow, nhud);
+    {   /* MENU > LARGE (ui.c large_kind): every screen, linted; as OUTDIR/ppm/LARGE_ACID_<screen>.ppm (ui_render.py:
+         * sheet_LARGE_ACID.png); the tall cards' value faces counted (lg_hook) (until ACID FM 0.3 in FLAT and LINE, every
+         * palette) */
+        static const char *const ST_N[1] = {"LARGE"};
         uint32_t st, n0 = nfind, ntall = 0;
         large_on = 1;
-        for (st = ST_FLAT; st <= ST_LINE; st++)
+        for (st = 0; st < 1u; st++)
             for (p = 0; p < NPALETTES; p++)
                 for (s = 0; s < S_COUNT; s++) {
                     char name[64], tag[24];
@@ -2430,19 +2384,15 @@ int main(int argc, char **argv)
                     setup((int)s);
                     ui_prefs |= PREF_LARGE;
                     pal(p);
-                    ui_style = (uint8_t)st; style_apply();
                     draw((int)s);
                     ntall += !ui.menu && !ui.confirm && !name_on() && large_kind() == LK_TALL;
                     lint();
-                    mono_check();
-                    if ((p == UI_GREY_INDEX || (!st && p == UI_BW_INDEX)))
-                        write_ppm(out, tag, S_NAME[s]);
+                    write_ppm(out, tag, S_NAME[s]);
                 }
-        ui_style = ST_FLAT; style_apply();
         sweep_columns();                                /* every value of every column, tall */
         large_on = 0;
         if (ntall < 100u) { fprintf(stderr, "ui_render: LARGE drew %u screens with tall cards only\n", ntall); return 1; }
-        fprintf(rep, "MENU > LARGE (FLAT and LINE, every palette, the page / value sweep): %u lint findings; %u screens with tall"
+        fprintf(rep, "MENU > LARGE (the page / value sweep too): %u lint findings; %u screens with tall"
                 " cards\n", nfind - n0, ntall);
         fprintf(rep, "  tall card values: %llu in L, %llu in M (a glyph not in L: \"%s\"), %llu in M (L too wide), %llu in S\n",
                 (unsigned long long)lg_n[0], (unsigned long long)lg_n[1], lg_miss, (unsigned long long)lg_n[2],
@@ -2453,50 +2403,15 @@ int main(int argc, char **argv)
         for (s = 0; s < lg_nsmall; s++) fprintf(rep, " '%s'", lg_small[s]);
         fprintf(rep, "\n");
     }
-    {   /* (0.8.9) MENU > DISPLAY > SKIN HUD (0.9.7: AIR; 0.9.17: BOTTOM retired) (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
-         * LINE and with MENU > LARGE ON (COLORS' layout, the skin's tabs and colours), linted (GREY: gray, MONO: neutral); FLAT
-         * as OUTDIR/ppm/<SKIN>_<PALETTE>_<screen>.ppm for JIANT PAPER GREY MONO (ui_render.py: sheet_<SKIN>_<PALETTE>.png) */
-        static const char *const SK_N[SKIN_N] = {"COLORS", "", "HUD", "AIR"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
-        uint32_t sk, st, n0 = nfind, nlow = 0, nhud = 0;
-        for (sk = SKIN_HUD; sk <= SKIN_AIR; sk++)      /* (0.9.7: AIR, the knobs' row on top; 0.9.17: BOTTOM retired) */
-            for (st = 0; st < 3u; st++)
-                for (p = 0; p < NPALETTES; p++)
-                    for (s = 0; s < S_COUNT; s++) {
-                        char name[64], tag[24];
-                        if (!FELUCCA_FM4 && (s == S_OP_ENV || (s >= S_ALG1 && s <= S_OP_LEVEL)))
-                            continue;
-                        snprintf(tag, sizeof tag, "%s%s_%s", SK_N[sk], ST_N[st], UI_PALETTES[p].name);
-                        snprintf(name, sizeof name, "%s/%s", tag, S_NAME[s]);
-                        cur_name = name;
-                        setup((int)s);
-                        if (st == 2u) ui_prefs |= PREF_LARGE;
-                        pal(p);
-                        ui_skin = (uint8_t)sk;
-                        ui_style = (uint8_t)(st == 1u); style_apply();
-                        draw((int)s);
-                        if (ux.skin != sk) { fprintf(stderr, "ui_render: %s drawn in skin %u\n", name, ux.skin); return 1; }
-                        nlow += (uint32_t)lz_low();
-                        nhud += (uint32_t)hud_home();
-                        lint();
-                        mono_check();
-                        if (!st && (p == UI_JIANT_INDEX || p == UI_GREY_INDEX || p == UI_BW_INDEX || !strcmp(UI_PALETTES[p].name, "PAPER")))
-                            write_ppm(out, tag, S_NAME[s]);
-                    }
-        ui_skin = SKIN_COLORS; ui_style = ST_FLAT; style_apply();
-        if (nlow < 1000u || nhud < 20u) { fprintf(stderr, "ui_render: SKIN drew %u screens low, %u HUD HOMEs only\n", nlow, nhud); return 1; }
-        fprintf(rep, "SKIN HUD and AIR (FLAT, LINE, LARGE, every palette): %u lint findings; %u screens with the knob row, %u HUD "
-                "HOMEs\n", nfind - n0, nlow, nhud);
-    }
-    {   /* every FM6 colony (the lint above, fm6_hook, runs on each), in GREY: gray */
+    {   /* every FM6 colony (the lint above, fm6_hook, runs on each) */
         uint32_t a, c0 = fmp_charts;
         for (a = 1; a <= 32u; a++) {
             char name[32];
             snprintf(name, sizeof name, "FM6 ALG %u", a);
             cur_name = name;
-            state(); pal(UI_GREY_INDEX); eng(ENGI_FM6); TSEL->p[P_E0] = (int16_t)a; go_title("OPERATOR");   /* (0.8.5) */
+            state(); pal(UI_ACID_INDEX); eng(ENGI_FM6); TSEL->p[P_E0] = (int16_t)a; go_title("OPERATOR");   /* (0.8.5) */
             draw(-1);
             lint();
-            mono_check();
         }
         if (fmp_charts - c0 != 32u) { fprintf(stderr, "ui_render: %u FM6 colonies drawn of 32\n", fmp_charts - c0); return 1; }
     }
@@ -2509,7 +2424,7 @@ int main(int argc, char **argv)
         uint32_t f, w, i, n0 = nfind;
         for (f = 0; f < NELEM(FT); f++) {
             cur_name = S_NAME[FT[f].s];
-            setup(FT[f].s); pal(UI_GREY_INDEX);
+            setup(FT[f].s); pal(UI_ACID_INDEX);
             draw(FT[f].s);
             for (w = 0; w < 6u; w++) {
                 for (i = 0; i < nscr && !strstr(scr[i].s, FT[f].w[w]); i++)
@@ -2583,18 +2498,16 @@ int main(int argc, char **argv)
             }
         }
         roll_cost();
-        {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole in each skin (us, texts, LCD px sent), and HOME frame
-             * by frame (HUD: every strip each frame, on the beings) */
+        {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole (us, texts, LCD px sent), and HOME frame by frame
+             * (HUD's HOME, the one skin's: every strip each frame, on the beings) */
             static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_VX_HEAD_S, S_V6_PHASE, S_VX_KIT_HOME};   /* (ACID FM 0.2: PHASE, was ANIMAL) */
-            static const char *const SK_N[SKIN_N] = {"COLORS", "", "HUD", "AIR"};
             uint32_t sk;
             fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");
-            for (sk = 0; sk < SKIN_N; sk++) {
-                if (sk == SKIN_BOTTOM_OLD) continue;    /* (0.9.17: retired, reads as AIR) */
-                fprintf(rep, "  %-7s", SK_N[sk]);
+            for (sk = 0; sk < 1u; sk++) {               /* (ACID FM 0.3: the one skin; until then COLORS HUD AIR) */
+                fprintf(rep, "  %-7s", "ACID");
                 for (k = 0; k < sizeof SC / sizeof SC[0]; k++) {
                     clock_t c0;
-                    setup(SC[k]); ui_skin = (uint8_t)sk; pal(UI_JIANT_INDEX); style_apply();
+                    setup(SC[k]); pal(UI_ACID_INDEX);
                     draw(SC[k]);
                     px_visited = n_text = blit_px = 0;
                     c0 = clock();
@@ -2604,7 +2517,7 @@ int main(int argc, char **argv)
                 }
                 {
                     clock_t c0;
-                    setup(S_HOME); ui_skin = (uint8_t)sk; pal(UI_JIANT_INDEX); style_apply(); draw(S_HOME);
+                    setup(S_HOME); pal(UI_ACID_INDEX); draw(S_HOME);
                     blit_px = 0;
                     c0 = clock();
                     for (i = 0; i < N * 4; i++) { ui_draw(); nscr = npend = 0; }
@@ -2612,7 +2525,6 @@ int main(int argc, char **argv)
                             (unsigned long long)(blit_px / (N * 4)));
                 }
             }
-            ui_skin = SKIN_COLORS; style_apply();
         }
         {   /* MENU > LARGE: the same full redraws, tall cards and the strip */
             static const int LC[] = {S_HOME, S_EDIT_ANALOG, S_ENV, S_LFO, S_MIXER, S_FX, S_PATTERN};
@@ -2655,16 +2567,16 @@ int main(int argc, char **argv)
     if (al_rep) fclose(al_rep);
     fprintf(rep, "\nalignment: %u measurements of %u places, %u off by 1 px or more (OUTDIR/align.txt)\n", al_count, al_nst - 1u, al_fail);
     if (audf) fclose(audf);
-    fprintf(rep, "\n%u lint findings, %u inks on their own colour, %u ellipsised free texts, %u GREY / MONO pixels off gray / "
-            "neutral; %u column values swept; %u FM6 charts linted; %u cards linted with MOTION's icon\n", nfind, nink, nfree, mono_bad,
+    fprintf(rep, "\n%u lint findings, %u inks on their own colour, %u ellipsised free texts; "
+            "%u column values swept; %u FM6 charts linted; %u cards linted with MOTION's icon\n", nfind, nink, nfree,
             nsweep, fmp_charts, nmotion);
     if (!nmotion) { fprintf(stderr, "ui_render: the MOTION sweep marked no card\n"); nfind++; }
     fclose(rep);
     printf("ui_render: %u screens x %u palettes + the page/value sweep; %u lint findings, %u ellipsised free texts (%u distinct), "
-           "%u inks on their own colour, %u GREY / MONO pixels off gray / neutral; report %s\n",
+           "%u inks on their own colour; report %s\n",
            (unsigned)(S_COUNT - (FELUCCA_FM4 ? 0 : 1 + S_OP_LEVEL - S_ALG1 + 1)), (unsigned)NPALETTES, nfind, nfree, nfree_seen, nink,
-           mono_bad, path);
+           path);
     printf("ui_render: alignment: %u measurements of %u places, %u off by 1 px or more%s\n", al_count, al_nst - 1u, al_fail,
            al_fail ? " (see align.txt)" : "");
-    return nfind || nink || mono_bad || al_fail ? 1 : 0;
+    return nfind || nink || al_fail ? 1 : 0;
 }

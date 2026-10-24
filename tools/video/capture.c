@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * (JIANT 0.6.11; 0.6.37 dark minimal techno) the presentation video's footage: the firmware's own UI and audio, from the
  * host build of the tests (tests/ui_test.c): a dark minimal techno track at 125 BPM in A minor (six tracks: low FM6
  * chords held for two bars, an acid line on ANALOG, a cyber line on PHASE, LOFI blips, DRUM-X, NOISE wind) played by
@@ -102,7 +103,7 @@ static void song_build(void)
     static const uint8_t BLIP[16] = {0, 0, 0, 81, 0, 0, 0, 0, 0, 0, 76, 0, 0, 0, 0, 0};
     uint32_t i, k;
     ui_power_on();
-    settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();               /* (0.6.30) TRACKS 6: all six play (4 the default) */
     song.g[G_BPM] = BPM;
     song.master_q12 = 4096;                                  /* (the pot: ui_power_on leaves 0) */

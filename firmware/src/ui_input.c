@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Felucca UI input: LEDs, knobs and buttons, SEQ step entry, panel setup. */
 static void pm_off(void);                               /* (0.9.14) ui_layer.c: the FX macros off */
 #include "ui_name.c"                                    /* NAME: naming user presets and projects */
@@ -2226,8 +2227,9 @@ static void ui_input_frame(void)
             ui.menu = 1;                                /* (at the page and setting it was left at) */
             ui.mlv = 1;
             ui.hot_t = 0;                               /* (0.9.18: no card lit from the page before) */
-            if (!menu_valued(ui.menu_sel))              /* (an action armed before it closed is let go: OCT+ on
-                                                         * opening never clears the learned CCs or opens a screen) */
+            if (!menu_valued(ui.menu_sel) || menu_hidden(ui.menu_sel))   /* (an action armed before it closed is let go:
+                                                         * OCT+ on opening never clears the learned CCs or opens a screen;
+                                                         * ACID FM 0.3: COLOR, power-on's 0, is on no page: the first) */
                 ui.menu_sel = MPAGE[menu_page()].row[0];
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();

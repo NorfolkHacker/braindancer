@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* RATCH, a step's ratchet (core.h SF_RATCH, seq.c seq_step / seq_ratchet), on the real sequencer, project, user
  * preset and UI sources (with the stubs of tests/ui_test.c):
  *   PLAY       x1..x4: that many note-ons in one pass of the step, in equal parts of it, each retriggered after its
@@ -439,12 +440,13 @@ static int screens(void)
             t->step[0] = kind[k];
             step_set_ratchet(&t->step[0], 2);
             memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-            dim[k] = card_px(2, T_DIM); thm[k] = card_px(2, T_TEXT);   /* (0.8.5: a value TEXT) */
+            dim[k] = card_px(2, T_DIM); thm[k] = card_px(2, T_K(2));   /* (ACID FM 0.3, the one skin: a lens card's value
+                                                         * in its knob's colour; 0.8.5 COLORS: TEXT) */
         }
         t->step[0] = kind[3]; t->step[0].hit = 1u;   /* a NOTE step of lane hits only: it plays */
         step_set_ratchet(&t->step[0], 2);
         memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-        ok = card_px(2, T_DIM) == dim[0] && card_px(2, T_TEXT) == thm[0];
+        ok = card_px(2, T_DIM) == dim[0] && card_px(2, T_K(2)) == thm[0];
         for (k = 1; k < 4u; k++)
             ok &= dim[k] > dim[0] && thm[k] < thm[0];
         bad += check("  RATCH shows dimmed on a REST, a TIE or an empty step (a note or a hit: not)", ok);

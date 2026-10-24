@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* (0.8.5) EDIT's lens panels (ui_lens.c), as the approved mock-up's; included by ui_graph.c. The canvas is the
  * lens's panel (240 x 140, x 4..236).
  *   SOUND   (EDIT 1 / EDIT 2 of a synth) the engine's being on the left (graph_being's, alive with the sound), the
@@ -35,20 +36,20 @@ static void graph_sound_lz(const track_t *t)
 {
     const engine_t *e = trk_engp(t);
     uint32_t k, two = cur_page()->id[0] != P_E0, n = 0;
-    int32_t x = 122, w = 106, ty = 2, bare = ux.skin != 0u;
+    int32_t x = 122, w = 106, ty = 2;                   /* (ACID FM 0.3: the one skin, bare: BOTTOM, HUD, AIR's) */
     uint16_t tb = lz_tile_bg();
     char b[40];
     /* (0.8.9, the skins' mock-up) the being large on the left (its tendrils kept on its side), the page's name over it, the
-     * sound's under it; on the right the scope in a tile (COLORS) or bare (BOTTOM, HUD), the page's four parameters as
+     * sound's under it; on the right the scope bare (BOTTOM, HUD, AIR), the page's four parameters as
      * chips in their knobs' colours (the knob turning: its label TEXT), the other page's names under them */
     if (!ui_scope && vx_draw(t, 4, 2, 232, (int32_t)cv_h - 4, -1)) {   /* (0.9.7) MENU > DISPLAY > SCOPE
                                                          * OFF (the default): the creature on the whole panel, centred, no
                                                          * SCOPE card and no chips (the knobs' cards say them); the page's name
                                                          * and the sound's small in its corners (BOTTOM, HUD, AIR: outlined) */
-        cv_halo = (uint8_t)bare;
+        cv_halo = 1;
         ed_cap(10, 6, e->page_title[two] && e->page_title[two][0] != '-' ? e->page_title[two] : e->name, T_THEME);
         sound_name(t, b);
-        cv_clip_text(10, (int32_t)cv_h - 12 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, bare ? T_TEXT : T_MID, T_SURF, 104);
+        cv_clip_text(10, (int32_t)cv_h - 12 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, T_TEXT, T_SURF, 104);
         cv_halo = 0;
         return;
     }
@@ -56,15 +57,14 @@ static void graph_sound_lz(const track_t *t)
         graph_being_at(t, 60 * 16, 68 * 16, 22 * 16);
     cv_rect(0, 0, 4, (int32_t)cv_h, T_BG);
     cv_rect(116, 0, 60, (int32_t)cv_h, T_SURF);
-    cv_halo = (uint8_t)bare;                            /* (0.9.0) BOTTOM, HUD: no panel, the being's spikes reach the words:
+    cv_halo = 1;                                        /* (0.9.0) BOTTOM, HUD: no panel, the being's spikes reach the words:
                                                          * outlined, as HUD's */
     ed_cap(10, 6, e->page_title[two] && e->page_title[two][0] != '-' ? e->page_title[two] : e->name, T_THEME);
     sound_name(t, b);
-    cv_clip_text(10, 128 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, bare ? T_TEXT : T_MID, T_SURF, 104);
+    cv_clip_text(10, 128 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, T_TEXT, T_SURF, 104);
     cv_halo = 0;
-    lz_tile(x, ty, w, 58, 0, T_THEME);
     GFX_HOOK_ALIGN(0, ty + 4, 0, ty + 11, AL_V | AL_PASS, "EDIT scope title");
-    cv_text_on(x + (bare ? 0 : 4), ty + 4 - AF_X_CAP_Y, &AF_X, "SCOPE", bare ? T_MID : T_TEXT, tb);
+    cv_text_on(x, ty + 4 - AF_X_CAP_Y, &AF_X, "SCOPE", T_MID, tb);
     scope_at(x + 4, w - 8, ty + 36, 18, T_THEME);
     for (k = 0; k < 4u; k++) {                          /* the page's four */
         const param_desc_t *d = track_desc(t, P_E0 + two * 4u + k);
@@ -72,18 +72,14 @@ static void graph_sound_lz(const track_t *t)
         const char *u = "";
         char v[16];
         int32_t r = d && d->label && d->label[0] != '-' ? RATIO(d, enum_rank(d, t->p[P_E0 + two * 4u + k])) : -1;
-        uint16_t kc = knob_col(k, r, d && d->min < 0 && d->max > 0);   /* (0.9.5 JIANT: its value's heat) */
-        if (!bare) {
-            cv_rrect(x, y, w, 12, 3, T_RAISE, T_SURF);
-            cv_rect(x, y + 2, 2, 8, kc);
-        }
+        uint16_t kc = knob_col(k, r, d && d->min < 0 && d->max > 0);
         if (!d || !d->label || d->label[0] == '-')
             continue;
         param_format(d, t->p[P_E0 + two * 4u + k], v, &u);
         str_cpy(v + str_len(v), u, sizeof v - str_len(v));
         GFX_HOOK_ALIGN(0, y, 0, y + 12, AL_V | AL_N(2), "EDIT chip on its row");
-        cv_clip_text(x + (bare ? 2 : 6), y + 3 - AF_X_CAP_Y, &AF_X, d->label, hot ? T_TEXT : T_MID, tb, 58);
-        cv_text_r(x + w - (bare ? 2 : 4), y + 3 - AF_X_CAP_Y, &AF_X, v, heat_on(r) ? ux_mix(kc, T_TEXT, 20) : kc, tb);
+        cv_clip_text(x + 2, y + 3 - AF_X_CAP_Y, &AF_X, d->label, hot ? T_TEXT : T_MID, tb, 58);
+        cv_text_r(x + w - 2, y + 3 - AF_X_CAP_Y, &AF_X, v, kc, tb);
     }
     str_cpy(b, two ? "1/2" : "2/2", sizeof b);          /* the other page's names, as many as fit */
     for (k = 0; k < 4u; k++) {
@@ -124,7 +120,7 @@ static void graph_filter_lz(const track_t *t, const page_t *pg)
         cv_rect(64 + k * 54, 6, 1, 99, T_RAISE);
     for (x = 10; x <= 226; x++) {
         int32_t y = ed_resp(ty, x, xc, r[2]);
-        cv_rect(x, y, 1, 105 - y, ux_mix(T_SURF, settings.palette == UI_JIANT_INDEX ? heat_col(40 + x * 160 / 226) : T_THEME, 30));
+        cv_rect(x, y, 1, 105 - y, ux_mix(T_SURF, T_THEME, 30));
         if (x > 10)
             cv_line_t(x - 1, py, x, y, T_THEME, 2);
         py = y;
@@ -166,7 +162,7 @@ static void graph_voice_lz(const track_t *t, const page_t *pg)
         ed_cap(14, y, n, i < nv ? T_MID : T_DIM);
         cv_rect(26, y, 202, 7, i < nv ? T_RAISE : T_LINE);
         if (lv > 0)
-            cv_rect(26, y, lv, 7, settings.palette == UI_JIANT_INDEX ? heat_col(60 + lv) : T_ACCENT);
+            cv_rect(26, y, lv, 7, T_ACCENT);
     }
     param_format(track_desc(t, P_VOICE), t->p[P_VOICE], b, &u);
     str_cpy(b + str_len(b), pg->id[0] == P_ALLOC ? " \xB7 ALLOC " : " \xB7 PRIO ", 40 - str_len(b));
