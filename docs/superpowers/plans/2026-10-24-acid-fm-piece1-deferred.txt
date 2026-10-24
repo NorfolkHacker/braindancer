@@ -1,0 +1,19 @@
+ACID FM piece 1 (pipeline) — deferred items, each tagged with the piece that should pick it up.
+Read this when writing the plan for that piece.
+
+[piece 3] docs/navigation-map*.png are stale (show v0.9.18); tools/gen_nav_map.py:598,600 hard-code "JIANT FM" in the map title.
+[piece 3] firmware/src/ui_signature.h: the power-on splash still draws JIANT's author signature above "by NorfolkHacker" (the redesign replaces the splash).
+[piece 3] firmware/src/ui_draw.c:1785 comment still says the splash shows "by Juan Jiant".
+[piece 3] web/index_pkg.html: "Since 0.6.71 ACID FM uses both cores" credits a JIANT version number to ACID FM.
+[piece 3] .github/workflows/emulator.yml:54,134 comments describe JIANT's 0.8.1 landing page; tools/landing_anim/* is dead tooling that writes to the deleted web/landing/anim/ (delete it).
+[piece 3] The manual (web/manual) still describes JIANT FM's features and leads with "Todo JIANT en una página"; rewrite as ACID FM's features land.
+[piece 2] firmware/src/felucca.c:42 and firmware/src/editor.c:412 comments run past 120 columns.
+[any]     docs/acid-fm/baseline.md has no SPDX / copyright header.
+[any]     tools/gen_about_qr.py and tests/about_qr_test.py fail with a bare ImportError when segno is missing (it is in requirements-dev.txt).
+[any]     web/fm1diag.js:208 stockCustom's file-name hint could list "acid" (the FM-1_9xx product id already covers ACID FM packages).
+
+Release state: no tag, no GitHub release (user, 2026-10-24: none until the first version that is genuinely ACID FM).
+web/STABLE is empty, so the public installer builds whatever is on main: keep main installable, or pin web/STABLE
+to a device-proven commit before risky work lands on main. Device-proven so far: dcb092c (docs/acid-fm/device-log.md).
+Spec §9's emulator-before-device check was waived for piece 1 (string-only changes); the user played the deployed
+emulator afterwards and it worked. Later pieces need emsdk locally (web/emu/build.sh) or must check the CI-built one first.
