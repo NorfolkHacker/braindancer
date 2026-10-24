@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Small-canvas renderer (no full framebuffer). Draw text/lines into
  * an off-screen strip, then blit it in one DMA transfer. Pixels are stored
  * byte-swapped (the panel takes RGB565 big-endian).
@@ -27,6 +28,7 @@ typedef struct {
 typedef struct { const char *name; uint16_t bg, surf, text, theme, accent; } ui_pal_t;
 typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #include "ui_fonts.h"                   /* AF_S 12 px / 400, AF_M 15 px / 500, AF_L 28 px / 600 */
+#include "ux_fonts.h"                   /* UF_LBL 8 / UF_HDR 10 / UF_VAL 14 / UF_TTL 32 / UF_MARK 52 px: Inter Tight (ACID FM) */
 #include "ui_font_x.h"                  /* (0.8.5) AF_X: the 5 x 7 mono pixel face (tools/gen_px_font.py) */
 #include "ui_palettes.h"
 #include "ui_keycaps.h"                 /* KC_*: the keycaps / badges (tools/gen_aa_keycaps.py), KNOB_* arcs */
@@ -634,7 +636,7 @@ static void cv_alpha(int32_t x, int32_t y, uint32_t w, uint32_t h, const uint8_t
  * its repeat count ((count - 1) << 4 | value: runs of zeros and 15s; 0.9.0, the keycaps: of any value). Codes of up
  * to 8 bits come from a 256-entry table made once per font in RAM (symbol | length << 8; 0 = a longer code: bit by bit). The
  * stream is read in order, so rows outside the clip are decoded and dropped; a run spans rows */
-#define HC_FONTS 4                       /* the codes: the faces M and L (gen_aa_font.py HUFF), the icons, the keycaps */
+#define HC_FONTS 5                       /* the codes: the faces M and L (gen_aa_font.py HUFF), the icons, the keycaps, UF_TTL / UF_MARK (never drawn together: they share the rebuilt slot) */
 static struct { const uint8_t *hc; uint16_t lut[256]; } hc_tab[HC_FONTS]
     __attribute__((section(".pool")));     /* (the drawing's, main loop only: 0.8.4 LOWBUF, was .bss; 0.8.5 the pool, LOWBUF full) */
 static const uint16_t *hc_lut(const uint8_t *hc)

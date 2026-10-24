@@ -250,6 +250,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "themes: contrast, text blending and font metrics" "$OUT/theme_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/text_ref_test" tests/text_ref_test.c -lm
     run "text: pens, kerning and pixels equal the reference renderer" "$OUT/text_ref_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ux_font_test" tests/ux_font_test.c -lm
+    run "ux fonts: the Inter Tight faces of the ACID FM screens (ux_fonts.h)" "$OUT/ux_font_test"
     if python3 -c "import PIL" 2>/dev/null; then
         run "text spacing: glyph gaps against the font's own (16x supersampled), a phase step (S M L <= 0.5 px)" \
             python3 tests/text_spacing_test.py build/gen/ui_fonts.h

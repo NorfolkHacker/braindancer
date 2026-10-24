@@ -2,10 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 # Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+# Portions Copyright (C) 2026 NorfolkHacker
 """Pre-rasterise TTF fonts into anti-aliased 4-bit alpha glyph tables for the UI (run by
 tools/build.py generate() with --preset inter-tight).
 
   gen_aa_font.py OUT.h --preset standin|inter-tight|chakra-petch [--tracking EM] [--gamma G] [--kern-min N]
+  gen_aa_font.py ux_fonts.h --preset acid   (ACID FM: UF_LBL 8 px @600, UF_HDR 10 @500, UF_VAL 14 @500, UF_TTL 32 @700,
+                UF_MARK 52 @700 of Inter Tight; code 0x86 = the arrow U+2192; the ASCII range of LBL / TTL / MARK is the space
+                only, their characters are extras)
   gen_aa_font.py OUT.h --face NAME=FONT[#index]:PX:FIRST-LAST[+0xNN,...] ...   (explicit faces)
 
 Faces of the presets (S labels, M values/headers, L big numerals / titles):
@@ -41,13 +45,14 @@ import aa_raster as ar  # noqa: E402
 FONTS = Path(__file__).resolve().parents[1] / "fonts"
 LOCAL_INTER = os.path.expanduser("~/Library/Fonts/Inter.ttc")   # 4.001: 0 Regular, 10 Medium, 12 SemiBold
 EXTRAS = [0xA9, 0xB0, 0xB7, 0xC4, 0xD6, 0xDC, 0xE4, 0xF6, 0xFC, 0x2026]  # (c) deg . A: O: U: a: o: u: (Latin-1), ...
-CODE = {0x2026: 0x85}                  # characters outside Latin-1 -> their one-byte code in the firmware
+CODE = {0x2026: 0x85, 0x2192: 0x86}                  # characters outside Latin-1 -> their one-byte code in the firmware
 PHASES, PHASES_L = 2, 2                # horizontal phases per glyph (aa_raster.raster_font): S M, L. (JIANT 0.9.16, flash)
                                        # S M 2, were 4: 12.9 KB less of the glyph tables; a glyph within 1/4 px of its
                                        # place, a gap within 1/2 px (text_spacing_test.py, as L since 0.5)
 # faces stored Huffman-coded (--huff): M and L. S, the most drawn and the least compressible (-15 %), stays
 # 2 px per byte, so the labels draw at full speed
 HUFF = [("M", "L")]
+UF_HUFF = "TTL,MARK"                      # (acid) the faces stored Huffman-coded (they share the one spare code slot: never drawn together)
 # L draws only "JIANT" (ABOUT), the UPDATE MODE countdown digit, the calibration's control names (panel.c
 # B_NAME / E_NAME) and MENU > LARGE's card values and page titles (ui_draw.c draw_column_tall, ui_graph.c
 # graph_title: # . / J W too; a value with another character is set in M): a sparse face of those glyphs, the
@@ -57,6 +62,11 @@ HUFF = [("M", "L")]
 # Chakra Petch's sat (tests/ui_render.c alignment: a value centred in its window, its unit on its baseline)
 RISE = {"IBMPlexMono-SemiBold.ttf": 1}
 UI_PRESET = "jiant-lab"            # the firmware's faces (tools/build.py; tests/text_spacing_test.py)
+PFX = "AF"                         # the faces' C prefix: AF_<N> (jiant-lab), UF_<N> (acid)
+UF_LBL = " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00b7\u2192"   # (ACID FM) upper-case labels; arrow = code 0x86
+UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7"   # HDR / VAL: ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
+UF_TTL = " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+UF_MARK = " ACDFIM"                # the wordmark's letters only
 L_CHARS = " #+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXY"
 
 
@@ -86,6 +96,14 @@ def preset(name):
         t = -0.025                             # Inter Tight is Inter with tighter spacing
         return [("S", reg, 12, (32, 126), EXTRAS, t, PHASES), ("M", med, 15, (32, 126), EXTRAS, t, PHASES),
                 ("L", semi, 28, (32, 32), [ord(c) for c in L_CHARS[1:]], t, PHASES_L)]
+    if name == "acid":     # (ACID FM piece 3) Inter Tight, a face a size; the big faces' glyphs on one phase each
+        v = str(FONTS.parent / "assets" / "fonts" / "InterTight[wght].ttf")
+        sparse = lambda chars: [ord(c) for c in dict.fromkeys(chars[1:])]
+        return [("LBL", v + "@600", 8, (32, 32), sparse(UF_LBL), 0.0, 1),
+                ("HDR", v + "@500", 10, (32, 32), sparse(UF_TEXT), 0.0, 1),
+                ("VAL", v + "@500", 14, (32, 32), sparse(UF_TEXT), 0.0, 1),
+                ("TTL", v + "@700", 32, (32, 32), sparse(UF_TTL), 0.0, 1),
+                ("MARK", v + "@700", 52, (32, 32), sparse(UF_MARK), 0.0, 1)]
     raise SystemExit(f"unknown preset {name}")
 
 
@@ -239,26 +257,27 @@ def emit(face, tracking, gamma, kern_min):
     lines.append(f"/* {name}: {os.path.basename(font.split('#')[0])} {px}px, h {r['h']}, baseline {r['asc']}, "
                  f"{len(chars)} glyphs x {phases} phases, {len(data)} B data"
                  + (f" (Huffman; {len(raw)} B as nibbles) */" if hc else " */"))
-    lines.append(ar.c_array(f"AF_{name}_DATA", "uint8_t", list(data), 24, "0x{:02x}"))
+    lines.append(ar.c_array(f"{PFX}_{name}_DATA", "uint8_t", list(data), 24, "0x{:02x}"))
     if hc:
-        lines.append(ar.c_array(f"AF_{name}_HC", "uint8_t", hc, 24))
+        lines.append(ar.c_array(f"{PFX}_{name}_HC", "uint8_t", hc, 24))
     gtext, gsize = ar.glyph_tables(name, table, phases)
+    gtext = gtext.replace("AF_", PFX + "_")
     lines.append(gtext)
     if keys:
-        lines.append(ar.c_array(f"AF_{name}_KI", "uint16_t", ki, 12))
-        lines.append(ar.c_array(f"AF_{name}_KP", "uint8_t", kp, 24))
+        lines.append(ar.c_array(f"{PFX}_{name}_KI", "uint16_t", ki, 12))
+        lines.append(ar.c_array(f"{PFX}_{name}_KP", "uint8_t", kp, 24))
     ex = ", ".join(str(CODE.get(c, c)) for c in extras) or "0"
-    lines.append(f"static const uint8_t AF_{name}_EX[{max(1, len(extras))}] = {{{ex}}};")
-    lines.append(f"static const aafont_t AF_{name} = {{{r['h']}, {r['asc']}, {first}, {last}, {len(extras)}, {nki}, "
-                 f"AF_{name}_GH, AF_{name}_GP, AF_{name}_DATA, {'AF_%s_KI' % name if keys else '0'}, "
-                 f"{'AF_%s_KP' % name if keys else '0'}, AF_{name}_EX, {psh}, {'AF_%s_HC' % name if hc else '0'}}};")
-    if "H" in chars:                                  # the capitals' band (gfx.c CAP_IN: centring text by it)
-        cap = table[chars.index("H") * phases]
-        lines.append(f"#define AF_{name}_CAP_Y {cap[3]}   /* the ink of H: rows {cap[3]} .. {cap[3] + cap[5] - 1} of the line */")
-        lines.append(f"#define AF_{name}_CAP_H {cap[5]}")
+    lines.append(f"static const uint8_t {PFX}_{name}_EX[{max(1, len(extras))}] = {{{ex}}};")
+    lines.append(f"static const aafont_t {PFX}_{name} = {{{r['h']}, {r['asc']}, {first}, {last}, {len(extras)}, {nki}, "
+                 f"{PFX}_{name}_GH, {PFX}_{name}_GP, {PFX}_{name}_DATA, {'%s_%s_KI' % (PFX, name) if keys else '0'}, "
+                 f"{'%s_%s_KP' % (PFX, name) if keys else '0'}, {PFX}_{name}_EX, {psh}, {'%s_%s_HC' % (PFX, name) if hc else '0'}}};")
+    if "H" in chars or "I" in chars:                  # the capitals' band (gfx.c CAP_IN: centring text by it)
+        cap = table[chars.index("H" if "H" in chars else "I") * phases]
+        lines.append(f"#define {PFX}_{name}_CAP_Y {cap[3]}   /* the ink of H: rows {cap[3]} .. {cap[3] + cap[5] - 1} of the line */")
+        lines.append(f"#define {PFX}_{name}_CAP_H {cap[5]}")
     cost = {"data": len(data) + len(hc), "glyph_table": gsize, "kern": len(kp) + 2 * len(ki), "extras": len(extras),
             "glyphs": len(chars), "phases": phases, "pairs": len(keys), "h": r["h"], "asc": r["asc"], "px": px,
-            "font": os.path.basename(font.split("#")[0]), "adv_digit": r["glyphs"]["0"][0] / 16}
+            "font": os.path.basename(font.split("#")[0]), "adv_digit": r["glyphs"]["0" if "0" in r["glyphs"] else chars[-1]][0] / 16}
     cost["total"] = cost["data"] + cost["glyph_table"] + cost["kern"] + cost["extras"]
     return "\n".join(lines) + "\n", cost
 
@@ -266,13 +285,19 @@ def emit(face, tracking, gamma, kern_min):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("out")
-    ap.add_argument("--preset", choices=["standin", "inter-tight", "chakra-petch", "jiant-lab"])
+    ap.add_argument("--preset", choices=["standin", "inter-tight", "chakra-petch", "jiant-lab", "acid"])
     ap.add_argument("--face", action="append", default=[])
     ap.add_argument("--tracking", type=float, default=0.0, help="extra advance per glyph in em")
     ap.add_argument("--gamma", type=float, default=1.0, help="coverage curve; <1 thickens light-on-dark text")
     ap.add_argument("--kern-min", type=int, default=1, help="smallest kerning pair kept, in 1/16 px (0 pairs = no kerning)")
     ap.add_argument("--huff", default=",".join(HUFF[0]), help="faces stored Huffman-coded (comma list, '' = none)")
     a = ap.parse_args()
+    global PFX
+    PFX = "UF" if a.preset == "acid" else "AF"
+    if a.preset == "acid" and a.huff == ",".join(HUFF[0]):
+        a.huff = UF_HUFF
+    if a.preset == "acid" and a.kern_min == 1:
+        a.kern_min = 100            # no kerning pairs (a pair is 2 B and a delta under 6 px is below what 8 .. 14 px text needs)
     HUFF[0] = tuple(x for x in a.huff.split(",") if x)
     faces = ([parse_face(s) for s in a.face] if a.face else []) or (preset(a.preset) if a.preset else None)
     if not faces:
