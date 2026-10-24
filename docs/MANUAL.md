@@ -50,7 +50,7 @@ files.
 ### Your first sound (1 minute)
 
 1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track. (0.9.9) The tracks
-   start as **T1 DRUM-X** (the factory kit), **T2 VOICE** (SINGER EN: it sings words), **T3 ANIMAL** (CMOS BIRD),
+   start as **T1 DRUM-X** (the factory kit), **T2 VOICE** (SINGER EN: it sings words), **T3 PHASE** (BRASS; ACID FM 0.2, was ANIMAL),
    **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (FAT BASS) and **T6 FM6** (TINE EP), each its preset's sound, dry.
 2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4** it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
@@ -569,8 +569,8 @@ keep controlling the macros on every page) until you press LFO again. F3 rolls n
 Nine engines, all synthesis, no samples. Any engine can go on any track. Pick them with **PRESETS** (one list over
 every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME knobs are listed too.
 
-**The order** (0.9.9): PRESETS, KNOB 2 (ENG) and the web editor's lists show the engines as **DRUM-X, VOICE, ANIMAL,
-LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE** (the first six are the tracks at power-on, T1–T6). Only the order you see
+**The order** (0.9.9; ACID FM 0.2 without ANIMAL and WHEEL): PRESETS, KNOB 2 (ENG) and the web editor's lists show
+the engines as **DRUM-X, VOICE, PHASE, LOFI, ANALOG, FM6, NOISE** (the first six are the tracks at power-on, T1–T6). Only the order you see
 changed: projects, user presets, favourites and backups name engines by their numbers, which stay, so everything saved
 before loads as it was. PROGRAM CHANGE numbers the sounds in this new order (see [14](#14-midi-and-usb)).
 
@@ -1277,7 +1277,7 @@ sounding after you let go; the next chord replaces them.
 | --- | --- |
 | The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
-| **Everything** (NEW PROJECT): every track its power-on sound (0.9.9: T1 DRUM-X, T2 VOICE SINGER EN, T3 ANIMAL CMOS BIRD, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **SAVE > TOOLS > 5 NEW PROJECT** (until 0.9.17 also MENU > SYSTEM > INIT SYSTEM), then OCT+ (UNDO brings the music back) |
+| **Everything** (NEW PROJECT): every track its power-on sound (0.9.9: T1 DRUM-X, T2 VOICE SINGER EN, T3 PHASE BRASS (ACID FM 0.2, was ANIMAL CMOS BIRD), T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **SAVE > TOOLS > 5 NEW PROJECT** (until 0.9.17 also MENU > SYSTEM > INIT SYSTEM), then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | *(not a clear)* A heavy test song, to measure the CPU on the device and listen for clicks (every live track chords of four with two step components a step and long glides, the kit on every lane, every FX on, 160 BPM) | **SAVE > TOOLS > 6 CPU TEST**, OCT+, then PLAY (UNDO brings your music back) |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
@@ -1922,7 +1922,7 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
   button is held and nothing is sounding, and **at most once a minute**.
 - It does **not** save when you switch off. If you change something and power off within those seconds, that last
   change is lost. To be safe: **stop, wait ~10 s**, or better, save into a section.
-- At power-on the device starts at zero, as **NEW PROJECT** leaves it (0.9.9: T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI,
+- At power-on the device starts at zero, as **NEW PROJECT** leaves it (0.9.9: T1 DRUM-X, T2 VOICE, T3 PHASE (ACID FM 0.2, was ANIMAL), T4 LOFI,
   T5 ANALOG, T6 FM6, each its preset's sound, dry; no
   steps). With **MENU › SYSTEM › RESTORE LAST ON** the autosave becomes the music instead (the screen says
   **RESTORED**). RESTORE LAST is **OFF** by default since 0.6.40: no autosave at all.
@@ -2178,8 +2178,8 @@ assumes the FM-1 is 1.6 times heavier than the estimate.
 - **PROGRAM CHANGE** (0.6.72): program *n* on the channel a track plays loads the PRESETS list's sound number *n* + 1
   (every engine's presets in their order, then the user presets) into that track; the selection stays where it was.
   The numbers follow the list exactly as PRESETS shows it: since 0.9.9 it starts with DRUM-X (program 0 is the
-  DRUM-X kit), then VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE. A MIDI setup made for 0.9.8 or older needs
-  its program numbers set again. Programs reach the list's first 128 sounds; the ones after them (and the user
+  DRUM-X kit), then VOICE, PHASE, LOFI, ANALOG, FM6, NOISE (ACID FM 0.2: ANIMAL and WHEEL retired). A MIDI setup made
+  for JIANT, or for 0.9.8 or older, needs its program numbers set again. Programs reach the list's first 128 sounds; the ones after them (and the user
   presets) are picked on the device or from the editor.
 - **Sections and projects** (0.6.80): **channel 16** is the song's: its PROGRAM CHANGE never loads a sound (whatever
   ROUTE). Programs **0–3** jump to section **A–D** of the project (playing: on the next bar, as the song layer's keys;

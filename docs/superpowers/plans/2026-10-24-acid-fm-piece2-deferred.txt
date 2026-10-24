@@ -12,7 +12,12 @@ Read this when writing the plan for that piece.
           device after BREAK lands (docs/acid-fm/voices.md: T is already at the CPU limit in the worst case).
 [piece 5] Re-run the CPU TEST on the device after TAPE.
 [piece 3] tools/landing_anim/capture.c, tools/gen_cheatsheets.py, tools/gen_readme_hero.py and tools/video/* still
-          list ANIMAL / WHEEL.
+          list ANIMAL / WHEEL. So do docs/MANUAL.md's engine sections (the EDIT table's WHEEL / ANIMAL rows, the
+          WHEEL and ANIMAL entries, "### ANIMAL (0.8.3)", the pictures' ANIMAL creature / WHEEL worms) and its GEN
+          text (ANIMAL in "Sound" / EXPLORE, "organ (WHEEL)"), and the cheatsheets: docs/cheatsheet/sound.html
+          ("NINE ENGINES", the ANIMAL / WHEEL rows) and docs/cheatsheet/controls.html ("SONG 1–8"), with their
+          rendered docs/cheatsheet-sound.pdf / .png and docs/cheatsheet-controls.pdf / .png (power-on lines,
+          engine order and PROGRAM CHANGE order in MANUAL.md were fixed in piece 2).
 [any]     regress reports 45 presets with no golden hash (pre-existing).
 [any]     params.c P_WRDEP / P_WDUST are dead slots kept for the stored layout.
 [any]     tools/build.py accepts a non-ASCII digit via isdigit() and then raises ValueError (use isascii()).
