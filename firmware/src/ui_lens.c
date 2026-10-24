@@ -172,8 +172,8 @@ static uint32_t nav_lv(void) { return nav_ch(nav_sec())->e[nav_cur()].lv; }   /*
 static uint32_t pd_level(void) { return nav_lv(); }
 static uint32_t save_level(void) { return nav_lv(); }
 static uint32_t home_level(void) { return gen_on() ? 2u : 0u; }   /* (the 0.8.5 lens level: GEN 2, HOME's pages 0) */
-static uint32_t home_set(void) { return !gen_on() && ux_home_page() == UXH_VISUAL; }
-static int home_macros(void) { return ui.home && !ui.menu && home_set(); }   /* VISUAL: M1..M4 (spec 4.3) */
+static int home_macros(void) { return ui.home && !ui.menu && ux_home_page() == UXH_VISUAL; }   /* VISUAL: M1..M4 (spec 4.3;
+                                                         * ux_home_page: GEN while it is open) */
 /* the entries shown now (on this track, at this LOAD), in order: their indices in v; how many */
 static uint32_t nav_list(uint32_t sec, uint8_t *v)
 {

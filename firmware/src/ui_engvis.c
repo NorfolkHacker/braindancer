@@ -4,7 +4,7 @@
  * Portions Copyright (C) 2026 NorfolkHacker */
 /* (JIANT 0.9.4) Three engines (ACID FM 0.2: two, ANIMAL retired) draw their own creature where every other engine
  * draws its being (ui_being.c): EDIT's
- * SOUND (ui_lzedit.c graph_sound_lz, on the left) and HOME's BEING (ui_lzhome.c, large in the middle); DRUM-X's kit
+ * SOUND (ui_lzedit.c graph_sound_lz, on the left) (and HOME's BEING until ACID FM 3a: ui_lzhome.c, gone); DRUM-X's kit
  * on EDIT > KIT and SOUND 1..4 (the whole panel), the colony staying on KIT 2, KIT 3 and X-MOD. Line art only,
  * antialiased (ui_organic.c og_line), in the beings' thermal colours (bg_col: heat_col; GREY and MONO their greys),
  * from small point tables (int8) and the synthesis state the UI already reads; nothing in the audio path. Each moves
@@ -109,8 +109,6 @@ static uint16_t vx_col(int32_t h)
         return T_DIM;
     return bg_col(clamp(h, 0, 255));
 }
-/* (0.9.7) HOME's beings (ui_lzhome.c, variant A): as the beings (bg_col) */
-static uint16_t vk_heat(int32_t h) { return bg_col(clamp(h, 0, 255)); }
 static void vx_line(const vxf_t *f, int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t h)
 {
     int32_t X0 = f->cx + ((x0 * f->s) >> 8), Y0 = f->cy + ((y0 * f->s) >> 8);
@@ -177,7 +175,8 @@ static int32_t vx_level(const track_t *t, uint32_t k, int32_t en_home)
     if (en_home >= 0)
         v = en_home;                                     /* (HOME: its own, eco_step's) */
     else {
-        v = (int32_t)ux_trk_peak((uint32_t)(t - trk)) * 256 / 255;   /* (ACID FM 3a: ux_home.c reads the peaks, once a frame) */
+        v = ux_trk_peak((uint32_t)(t - trk)) * 256 / 7000;   /* (ACID FM 3a: ux_home.c reads the peaks, once a frame) */
+        v = v > 256 ? 256 : v;
         v = v > vxs.en[k] ? v : vxs.en[k] + (v - vxs.en[k] - 2) / 3;
     }
     v = v > 4 ? v : 0;                                   /* (HOME's level rests a little above 0: silence) */

@@ -409,8 +409,6 @@ static void draw_frame(void)
 {
     uint32_t i, ch = card_h(), gy = graph_y(), gh = graph_h(), cy = card_y(), fy = foot_y();   /* (MENU > LARGE: tall
                                                          * cards, a strip; 0.8.5 a lens page: the mock-up's) */
-    if (hud_home())                                     /* (0.8.9) HUD's HOME: its strips cover the screen */
-        return;
     lcd_fill(0, H_HEAD, 240, cy - H_HEAD, T_BG);        /* (the knobs' row over the panel in every layout: ACID FM 0.3,
                                                          * BOTTOM / HUD's row under it gone) */
     lcd_fill(0, cy + ch, 240, gy - cy - ch, T_BG);
@@ -635,10 +633,8 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     uint32_t kind = large_kind();                       /* MENU > LARGE: tall (draw_column_tall), or the label in M */
     uint8_t sig;
     uint16_t lc = hot ? T_ACCENT : arm || mot ? T_THEME : T_MID, cb = arm ? T_TINT : CARD_BG, gk = 0;
-    int low = lz_low(), hud = hud_home();
-    uint32_t fd = hud_fade();                           /* (0.8.9) HUD: the row faded while the knobs rest */
-    int32_t ox = hud ? CARD_X(c) - (int32_t)c * 60 : 0, cw = hud ? 60 : COL_W;   /* (HUD's HOME: the row whole, 4 x 60) */
-    int32_t x, lx = 5 + ox, uw, room = COL_W - 8, ch = (int32_t)card_h(), ry = ROLL_Y;
+    int low = lz_low();
+    int32_t x, lx = 5, uw, room = COL_W - 8, ch = (int32_t)card_h(), ry = ROLL_Y;
     const aafont_t *vf = &AF_M;
     uint32_t n, kn, hk;
     int32_t kid = kc_tag(val, &kn);
@@ -650,16 +646,10 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             gk = knob_col(c, ratio, card_bip);          /* (the gauge's, the frame's) */
             vc = gk;
         }
-        lc = arm || mot ? T_THEME : low && !hot && !hud ? T_MID : T_TEXT;   /* (0.9.0 HUD's HOME: TEXT, over the beings) */
+        lc = arm || mot ? T_THEME : low && !hot ? T_MID : T_TEXT;
     }
     if (!gk)
         vc = value_col(vc, ratio);
-    if (fd < 100u) {
-        vc = ux_mix(T_BG, vc, (int32_t)fd);
-        lc = ux_mix(T_BG, lc, (int32_t)fd);
-        if (gk)
-            gk = ux_mix(T_BG, gk, (int32_t)fd);
-    }
     fmt_named = 0;                                      /* (params.c: a name, for this card only) */
     card_mot_next = 0;                                  /* (the same: MOTION, this card only) */
     card_arm_next = card_free_next = 0;
@@ -688,7 +678,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         key[n + 9] = (char)('A' + ((gc >> 8) & 15u));
         key[n + 10] = (char)('A' + (gc >> 12));
     }
-    key[n + 11] = (char)('A' + fd / 13u + 8u * (uint32_t)low);
+    key[n + 11] = (char)('A' + 8u * (uint32_t)low);
     key[n + 12] = (char)(curve == DJF_NOCURVE ? '#' : 0x80 | ((curve + 64) & 127));   /* (0.9.1) the DJ FILTER's curve */
     key[n + 13] = 0;
     uw = unit[0] ? text_w(&AF_S, unit) + 3 : 0;
@@ -698,7 +688,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     snap = ui.force || sig != ui.roll[c].sig;           /* what the value is of: label, unit, track, engine, palette */
     if (kind == LK_TALL)
         ui.roll[c].from[0] = 0;                         /* (a tall card: no rolling digits) */
-    strip = !snap && !hud && str_eq(key, ui.col[c]);
+    strip = !snap && str_eq(key, ui.col[c]);
     if (strip && !ui.roll[c].from[0])
         return;
     if (strip) {                                        /* rolling: the value strip only */
@@ -728,10 +718,8 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             draw_column_tall(c, label, val, unit, vc, ratio, icon, hot, mot, kid);
             return;
         }
-        if (low) {                                      /* (0.8.9) BOTTOM, HUD: no box (HUD's HOME: on the beings) */
-            lz_begin((uint32_t)cw, (uint32_t)ch, hud ? c * 60u : (uint32_t)CARD_X(c), card_y());
-            if (fd < 100u)                              /* (0.9.0) faded: no outline (it cut holes in the beings) */
-                cv_halo = 0;
+        if (low) {                                      /* (0.8.9) BOTTOM, HUD: no box */
+            lz_begin(COL_W, (uint32_t)ch, (uint32_t)CARD_X(c), card_y());
         } else {
             cv_begin(COL_W, (uint32_t)ch, T_BG);
             if (!lz_on())
@@ -768,38 +756,37 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         }
         cv_scroll = 0;
         if (kid >= 0)                                   /* "[OCT+]": the keycap (accent: it would act; DIM: it would not) */
-            x = cv_keycap(5 + ox, ry + 2, (uint32_t)kid, vc == T_ACCENT || vc == T_DIM ? vc : T_KEY, T_INK, cb);
+            x = cv_keycap(5, ry + 2, (uint32_t)kid, vc == T_ACCENT || vc == T_DIM ? vc : T_KEY, T_INK, cb);
         else if (vf == &AF_M) {
             if (!ui.roll[c].from[0] && val[0])
-                GFX_HOOK_ALIGN(0, ry, cw, ry + ROLL_H, AL_V, "card value in its roll window");
-            x = roll_text(c, 5 + ox, ry - 1, val, vc);
+                GFX_HOOK_ALIGN(0, ry, COL_W, ry + ROLL_H, AL_V, "card value in its roll window");
+            x = roll_text(c, 5, ry - 1, val, vc);
         } else if (free)                                /* (a name: ellipsised where it must be) */
-            x = cv_free_text(5 + ox, ry + 2, vf, val, vc, cb, room - uw);
+            x = cv_free_text(5, ry + 2, vf, val, vc, cb, room - uw);
         else
-            x = cv_text_fit(5 + ox, ry + 2, vf, val, vc, cb, room - uw);
+            x = cv_text_fit(5, ry + 2, vf, val, vc, cb, room - uw);
         if (unit[0]) {
             GFX_HOOK_ALIGN(0, 0, 0, vf == &AF_M ? ry - 1 + AF_M.asc : ry + 2 + AF_S.asc, AL_B, "card unit on its value's baseline");
-            uint16_t uc = hud ? T_TEXT : T_MID;         /* (0.9.0 HUD's HOME: TEXT) */
-            cv_text_on(x + 3, ry + 2, &AF_S, unit, fd < 100u ? ux_mix(T_BG, uc, (int32_t)fd) : uc, cb);   /* on the value's
+            cv_text_on(x + 3, ry + 2, &AF_S, unit, T_MID, cb);   /* on the value's
                                                          * baseline (S) */
         }
         if (!strip && curve != DJF_NOCURVE && kind != LK_TALL) {   /* (0.9.1) the DJ FILTER: its response (BOTTOM, HUD:
                                                          * 5 rows, under the value's strip) */
             uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? (gk ? gk : vc) : gauge_col(ratio);
-            uint16_t tc = fd < 100u ? ux_mix(T_BG, T_LINE, (int32_t)fd) : T_LINE;
-            djf_curve(5 + ox, low ? ch - 5 : ch - 8, COL_W - 10, low ? 5 : 6, curve,
-                      curve ? gc : fd < 100u ? ux_mix(T_BG, T_MID, (int32_t)fd) : T_MID, tc);
+            uint16_t tc = T_LINE;
+            djf_curve(5, low ? ch - 5 : ch - 8, COL_W - 10, low ? 5 : 6, curve,
+                      curve ? gc : T_MID, tc);
         } else if (!strip && ratio >= 0) {              /* the gauge: a 2 px LINE track, the value THEME on it */
             int32_t gw = COL_W - 10, fx = ratio * gw / 1000;
             uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? (gk ? gk : vc) : gauge_col(ratio);
-            uint16_t tc = fd < 100u ? ux_mix(T_BG, T_LINE, (int32_t)fd) : T_LINE;
+            uint16_t tc = T_LINE;
             if (low) {                                  /* (0.8.9) BOTTOM, HUD: a hairline, the value 2 px on it */
                 if (cv_halo) {                          /* (0.9.0) its outline 1 px round the line and the bar, not a band */
-                    cv_rect(4 + ox, ch - 5, gw + 2, 3, T_BG);
-                    cv_rect(4 + ox, ch - 6, (fx < 2 ? 2 : fx) + 2, 4, T_BG);
+                    cv_rect(4, ch - 5, gw + 2, 3, T_BG);
+                    cv_rect(4, ch - 6, (fx < 2 ? 2 : fx) + 2, 4, T_BG);
                 }
-                cv_rect(5 + ox, ch - 4, gw, 1, tc);
-                cv_rect(5 + ox, ch - 5, fx < 2 ? 2 : fx, 2, gc);
+                cv_rect(5, ch - 4, gw, 1, tc);
+                cv_rect(5, ch - 5, fx < 2 ? 2 : fx, 2, gc);
             } else if (lz_on() && kind != LK_TALL) {   /* COLORS: 3 px, rounded, as the 0.6's */
                 cv_rrect(5, ch - 6, gw, 3, 1, T_LINE, cb);
                 cv_rrect(5, ch - 6, fx < 3 ? 3 : fx, 3, 1, gc, T_LINE);
@@ -811,7 +798,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     }
     cv_oy = 0;
     if (low && !strip)
-        lz_blit(hud ? c * 60u : (uint32_t)CARD_X(c), card_y());
+        lz_blit((uint32_t)CARD_X(c), card_y());
     else
         cv_blit((uint32_t)CARD_X(c), card_y() + (strip ? (uint32_t)ry : 0u));
 }
@@ -858,10 +845,8 @@ static void sound_name(const track_t *t, char *b)
 static void tabs_paint(uint32_t n, uint32_t lv, const char *const *nm, const char *const *tab, const uint8_t *cnt, uint32_t at)
 {
     uint32_t l, d;
-    int low = lz_low() || ((dlg_on() || name_on()) && !(ui_prefs & PREF_LARGE)), hud = hud_home();   /* (0.9.0:
-                                                         * NAME too, as the dialogs) */
-    int32_t y = hud ? H_HEAD : LT_Y, h = hud ? (int32_t)(card_y() < graph_y() ? card_y() : graph_y()) - H_HEAD : low ? LB_TAB_H : LT_H;
-    int32_t o = LT_Y - y;                               /* (0.9.7 AIR's HOME: down to its knobs' row) */
+    int low = lz_low() || ((dlg_on() || name_on()) && !(ui_prefs & PREF_LARGE));   /* (0.9.0: NAME too, as the dialogs) */
+    int32_t y = LT_Y, h = low ? LB_TAB_H : LT_H;
     lz_begin(240, (uint32_t)h, 0, (uint32_t)y);
     for (l = 0; l < n; l++) {
         int32_t x = low ? (int32_t)(l * 240u / n) + 2 : TAB_X(l, n), w = low ? (int32_t)((l + 1u) * 240u / n) - 2 - x :
@@ -871,8 +856,8 @@ static void tabs_paint(uint32_t n, uint32_t lv, const char *const *nm, const cha
             s = tab[l];
         if (low) {
             GFX_HOOK_ALIGN(x, 0, x + w, 0, AL_H, "group tab word centred on its slot");
-            cv_text_in(x, o + 2 - AF_X_CAP_Y, w, &AF_X, s, l == lv ? T_THEME : hud_cap(T_MID), T_BG);
-            dy = o + 12;
+            cv_text_in(x, 2 - AF_X_CAP_Y, w, &AF_X, s, l == lv ? T_THEME : hud_cap(T_MID), T_BG);
+            dy = 12;
             if (cv_halo && nd)
                 cv_rect(dx - 1, dy - 1, nd * 4, 3, T_BG);
             for (d = 0; d < (uint32_t)nd; d++) {
@@ -934,8 +919,7 @@ static void draw_tabs(void)
     const char *nm[8], *tab[8];
     uint8_t cnt[8];
     uint32_t lv, at, n = tabs_now(nm, tab, cnt, &lv, &at), k,
-             sig = (lv + 1u) * 2654435761u + at * 40503u + ux.gen * 977u + lz_fam() * 131u + 1u +
-                   (uint32_t)hud_home() * 31u + n * 7919u;
+             sig = (lv + 1u) * 2654435761u + at * 40503u + ux.gen * 977u + lz_fam() * 131u + 1u + n * 7919u;
     for (k = 0; k < n; k++)
         sig = (sig ^ str_hash(cnt[k], nm[k])) * 16777619u;
     if (!ui.force && sig == drawn)
@@ -1188,24 +1172,7 @@ static void draw_columns(void)
     char val[12];
     const char *unit;
     (void)motion_mask(song.sel, card_mot_mask);       /* (PLAY OFF: no scan) */
-    if (home_macros()) {                                /* (0.8.5) HOME's MACROS / ROUTES: M1..M4, 0..100 % */
-        static const char *const M[4] = {"M1", "M2", "M3", "M4"};
-        for (c = 0; c < 4u; c++) {
-            fmt_int(val, macro_v[c] * 100 / 127);
-            draw_column(c, M[c], val, "%", VAL(c), macro_v[c] * 1000 / 127, ICON_MIX);
-        }
-        return;
-    }
-    if (ui.home) {
-        for (c = 0; c < 4u; c++) {
-            int16_t *vp;
-            const param_desc_t *d = home_param(c, &vp);
-            param_format(d, *vp, val, &unit);
-            card_mot_of(vp);
-            draw_column(c, d->label, val, unit, VAL(c), RATIO(d, enum_rank(d, *vp)), param_icon(d, *vp));
-        }
-        return;
-    }
+    /* (ACID FM 3a: HOME's cards, the sound's four and MACROS' M1..M4, are ux_home.c's knob row) */
     if (cur_page()->graph == GR_LIVE) {                /* (0.9.11) GLO > LIVE (ui_live.c) */
         live_cards();
         return;
@@ -2247,7 +2214,6 @@ static void ui_draw_page(uint32_t counting)
 }
 static void ui_draw_body(uint32_t counting)
 {
-    int skip = 0;
     if (ui.hint_pg && ui.hint_pg != (ui.home ? 255u : ui.page + 1u)) {   /* (0.9.0) a layer's hint: its own page's only */
         ui.hint_pg = 0;
         ui.msg_t = 0;
@@ -2337,35 +2303,14 @@ static void ui_draw_body(uint32_t counting)
         page_entered();
     }
     cursor_fix();
-    {   /* (0.8.9) SKIN HUD's HOME: every strip on the beings, so all of them each frame (LOAD LITE / ECO: every 50 / 70 ms,
-         * as the panel's own pace) */
-        static uint8_t was __attribute__((section(".pool")));
-        static uint32_t hud_ms __attribute__((section(".pool"))), view __attribute__((section(".pool")));
-        uint8_t h = (uint8_t)hud_home();
-        uint32_t v = (uint32_t)h + home_set() * 2u + (uint32_t)lz_level() * 4u;
-        if (h != was)
-            ui.force = 1, was = h;
-        if (v != view)                                  /* (0.9.0) HUD's HOME entered, its level or set changed: the knob
-                                                         * row whole again */
-            ui.knob_ms = fm1_ms, view = v;
-        if (h && sys_load && !ui.force && fm1_ms - hud_ms < (sys_load == LOAD_ECO ? 70u : 50u))
-            skip = 1;
-        else if (h) {                                   /* (0.9.0: drawn whole, sent where it changed: gfx.c cv_blit_cells) */
-            hud_ms = fm1_ms;
-            dc_frame(ui.force);
-            ui.force = 1;
-        }
-    }
-    if (ui.force && !skip)
+    if (ui.force)                                       /* (ACID FM 3a: SKIN HUD's HOME, every strip on the beings, gone) */
         draw_frame();
     felucca_dbg.stage = 3;
-    if (!skip) {
-        draw_head();
-        felucca_dbg.stage = 4;
-        draw_columns();
-        felucca_dbg.stage = 5;
-        draw_graph();
-    }
+    draw_head();
+    felucca_dbg.stage = 4;
+    draw_columns();
+    felucca_dbg.stage = 5;
+    draw_graph();
     if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {     /* the second message (ui_notices) */
         str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
         ui.msg2[0] = 0;
@@ -2376,10 +2321,6 @@ static void ui_draw_body(uint32_t counting)
     if (ui.hot_t)
         ui.hot_t--;
     felucca_dbg.stage = 6;
-    if (skip) {
-        ui.force = 0;
-        return;
-    }
     if (pf_on)                                          /* (0.6.61) the page's name for a moment; (0.6.64) over the
                                                          * footer, which says the same: the header, the cards and
                                                          * the graph stay in sight */

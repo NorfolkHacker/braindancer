@@ -12,6 +12,24 @@
  *           curve
  *   FOCUS   the parameter as a gauge, its value large, the MOD slot that moves it ("M1 -> +63%"); E1..E8 as tabs
  * The others (MORPH, RETRIG, ROTOR, the kit's, the operators') keep their panels. */
+/* (0.8.5) a gauge, as the mock-up's: an arc of 270 degrees (from 7:30, clockwise) round (cx, cy) px, radius r, w px
+ * thick, the value f (0..1000) in vc over the track tc; antialiased lines (og_line), 24 a turn (ACID FM 3a: was
+ * ui_lzhome.c's, gone with JIANT's HOME) */
+static void lz_arc(int32_t cx, int32_t cy, int32_t r, int32_t w, int32_t f, uint16_t tc, uint16_t vc)
+{
+    int32_t k, i;
+    for (k = 0; k < w; k++) {
+        int32_t rr = (r - k) * 16, px = 0, py = 0;
+        for (i = 0; i <= 18; i++) {                     /* (18 segments over 270 degrees) */
+            uint32_t a = 0x6000u + (uint32_t)i * 0xC000u / 18u;   /* (from 135 degrees, y down) */
+            int32_t x = cx * 16 + (og_cos(a) * rr >> 15), y = cy * 16 + (og_sin(a) * rr >> 15);
+            if (i)
+                og_line(px, py, x, y, i * 1000 <= f * 18 ? vc : tc);
+            px = x;
+            py = y;
+        }
+    }
+}
 #define ED_CH 17                                        /* a chip's height (two lines of AF_X) */
 /* a chip: the stripe, the label, the value (on: the page's) */
 static void ed_chip(int32_t x, int32_t y, int32_t w, const param_desc_t *d, int16_t v, int on)

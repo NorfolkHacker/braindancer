@@ -2,7 +2,7 @@
 /* Copyright (C) 2026 NorfolkHacker */
 /* ACID FM's shared page pieces (ux_widgets.h). Each piece is a one-shot strip like JIANT's head and foot: cv_begin, drawn,
  * cv_blit_cells (only the cells that changed are sent). Text goes through cv_text* so the host lint sees it; each
- * column and meter is a GFX_HOOK_CELL its texts must lie in; header and footer texts declare they sit centred up and
+ * column is a GFX_HOOK_CELL its texts must lie in; header and footer texts declare they sit centred up and
  * down in their rows (GFX_HOOK_ALIGN). */
 #include "ux_widgets.h"
 
@@ -103,23 +103,6 @@ static void ux_footer(const char *where, const char *right)
         cv_text_on(232 - w, ty, &UF_LBL, right, UX_BG, UX_BLEND[(232 - w / 2) * 255 / 239]);
     }
     cv_blit_cells(0, UX_Y_FOOT);
-}
-
-static void ux_meters(const uint8_t lvl[6], const char *const name[6], uint32_t sel, uint32_t knob_first)
-{
-    uint32_t i;
-    for (i = 0; i < 6u; i++) {
-        int32_t x = 10 + (int32_t)i * 37, bh = (int32_t)lvl[i] * 70 / 255, kn = i >= knob_first && i < knob_first + 4u;
-        uint16_t col = kn ? ux_knob_col(i - knob_first) : UX_MID;
-        GFX_HOOK_CELL(x - 2, 8, x + 34, 100);
-        cv_rect(x, 12, 32, 70, UX_EMPTY);
-        if (bh > 0)
-            cv_rect(x, 82 - bh, 32, bh, col);
-        if (i == sel)
-            cv_frame(x - 2, 10, 36, 74, UX_TEXT);
-        if (name && name[i])
-            cv_text_on(x, 88, &UF_LBL, name[i], i == sel ? UX_TEXT : UX_MID, swap16(cv_px[(uint32_t)(88 + cv_oy) * cv_w + (uint32_t)x]));
-    }
 }
 
 static uint16_t ux_step_col(const step_t *s, uint16_t prev)

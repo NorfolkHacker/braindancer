@@ -3113,8 +3113,7 @@ static int test_soak_cards(void)
             continue;                                   /* (the cards are not drawn; ACID FM 3a: HOME's knob row is ux_knobs) */
         for (c = 0; c < 5u; c++)
             old += ui.roll[c].from[0] && (uint8_t)(ui.frame - ui.roll[c].t0) >= ROLL_FRAMES;
-        if (quiet > 45u && !was_hot && !ui.bpm_t && !ui.msg_t && !hud_home() && SOAK_RND(8u) == 0u) {   /* (HUD's HOME, the
-                                                         * one skin's: the beings swim under its cards, moving each frame) */
+        if (quiet > 45u && !was_hot && !ui.bpm_t && !ui.msg_t && SOAK_RND(8u) == 0u) {
             uint32_t cy = card_y(), ch = card_h() < CARD_H ? card_h() : CARD_H;
             for (c = 0; c < 5u && !ui.roll[c].from[0]; c++) {}
             if (c < 5u)
@@ -9997,7 +9996,7 @@ static int test_skin(void)
     ui_power_on(); frame();                                       /* the geometry, AIR's (ACID FM 3a: HOME is ux_home.c's) */
     go_title("ENV"); frame();                                     /* the knob row on top, under the tabs */
     ok = lg_px(LT_X(0) + LT_W / 2 + 30, LT_Y + 1) == T_BG;        /* (the tabs words: no fill) */
-    ok &= lz_low() && !hud_home() && card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && graph_h() == LB_GRAPH_H &&
+    ok &= lz_low() && card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && graph_h() == LB_GRAPH_H &&
           graph_y() + graph_h() <= LZ_FOOT_Y && skin_ink(LA_CARD_Y, LA_CARD_Y + LB_CARD_H) > 100 &&
           lg_px(CARD_X(0) + COL_W / 2, LA_CARD_Y + 1) == T_BG;  /* (no boxes) */
     go_title("PATTERN"); frame();                                 /* (the SEQ pages too) */
@@ -10008,27 +10007,16 @@ static int test_skin(void)
     ui_prefs &= ~PREF_LARGE; go_home(); frame();
     bad += check("SKIN geometry (the one, AIR's): the knob row 42..74 under the tabs, the panel 77..224, no boxes; LARGE: its "
                  "tall cards", ok);
-    {   /* (0.9.0, the HUD audit's M1) a lens page's knob row never fades (ACID FM 3a: HOME's, HUD's, gone) */
-        ui_power_on(); frame();
-        go_title("ENV"); frame();
-        frames(4000);
-        ok = hud_fade() == 100u && !hud_home();                   /* (a lens page: never faded) */
-        go_home(); frame(); frames(4000);
-        ok &= !hud_home();
-        bad += check("SKIN: a lens page's knob row never fades; HOME no HUD (ACID FM 3a) (M1)", ok);
-    }
     {   /* (0.9.0, H1) the count-in and UPDATE MODE's countdown over HUD's HOME: their header on BG, no beings */
         uint32_t x, y, clean = 1;
         ui_power_on(); song.playing = 1; frames(2000);
         ok = ui.home;
         cin_left = cin_total = 4u; frame(); frame();
-        ok &= !hud_home();
         for (y = 20; y < H_HEAD; y++)
             for (x = 0; x < 240; x++) clean &= lg_px((int32_t)x, (int32_t)y) == T_BG;
         cin_left = cin_total = 0; frames(100);
         ok &= ui.home && clean;
         ui.uboot = 3; ui.force = 1; frame(); frame();
-        ok &= !hud_home();
         for (y = 20; y < H_HEAD; y++)
             for (x = 0; x < 240; x++) clean &= lg_px((int32_t)x, (int32_t)y) == T_BG;
         ui.uboot = 0; ui.force = 1; frame();
@@ -10158,74 +10146,6 @@ static uint32_t sc_rows(int32_t y0, int32_t y1, uint16_t c)   /* rows of x 122..
     for (y = y0; y < y1; y++)
         n += sc_count(122, y, 228, y + 1, c, 1) >= 90u;
     return n;
-}
-/* (0.9.7) HOME variant A: the face (eco_face) drawn alone on a canvas: the rows its pixels span, the top one */
-static void ha_face(int32_t e, uint32_t fl, uint32_t *rows, int32_t *top)
-{
-    uint32_t x, y, n = 0;
-    cv_begin(64, 64, T_SURF);
-    cv_oy = 0;
-    eco_face(32 * 16, 32 * 16, 17 * 16, 159, e, fl);
-    *top = -1;
-    for (y = 0; y < 64u; y++) {
-        int any = 0;
-        for (x = 0; x < 64u; x++)
-            any |= cv_px[y * 64u + x] != swap16(T_SURF);
-        if (any && *top < 0) *top = (int32_t)y;
-        n += (uint32_t)any;
-    }
-    *rows = n;
-}
-static uint32_t ha_eye_rows(uint32_t fl)                /* .. the rows of its eyes' colour (vk_heat(248); asleep: dim) */
-{
-    uint32_t x, y, n = 0;
-    uint16_t c = swap16((fl & EF_SLEEP) ? T_DIM : vk_heat(248));
-    cv_begin(64, 64, T_SURF);
-    cv_oy = 0;
-    eco_face(32 * 16, 32 * 16, 17 * 16, 159, 0, fl);
-    for (y = 0; y < 64u; y++) {
-        int any = 0;
-        for (x = 0; x < 64u; x++)
-            any |= cv_px[y * 64u + x] == c;
-        n += (uint32_t)any;
-    }
-    return n;
-}
-/* .. ECO's panel (COLORS: the graph's rows) at frame f, the animation held: its pixels not SURF away from every being (2 r +
- * 14 px round it: its isotherms, face, number) */
-static uint32_t ha_loose(void)
-{
-    uint32_t x, y, c, n = 0;
-    for (y = graph_y() + 2u; y + 2u < graph_y() + graph_h(); y++)
-        for (x = 8; x < 232u; x++) {
-            int near = 0;
-            for (c = 0; c < ECO_N; c++) {
-                int32_t dx = (int32_t)x - (eco.sx[c] >> 8), dy = (int32_t)y - (int32_t)graph_y() - (eco.sy[c] >> 8);
-                int32_t rr = 2 * (eco.r[c] >> 4) + 14;
-                near |= dx * dx + dy * dy < rr * rr;
-            }
-            n += !near && lg_px((int32_t)x, (int32_t)y) != T_SURF;
-        }
-    return n;
-}
-static void ha_eco_at(uint32_t f) { ui.frame = f - 1u; ui.force = 1; frame(); }
-static int test_home_a(void)
-{
-    int bad = 0, ok;
-    uint32_t r0, r1, c, sk;
-    int32_t t0, t1;
-    ui_power_on();
-    ha_face(0, 0, &r0, &t0);
-    ha_face(256, 0, &r1, &t1);
-    ok = r1 >= r0 + 3u && t1 == t0;                              /* (the mouth opens with the level, the eyes stay) */
-    ha_face(0, EF_UP, &r1, &t1);
-    ok &= t1 < t0;                                                /* (MUTATE: it looks up) */
-    ok &= ha_eye_rows(0) == 2u && ha_eye_rows(EF_SHUT) == 1u && ha_eye_rows(EF_SLEEP) >= 1u;
-    bad += check("0.9.7 HOME A: the face: its mouth opens with the level, its eyes shut on a hit (one row), it looks up on MUTATE", ok);
-    /* (ACID FM 3a: the faces as HOME ran them, ECO drawn, are gone with ECO: HOME is TRACKS / VISUAL, ux_nav.c) */
-    ui_prefs = 0;
-    ui_power_on();
-    return bad;
 }
 static int test_scope(void)
 {
@@ -11061,6 +10981,9 @@ static int test_ux_tracks(void)
     trk[2].peak = 7000;                                             /* T3 sounds for a moment */
     fm1_ms += UXR_MS; ux_levels_tick();
     ok &= trk[2].peak == 0 && ux_hist(2, 0) > 200u && ux_hist(1, 0) == 0u;   /* (read and cleared: the one reader) */
+    ok &= ux_trk_peak(2) == 7000 && ux_trk_peak(2) == 7000;         /* (MIXER's meters, EDIT's creatures: every reader the */
+    ux_levels_tick();                                               /* same this frame, the next frame anew) */
+    ok &= ux_trk_peak(2) == 0;
     {
         uint32_t top = ux_hist(2, 0);
         for (i = 0; i < 10u; i++) { fm1_ms += UXR_MS; ux_levels_tick(); }
@@ -12451,7 +12374,6 @@ int main(void)
     bad += test_large();
     bad += test_skin();
     bad += test_scope();
-    bad += test_home_a();
     bad += test_browse_no_pattern();
     bad += test_name();
     bad += test_edit_cycle();

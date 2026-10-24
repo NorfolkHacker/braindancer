@@ -227,20 +227,17 @@ static int32_t ratio_d(const param_desc_t *d, int32_t v) { return ratio_of(d->mi
 #define LG_H_GRAPH 62
 #define LZ_LG_Y_GRAPH 150                 /* (0.8.5) .. under a lens's tabs: the tall cards 42..146, the strip 150..212 */
 /* (0.8.9) SKIN BOTTOM and HUD (the mock-up's options 3 and 4): the tabs words (26..39), the panel the screen's width and no
- * box (42..189), the knobs a slim row over the breadcrumb (191..223: label, value, a hairline gauge). HUD's HOME (hud_home):
- * the beings over the whole screen, every strip drawn on them (head 0..23, tabs 24..40, the panel 41..190, the knobs
- * 191..223, the breadcrumb 224..239). MENU > LARGE ON keeps COLORS' layout (its tall cards on top) in every skin */
+ * box (42..189), the knobs a slim row over the breadcrumb (191..223: label, value, a hairline gauge). MENU > LARGE ON keeps
+ * COLORS' layout (its tall cards on top) in every skin (ACID FM 3a: HUD's HOME, the beings over the whole screen, gone) */
 #define LB_TAB_H 14
 #define LB_GRAPH_Y 42
 #define LB_GRAPH_H 148
 #define LB_CARD_Y 191
 #define LB_CARD_H 33
 /* (0.9.7) SKIN AIR: BOTTOM's strips with the knobs' row on top, under the tabs (42..74), the panel 77..224 (BOTTOM's 148
- * rows); its HOME as HUD's (the beings over the whole screen) with the row 41..73 and the panel 74..223 */
+ * rows) */
 #define LA_CARD_Y 42
 #define LA_GRAPH_Y 77
-#define LA_HOME_CARD_Y 41
-#define LA_HOME_GRAPH_Y 74
 
 /* (0.9.5) the hints a page gives ("OCT+ KEEP  GLO+A4 FREEZE"): only once the page has been dwelt on HINT_DWELL_MS (never
  * while SELECT walks past it), each at most HINT_MAX times ever. The count kept with the settings, a byte a hint in engine
@@ -502,28 +499,23 @@ static uint32_t large_kind(void)
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
-/* (0.8.9) a lens page in SKIN BOTTOM / HUD's layout (LARGE: COLORS'); HUD's HOME (ECO): the beings full screen. (ACID FM
- * 0.3: the one skin, AIR's: every lens page but in LARGE) */
+/* (0.8.9) a lens page in SKIN BOTTOM / HUD's layout (LARGE: COLORS'). (ACID FM 0.3: the one skin, AIR's: every lens page
+ * but in LARGE) */
 static int lz_low(void) { return lz_on() && !(ui_prefs & PREF_LARGE); }
 /* (0.9.17) .. with the knobs' row on top, under the tabs: AIR (ACID FM 0.3: lz_top, AIR's or HUD's SEQ pages', is lz_low:
  * BOTTOM / HUD's knobs at the foot are gone) */
-static int hud_home(void);
-static uint32_t card_y(void)
-{
-    return lz_low() ? (hud_home() ? LA_HOME_CARD_Y : LA_CARD_Y) : lz_on() ? LZ_CARD_Y : Y_LABEL;
-}
-static uint32_t foot_y(void) { return hud_home() ? LZ_FOOT_Y - 1u : lz_on() ? LZ_FOOT_Y : Y_FOOT; }
-static uint32_t foot_h(void) { return hud_home() ? LZ_FOOT_H + 1u : lz_on() ? LZ_FOOT_H : H_FOOT; }
+static uint32_t card_y(void) { return lz_low() ? LA_CARD_Y : lz_on() ? LZ_CARD_Y : Y_LABEL; }
+static uint32_t foot_y(void) { return lz_on() ? LZ_FOOT_Y : Y_FOOT; }
+static uint32_t foot_h(void) { return lz_on() ? LZ_FOOT_H : H_FOOT; }
 static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : lz_low() ? LB_CARD_H : lz_on() ? LZ_CARD_H : CARD_H; }
 static uint32_t graph_y(void)
 {
-    return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : hud_home() ? LA_HOME_GRAPH_Y :
-           lz_low() ? LA_GRAPH_Y : lz_on() ? LZ_GRAPH_Y : Y_GRAPH;
+    return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : lz_low() ? LA_GRAPH_Y : lz_on() ? LZ_GRAPH_Y :
+           Y_GRAPH;
 }
 static uint32_t graph_h(void)
 {
-    return large_kind() == LK_TALL ? LG_H_GRAPH : hud_home() ? LB_CARD_Y - LB_GRAPH_Y + 1u : lz_low() ? LB_GRAPH_H :
-           lz_on() ? LZ_GRAPH_H : H_GRAPH;
+    return large_kind() == LK_TALL ? LG_H_GRAPH : lz_low() ? LB_GRAPH_H : lz_on() ? LZ_GRAPH_H : H_GRAPH;
 }
 static int large_face_has(const char *s)                /* every glyph of s in the sparse L face */
 {
@@ -673,12 +665,6 @@ static uint32_t lz_fam(void)                            /* which lens */
     return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ;
 }
 static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
-/* (MENU > LARGE: their cards as they are; 0.9.0: not under the count-in or UPDATE MODE's countdown, which cover the page:
- * their header on BG, as every other page's) */
-static int hud_home(void)
-{
-    return 0;                                           /* (ACID FM 3a: HOME is ux_home.c's; HUD's code goes in 3a task 6) */
-}
 /* the tab lit: the section's group shown, the menu's tab, a layer's view */
 static uint32_t menu_tab(void);
 static uint32_t menu_page(void);                        /* (0.9.18) the MENU's page (ui_menu.c) */
@@ -1722,13 +1708,6 @@ static uint32_t preset_visible(uint32_t cur, uint32_t total, uint32_t row)
 /* (JIANT 0.4) the MACRO layer latched: LFO held opens it, let go it stays (M1..M4 on KNOB 1..4, SELECT the dice, its
  * cards drawn by ui_draw over any page, no layer open: the keys stay notes) until LFO is pressed again (ui_layer.c) */
 static uint8_t mac_latch;
-/* HOME: what KNOB k edits: the engine's four main parameters */
-static const param_desc_t *home_param(uint32_t k, int16_t **vp)
-{
-    uint32_t id = trk_engp(TSEL)->knob[k & 3u];
-    *vp = &TSEL->p[id];
-    return track_desc(TSEL, id);
-}
 
 /* select track i (KNOB 1 on TRACKS, the editor): its sound, pages and pattern from now on */
 static void track_select(uint32_t i)

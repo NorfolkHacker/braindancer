@@ -12,11 +12,14 @@
 
 /* ---- the level history: the one reader of trk[c].peak (fx.c holds each track's peak until it is read; read here once a
  * frame on every page, smoothed with a fall-off, a point every UXR_MS into a ring of UXR_N per track: 672 B of .bss) */
+#define UXR_HOLD 5u
 static struct {
     uint8_t h[NTRK][UXR_N];      /* the points, 0..255; slot at is the oldest */
     uint8_t acc[NTRK];           /* the peak since the last point (0..255) */
     uint8_t lv[NTRK];            /* the level now, smoothed */
-    uint8_t pk[NTRK];            /* this frame's peak (ux_trk_peak: the EDIT creatures' level) */
+    int32_t pk[NTRK];            /* the peak as fx.c measured it since a reader last took it (ux_trk_peak: MIXER's meters,
+                                  * EDIT's creatures), held at most UXR_HOLD frames unread (a page paced under load) */
+    uint8_t pk_n, pk_taken;
     uint8_t at;
     uint16_t nz;                 /* points not 0: the lines move while there are any */
     uint32_t ms;                 /* the last point's time */
@@ -30,11 +33,16 @@ static void ux_levels_reset(void)
 static void ux_levels_tick(void)
 {
     uint32_t c, n = (fm1_ms - uxr.ms) / UXR_MS;
+    if (uxr.pk_taken || ++uxr.pk_n > UXR_HOLD) {
+        memset(uxr.pk, 0, sizeof uxr.pk);
+        uxr.pk_taken = uxr.pk_n = 0;
+    }
     for (c = 0; c < NTRK; c++) {
         int32_t v = trk[c].peak;
         trk[c].peak = 0;
+        if (v > uxr.pk[c])
+            uxr.pk[c] = v;
         v = v <= 0 ? 0 : v >= 7000 ? 255 : v * 255 / 7000;  /* (ui_lzhome.c's scale: a track's peak near 7000 is loud) */
-        uxr.pk[c] = (uint8_t)v;
         if (v > uxr.acc[c])
             uxr.acc[c] = (uint8_t)v;
     }
@@ -58,7 +66,11 @@ static void ux_levels_tick(void)
         uxr.at = (uint8_t)(uxr.at + 1u == UXR_N ? 0u : uxr.at + 1u);
     }
 }
-static uint32_t ux_trk_peak(uint32_t c) { return c < NTRK ? uxr.pk[c] : 0u; }
+static int32_t ux_trk_peak(uint32_t c)
+{
+    uxr.pk_taken = 1;                                   /* (every reader this frame sees the same; the next frame anew) */
+    return c < NTRK ? uxr.pk[c] : 0;
+}
 static uint32_t ux_hist(uint32_t c, uint32_t age)       /* the point age points old (0: the newest) */
 {
     return uxr.h[c % NTRK][(uxr.at + UXR_N - 1u - age % UXR_N) % UXR_N];
@@ -185,9 +197,9 @@ static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])
 static void ux_ridge(uint32_t c, int32_t base, uint16_t col, int thick, uint8_t *hz)
 {
     int32_t i, yp = base;
-    uint32_t pos = 0, step = ((UXR_N - 1u) << 8) / (UXR_W - 1u);
+    uint32_t pos = 0, step = ((UXR_N - 1u) << 16) / (UXR_W - 1u) + 1u;    /* (16.16: the last column the newest point) */
     for (i = 0; i < (int32_t)UXR_W; i++, pos += step) {
-        uint32_t j = pos >> 8, f = pos & 255u;
+        uint32_t j = pos >> 16, f = (pos >> 8) & 255u;
         int32_t a = uxr.h[c][(uxr.at + j) % UXR_N], b = j + 1u < UXR_N ? uxr.h[c][(uxr.at + j + 1u) % UXR_N] : a;
         int32_t y = base - (a * 256 + (b - a) * (int32_t)f) * UXR_PEAK / (255 * 256), t = y < yp ? y : yp, bot = y < yp ? yp : y;
         if (i == 0) t = bot = y;

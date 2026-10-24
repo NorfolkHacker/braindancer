@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Copyright (C) 2026 NorfolkHacker */
-/* ACID FM's shared page pieces (spec 3.3): header, knob row, glow panel, footer, level meters, step strip. Included by
+/* ACID FM's shared page pieces (spec 3.3): header, knob row, glow panel, status line, footer, step strip. Included by
  * ux_widgets.c after core.h (step_t) and ux_theme.c. */
 #ifndef UX_WIDGETS_H
 #define UX_WIDGETS_H
@@ -46,9 +46,6 @@ static void ux_panel_end(void);                                                 
  * the page margin: UX_MID a hint, UX_TEXT a readout, UX_ACCENT a refusal / warning, UX_QUEUED pending */
 static void ux_status(const char *text, uint16_t col);
 static void ux_footer(const char *where, const char *right);
-/* six level columns in the panel's top 100 rows (call between ux_panel_begin and ux_panel_end); sel is outlined; the four from
- * knob_first (0..2) wear the knobs' colours (the four the knobs control), the others MID */
-static void ux_meters(const uint8_t lvl[6], const char *const name[6], uint32_t sel, uint32_t knob_first);
 /* a strip of 16 cells at canvas y in the panel: the first n16 are the pattern's (steps[0..n16-1]), the rest drawn
  * dim (BG2); a tie after a rest or an empty step stays EMPTY (nothing to hold); edit / play: the cell to outline / lighten, or -1 */
 static void ux_strip(int32_t y, const step_t *steps, uint32_t n16, int32_t edit, int32_t play);

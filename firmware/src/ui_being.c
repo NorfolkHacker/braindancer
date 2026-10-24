@@ -194,7 +194,7 @@ static void graph_being_at(const track_t *t, int32_t cx, int32_t cy, int32_t r)
     being_lines(g, &f, cx, cy, r * (256 + en / 3) / 256, en, tm);
 }
 
-/* (JIANT 0.5) HOME, the system as an ecosystem: ui_lzhome.c (graph_eco, eco_step) */
+/* (JIANT 0.5) HOME, the system as an ecosystem: ui_lzhome.c (graph_eco, eco_step; gone in ACID FM 3a) */
 
 /* DRUM-X: the colony. Two rows of four, the sound's name under each */
 static const genome_t LANE_G[8] = {

@@ -1858,8 +1858,6 @@ static void draw(int s)
     }
     if (s == S_UX_DEMO || s == S_UX_DEMO_WARN) {                         /* ux_widgets.c: every piece on one page (the mock-up's glow option) */
         static const ux_knob_t K[4] = {{"CUTOFF", "42", 42}, {"RESO", "110", 110}, {"ENV MOD", "88", 88}, {"DECAY", "31", 31}};
-        static const uint8_t LV[6] = {200, 140, 90, 230, 60, 20};
-        static const char *const NM[6] = {"T1", "T2", "T3", "T4", "T5", "T6"};
         step_t st[16];
         uint32_t i;
         memset(st, 0, sizeof st);
@@ -1874,7 +1872,6 @@ static void draw(int s)
         ux_header(3, "ACID 303", "128 BPM");
         ux_knobs(K, 0);
         ux_panel_begin(3);
-        ux_meters(LV, NM, 3, 0);
         ux_strip(110, st, 16, 4, 7);
         ux_panel_end();
         if (s == S_UX_DEMO) ux_status("5 \xB7 G2 \xB7 ACC", UX_TEXT);

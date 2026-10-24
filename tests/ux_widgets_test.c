@@ -152,17 +152,6 @@ int main(void)
         ck("glow: h past the strip is clamped to 150 (draws, no overrun)", px(96, 45) != UX_BG);
         (void)i; (void)mx;
     }
-    {   /* meters */
-        uint8_t lv[6] = {255, 128, 0, 64, 200, 30};
-        const char *nm[6] = {"T1", "T2", "T3", "T4", "T5", "T6"};
-        ux_panel_begin(3);
-        ux_meters(lv, nm, 1, 0);
-        ck("meters: a full column reaches 70 px in the knob 1 colour (ACID)", px(10 + 16, 12) == UX_ACID && px(10 + 16, 81) == UX_ACID);
-        ck("meters: knob columns wear knob colours, the others MID",
-           px(10 + 37 + 16, 82 - 30) == UX_SLIDE && px(10 + 4 * 37 + 16, 82 - 50) == UX_MID);
-        ck("meters: an empty column shows only its track", px(10 + 2 * 37 + 16, 81) == UX_EMPTY);
-        ck("meters: the selected column is outlined TEXT", px(10 + 37 - 2, 10) == UX_TEXT);
-    }
     ck("text samples: the spec's footer hint fits (cv_text-based widths)", text_w(&UF_LBL, "LVL \xB7 LVL \xB7 LVL \xB7 LVL") < 140);
     return fails ? 1 : 0;
 }

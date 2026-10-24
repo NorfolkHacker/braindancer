@@ -12,33 +12,16 @@
 #define PANEL_X0 10                                  /* the graphs' inner area: x 10..230 */
 #define PANEL_W 220
 #define GOY 11                                       /* graphs drawn on a 100 px scale sit at y 11..111 */
-/* (0.8.9) SKIN HUD's HOME (ui.c hud_home): every strip begins on the beings (ui_lzhome.c eco_backdrop: the strip at screen
- * x, y), its words outlined (gfx.c cv_halo); elsewhere a strip cleared to BG */
-static void eco_backdrop(int32_t x0, int32_t y0, int words);
+/* a lens strip: cleared to BG, sent whole (ACID FM 3a: HUD's HOME, every strip on the beings, gone) */
 static void lz_begin(uint32_t w, uint32_t h, uint32_t x, uint32_t y)
 {
+    (void)x; (void)y;
     cv_begin(w, h, T_BG);
-    if (hud_home()) {
-        eco_backdrop((int32_t)x, (int32_t)y, 0);
-        cv_halo = 1;
-    }
 }
 static void lz_blit(uint32_t x, uint32_t y)
 {
     cv_halo = 0;
-    if (hud_home())                                  /* (0.9.0) what changed only (gfx.c) */
-        cv_blit_cells(x, y);
-    else
-        cv_blit(x, y);
-}
-/* (0.8.9) HUD: the knob row while KNOB 1..4 rest: whole for 3 s after a turn (0.9.0: or the page, level or set shown
- * changing), then down to 22 % in 0.6 s (steps of 13 %); every other case 100 (0.9.0: every page but HUD's HOME) */
-static uint32_t hud_fade(void)
-{
-    uint32_t el = fm1_ms - ui.knob_ms;
-    if (!hud_home() || el < 3000u)                   /* (0.9.0: HUD's HOME only, over the beings) */
-        return 100u;
-    return el >= 3600u ? 22u : 100u - (el - 3000u) * 78u / 600u / 13u * 13u;
+    cv_blit(x, y);
 }
 
 /* (0.8.9) a tile in a lens's panel (FX's modules, the menu's tabs, ENV's tracks, MOD's slots): BOTTOM, HUD and AIR none
@@ -1114,8 +1097,6 @@ static uint32_t graph_signature(void)
     if (ui.confirm == CF_DICE_ALL)                   /* (0.8.5) GEN: its settings, its page (0.9.0: MENU > LARGE's strip is
                                                       * HOME's scope there: live) */
         return h ^ gen_draw_sig() ^ (strip_kind() == SK_SCOPE ? ui.frame / 2u * 2654435761u : 0u);
-    if (ui.home)
-        return h ^ (ui.frame / 2u) ^ (home_level() * 7u + home_set()) * 104729u;   /* the beings: every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number) */
         return h ^ 0x5A17u;
@@ -1540,10 +1521,10 @@ static void draw_tracks(void)
             mute = 2u;
         uint32_t hot = sel && ui.hot_t ? ui.hot_col + 1u : 0u;   /* the knob just turned (hot_col + 1): 1 LEVEL, 2 PAN,
                                                                 * 3 REV (4: the DJ FILTER, on its card) */
-        int32_t pk = t->peak, m, pan = clamp(t->p[P_PAN], -64, 63), rv = clamp(t->p[P_REV], 0, 127);
+        int32_t pk = ux_trk_peak(c), m, pan = clamp(t->p[P_PAN], -64, 63), rv = clamp(t->p[P_REV], 0, 127);   /* (ACID FM
+                                                         * 3a: ux_home.c reads the peaks, once a frame) */
         uint16_t vc = mute ? T_DIM : T_THEME;
         char b[16];
-        t->peak = 0;
         trk_short_name(c, b);
         m = mute ? 0 : meter_px(pk);
         if (m < ts.meter[c] - 1)
@@ -1687,7 +1668,6 @@ static uint16_t sec_col(uint32_t s)
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
 #include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
-#include "ui_lzhome.c"                              /* (0.8.5) HOME's lens: ECO, BEING, the critters */
 #include "ui_lzedit.c"                               /* (0.8.5) EDIT's lens panels */
 #include "ui_lzpage.c"                               /* (0.8.5) ENV's, LFO . MOD's, SCL . ARP's, GLO's */
 /* (0.9.17) a SEQ page's own marks over the roll (a kit: the grid), column i of the bar shown at x, w px wide:
@@ -1819,12 +1799,6 @@ static void draw_graph(void)
     }
     ui.graph_sig = sig;
     cv_begin(240, graph_h(), T_BG);
-    if (hud_home()) {                                /* (0.8.9) HUD's HOME: the middle of the screen's water, its numbers */
-        cv_halo = 1;                                 /* (0.9.0) its words outlined too (M3) */
-        eco_backdrop(0, (int32_t)graph_y(), 1);
-        lz_blit(0, graph_y());
-        return;
-    }
     if (lz_low())                                    /* (0.8.9) BOTTOM, HUD: no panel, the picture on the background */
         ;
     else if (lz_on())                                /* (0.8.5) a lens page: the mock-up's panel, 4 .. 236 (0.8.9 COLORS: */
@@ -1847,13 +1821,9 @@ static void draw_graph(void)
     } else if (ui.confirm == CF_DICE_ALL) {          /* (0.8.5) GEN, HOME's lens's last level (gen.c) */
         cv_oy = 0;
         gen_panel();
-    } else if (ui.home) {
-        cv_oy = 0;
-        graph_home_lz();
     } else if (pg->graph == GR_LIVE) {               /* (0.9.11) GLO > LIVE: the rails, MANO's board (ui_live.c) */
         cv_oy = 0;
-        graph_live();                             /* (0.8.5: HOME's lens, ECO / BEING; JIANT 0.5: the system's
-                                                      * beings, was the scope) */
+        graph_live();                             /* (ACID FM 3a: HOME is ux_home.c's: its lens, ECO / BEING, gone) */
     } else if (seq_roll_view(pg)) {                  /* (0.9.17) every SEQ page: the roll (a kit: the grid), its marks */
         cv_oy = 0;
         if (drum_track(t))
