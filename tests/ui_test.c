@@ -136,6 +136,7 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/ui_input.c"
 #include "../firmware/src/ui_layer.c"
 #include "../firmware/src/ux_widgets.c"
+#include "../firmware/src/ux_home.c"                     /* (ux_nav.c: by ui.c) */
 #include "../firmware/src/upreset.c"
 #include "../firmware/src/project.c"
 
@@ -236,6 +237,13 @@ static void ui_power_on(void)
 }
 /* card slot drawn with MOTION's mark (ui_draw.c card_mot: its icon, or a long label in the theme colour) */
 static int card_motion(uint32_t slot) { return (card_mot >> slot) & 1u; }
+/* (ACID FM 3a) ux_widgets' strips drawn: */
+static uint32_t ux_rows_ink(uint32_t y0, uint32_t h)    /* pixels of LCD rows y0.. that are not UX_BG */
+{
+    uint32_t n = 0, i;
+    for (i = y0 * 240u; i < (y0 + h) * 240u; i++) n += swap16(host_screen[i]) != UX_BG;
+    return n;
+}
 
 /* one UI frame (input, then the drawing on the stub display) */
 static void frame(void)
@@ -3100,8 +3108,8 @@ static int test_soak_cards(void)
         was_hot = ui.hot_t;                             /* (its last frame still drawn hot: the next one redraws) */
         ui_draw();
         quiet++;
-        if (ui.menu || ui.layer || ui.confirm || name_on() || ui.uboot)
-            continue;                                   /* (the cards are not drawn) */
+        if (ui.menu || ui.layer || ui.confirm || name_on() || ui.uboot || ui.home)
+            continue;                                   /* (the cards are not drawn; ACID FM 3a: HOME's knob row is ux_knobs) */
         for (c = 0; c < 5u; c++)
             old += ui.roll[c].from[0] && (uint8_t)(ui.frame - ui.roll[c].t0) >= ROLL_FRAMES;
         if (quiet > 45u && !was_hot && !ui.bpm_t && !ui.msg_t && !hud_home() && SOAK_RND(8u) == 0u) {   /* (HUD's HOME, the
@@ -3503,18 +3511,18 @@ static int test_product_ux(void)
     motion_full = 1; frame();
     bad += check("#93 the events used up: AUTOMATION FULL", msg_is("AUTOMATION FULL") && !motion_full);
     {   /* #63: a card shows MOTION's icon while the track's motion changes its parameter */
-        uint32_t id = ENGINES[TSEL->eng_req]->knob[0];
-        ui_power_on(); go_home(); frame();
+        uint32_t id = ENGINES[TSEL->eng_req]->knob[0];   /* (ACID FM 3a: on EDIT 1, HOME has its own knob row) */
+        ui_power_on(); go_title("EDIT 1"); frame();
         ok = !card_motion(0) && !card_motion(1);
-        song.rec = 1; seq_start(); go_home(); turn(EN_K1, 1); frame();
+        song.rec = 1; seq_start(); go_title("EDIT 1"); turn(EN_K1, 1); frame();
         ok &= card_motion(0) && !card_motion(1) && !card_motion(2) && !card_motion(3);
-        bad += check("MOTION: a recorded knob marks its HOME card (and no other)", ok && motion_count(TSEL) == 1);
+        bad += check("MOTION: a recorded knob marks its card, EDIT 1 (and no other; ACID FM 3a: HOME's were JIANT's)", ok && motion_count(TSEL) == 1);
         song.rec = 0; press(B_PLAY); events_block(32); frame();
         ok = card_motion(0);
-        go_page(GR_MOTION); turn(EN_K1, -1); go_home(); frame();
+        go_page(GR_MOTION); turn(EN_K1, -1); go_title("EDIT 1"); frame();
         ok &= !card_motion(0) && motion_count(TSEL) == 1;
         bad += check("MOTION: PLAY OFF takes the icon off the card, the events stay", ok);
-        go_page(GR_MOTION); turn(EN_K1, 1); go_home(); frame();
+        go_page(GR_MOTION); turn(EN_K1, 1); go_title("EDIT 1"); frame();
         ok = card_motion(0);
         track_select(1); frame();
         ok &= !card_motion(0);                           /* (another track: its own motion, none) */
@@ -3528,7 +3536,7 @@ static int test_product_ux(void)
         bad += check("MOTION: a mix parameter's event marks its MIXER card (PAN)", ok);
         go_page(GR_MOTION); turn(EN_K4, 1); press(B_OCTUP); press(B_OCTUP);
         ok = motion_count(TSEL) == 0;
-        go_home(); frame();
+        go_title("EDIT 1"); frame();
         ok &= !card_motion(0) && !card_motion(1);
         go_page(GR_TRK); frame();
         ok &= !card_motion(1);
@@ -9670,9 +9678,11 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -1);
     ok &= str_eq(cur_page()->title, "GLOBAL");
     go_home(); frame(); turn(EN_SELECT, 1);
-    ok &= ui.home && !ui.confirm && home_level() == 0u && home_set();   /* (0.9.2: ECO MACROS BEING ROUTES GEN ..) */
+    ok &= ui.home && !ui.confirm && ux_home_page() == UXH_VISUAL;     /* (ACID FM 3a: TRACKS VISUAL, never GEN) */
     turn(EN_SELECT, 3);
-    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: GEN */
+    ok &= ui.home && !ui.confirm && ux_home_page() == UXH_VISUAL && song.g[G_BPM] == b0;
+    held_turn(B_HOME, 1); frames(600);
+    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME (+ SELECT): GEN */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); turn(EN_SELECT, 2);
     ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.9.2: EDIT 1 EDIT 2 FILTER ..) */
@@ -9680,7 +9690,7 @@ static int test_bpm_lock(void)
     ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
     ok &= str_eq(cur_page()->title, "STAGE") && !ui.home;             /* (0.8.5 LENTE: ENV -> STAGE, the last; no LFO) */
-    bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
+    bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME + SELECT: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
     hold(B_HOME);
@@ -9840,8 +9850,7 @@ static int test_large(void)
     ui_power_on();
     song.playing = 0;
     frame();
-    ok = !(ui_prefs & PREF_LARGE) && large_kind() == LK_OFF && hud_home() && card_h() == LB_CARD_H &&
-         graph_y() == LA_HOME_GRAPH_Y;                  /* (HOME's lens, the one skin's: HUD's HOME, AIR's row) */
+    ok = !(ui_prefs & PREF_LARGE) && large_kind() == LK_OFF;   /* (ACID FM 3a: HOME is ux_home.c's, no HUD) */
     ok &= MI_LARGE == MI_STYLE + 1u && str_eq(MI_NAME[MI_LARGE], "LARGE") && menu_flag(MI_LARGE) &&
           str_eq(menu_flag(MI_LARGE)->name[0], "OFF") && str_eq(menu_flag(MI_LARGE)->name[1], "ON");
     ui.force = 1; frame();
@@ -9857,23 +9866,23 @@ static int test_large(void)
     press(B_HOME);
     bad += check("#15 MENU > LARGE: OFF by default (ACID FM 0.3: SCREEN KNOB 1; was after STYLE, KNOB 4); right / OCT+ ON, left / OCT- OFF", ok && !ui.menu);
 
-    /* HOME (0.8.5: a lens): tall cards under its tabs (rows 42..146) and the strip (150..212); the footer as it was */
-    frame();
-    ok = ui.home && large_kind() == LK_TALL && card_y() == LZ_CARD_Y && card_h() == LG_CARD_H && graph_y() == LZ_LG_Y_GRAPH &&
-         strip_kind() == SK_SCOPE;
-    ok &= !hud_home() && lg_px(30, LZ_LG_Y_GRAPH - 2) == T_BG;   /* (not HUD's HOME: no beings under it; the gap) */
-    ok &= lg_px(30, LZ_LG_Y_GRAPH + 1) == T_SURF;
+    /* a lens page (ACID FM 3a: was HOME's, now ux_home.c's own strips): tall cards under its tabs (rows 42..146) and the
+     * strip; the footer as it was */
+    go_title("ENV"); frame();
+    ok = large_kind() == LK_TALL && card_y() == LZ_CARD_Y && card_h() == LG_CARD_H && graph_y() == LZ_LG_Y_GRAPH;
+    ok &= lg_px(30, LZ_LG_Y_GRAPH - 2) == T_BG;                  /* (the gap) */
     for (c = 0; c < 4u; c++)                                      /* each column's K pill, over its knob */
         ok &= lg_px(CARD_X(c) + 8, LZ_CARD_Y + LG_MY + LG_MH / 2) == T_KEY;
-    {   /* the footer: its breadcrumb drawn (ACID FM 0.3: off, HUD's HOME's footer a row higher: not the same pixels) */
+    {   /* the footer: its breadcrumb drawn */
         uint32_t x, y, n = 0;
         for (y = LZ_FOOT_Y; y < 240u; y++)
             for (x = 0; x < 240u; x++)
                 n += lg_px((int32_t)x, (int32_t)y) != T_BG;
         ok &= n > 0u;
     }
-    ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(0) + 2]) == T_THEME;   /* (its tabs: ECO lit) */
-    bad += check("#15 LARGE ON: HOME's cards tall under its tabs (a K1..K4 pill over each column), the scope a strip, the footer kept", ok);
+    go_home(); frame();
+    ok &= ui.home && ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;   /* (HOME: its own, LARGE or not, until 3a task 6) */
+    bad += check("#15 LARGE ON: a lens page's cards tall under its tabs (a K1..K4 pill over each column), the footer kept; HOME its own", ok);
 
     /* the value in L: GLOBAL's BPM 124 stands about twice as tall as in M */
     go_title("GLOBAL"); frame();
@@ -9987,94 +9996,47 @@ static int test_skin(void)
         bad += check("SKIN's byte saved with the settings and read back, kept in JIANT's range (unknown 0, BOTTOM's 1 AIR); "
                      "the screen the same whatever it holds", ok);
     }
-    ui_power_on(); frame();                                       /* the geometry: HOME (ECO), AIR's */
-    ok = lz_low() && hud_home() && card_y() == LA_HOME_CARD_Y && card_h() == LB_CARD_H && graph_y() == LA_HOME_GRAPH_Y &&
-         graph_y() + graph_h() == LZ_FOOT_Y - 1u && foot_y() == LZ_FOOT_Y - 1u && skin_ink(LA_HOME_CARD_Y, LA_HOME_CARD_Y + LB_CARD_H) > 100;
-    ok &= lg_px(LT_X(0) + LT_W / 2 + 30, LT_Y + 1) == T_BG;       /* (the tabs words: no fill) */
+    ui_power_on(); frame();                                       /* the geometry, AIR's (ACID FM 3a: HOME is ux_home.c's) */
     go_title("ENV"); frame();                                     /* the knob row on top, under the tabs */
+    ok = lg_px(LT_X(0) + LT_W / 2 + 30, LT_Y + 1) == T_BG;        /* (the tabs words: no fill) */
     ok &= lz_low() && !hud_home() && card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && graph_h() == LB_GRAPH_H &&
           graph_y() + graph_h() <= LZ_FOOT_Y && skin_ink(LA_CARD_Y, LA_CARD_Y + LB_CARD_H) > 100 &&
           lg_px(CARD_X(0) + COL_W / 2, LA_CARD_Y + 1) == T_BG;  /* (no boxes) */
     go_title("PATTERN"); frame();                                 /* (the SEQ pages too) */
     ok &= lz_low() && card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && skin_ink(LA_CARD_Y, LA_CARD_Y + LB_CARD_H) > 100;
-    go_home(); frame();
+    go_title("ENV"); frame();
     ui_prefs |= PREF_LARGE; frame();
-    ok &= !lz_low() && !hud_home() && large_kind() == LK_TALL && card_y() == LZ_CARD_Y;   /* (LARGE: its tall cards on top) */
+    ok &= !lz_low() && large_kind() == LK_TALL && card_y() == LZ_CARD_Y;   /* (LARGE: its tall cards on top) */
     ui_prefs &= ~PREF_LARGE; go_home(); frame();
-    bad += check("SKIN geometry (the one, AIR's): the knob row 42..74 under the tabs, the panel 77..224 (HOME: full screen, the "
-                 "row 41..73), no boxes; LARGE: its tall cards", ok);
-    {   /* HUD's HOME (AIR's, the one skin's): the beings swim the whole screen, under the header, the tabs and the knobs */
-        uint32_t top = 0, low = 0, k;
-        ui_power_on(); song.playing = 1;
-        eco.init = 0; frame();                                    /* (0.9.1) from their power-on places, one sent under the
-                                                                   * knob row and one over the tabs' line: they stay there
-                                                                   * (HUD's floor and ceiling the screen's), whatever the
-                                                                   * tests before left (their swim had been carried from them:
-                                                                   * a track muted on the MIXER then moved them lower) */
-        eco.sy[0] = (LB_CARD_Y + 20) << 8; eco.vy[0] = 30;
-        eco.sy[1] = (LB_GRAPH_Y - 20) << 8; eco.vy[1] = -30;
-        for (k = 0; k < 400u; k++) {
-            uint32_t c;
-            frame();
-            for (c = 0; c < ECO_N; c++) {
-                top |= (eco.sy[c] >> 8) < LB_GRAPH_Y;
-                low |= (eco.sy[c] >> 8) > LB_CARD_Y;
-            }
-        }
-        ok = hud_home() && top && low && ui.graph_sig != 0u;
-        bad += check("SKIN: HOME's beings over the whole screen (above the tabs' line, low on the panel), every strip on them", ok);
-    }
-    {   /* (0.9.7) AIR's HOME as HUD's: the knob row (on top, under the tabs) fades to 22 % 3 s after the last turn */
-        uint32_t lit, faded, c;
-        ui_power_on();
-        for (c = 0; c < NTRK; c++) trk[c].p[P_MUTE] = 1;
-        frame();
-        turn(EN_K1, 1); frame();
-        lit = skin_ink(LA_HOME_CARD_Y, LA_HOME_CARD_Y + LB_CARD_H);
-        ok = hud_home() && hud_fade() == 100u;
-        frames(4000);
-        faded = skin_ink(LA_HOME_CARD_Y, LA_HOME_CARD_Y + LB_CARD_H);
-        ok &= hud_fade() == 22u && lit > 100u && faded > 0u;
-        turn(EN_K2, 1); frame();
-        ok &= hud_fade() == 100u && skin_ink(LA_HOME_CARD_Y, LA_HOME_CARD_Y + LB_CARD_H) > 100u;
-        for (c = 0; c < NTRK; c++) trk[c].p[P_MUTE] = 0;
-        bad += check("SKIN AIR: HOME's knob row (on top) fades as HUD's, whole again at a turn", ok);
-    }
-    {   /* (0.9.0, the HUD audit's M1) the fade on HUD's HOME only; whole again on a page, level or set change */
+    bad += check("SKIN geometry (the one, AIR's): the knob row 42..74 under the tabs, the panel 77..224, no boxes; LARGE: its "
+                 "tall cards", ok);
+    {   /* (0.9.0, the HUD audit's M1) a lens page's knob row never fades (ACID FM 3a: HOME's, HUD's, gone) */
         ui_power_on(); frame();
         go_title("ENV"); frame();
         frames(4000);
-        ok = hud_fade() == 100u;                                  /* (a lens page: never faded) */
-        go_home(); frame();
-        ok &= hud_home() && hud_fade() == 100u;                   /* (HOME entered: whole) */
-        frames(4000);
-        ok &= hud_fade() == 22u;
-        turn(EN_SELECT, 1); frame();                              /* (0.9.2: SELECT, MACROS; was a HOME tap) */
-        ok &= hud_home() && home_set() && hud_fade() == 100u;
-        frames(4000);
-        ok &= hud_fade() == 22u;
-        turn(EN_SELECT, 1); frames(200); turn(EN_SELECT, -1); frame();   /* (BEING and back: its level) */
-        ok &= hud_home() && hud_fade() == 100u;
-        bad += check("SKIN: the knob row fades on HOME only, whole again on a new page, level or set (M1)", ok);
+        ok = hud_fade() == 100u && !hud_home();                   /* (a lens page: never faded) */
+        go_home(); frame(); frames(4000);
+        ok &= !hud_home();
+        bad += check("SKIN: a lens page's knob row never fades; HOME no HUD (ACID FM 3a) (M1)", ok);
     }
     {   /* (0.9.0, H1) the count-in and UPDATE MODE's countdown over HUD's HOME: their header on BG, no beings */
         uint32_t x, y, clean = 1;
         ui_power_on(); song.playing = 1; frames(2000);
-        ok = hud_home();
+        ok = ui.home;
         cin_left = cin_total = 4u; frame(); frame();
         ok &= !hud_home();
         for (y = 20; y < H_HEAD; y++)
             for (x = 0; x < 240; x++) clean &= lg_px((int32_t)x, (int32_t)y) == T_BG;
         cin_left = cin_total = 0; frames(100);
-        ok &= hud_home() && clean;
+        ok &= ui.home && clean;
         ui.uboot = 3; ui.force = 1; frame(); frame();
         ok &= !hud_home();
         for (y = 20; y < H_HEAD; y++)
             for (x = 0; x < 240; x++) clean &= lg_px((int32_t)x, (int32_t)y) == T_BG;
         ui.uboot = 0; ui.force = 1; frame();
-        ok &= hud_home() && clean;
+        ok &= ui.home && clean;
         song.playing = 0;
-        bad += check("SKIN: the count-in and UPDATE MODE over HOME: not HUD's HOME, their header on BG (H1)", ok);
+        bad += check("SKIN: the count-in and UPDATE MODE over HOME: their header on BG (H1)", ok);
     }
     {   /* (0.9.0, H2) HUD's HOME sends what changed only (gfx.c cv_blit_cells): the panel always equals a full redraw of the
          * same state, and a frame sends a fraction of the screen */
@@ -10109,7 +10071,7 @@ static int test_skin(void)
                 same &= !nd;
             }
         }
-        ok = hud_home() && same && sent / 180u < 30000u;
+        ok = ui.home && same && sent / 180u < 30000u;   /* (ACID FM 3a: HOME ux_home.c's strips) */
         printf("ui:   (HOME: %llu px a frame sent on average, of 57600)\n", (unsigned long long)(sent / 180u));
         song.playing = 0; ui.msg_t = 0;
         bad += check("SKIN: HOME sends only the cells that changed; the panel equals a full redraw (H2)", ok);
@@ -10162,17 +10124,18 @@ static int test_skin(void)
             if (!okp) { printf("  %s\n", PAGES[i].title); break; }
         }
         ok = okp;
-        for (i = 0; i < 3u; i++) {                                /* HOME's groups: ECO, BEING, GEN (a HOME tap each, 0.9.2) */
+        for (i = 0; i < 3u; i++) {                                /* HOME's TRACKS, VISUAL (a HOME tap), GEN (HOME + SELECT) */
             ui_power_on(); frame();
             if (i == 1u) press(B_HOME);
-            if (i == 2u) { press(B_HOME); press(B_HOME); }
-            frames(100);
-            ok &= lz_on() && lz_fam() == LZ_HOME && lz_level() == i && hud_home() == !i && skin_ink(LZ_FOOT_Y, 240) > 0;
+            if (i == 2u) held_turn(B_HOME, 1);
+            frames(700);
+            ok &= lz_on() && lz_fam() == LZ_HOME && (i < 2u ? ux_home_page() == i && !gen_on() && ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 0u :
+                                                      gen_on() && skin_ink(LZ_FOOT_Y, 240) > 0);
         }
         hold(B_HOME); frame();                                    /* the menu */
         ok &= ui.menu == 1u && lz_low();
         press(B_HOME);
-        bad += check("SKIN: every page of the lenses, HOME's three levels and the menu drawn (the knob row on top)", ok && npg > 40u);
+        bad += check("SKIN: every page of the lenses, HOME's two pages and GEN, and the menu drawn (the knob row on top)", ok && npg > 40u);
     }
     ui_power_on(); frame();
     return bad;
@@ -10261,46 +10224,7 @@ static int test_home_a(void)
     ok &= t1 < t0;                                                /* (MUTATE: it looks up) */
     ok &= ha_eye_rows(0) == 2u && ha_eye_rows(EF_SHUT) == 1u && ha_eye_rows(EF_SLEEP) >= 1u;
     bad += check("0.9.7 HOME A: the face: its mouth opens with the level, its eyes shut on a hit (one row), it looks up on MUTATE", ok);
-    {   /* the face as HOME runs it: a hit shuts the eyes 0.1 s, a mutation landed looks up, muted asleep */
-        ui_power_on(); ui.home = 1; ui.hlv = 0; ui.hset[0] = 0;
-        for (c = 0; c < NTRK; c++) trk[c].p[P_MUTE] = 0;
-        frames(320);
-        ok = eco_fc.init && !(eco_fc.fl[0] & (EF_SHUT | EF_UP));
-        for (c = 0; c < 4u && eco.en[0] < 200; c++) { trk[0].peak = 9000; frame(); }   /* (the panel: every other frame) */
-        ok &= (eco_fc.fl[0] & EF_SHUT) && eco.en[0] > 77 && !(eco_fc.fl[1] & EF_SHUT);
-        for (c = 0; c < 12u; c++) { trk[0].peak = 9000; frame(); }
-        ok &= !(eco_fc.fl[0] & EF_SHUT);                          /* (0.1 s on: open again, the level held) */
-        mut_flash[2] = 12; frame(); frame();
-        ok &= (eco_fc.fl[2] & EF_UP) && !(eco_fc.fl[3] & EF_UP);
-        mut_flash[2] = 0; frame(); frame();
-        ok &= !(eco_fc.fl[2] & EF_UP);
-        bad += check("0.9.7 HOME A: a hit shuts its eyes 0.1 s (only its), a mutation landed: it looks up (only it)", ok);
-    }
-    for (sk = 0; sk < 1u; sk++) {       /* no critters, no ring of MUTATE dots: MUTATE on draws nothing until one lands (ACID
-                                         * FM 0.3: the one skin; until then in each) */
-        static uint16_t a[240 * 240];
-        ui_power_on(); ui.home = 1; ui.hlv = 0; ui.hset[0] = 0;
-        frames(320);
-        ui_prefs = PREF_ANIM_OFF;
-        for (c = 0; c < NTRK; c++) { trk[c].p[P_MSND] = 0; trk[c].p[P_MPAT] = 0; }
-        ha_eco_at(5000); ha_eco_at(5000);
-        memcpy(a, host_screen, sizeof a);
-        ha_eco_at(5000);
-        ok = !memcmp(a, host_screen, sizeof a);                   /* (control: the same frame, the same picture) */
-        for (c = 0; c < NTRK; c++) trk[c].p[P_MSND] = 1;          /* MUTATE SOUND every bar on every track */
-        ha_eco_at(5000);
-        {
-            uint32_t y, d = 0;
-            for (y = graph_y(); y < graph_y() + graph_h(); y++)
-                d += memcmp(a + y * 240u, host_screen + y * 240u, 480u) != 0;
-            ok &= d == 0u;
-        }
-        mut_flash[0] = 12;                                        /* .. one lands: its ring, its number white */
-        ha_eco_at(5000);
-        ok &= memcmp(a, host_screen, sizeof a) != 0;
-        mut_flash[0] = 0;
-        bad += check("0.9.7 HOME A: no MUTATE ring until a mutation lands", ok);
-    }
+    /* (ACID FM 3a: the faces as HOME ran them, ECO drawn, are gone with ECO: HOME is TRACKS / VISUAL, ux_nav.c) */
     ui_prefs = 0;
     ui_power_on();
     return bad;
@@ -10841,82 +10765,241 @@ static int lz_count_is(const char *s)
     char b[8];
     return crumb_count(b) && str_eq(b, s);
 }
-/* HOME (0.9.2): ECO (ECO MACROS) . BEING (BEING ROUTES) . GEN (GEN 1..3) one chain; SELECT a page a detent (no wrap), a
- * HOME tap the next group (round: GEN -> ECO), PRESETS on GEN its GENRE, OCT- on GEN back to ECO; GEN is a page (a
- * section's button leaves it, HOME comes back to it); HOME from elsewhere the page left; MACROS / ROUTES: M1..M4.
- * (Was 0.8.5's lens: SELECT ECO <-> BEING <-> GEN levels, a HOME tap the level's other set, GEN modal) */
-static int test_lz_home(void)
+/* (ACID FM 3a, ux_nav) every section's button but HOME lands where it did before HOME became TRACKS / VISUAL: for each
+ * power-on track (a synth, FM6, LOFI, DRUM-X, PHASE: EDIT's chains differ) and each section, from HOME its button and
+ * again five times, SELECT +1 +1 -1, HOME then the button again (its memory), the button held + SELECT (+1); each landing
+ * "section/entry/title" (* HOME). UXN_WANT is what the JIANT 0.9.18 HOME (ECO MACROS BEING ROUTES GEN) build gave */
+static const uint8_t UXN_BTN[SEC_N] = {B_HOME, B_EDIT, B_SEQ, B_FX, B_GLO, B_ENV, B_LFO, B_SCL, B_ARP, B_SAVE};
+static void uxn_at(char *b, uint32_t n)
+{
+    uint32_t l = (uint32_t)strlen(b);
+    snprintf(b + l, n - l, "%s%s/%u/%s", l ? "|" : "", SEC_NAME[nav_sec()], (unsigned)nav_cur(),
+             ui.home ? "*" : PAGES[ui.page].title);
+}
+static void uxn_walk(uint32_t t, uint32_t sec, char *b, uint32_t n)
+{
+    uint32_t k;
+    ui_power_on(); track_select(t); frames(32);
+    b[0] = 0;
+    press(UXN_BTN[sec]); frames(32); uxn_at(b, n);
+    for (k = 0; k < 5u; k++) { press(UXN_BTN[sec]); frames(32); uxn_at(b, n); }
+    turn(EN_SELECT, 1); frames(32); uxn_at(b, n);
+    turn(EN_SELECT, 1); frames(32); uxn_at(b, n);
+    turn(EN_SELECT, -1); frames(32); uxn_at(b, n);
+    press(B_HOME); frames(32);
+    press(UXN_BTN[sec]); frames(32); uxn_at(b, n);
+    press(B_HOME); frames(500);
+    held_turn(UXN_BTN[sec], 1); frames(32); frames(500); uxn_at(b, n);
+}
+static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE, T2 EDIT .. SAVE, .. */
+    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
+    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
+    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
+    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/5/OPERATOR|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/5/OPERATOR|EDIT/6/OP ENV|EDIT/7/OPERATOR 2|EDIT/6/OP ENV|EDIT/6/OP ENV|HOME/0/*",
+    "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
+    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
+    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
+    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
+    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
+    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
+    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "EDIT/0/EDIT 1|EDIT/3/SOUND|EDIT/7/LEVELS|EDIT/9/X-MOD|EDIT/0/EDIT 1|EDIT/3/SOUND|EDIT/4/SOUND 2|EDIT/5/SOUND 3|EDIT/4/SOUND 2|EDIT/4/SOUND 2|HOME/0/*",
+    "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
+    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
+    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
+    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
+    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
+    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
+    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
+    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
+    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
+    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+};
+static int test_ux_nav_sections(void)
+{
+    static char b[512];
+    int bad = 0, ok = 1;
+    uint32_t t, sec;
+    for (t = 0; t < NTRK; t++)
+        for (sec = SEC_EDIT; sec < SEC_N; sec++) {
+            uxn_walk(t, sec, b, sizeof b);
+            printf("WANT T%u %s: \"%s\",\n", (unsigned)t + 1u, SEC_NAME[sec], b);
+        }
+    bad += check("ACID FM 3a: every section's button but HOME lands where it did (taps, SELECT, memory, held + SELECT)", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* HOME (ACID FM 3a, ux_nav.c; spec 4.1 / 4.3): two pages, TRACKS and VISUAL. A HOME tap from elsewhere: the page last shown
+ * there (power-on: TRACKS); on HOME: the other one; SELECT steps them (no wrap); HOME held: MENU; HOME + SELECT: GEN 1
+ * (JIANT's GEN 1..3, SELECT along them), OCT- or a HOME tap out of GEN: HOME's last page; a section's button leaves GEN and
+ * HOME comes back to HOME's last page; a stored HOME page that is no more: TRACKS. TRACKS' knobs the sound's four (until
+ * piece 3a task 6), VISUAL's M1..M4; the MACRO layer (LFO held) still M1..M4. The placeholder: header, knob row, the
+ * status line's hint of what HOME does next, the footer HOME . page and n / 2.
+ * (Was 0.9.2's: ECO MACROS BEING ROUTES GEN 1..3 one chain, a HOME tap the next group) */
+static int ux_home_at(uint32_t p) { return ui.home && !ui.confirm && !ui.menu && ux_home_page() == p && nav_cur() == p && nav_sec() == SEC_HOME; }
+static int test_ux_nav_home(void)
 {
     int bad = 0, ok;
-    uint32_t c, k;
+    uint8_t cnt[8], gi[8];
+    uint32_t g, p, i, m, k, c;
     ui_power_on(); frame();
-    ok = ui.home && lz_on() && lz_fam() == LZ_HOME && home_level() == 0u && !home_set() && lz_tab_lit(0) && lz_tabs() == 3u &&
-         lz_crumb_is("HOME \xB7 ECO \xB7 ECO") && lz_count_is("1/7");
-    press(B_HOME); frame();                                         /* a HOME tap: BEING (the next group) */
-    ok &= ui.home && home_level() == 1u && !home_set() && lz_tab_lit(1) && lz_crumb_is("HOME \xB7 BEING \xB7 BEING") &&
-          lz_count_is("3/7");
-    turn(EN_SELECT, -1); frame();                                   /* SELECT left: MACROS */
-    ok &= home_level() == 0u && home_set() && home_macros() && lz_crumb_is("HOME \xB7 ECO \xB7 MACROS") && lz_count_is("2/7");
-    k = macro_v[0];
-    turn(EN_K1, 3); frame();
-    ok &= macro_v[0] == (uint8_t)(k + 3u) && !strncmp(ui.col[0], "M1|", 3);
-    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
-    turn(EN_SELECT, -1); frame();                                   /* ECO: the HOME knobs */
-    turn(EN_K1, 1); frame();
-    ok &= !home_set() && home_level() == 0u && (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c &&
-          macro_v[0] == (uint8_t)(k + 3u);
-    turn(EN_SELECT, -1); frame();                                   /* (no wrap) */
-    ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
-    bad += check("0.9.2 HOME: ECO MACROS BEING .. one chain by SELECT (no wrap), a HOME tap the next group; tabs, crumb, n/7", ok);
-    turn(EN_SELECT, 3); frame();                                    /* ROUTES */
-    ok = home_level() == 1u && home_set() && home_macros() && lz_crumb_is("HOME \xB7 BEING \xB7 ROUTES") && lz_count_is("4/7");
-    fm1_ms += 1000u;
-    turn(EN_SELECT, 1); frame();                                    /* GEN 1 */
-    ok &= gen_on() && gen_page() == 0u && home_level() == 2u && lz_on() && lz_tab_lit(2) && lz_crumb_is("HOME \xB7 GEN \xB7 GEN 1") &&
-          lz_count_is("5/7");
-    k = gp.genre;
-    turn(EN_PRESET, 1); frame();
-    ok &= gp.genre == (k == GEN_EXPLORE ? 0u : k == NGENRE ? GEN_EXPLORE : k + 1u);   /* PRESETS: the GENRE, KNOB 1's order
-                                                         * (0.8.6: EXPLORE, RANDOM, the genres) */
-    turn(EN_SELECT, 1); frame();
-    ok &= gen_on() && gen_page() == 1u && lz_crumb_is("HOME \xB7 GEN \xB7 GEN 2") && lz_count_is("6/7");
-    turn(EN_SELECT, -2); frame();                                   /* back: ROUTES, GEN shut */
-    ok &= !ui.confirm && ui.home && home_level() == 1u && home_set();
-    turn(EN_SELECT, 1); frame();
-    ok &= gen_on() && gen_page() == 0u;
-    press(B_HOME); frame();                                         /* a HOME tap on GEN: round to ECO */
-    ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
-    bad += check("0.9.2 HOME: ROUTES, then GEN 1..3 (PRESETS its GENRE); SELECT back out of GEN; a HOME tap on GEN: ECO", ok);
-    turn(EN_SELECT, 5); frame();                                    /* GEN 2 */
-    ok = gen_on() && gen_page() == 1u;
-    press(B_ENV); frame();                                          /* not modal: a section's button leaves it */
-    ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV");
-    press(B_HOME); frame();                                         /* HOME: back where it was left, GEN 2 */
-    ok &= gen_on() && gen_page() == 1u && ui.home;
-    turn(EN_ALGO, 1); frame();
-    ok &= song.sel == 1u && gen_on();                               /* (ALGORITHM the track there too) */
-    turn(EN_ALGO, -1); frame();
-    press(B_OCTDN); frame();                                        /* OCT-: ECO */
-    ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
-    bad += check("0.9.2 HOME: GEN is HOME's pages, not modal (ENV leaves it, HOME comes back to GEN 2, ALGORITHM works); OCT- ECO", ok);
-    turn(EN_SELECT, 2); frame();                                    /* BEING */
-    open_family(FAM_ENV); frame();
+    ok = ux_home_at(UXH_TRACKS);                                    /* power-on: TRACKS */
+    press(B_SEQ); frame();
+    ok &= !ui.home && nav_sec() == SEC_SEQ;
+    press(B_HOME); frame();                                         /* from SEQ (fresh): TRACKS */
+    ok &= ux_home_at(UXH_TRACKS);
+    press(B_HOME); frame();                                         /* HOME again: VISUAL */
+    ok &= ux_home_at(UXH_VISUAL);
+    press(B_HOME); frame();                                         /* and again: TRACKS */
+    ok &= ux_home_at(UXH_TRACKS);
+    ux_home_flip(); frame();
+    ok &= ux_home_at(UXH_VISUAL);
+    ux_home_flip(); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    bad += check("3a HOME: power-on TRACKS; from SEQ a HOME tap TRACKS; HOME again VISUAL, again TRACKS (ux_home_flip)", ok);
+    press(B_HOME); frame();                                         /* VISUAL, then SEQ, then HOME: VISUAL */
+    press(B_SEQ); frame();
     ok = !ui.home;
-    press(B_HOME); frame();                                         /* HOME from elsewhere: where it was left */
-    ok &= ui.home && home_level() == 1u && home_set() == 0u;
-    {   /* the beings drawn: the ECO panel differs from frame to frame while the tracks sound (their life, their faces) */
-        static uint16_t a[240 * 140];
-        turn(EN_SELECT, -2); frame();
-        for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
-        frames(64);
-        memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
-        for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
-        frames(64);
-        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0 && eco_fc.init;
+    press(B_HOME); frame();
+    ok &= ux_home_at(UXH_VISUAL);
+    press(B_ENV); frame(); press(B_HOME); frame();
+    ok &= ux_home_at(UXH_VISUAL);
+    press(B_HOME); frame();
+    press(B_FX); frame(); press(B_HOME); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    bad += check("3a HOME: from another section the page last shown on HOME (VISUAL, TRACKS)", ok);
+    ui_power_on(); frame();
+    (void)nav_groups(cnt, gi, &g, &p, &i, &m);
+    ok = nav_groups(cnt, gi, &g, &p, &i, &m) == 2u && m == 2u && g == 0u && i == 0u && cnt[0] == 1u && cnt[1] == 1u &&
+         lz_tabs() == 2u && lz_level() == 0u && str_eq(nav_group_name(0), "TRACKS") && str_eq(nav_group_name(1), "VISUAL");
+    press(B_HOME); frame();
+    (void)nav_groups(cnt, gi, &g, &p, &i, &m);
+    ok &= m == 2u && g == 1u && i == 1u && lz_tabs() == 2u && lz_level() == 1u && str_eq(nav_page_name(), "VISUAL");
+    ok &= str_eq(ux_home_where(), "HOME \xB7 VISUAL") && str_eq(ux_home_count(), "2 / 2") && str_eq(ux_home_hint(), "HOME AGAIN: TRACKS");
+    press(B_HOME); frame();
+    ok &= str_eq(nav_page_name(), "TRACKS") && str_eq(ux_home_where(), "HOME \xB7 TRACKS") && str_eq(ux_home_count(), "1 / 2") &&
+          str_eq(ux_home_hint(), "HOME AGAIN: VISUAL");
+    bad += check("3a HOME: two pages (groups TRACKS, VISUAL; tabs 2; footer HOME . page, n / 2; the hint what HOME does next)", ok);
+    ui_power_on(); frame();
+    turn(EN_SELECT, 1); frame();                                    /* SELECT: TRACKS -> VISUAL (rule 2), no wrap */
+    ok = ux_home_at(UXH_VISUAL);
+    turn(EN_SELECT, 1); frame();
+    ok &= ux_home_at(UXH_VISUAL) && !gen_on();
+    turn(EN_SELECT, -1); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    turn(EN_SELECT, -1); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    bad += check("3a HOME: SELECT steps TRACKS <-> VISUAL (no wrap, never into GEN)", ok);
+    ui_power_on(); frame();
+    press(B_HOME); frame();                                         /* VISUAL, then HOME + SELECT: GEN 1 */
+    held_turn(B_HOME, 1); frame(); frames(600);
+    ok = gen_on() && gen_page() == 0u && ui.home && nav_sec() == SEC_HOME && nav_cur() == UXH_GEN0 && !ui.menu &&
+         str_eq(nav_page_name(), "GEN 1");
+    fm1_ms += 1000u;
+    turn(EN_SELECT, 1); frame();                                    /* (SELECT along GEN's pages) */
+    ok &= gen_on() && gen_page() == 1u && nav_cur() == UXH_GEN0 + 1u;
+    turn(EN_SELECT, -5); frame();
+    ok &= gen_on() && gen_page() == 0u;
+    press(B_OCTDN); frame();                                        /* OCT-: HOME's last page, VISUAL */
+    ok &= ux_home_at(UXH_VISUAL);
+    press(B_HOME); frame();                                         /* TRACKS; GEN; OCT-: TRACKS */
+    held_turn(B_HOME, 1); frame(); frames(600);
+    ok &= gen_on() && gen_page() == 0u;
+    fm1_ms += 1000u;
+    turn(EN_SELECT, 2); frame();                                    /* GEN 3 left; HOME + SELECT again: GEN 1 */
+    ok &= gen_on() && gen_page() == 2u;
+    press(B_OCTDN); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    held_turn(B_HOME, 1); frame(); frames(600);
+    ok &= gen_on() && gen_page() == 0u && nav_cur() == UXH_GEN0;
+    press(B_OCTDN); frame();
+    ok &= ux_home_at(UXH_TRACKS);
+    bad += check("3a HOME: HOME + SELECT GEN 1 (SELECT its pages; always GEN 1); OCT- back to HOME's last page", ok);
+    press(B_HOME); frame();                                         /* VISUAL; GEN; a HOME tap: VISUAL */
+    held_turn(B_HOME, 1); frame(); frames(600);
+    ok = gen_on();
+    press(B_HOME); frame();
+    ok &= ux_home_at(UXH_VISUAL);
+    held_turn(B_HOME, 1); frame(); frames(600);                     /* GEN; ENV leaves it; HOME: VISUAL */
+    ok &= gen_on();
+    press(B_ENV); frame();
+    ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV");
+    press(B_HOME); frame();
+    ok &= ux_home_at(UXH_VISUAL);
+    bad += check("3a HOME: out of GEN by a HOME tap or a section's button: HOME's last page (not GEN)", ok);
+    hold(B_HOME); frame();                                          /* HOME held: MENU (unchanged) */
+    ok = ui.menu == 1u;
+    press(B_HOME); frame();
+    ok &= !ui.menu && ux_home_at(UXH_VISUAL);
+    bad += check("3a HOME: HOME held MENU; a HOME tap closes it, on HOME's page", ok);
+    ui_power_on(); frame();
+    ui.nmem[0] = (uint8_t)(5u ^ NAV_DEF[0]);                        /* a stored HOME page that is no more (0.9.2's ROUTES ..) */
+    ok = ux_home_page() == UXH_TRACKS && nav_cur() == UXH_TRACKS;
+    press(B_SEQ); frame(); press(B_HOME); frame();
+    ok &= ux_home_at(UXH_TRACKS) && sizeof ui.nmem == 13u && nav_mem(0) == UXH_TRACKS;
+    ui.nmem[0] = (uint8_t)(UXH_VISUAL ^ NAV_DEF[0]);                /* (the byte as before: the entry ^ the default) */
+    ok &= ux_home_page() == UXH_VISUAL;
+    bad += check("3a HOME: page memory the same 13 bytes (entry ^ default); a HOME page that is no more: TRACKS", ok);
+    ui_power_on(); frame();                                         /* TRACKS: the sound's four knobs */
+    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
+    k = macro_v[0];
+    turn(EN_K1, 1); frame();
+    ok = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c && macro_v[0] == k && !home_macros();
+    press(B_HOME); frame();                                         /* VISUAL: M1..M4 */
+    turn(EN_K1, 3); frame();
+    ok &= home_macros() && macro_v[0] == (uint8_t)(k + 3u);
+    press(B_HOME); frame();                                         /* TRACKS, the MACRO layer latched (LFO held): M1 */
+    hold(B_LFO); frame();
+    ok &= mac_latch;
+    turn(EN_K1, 2); frame();
+    ok &= macro_v[0] == (uint8_t)(k + 5u);
+    press(B_LFO); frame();
+    ok &= !mac_latch;
+    bad += check("3a HOME: TRACKS the sound's knobs; VISUAL M1..M4; the MACRO layer (LFO held) still M1..M4", ok);
+    ui_power_on(); ui.force = 1; frame();                           /* the placeholder drawn: every strip */
+    ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
+         ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u && ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;
+    {
+        static uint16_t a[240 * 240];
+        memcpy(a, host_screen, sizeof a);
+        press(B_HOME); frame();
+        ok &= memcmp(a + UX_Y_FOOT * 240, host_screen + UX_Y_FOOT * 240, 240u * UX_H_FOOT * 2u) != 0 &&
+              memcmp(a + UX_Y_STATUS * 240, host_screen + UX_Y_STATUS * 240, 240u * UX_H_STATUS * 2u) != 0;
     }
-    bad += check("0.9.2 HOME: HOME from elsewhere the page left (rule 2); the beings live", ok);
-    gp.page = 0;                                                    /* (GEN's page is kept: the next tests' start) */
-    gp.genre = 0;
+    bad += check("3a HOME: the placeholder drawn (header, knobs, status hint, footer; VISUAL's footer and hint not TRACKS')", ok);
     ui_power_on();
     return bad;
 }
@@ -11477,7 +11560,7 @@ static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, 
         else if (i % 4u == 0u) { st->n = 1; st->note[0] = (uint8_t)(60 + (i & 7u)); } else st->time = ST_TIE;
     }
     vxt_run(160, 1);                                    /* (the engine's switch faded) */
-    if (page) go_title(page); else { ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; }
+    go_title(page);
     transport_req = 1;
     vxt_run(1500, 1);
     j = vxs.fr[k];
@@ -11500,17 +11583,15 @@ static int test_engvis(void)
 {
     static const struct { uint32_t e; const char *pre, *page; uint8_t k; const char *what; } C[] = {
         {5, "CANTOR ES", "EDIT 1", 0, "VOICE WORDS, EDIT"}, {5, "TALK BOX", "EDIT 2", 0, "VOICE vowels, EDIT"},
-        {5, "SINGER EN", 0, 0, "VOICE, HOME BEING"},
         {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"}, {ENGI_DRUM, "DRUM-X", "EDIT 1", 2, "DRUM-X kit, EDIT KIT"},
-        {ENGI_DRUM, "DRUM-X", 0, 2, "DRUM-X kit, HOME BEING"},
-        {ENGI_ANALOG, "ACID", "EDIT 1", 3, "ANALOG cell, EDIT"}, {ENGI_ANALOG, "SOFT PAD", 0, 3, "ANALOG cell, HOME BEING"},
+        {ENGI_ANALOG, "ACID", "EDIT 1", 3, "ANALOG cell, EDIT"},
         {ENGI_FM6, "TINE EP", "EDIT 1", 4, "FM6 colony, EDIT"}, {ENGI_FM6, "TINE EP", "OPERATOR", 4, "FM6 colony, OPERATOR"},
         {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"},
-        {ENGI_FM6, "MARIMBA", 0, 4, "FM6 colony, HOME BEING"},
-        {11, "RAIN", "EDIT 1", 6, "NOISE swarm, EDIT"}, {11, "SEA", 0, 6, "NOISE swarm, HOME BEING"},
-        {2, "BRASS", "EDIT 1", 7, "PHASE snail, EDIT"}, {2, "CZ PIANO", 0, 7, "PHASE snail, HOME BEING"},
+        {11, "RAIN", "EDIT 1", 6, "NOISE swarm, EDIT"},
+        {2, "BRASS", "EDIT 1", 7, "PHASE snail, EDIT"},
         {3, "BYTEBEAT", "EDIT 1", 8, "LOFI caterpillar BYTE, EDIT"}, {3, "FLOAT PAD", "EDIT 2", 8, "LOFI caterpillar FLOAT, EDIT"},
-        {3, "PULSE LD", "EDIT 1", 8, "LOFI caterpillar PLS, EDIT"}, {3, "GB ARP", 0, 8, "LOFI caterpillar, HOME BEING"}};
+        {3, "PULSE LD", "EDIT 1", 8, "LOFI caterpillar PLS, EDIT"}};   /* (ACID FM 3a: HOME's BEING
+                                                         * cases gone with BEING) */
     int bad = 0, ok = 1, mv, st;
     uint32_t c;
     for (c = 0; c < NELEM(C); c++) {
@@ -11519,7 +11600,7 @@ static int test_engvis(void)
         ok &= mv && st;
     }
     bad += check("0.9.4 / 0.9.6 the engines' creatures (VOICE DRUM-X ANALOG FM6 NOISE PHASE LOFI; EDIT, FM6's OPERATOR "
-                 "pages, HOME): move with the sound, still in silence", ok);
+                 "pages): move with the sound, still in silence", ok);
     {   /* (0.9.9) VOICE's tract (SCOPE OFF, the whole panel; WORDS on): an open vowel opens the jaw down (the chin
          * drops; the condyle glides forward), the lips apart; a nasal drops the velum and the branch to the nose opens (its ink over the
          * palate, where an open vowel leaves none); the pulses travel and the waves leave while it sings */
@@ -11679,7 +11760,7 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
         if (nav_cur() == at && nav_sec() == sec)
             break;
     }
-    if (sec == SEC_HOME) { press(B_OCTDN); frames(2); }   /* (GEN: OCT- back to ECO) */
+    if (gen_on()) { press(B_OCTDN); frames(2); }       /* (GEN: OCT- back to HOME) */
 }
 /* 0.9.1's lenses (ui_lens.c PD_TAB / ED, ui.c LENS_SET / SV_SET / FX's), as the mock-up's "Hoy" column: section, level
  * (0.9.1's numbering, the level the page is drawn as), its pages; each must be reached at that level */
@@ -11760,17 +11841,22 @@ static int test_lz_reach(void)
                         if (j == NPAGES) { seen_old[i][k] |= 2u; continue; }   /* (not this engine's, this LOAD's) */
                         if (rv_has(OLD_LV[i].t[k], OLD_LV[i].fam, OLD_LV[i].lv)) seen_old[i][k] |= 1u;
                     }
-            {   /* HOME: its seven pages (ECO MACROS BEING ROUTES GEN 1..3), each drawn as before */
-                static const uint8_t HL[7] = {0, 0, 1, 1, 2, 2, 2};
+            {   /* HOME (ACID FM 3a): TRACKS VISUAL by SELECT; GEN 1..3 by HOME + SELECT, then SELECT */
                 uint32_t n = 0;
                 go_home(); frames(32); press(B_HOME); frames(32);
                 turn(EN_SELECT, -10); frames(2);
-                for (k = 0; k < 7u; k++) {
-                    n += nav_cur() == k && home_level() == HL[k] && (k >= 4u ? gen_on() && gen_page() == k - 4u : ui.home &&
-                         home_set() == (k & 1u));
+                for (k = 0; k < UXH_N; k++) {
+                    n += nav_cur() == k && ux_home_page() == k && home_level() == 0u && ui.home && !gen_on();
                     turn(EN_SELECT, 1); frames(2);
                 }
-                okh &= n == 7u;
+                held_turn(B_HOME, 1); frames(600);
+                for (k = 0; k < UXH_NGEN; k++) {
+                    n += nav_cur() == UXH_GEN0 + k && home_level() == 2u && gen_on() && gen_page() == k;
+                    fm1_ms += 1000u;
+                    turn(EN_SELECT, 1); frames(2);
+                }
+                if (n != UXH_N + UXH_NGEN) printf("  %s: HOME's pages %u of %u\n", ENGINES[e]->name, n, UXH_N + UXH_NGEN);
+                okh &= n == UXH_N + UXH_NGEN;
                 press(B_OCTDN); frames(2);
             }
         }
@@ -11783,7 +11869,7 @@ static int test_lz_reach(void)
     bad += check("0.9.2 reach: every page each engine shows (LOFI BYTE, LOAD ECO too) by its button and SELECT alone", ok);
     bad += check("0.9.2 reach: every parameter of those pages (the ids on them)", okp);
     bad += check("0.9.2 reach: every 0.9.1 lens page at its 0.9.1 level (drawn as it was; NOTE's STEP view merged)", okold);
-    bad += check("0.9.2 reach: HOME's seven pages by SELECT (ECO MACROS BEING ROUTES GEN 1..3); PHRASES by SEQ's PRESETS", okh);
+    bad += check("0.9.2 reach: HOME's TRACKS VISUAL by SELECT, GEN 1..3 by HOME + SELECT (ACID FM 3a); PHRASES by SEQ's PRESETS", okh);
     ui_power_on();
     return bad;
 }
@@ -12173,7 +12259,8 @@ int main(void)
     setvbuf(stdout, NULL, _IONBF, 0);
     int bad = 0;
     bad += test_large_face();
-    bad += test_lz_home();
+    bad += test_ux_nav_sections();
+    bad += test_ux_nav_home();
     bad += test_lz_edit();
     bad += test_lz_env();
     bad += test_lz_mod();

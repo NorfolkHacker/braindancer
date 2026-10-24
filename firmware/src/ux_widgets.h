@@ -30,7 +30,8 @@
 
 typedef struct { const char *label; char value[8]; uint8_t bar; /* 0..255 */ } ux_knob_t;
 
-static void ux_header(uint32_t trk, const char *sound, const char *right);      /* top line + header, LCD y 0..15 */
+/* top line + header, LCD y 0..15: "T<trk> · sound" (trk 0: the sound alone), right in MID */
+static void ux_header(uint32_t trk, const char *sound, const char *right);
 /* knob row, LCD y 16..55. hot: 0..3 forces that column bright; -1 uses ux_knob_touch: the touched column is bright for
  * UX_HOT_MS after the touch, then normal. */
 static void ux_knobs(const ux_knob_t k[4], int32_t hot);

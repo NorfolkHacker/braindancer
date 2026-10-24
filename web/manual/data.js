@@ -135,7 +135,7 @@ controls: {
       {k: "REC+GLO", t: ["borra la automatización de nivel y paneo", "clear the level and pan automation"]}
     ]},
   "HOME": {kind: "button", sec: "home", shot: 'home', layer: "HOME",
-    alone: ["HOME: desde otra sección, la última página de HOME; en HOME el grupo siguiente ECO → BEING → GEN.", "HOME: from elsewhere the HOME page last shown; on HOME the next group ECO → BEING → GEN."],
+    alone: ["HOME: desde otra sección, la última página de HOME; en HOME la otra (TRACKS ↔ VISUAL). HOME + SELECT: GEN.", "HOME: from elsewhere the HOME page last shown; on HOME the other one (TRACKS ↔ VISUAL). HOME + SELECT: GEN."],
     held: ["Unos 0,7 s: abre el MENU.", "About 0.7 s: opens the MENU."],
     combos: [{k: "HOME+SELECT", t: ["GEN, el generador de temas", "GEN, the song generator"]}]},
   "SAVE": {kind: "button", sec: "save", shot: 'save_sound', layer: "SAVE",
@@ -217,7 +217,7 @@ keyAlone: ["Toca la nota en la pista elegida (27 teclas, F3 a G5). En una pista 
 
 // ------------------------------------------------------------------------------------------- every page's four knobs
 pages: {
-  "HOME/ECO": ["(4 del motor)", "", "", ""], "HOME/MACROS": ["M1", "M2", "M3", "M4"], "HOME/BEING": ["(4 del motor)", "", "", ""], "HOME/ROUTES": ["M1", "M2", "M3", "M4"],
+  "HOME/TRACKS": ["(4 del motor)", "", "", ""], "HOME/VISUAL": ["M1", "M2", "M3", "M4"],
   "HOME/GEN 1": ["GENRE", "SEED", "ENERGY", "FORM"], "HOME/GEN 2": ["DRUMS", "BASS", "CHORDS", "ARP"], "HOME/GEN 3": ["LEAD", "COMPLEX", "SWING", "HUMAN"],
   "EDIT/EDIT 1": ["E1", "E2", "E3", "E4"], "EDIT/EDIT 2": ["E5", "E6", "E7", "E8"], "EDIT/FILTER": ["TYPE", "CUT", "RES", "DRIVE / DIST"],
   "EDIT/MORPH": ["MORPH", "—", "—", "—"], "EDIT/RETRIG": ["RTRG", "—", "—", "—"], "EDIT/VOICE": ["VOICE", "GLIDE", "MODE", "PRIO"], "EDIT/VOICE 2": ["ALLOC", "DETUNE", "—", "—"],
@@ -273,12 +273,10 @@ commands: [
    d: ["Con el equipo andando, OCT− + OCT+ mantenidos 5 s: modo actualización (UBOOT), con cuenta regresiva desde los 2 s; soltá para cancelar.", "While running, OCT− + OCT+ held 5 s: update mode (UBOOT), with a countdown from 2 s; let go to cancel."]},
 
   // HOME
-  {s: "home", k: "HOME", shot: 'home', t: ["HOME: el ecosistema", "HOME: the ecosystem"],
-   d: ["Una criatura por pista: su especie es el motor, su forma sus cuatro perillas; se hincha con su audio. La elegida es más grande, una muteada duerme. Un toque de HOME: ECO → BEING → GEN. KNOB 1–4: las cuatro perillas más útiles del motor.", "One being per track: its species is the engine, its shape its four knobs; it swells with its audio. The selected one is bigger, a muted one sleeps. A HOME tap: ECO → BEING → GEN. KNOB 1–4: the engine's four most useful knobs."]},
-  {s: "home", k: "HOME", shot: 'home_macros', t: ["MACROS en HOME", "MACROS on HOME"],
-   d: ["HOME › ECO › MACROS: KNOB 1–4 son M1–M4 (como LFO mantenido); arriba las rutas contadas.", "HOME › ECO › MACROS: KNOB 1–4 are M1–M4 (as LFO held); the routes counted on top."]},
-  {s: "home", k: "HOME", shot: 'home_being', t: ["BEING y ROUTES", "BEING and ROUTES"],
-   d: ["BEING: la criatura de la pista grande con sus cuatro perillas como órganos (VOICE su cabeza, DRUM-X su kit). ROUTES: M1–M4 con sus rutas dibujadas.", "BEING: the track's creature large with its four knobs as organs (VOICE its head, DRUM-X its kit). ROUTES: M1–M4 with their routes drawn."]},
+  {s: "home", k: "HOME", shot: 'home', t: ["HOME: TRACKS y VISUAL", "HOME: TRACKS and VISUAL"],
+   d: ["Dos páginas: TRACKS y VISUAL. Desde otra sección, HOME vuelve a la última que viste; en HOME, HOME otra vez (o SELECT) cambia de página. La línea de estado dice qué hace el próximo HOME. KNOB 1–4 en TRACKS: las cuatro perillas más útiles del motor.", "Two pages: TRACKS and VISUAL. From another section HOME comes back to the one you saw last; on HOME, HOME again (or SELECT) changes page. The status line says what the next HOME does. KNOB 1–4 on TRACKS: the engine's four most useful knobs."]},
+  {s: "home", k: "HOME", shot: 'home_visual', t: ["VISUAL: los macros", "VISUAL: the macros"],
+   d: ["HOME › VISUAL: KNOB 1–4 son M1–M4 (como LFO mantenido).", "HOME › VISUAL: KNOB 1–4 are M1–M4 (as LFO held)."]},
   {s: "home", k: "HOME", shot: 'menu', t: ["Abrir el MENU", "Open the MENU"],
    d: ["Mantené HOME ~0,7 s. SELECT recorre las filas, ALGORITHM las pestañas, una perilla u OCT± cambian el valor; HOME cierra (y guarda).", "Hold HOME ~0.7 s. SELECT walks the rows, ALGORITHM the tabs, a knob or OCT± changes the value; HOME closes (and saves)."]},
 
@@ -292,7 +290,7 @@ commands: [
   {s: "gen", k: "SELECT", shot: 'gen_parts', t: ["Dosificar las partes (GEN 2 / GEN 3)", "Weigh the parts (GEN 2 / GEN 3)"],
    d: ["GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % o AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Bajá DRUMS y OCT+: la misma pieza con menos batería.", "GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % or AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Lower DRUMS and OCT+: the same piece, fewer drums."]},
   {s: "gen", k: "OCT-", t: ["Salir de GEN / volver a lo de antes", "Leave GEN / go back to before"],
-   d: ["OCT− vuelve a ECO (la pieza queda). Para recuperar lo que había antes: GLO + G4 (UNDO). FORM PARTS / SONG llena las secciones y ARRANGE, pero nunca pisa secciones guardadas por vos.", "OCT− goes back to ECO (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and ARRANGE, but never overwrites sections you stored."]},
+   d: ["OCT− vuelve a HOME (la pieza queda). Para recuperar lo que había antes: GLO + G4 (UNDO). FORM PARTS / SONG llena las secciones y ARRANGE, pero nunca pisa secciones guardadas por vos.", "OCT− goes back to HOME (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and ARRANGE, but never overwrites sections you stored."]},
 
   // EDIT
   {s: "edit", k: "EDIT", shot: 'edit_analog', t: ["Editar el motor (EDIT 1 / EDIT 2)", "Edit the engine (EDIT 1 / EDIT 2)"],

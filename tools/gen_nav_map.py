@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+# Portions Copyright (C) 2026 NorfolkHacker
 """(JIANT 0.9.2) The navigation map: every section (its button), its groups (the tabs) and its pages in chain order,
 with the six rules, the held layers and the combos, read from the firmware's own chain tables (firmware/src/ui_lens.c
 CE_* / CG_* / CHAINS / NAV_DEF), so the map cannot drift from the firmware.
@@ -87,7 +88,7 @@ L = {
          'FX': ('punch-in FX', 'FX dice'), 'GLO': ('mutes · solos · UNDO', 'tempo'), 'ENV': (None, 'walk this chain'),
          'LFO': ('MACROS M1–M4', 'LFO dice'), 'SCL': ('ROOT on the keys', 'walk this chain'), 'ARP': (None, 'walk this chain'),
          'SAVE': ('sections live · NAME', 'walk this chain')},
-  notes={'HOME': 'GEN 1–3: PRESETS the genre, OCT+ makes the piece, OCT− back to ECO.',
+  notes={'HOME': 'TRACKS ↔ VISUAL: HOME again or SELECT. GEN 1–3 (HOME + SELECT): PRESETS the genre, OCT+ makes the piece, OCT− back to HOME.',
          'SEQ': 'PRESETS: the patterns (PHRASES). KNOB 1: all 64 steps on STEP (a fast turn several).',
          'EDIT': 'TONE pages only where the engine has them: MORPH (ANALOG PHASE LOFI), RETRIG (LOFI), ROTOR (WHEEL), WORDS (VOICE). DRUM-X: KNOB 1 picks the kit\'s sound on SOUND.',
          'FX': 'CHORUS and SLICER are hidden with LOAD ECO; the chain skips them.',
@@ -132,7 +133,7 @@ L = {
          'FX': ('FX punch-in', 'dados de FX'), 'GLO': ('mutes · solos · UNDO', 'tempo'), 'ENV': (None, 'recorre esta cadena'),
          'LFO': ('MACROS M1–M4', 'dados de LFO'), 'SCL': ('ROOT en las teclas', 'recorre esta cadena'),
          'ARP': (None, 'recorre esta cadena'), 'SAVE': ('secciones en vivo · NAME', 'recorre esta cadena')},
-  notes={'HOME': 'GEN 1–3: PRESETS el género, OCT+ arma la pieza, OCT− vuelve a ECO.',
+  notes={'HOME': 'TRACKS ↔ VISUAL: HOME otra vez o SELECT. GEN 1–3 (HOME + SELECT): PRESETS el género, OCT+ arma la pieza, OCT− vuelve a HOME.',
          'SEQ': 'PRESETS: los patrones (PHRASES). KNOB 1: los 64 pasos en STEP (girado rápido, varios).',
          'EDIT': 'Las páginas de TONE solo donde el motor las tiene: MORPH (ANALOG PHASE LOFI), RETRIG (LOFI), ROTOR (WHEEL), WORDS (VOICE). DRUM-X: KNOB 1 elige el sonido del kit en SOUND.',
          'FX': 'CHORUS y SLICER se ocultan con LOAD ECO; la cadena los saltea.',

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * The design (the device clock driven by the audio the worklet asks for, the exports below, the saved
  * flash handed back before boot) follows X0X's browser build, web/emu/x0x_web.c of charlesvestal/fm1-x0x
  * (GPL-3.0), a Felucca fork. */
@@ -150,6 +151,7 @@ static void lcd_wake_now(void) {}
 static void lcd_init(void) {}
 
 #include "../../firmware/src/gfx.c"
+#include "../../firmware/src/ux_theme.c"
 #include "../../firmware/src/panel.c"
 #include "../../firmware/src/ui.c"
 #include "../../firmware/src/menu_items.c"
@@ -159,6 +161,8 @@ static void lcd_init(void) {}
 #include "../../firmware/src/ui_menu.c"
 #include "../../firmware/src/ui_input.c"
 #include "../../firmware/src/ui_layer.c"
+#include "../../firmware/src/ux_widgets.c"
+#include "../../firmware/src/ux_home.c"
 
 /* ------------------------------------------------------------ the flash --- */
 static uint32_t web_flash_writes;

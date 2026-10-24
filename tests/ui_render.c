@@ -610,8 +610,8 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
  * OP LEVEL pages and the algorithm charts, exist only there: fm4_screen) */
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
 
-enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
-       S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_PFLASH_HOME, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
+enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
+       S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
        S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT, S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM,
        S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_SAMPLE, S_EDIT_GRAIN,
        S_ALG1, S_ALG2, S_ALG3, S_ALG4, S_ALG5, S_ALG6, S_ALG7, S_ALG8, S_OP_LEVEL,
@@ -634,22 +634,22 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
-       S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
+       S_GEN_LEAD,
        S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
        S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK,
        S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP, S_GEN_EXPLORE,
        S_VX_HEAD_A, S_VX_HEAD_I, S_VX_HEAD_U, S_VX_HEAD_S, S_VX_HEAD_M, S_VX_HEAD_K, S_VX_HEAD_T, S_VX_HEAD_F, S_VX_HEAD_VOWEL,
-       S_VX_HEAD_HOME, S_VX_HEAD_QUIET,
-       S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_HOME, S_VX_KIT_MUTED,
+       S_VX_HEAD_QUIET,
+       S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_MUTED,
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
-       S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_HOME, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_HOME, S_V6_FM6_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_HOME, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_HOME, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_HOME, S_V6_LOFI_FULL, S_V6_VOICE_FULL, S_VX_TRACT_A_FULL, S_VX_TRACT_M_FULL, S_VX_TRACT_A_EDIT, S_VX_TRACT_M_EDIT, S_VX_TRACT_A_HOME, S_VX_TRACT_M_HOME, S_HOME_MUT, S_HOME_FACES, S_V6_LOFI_4BIT, S_V6_LOFI_4B2, S_V6_LOFI_1BIT, S_V6_LOFI_STEP, S_V6_LOFI_FBK, S_V6_LOFI_MASK, S_V6_LOFI_WRAM, S_V6_LOFI_HP_RES, S_V6_LOFI_COMB_DIST, S_V6_LOFI_BP_LOOP, S_V6_LOFI_FULL_4BIT, S_V6_LOFI_FULL_1BIT, S_V6_LOFI_HOME_4BIT, S_V6_LOFI_HOME_1BIT,
+       S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_FULL, S_V6_VOICE_FULL, S_VX_TRACT_A_FULL, S_VX_TRACT_M_FULL, S_VX_TRACT_A_EDIT, S_VX_TRACT_M_EDIT, S_V6_LOFI_4BIT, S_V6_LOFI_4B2, S_V6_LOFI_1BIT, S_V6_LOFI_STEP, S_V6_LOFI_FBK, S_V6_LOFI_MASK, S_V6_LOFI_WRAM, S_V6_LOFI_HP_RES, S_V6_LOFI_COMB_DIST, S_V6_LOFI_BP_LOOP, S_V6_LOFI_FULL_4BIT, S_V6_LOFI_FULL_1BIT, 
        S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS,
-       S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
+       S_MIXER_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
        S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_COUNT };
-static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
-    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
+static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
+    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_voice",
     "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level", "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern",
@@ -672,18 +672,18 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "save_library", "save_tools", "save_project", "save_arrange", "save_sound", "save_presets",
     "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay", "fx_effect_delay2", "fx_effect_reverb",
     "fx_effect_slicer", "fx_effect_master",
-    "home_macros", "home_being", "home_routes", "gen_lead",
+    "gen_lead",
     "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
     "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back",
     "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum", "comp_jump", "gen_explore",
     "vx_head_a", "vx_head_i", "vx_head_u", "vx_head_s", "vx_head_m", "vx_head_k", "vx_head_t", "vx_head_f", "vx_head_vowel",
-    "vx_head_home", "vx_head_quiet",
-    "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_home", "vx_kit_muted",
+    "vx_head_quiet",
+    "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_muted",
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
-    "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_home", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_home", "v6_fm6_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_home", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_home", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_home", "v6_lofi_full", "v6_voice_full", "vx_tract_a_full", "vx_tract_m_full", "vx_tract_a_edit", "vx_tract_m_edit", "vx_tract_a_home", "vx_tract_m_home", "home_mutate", "home_faces", "v6_lofi_4bit", "v6_lofi_4b2", "v6_lofi_1bit", "v6_lofi_step", "v6_lofi_fbk", "v6_lofi_mask", "v6_lofi_wram", "v6_lofi_hp_res", "v6_lofi_comb_dist", "v6_lofi_bp_loop", "v6_lofi_full_4bit", "v6_lofi_full_1bit", "v6_lofi_home_4bit", "v6_lofi_home_1bit",
+    "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_full", "v6_voice_full", "vx_tract_a_full", "vx_tract_m_full", "vx_tract_a_edit", "vx_tract_m_edit", "v6_lofi_4bit", "v6_lofi_4b2", "v6_lofi_1bit", "v6_lofi_step", "v6_lofi_fbk", "v6_lofi_mask", "v6_lofi_wram", "v6_lofi_hp_res", "v6_lofi_comb_dist", "v6_lofi_bp_loop", "v6_lofi_full_4bit", "v6_lofi_full_1bit", 
     "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys",
-    "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
+    "mixer_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
     "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
     "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2", "ux_theme", "ux_demo", "ux_demo_warn"};
 
@@ -908,8 +908,8 @@ static void vx_phon(uint32_t ph, int32_t peak)
 }
 /* (0.9.9) VOICE's tract sung a while (the mock-up's time running: the nod struck at the vowel's onset, the pulses up the
  * tube and the waves out on their way): ph0 for n0 frames of 33 ms, then ph for n, at peak; full: the whole panel (SCOPE
- * OFF), home: HOME's BEING */
-static void vx_sing(uint32_t ph0, uint32_t n0, uint32_t ph, uint32_t n, int32_t peak, int full, int home)
+ * OFF) (ACID FM 3a: HOME's BEING gone) */
+static void vx_sing(uint32_t ph0, uint32_t n0, uint32_t ph, uint32_t n, int32_t peak, int full)
 {
     sing_t *g = &sing[song.sel];
     uint32_t i, ms = fm1_ms, fr = ui.frame;              /* (the clock and the frame put back after: the scenes after
@@ -930,7 +930,6 @@ static void vx_sing(uint32_t ph0, uint32_t n0, uint32_t ph, uint32_t n, int32_t 
     ui.frame = vxs.fr[0] = fr;
     TSEL->peak = peak;
     ui_scope = !full;
-    if (home) { ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; eco.en[song.sel] = 220; }
 }
 static void vx_kit_scene(uint32_t lanes, uint32_t dm)
 {
@@ -971,7 +970,7 @@ static void vx_bug_scene(uint32_t l, uint32_t dm, uint32_t n)
     go_title("EDIT 1");
 }
 /* (0.9.6) the six creatures of the mock-up's family (ui_engvis.c): track 1 as engine e (preset pre), the knobs k[0..7]
- * (-99: the preset's), a note (none: silent) played and rung a while, then on page (0: HOME's BEING); age: ms since the
+ * (-99: the preset's), a note (none: silent) played and rung a while, then on page; age: ms since the
  * note when drawn (its squash, its blink), mt: the creature's time (its phases, NOISE's swarm moving) */
 enum { ENGI_PHASE_UI = 2, ENGI_LOFI_UI = 3, ENGI_NOISE_UI = 11 };   /* (engines.c ENGINES[]) */
 static const int16_t *v6_flt;                            /* (0.9.10) FILTER and DIST for the next v6_scene (-99: the preset's) */
@@ -1003,7 +1002,7 @@ static void v6_scene(uint32_t e, const char *pre, const char *page, const int16_
     vxs.nms[c] = fm1_ms - age;
     vxs.mt[c] = 30u * 256u * 3u + c * 977u;
     vxs.swt = vxs.mt[c] >> 8;
-    if (page) go_title(page); else { ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; }
+    go_title(page);
 }
 /* (0.9.17) a short line on the selected track for the SEQ pages that drew their own panel before (TRACK, MUTATE, AUTOMATION,
  * AUTO LIST): every page shows the roll now, its marks over these notes */
@@ -1050,6 +1049,10 @@ static void setup(int s)
         song.octave = 2; song.rec = 1; usb.config = 1; break;
     }
     case S_HOME_IDLE: song.playing = 0; song.batt_raw = 570; ui.hot_col = 1; ui.hot_t = 30; break;
+    case S_HOME_VISUAL:                          /* (ACID FM 3a) HOME's second page (HOME again), M1..M4, M2 just turned */
+        macro_v[0] = 40; macro_v[1] = 90; macro_v[2] = 20; macro_v[3] = 64;
+        nav_go(SEC_HOME, UXH_VISUAL, 0); ui.hot_col = 1; ui.hot_t = 30;
+        break;
     case S_MESSAGE: ui_say("LOADED ", "07 A VERY LONG PATTERN NAME"); break;
     case S_MESSAGE_KEY: ui_message("[SAVE] HOLD TO UNDO"); break;            /* a message with a keycap */
     case S_MESSAGE_NOFILE: ui_message(MSG_NOFILE "NO FILE"); break;   /* a message led by the no-file icon */
@@ -1083,9 +1086,6 @@ static void setup(int s)
         break;
     case S_PFLASH:                                      /* (0.6.51) a page changed by hand: its name big, held */
         go_title("LFO"); page_flash(); pf_ms = fm1_ms - 200u;
-        break;
-    case S_PFLASH_HOME:                                 /* (0.6.61) a track picked on HOME: its engine, "T1 HOME" */
-        ui.home = 1; page_flash(); pf_ms = fm1_ms - 200u;
         break;
     case S_DXIMG:                                       /* (0.6.48) DRUM IMAGE 40 */
         set_engine_of(TSEL, ENGI_DRUM); TSEL->p[P_DXIMG] = 40; go_title("STEREO");
@@ -1155,14 +1155,14 @@ static void setup(int s)
      * the BPM being turned (the accent's); BPM LOCK ON (the lock right of the BPM), and its message after a turn;
      * GLO with the tempo turned and BPM LOCK ON (the label right of the lock); the metronome on the bar's 1st beat
      * (the accent's) and its 2nd (mirrored) */
-    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_home(); break;
-    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_home(); break;
-    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_home(); break;
-    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_home(); break;
-    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_home(); ui_message("BPM LOCKED"); break;
+    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_title("ENV"); break;
+    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_title("ENV"); break;
+    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_title("ENV"); break;
+    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_title("ENV"); break;
+    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_title("ENV"); ui_message("BPM LOCKED"); break;
     case S_HEAD_GLO_TURN: ui_prefs |= PREF_BPM_LOCK; go_home(); ui.layer = LAYER_GLO; ui.bpm_t = 40; break;
-    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_home(); break;
-    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_home(); break;
+    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_title("ENV"); break;
+    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_title("ENV"); break;
     case S_DRUM: drum(0); go_page(GR_ROLL); ui.cursor = 4; ui.lane = 1; trk[3].seq_idx = 9; break;
     case S_DRUM_HAND: drum(1); go_page(GR_ROLL); ui.lane = 5; ui.cursor = 7; break;
     case S_DRUM_CYM: drum(2); go_page(GR_ROLL); ui.lane = 7; break;
@@ -1175,36 +1175,6 @@ static void setup(int s)
         break;
     case S_MIXER_T4:                             /* (0.6.22) TRACKS 4: T5, T6 asleep, grey, OFF */
         go_page(GR_TRK); trk_live = 4; break;
-    case S_HOME_T4: trk_live = 4; break;
-    case S_HOME_MUT: {                           /* (0.9.7) HOME A: MUTATE on, one landed on T2 (it looks up, its number white,
-                                                  * its ring opening), T5 asleep */
-        uint32_t k;
-        for (k = 0; k < NTRK; k++) { trk[k].peak = (int32_t)(1200u + k * 1100u); trk[k].p[P_MSND] = 1; }
-        trk[4].p[P_MUTE] = 1;
-        mut_flash[1] = 7;
-        break;
-    }
-    case S_HOME_FACES: {                         /* (0.9.7) HOME A: the faces: T1 hit just now (its eyes shut), the others
-                                                  * quiet .. loud (their mouths, their colours), T6 muted (asleep) */
-        uint32_t k;
-        for (k = 0; k < NTRK; k++) { mut_flash[k] = 0; trk[k].peak = (int32_t)(k * 1700u); }
-        trk[0].peak = 3500;
-        eco.en[0] = 128;
-        eco_fc.ms[0] = (uint16_t)fm1_ms;
-        trk[5].p[P_MUTE] = 1;
-        break;
-    }
-    case S_HOME_MACROS: case S_HOME_BEING: case S_HOME_ROUTES: {   /* (0.8.5) HOME's lens: MACROS, BEING, ROUTES */
-        uint32_t k;
-        ui.hlv = s != S_HOME_MACROS;
-        ui.hset[s == S_HOME_MACROS ? 0 : 1] = s != S_HOME_BEING;
-        for (k = 0; k < NTRK; k++) trk[k].peak = (int32_t)(1500u + k * 900u);
-        trk[1].p[P_M1SRC] = MS_M1; trk[1].p[P_M1DST] = MD_CUT; trk[1].p[P_M1AMT] = 40;
-        trk[3].p[P_M1SRC + 3] = MS_M1 + 2; trk[3].p[P_M1DST + 3] = MD_E1; trk[3].p[P_M1AMT + 3] = -20;
-        macro_v[0] = 40; macro_v[1] = 90; macro_v[2] = 20; macro_v[3] = 64;
-        if (s == S_HOME_BEING) { ui.hot_col = 2; ui.hot_t = 30; }
-        break;
-    }
     case S_ED_FILTER: go_title("FILTER"); TSEL->p[P_E5] = 90; break;   /* (0.8.5) EDIT's lens: TONE, FILTER (ANALOG) */
     case S_ED_FILTER_BP: eng(2); go_title("FILTER");   /* (ACID FM 0.2: PHASE, was WHEEL) */
         TSEL->p[P_FTYPE] = 2; TSEL->p[P_DIST] = 60; ui.hot_col = 1; ui.hot_t = 30; break;
@@ -1370,25 +1340,28 @@ static void setup(int s)
     }
     case S_UBOOT: ui.uboot = 3; break;
     /* the header's battery at each stock level (raw ADC: under 531, 531.., 561.., 591..) and on USB power */
-    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_home(); break;
-    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_home(); break;
-    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_home(); break;
-    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_home(); break;
-    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_home(); break;
+    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_title("ENV"); break;
+    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_title("ENV"); break;
+    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("ENV"); break;
+    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("ENV"); break;
+    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("ENV"); break;
     case S_MOTION_REC: song.rec = 1u << song.sel; go_page(GR_MOTION); break;    /* recording into the motion */
     case S_MOTION_OFF: song.playing = 0; go_page(GR_MOTION); ui.act = 4; break;  /* stopped, CLEAR picked */
-    case S_MOTION_CARD: {                                          /* #63: HOME, MOTION drives KNOB 1 and 3 (3 just turned) */
-        const engine_t *en = ENGINES[TSEL->eng_req];
-        motion_set_event(TSEL, 2, en->knob[0], TSEL->p[en->knob[0]]);
-        motion_set_event(TSEL, 6, en->knob[2], TSEL->p[en->knob[2]]);
-        go_home(); ui.hot_col = 2; ui.hot_t = 30;
+    case S_MOTION_CARD: {                                          /* #63: EDIT 1 (ACID FM 3a: was HOME), MOTION drives KNOB 1
+                                                                    * and 3 (3 just turned) */
+        const page_t *pg;
+        go_title("EDIT 1");
+        pg = cur_page();
+        motion_set_event(TSEL, 2, pg->id[0], TSEL->p[pg->id[0]]);
+        motion_set_event(TSEL, 6, pg->id[2], TSEL->p[pg->id[2]]);
+        ui.hot_col = 2; ui.hot_t = 30;
         break;
     }
     case S_SONG_HOME:                            /* the song playing: the disc and its row in the header */
         song.playing = 0; project_save(0); project_save(1);
         chain_config.count = 2;
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4};
-        go_page(GR_SONG); chain_prepare(); events_block(32); go_home(); ui.msg_t = 0;
+        go_page(GR_SONG); chain_prepare(); events_block(32); go_title("ENV"); ui.msg_t = 0;   /* (3a: a lens page's header) */
         break;
     /* the FX layer's map: held alone; REPEAT 1/16 + GLITCH + the CRUSH sweep + a mute playing with the macros turned;
      * at 72 BPM: a REPEAT 1/16 waiting for its 1/16 (shown THEME) beside the FILTER sweep playing, and REPEAT 1/8
@@ -1703,12 +1676,10 @@ static void setup(int s)
         memset(vxs.fr, 0xFF, sizeof vxs.fr);
         go_title("EDIT 2");
         break;
-    case S_VX_HEAD_HOME: vx_phon(PH_E, 6000); ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; break;
     case S_VX_HEAD_QUIET: vx_phon(PH_SIL, 0); break;
     case S_VX_KIT: vx_kit_scene(0x03u, 0); dx_ui_lane = 1; dx_ui_seen = last_note; go_title("SOUND"); break;
     case S_VX_KIT_HITS: vx_kit_scene(0xBCu, 0); dx_ui_lane = 4; dx_ui_seen = last_note; go_title("SOUND 2"); break;
     case S_VX_KIT_GHOST: vx_kit_scene(0x22u, 2); dx_ui_lane = 5; dx_ui_seen = last_note; go_title("SOUND 3"); break;
-    case S_VX_KIT_HOME: vx_kit_scene(0x8Bu, 0); ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; break;
     case S_VX_BUG_BD: case S_VX_BUG_SD: case S_VX_BUG_CP: case S_VX_BUG_CH: case S_VX_BUG_OH: case S_VX_BUG_TM:
     case S_VX_BUG_RS: case S_VX_BUG_CB: vx_bug_scene((uint32_t)(s - S_VX_BUG_BD), 0, 1); break;
     case S_VX_BUG_GHOST: vx_bug_scene(1, 2, 1); break;
@@ -1719,7 +1690,6 @@ static void setup(int s)
     case S_V6_ANALOG_SQR: { static const int16_t K[8] = {1, 40, 80, 70, 40, 30, 0, 7}; v6_scene(ENGI_ANALOG, "SQR BASS", "EDIT 2", K, 40, 40, 3); break; }
     case S_V6_ANALOG_RING: { static const int16_t K[8] = {6, 60, 90, -99, 90, 70, 40, -99}; v6_scene(ENGI_ANALOG, "SAW LEAD", "EDIT 1", K, 64, 700, 3); break; }
     case S_V6_ANALOG_QUIET: v6_scene(ENGI_ANALOG, "ACID", "EDIT 1", 0, 0, 4000, 3); break;
-    case S_V6_ANALOG_HOME: v6_scene(ENGI_ANALOG, "SOFT PAD", 0, 0, 57, 300, 3); break;
     case S_V6_ANALOG_FULL: { static const int16_t K[8] = {-99, -99, -99, 30, 70, 100, 110, -99}; v6_scene(ENGI_ANALOG, "ACID", "EDIT 1", K, 45, 300, 3); ui_scope = 0; break; }
     case S_V6_FM6: v6_scene(ENGI_FM6, "TINE EP", "EDIT 1", 0, 60, 300, 4); break;
     case S_V6_FM6_ALG32: { static const int16_t K[8] = {32, 5, -99, -99, -99, -99, -99, -99}; v6_scene(ENGI_FM6, "BELL", "EDIT 2", K, 72, 120, 4); break; }
@@ -1730,39 +1700,33 @@ static void setup(int s)
         break;
     case S_V6_FM6_ENV: v6_scene(ENGI_FM6, "BELL", "OP ENV", 0, 72, 600, 4); fop_op = 0; fop_stg = 1; break;
     case S_V6_FM6_ENV_REL: v6_scene(ENGI_FM6, "PAD", "OP ENV", 0, 0, 4000, 4); fop_op = 2; fop_stg = 3; break;
-    case S_V6_FM6_HOME: v6_scene(ENGI_FM6, "MARIMBA", 0, 0, 67, 200, 4); break;
     case S_V6_FM6_FULL: v6_scene(ENGI_FM6, "TINE EP", "EDIT 1", 0, 60, 300, 4); ui_scope = 0; break;
     case S_V6_NOISE: { static const int16_t K[8] = {1, 40, 80, 90, 64, 100, 30, 0}; v6_scene(ENGI_NOISE_UI, "RAIN", "EDIT 1", K, 60, 300, 6); break; }
     case S_V6_NOISE_LFSR: { static const int16_t K[8] = {2, 64, 90, 40, 64, 32, 0, 40}; v6_scene(ENGI_NOISE_UI, "ARCADE", "EDIT 2", K, 60, 300, 6); break; }
     case S_V6_NOISE_WHITE: { static const int16_t K[8] = {0, 0, 120, 10, 64, 0, 60, 0}; v6_scene(ENGI_NOISE_UI, "WIND", "EDIT 1", K, 48, 900, 6); break; }
-    case S_V6_NOISE_HOME: v6_scene(ENGI_NOISE_UI, "SEA", 0, 0, 48, 300, 6); break;
     case S_V6_NOISE_FULL: { static const int16_t K[8] = {1, 40, 80, 90, 64, 100, 30, 0}; v6_scene(ENGI_NOISE_UI, "RAIN", "EDIT 1", K, 60, 300, 6); ui_scope = 0; break; }
     case S_V6_PHASE: v6_scene(ENGI_PHASE_UI, "BRASS", "EDIT 1", 0, 50, 300, 7); break;
     case S_V6_PHASE_RING: { static const int16_t K[8] = {3, 2, 90, 60, 30, 1, 80, 70}; v6_scene(ENGI_PHASE_UI, "BELL", "EDIT 2", K, 62, 50, 7); break; }
-    case S_V6_PHASE_HOME: v6_scene(ENGI_PHASE_UI, "CZ PIANO", 0, 0, 57, 300, 7); break;
     case S_V6_PHASE_FULL: v6_scene(ENGI_PHASE_UI, "BRASS", "EDIT 1", 0, 50, 300, 7); ui_scope = 0; break;
     case S_V6_LOFI: v6_scene(ENGI_LOFI_UI, "BYTEBEAT", "EDIT 1", 0, 60, 300, 8); break;
     case S_V6_LOFI_FLOAT: v6_scene(ENGI_LOFI_UI, "FLOAT PAD", "EDIT 2", 0, 60, 120, 8); break;
     case S_V6_LOFI_PLS: v6_scene(ENGI_LOFI_UI, "PULSE LD", "EDIT 1", 0, 72, 600, 8); break;
-    case S_V6_LOFI_HOME: v6_scene(ENGI_LOFI_UI, "GB ARP", 0, 0, 72, 300, 8); break;
     case S_V6_LOFI_FULL: v6_scene(ENGI_LOFI_UI, "BYTEBEAT", "EDIT 1", 0, 60, 300, 8); ui_scope = 0; break;
-    case S_VX_TRACT_A_FULL: vx_sing(PH_M, 6, PH_A, 4, 7000, 1, 0); break;   /* (0.9.9) an open vowel, a nasal */
-    case S_VX_TRACT_M_FULL: vx_sing(PH_A, 8, PH_M, 7, 5000, 1, 0); break;
-    case S_VX_TRACT_A_EDIT: vx_sing(PH_M, 6, PH_A, 4, 7000, 0, 0); break;
-    case S_VX_TRACT_M_EDIT: vx_sing(PH_A, 8, PH_M, 7, 5000, 0, 0); break;
-    case S_VX_TRACT_A_HOME: vx_sing(PH_M, 6, PH_A, 4, 7000, 0, 1); break;
-    case S_VX_TRACT_M_HOME: vx_sing(PH_A, 8, PH_M, 7, 5000, 0, 1); break;
+    case S_VX_TRACT_A_FULL: vx_sing(PH_M, 6, PH_A, 4, 7000, 1); break;   /* (0.9.9) an open vowel, a nasal */
+    case S_VX_TRACT_M_FULL: vx_sing(PH_A, 8, PH_M, 7, 5000, 1); break;
+    case S_VX_TRACT_A_EDIT: vx_sing(PH_M, 6, PH_A, 4, 7000, 0); break;
+    case S_VX_TRACT_M_EDIT: vx_sing(PH_A, 8, PH_M, 7, 5000, 0); break;
     /* (0.9.10) LOFI's V1 "DIP": CHIP's morph (4BIT half way, 4B/2 nearly, 1BIT the chip) and the knobs at their ends */
-    case S_V6_LOFI_4BIT: case S_V6_LOFI_FULL_4BIT: case S_V6_LOFI_HOME_4BIT: {
+    case S_V6_LOFI_4BIT: case S_V6_LOFI_FULL_4BIT: {
         static const int16_t K[8] = {0, -99, -99, -99, -99, -99, -99, -99};
-        v6_scene(ENGI_LOFI_UI, "BYTEBEAT", s == S_V6_LOFI_HOME_4BIT ? 0 : "EDIT 1", K, 60, 300, 8);
+        v6_scene(ENGI_LOFI_UI, "BYTEBEAT", "EDIT 1", K, 60, 300, 8);
         if (s == S_V6_LOFI_FULL_4BIT) ui_scope = 0;
         break;
     }
     case S_V6_LOFI_4B2: { static const int16_t K[8] = {1, -99, -99, -99, -99, -99, -99, -99}; v6_scene(ENGI_LOFI_UI, "BYTEBEAT", "EDIT 1", K, 60, 300, 8); break; }
-    case S_V6_LOFI_1BIT: case S_V6_LOFI_FULL_1BIT: case S_V6_LOFI_HOME_1BIT: {
+    case S_V6_LOFI_1BIT: case S_V6_LOFI_FULL_1BIT: {
         static const int16_t K[8] = {3, -99, -99, -99, -99, -99, -99, -99};
-        v6_scene(ENGI_LOFI_UI, "BYTEBEAT", s == S_V6_LOFI_HOME_1BIT ? 0 : "EDIT 1", K, 60, 300, 8);
+        v6_scene(ENGI_LOFI_UI, "BYTEBEAT", "EDIT 1", K, 60, 300, 8);
         if (s == S_V6_LOFI_FULL_1BIT) ui_scope = 0;
         break;
     }
@@ -1843,7 +1807,7 @@ static void setup(int s)
     }
     if (s != S_FUGUE)
         memset(fg_set, 0, sizeof fg_set);
-    if (s != S_PFLASH && s != S_PFLASH_HOME)      /* (0.6.51) the page's big name: its own screen only (the clock stands */
+    if (s != S_PFLASH)                            /* (0.6.51) the page's big name: its own screen only (the clock stands */
         pf_on = 0;                                /* still here: it would never go) */
 }
 static void draw(int s)
@@ -2330,7 +2294,7 @@ int main(int argc, char **argv)
     char path[600];
     uint32_t p, s;
     static const char *const SHOW[] = {"ACID"};    /* (ACID FM 0.3: the one palette) */
-    uint32_t nlow = 0, nhud = 0;
+    uint32_t nlow = 0, nhome = 0;
     snprintf(path, sizeof path, "%s/report.txt", out);
     rep = fopen(path, "w");
     if (!rep) { fprintf(stderr, "cannot write %s\n", path); return 1; }
@@ -2396,14 +2360,14 @@ int main(int argc, char **argv)
             if (p == UI_ACID_INDEX) aud = audf;
             draw((int)s);
             nlow += (uint32_t)lz_low();                 /* (the one skin, AIR's: the knob row on top of the lens pages) */
-            nhud += (uint32_t)hud_home();               /* (.. HOME the beings under every strip) */
+            nhome += lz_fam() == LZ_HOME && !gen_on() && !dlg_on() && !name_on();   /* (ACID FM 3a: HOME, ux_home.c's strips) */
             lint();
             if (p == UI_ACID_INDEX) { audit_scene(S_NAME[s]); aud = 0; }
             for (k = 0; k < sizeof SHOW / sizeof SHOW[0]; k++)
                 if (!strcmp(UI_PALETTES[p].name, SHOW[k])) write_ppm(out, SHOW[k], S_NAME[s]);
         }
-    if (nlow < 250u || nhud < 10u) { fprintf(stderr, "ui_render: the one skin drew %u screens low, %u HUD HOMEs only\n", nlow, nhud); return 1; }
-    fprintf(rep, "the one skin (AIR's): %u screens with the knob row on top, %u HUD HOMEs\n", nlow, nhud);
+    if (nlow < 250u || nhome < 3u) { fprintf(stderr, "ui_render: the one skin drew %u screens low, %u HOMEs only\n", nlow, nhome); return 1; }
+    fprintf(rep, "the one skin (AIR's): %u screens with the knob row on top, %u HOMEs (ux_home.c)\n", nlow, nhome);
     {   /* MENU > LARGE (ui.c large_kind): every screen, linted; as OUTDIR/ppm/LARGE_ACID_<screen>.ppm (ui_render.py:
          * sheet_LARGE_ACID.png); the tall cards' value faces counted (lg_hook) (until ACID FM 0.3 in FLAT and LINE, every
          * palette) */
@@ -2483,12 +2447,11 @@ int main(int argc, char **argv)
         static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_CONFIRM_PROJ,
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
                                    S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
-                                   S_HOME_BEING, S_EDIT_ANALOG, S_ED_FILTER, S_ED_FOCUS, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
+                                   S_HOME_VISUAL, S_EDIT_ANALOG, S_ED_FILTER, S_ED_FOCUS, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
                                    S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_VX_HEAD_S,
-                                   S_VX_KIT_HITS, S_VX_HEAD_HOME, S_VX_KIT_HOME, S_VX_BUG_SD,
+                                   S_VX_KIT_HITS, S_VX_BUG_SD,
                                    S_V6_ANALOG, S_V6_FM6, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_NOISE, S_V6_PHASE,
-                                   S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_ANALOG_HOME, S_V6_FM6_HOME, S_V6_NOISE_HOME,
-                                   S_V6_PHASE_HOME, S_V6_LOFI_HOME, S_V6_ANALOG_FULL, S_V6_FM6_FULL,
+                                   S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_ANALOG_FULL, S_V6_FM6_FULL,
                                    S_V6_NOISE_FULL, S_V6_PHASE_FULL, S_V6_LOFI_FULL, S_V6_LOFI_1BIT, S_V6_LOFI_HP_RES};   /* (0.9.6: the six, EDIT, HOME, the whole panel) */   /* (0.9.4: the creatures against a being) */   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
@@ -2538,7 +2501,8 @@ int main(int argc, char **argv)
         roll_cost();
         {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole (us, texts, LCD px sent), and HOME frame by frame
              * (HUD's HOME, the one skin's: every strip each frame, on the beings) */
-            static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_VX_HEAD_S, S_V6_PHASE, S_VX_KIT_HOME};   /* (ACID FM 0.2: PHASE, was ANIMAL) */
+            static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_VX_HEAD_S, S_V6_PHASE, S_VX_KIT_HITS};   /* (ACID FM 0.2: PHASE, was ANIMAL;
+                                                         * 3a: the kit on EDIT, HOME's BEING gone) */
             uint32_t sk;
             fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");
             for (sk = 0; sk < 1u; sk++) {               /* (ACID FM 0.3: the one skin; until then COLORS HUD AIR) */

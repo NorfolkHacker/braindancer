@@ -73,8 +73,10 @@ static uint32_t ux_isqrt(uint32_t v)
  * centre, the innermost ring the middle. Every pixel is written once. The edges (half-widths of each ring at each
  * |dy|, the old isqrt rows) are a table of UX_GLOW_N x UX_GLOW_ROWS bytes (2 KiB) built when the panel's size changes. */
 #define UX_GLOW_ROWS 105u        /* |dy| 0 .. 104: 0.693 x the strip's 150 rows */
-static uint8_t ux_gtab[UX_GLOW_ROWS * UX_GLOW_N] __attribute__((section(".pool")));   /* hw + 1; 0: the ring is not on this row */
-static int16_t ux_gw __attribute__((section(".pool"))), ux_gh __attribute__((section(".pool")));
+/* (3a task 5) in .bss, not the pool: the pool keeps its 8 KiB headroom (build.py) now that HOME links the glow; zero at
+ * boot, so the first panel builds the table */
+static uint8_t ux_gtab[UX_GLOW_ROWS * UX_GLOW_N];      /* hw + 1; 0: the ring is not on this row */
+static int16_t ux_gw, ux_gh;
 #ifndef UX_HOOK_SPAN
 #define UX_HOOK_SPAN(x, y, n) ((void)0)       /* (the host test counts the spans) */
 #endif

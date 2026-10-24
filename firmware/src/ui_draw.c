@@ -2306,6 +2306,21 @@ static void ui_draw_body(uint32_t counting)
         lz_frame_end();
         return;
     }
+    if (ui.home) {                                      /* (ACID FM 3a) HOME: TRACKS / VISUAL (ux_home.c), its own strips */
+        ux_home_draw();
+        pf_on = 0;                                      /* (the footer names the page at once: no flash over it) */
+        if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {   /* the second message (ui_notices) */
+            str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
+            ui.msg2[0] = 0;
+            ui.msg_t = 60;
+        }
+        if (ui.bpm_t)
+            ui.bpm_t--;
+        if (ui.hot_t)
+            ui.hot_t--;
+        ui.force = 0;
+        return;
+    }
     if (!ui.home && !page_visible(ui.page)) {          /* an OP page of a track that is not DIGITAL (without
                                                          * FELUCCA_FM4: any track): EDIT 1 */
         ui.page = (uint8_t)page_first(FAM_EDIT);

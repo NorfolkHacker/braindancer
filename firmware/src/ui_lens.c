@@ -1,6 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
+/* (ACID FM 3a) HOME is two pages, TRACKS and VISUAL (ux_nav.c): a HOME tap from elsewhere the one last shown, on HOME the
+ * other one; SELECT steps them; GEN 1..3 (JIANT's) by HOME + SELECT, out of it (OCT-, HOME, a section) HOME's last page.
+ * Every other section as below. */
 /* (0.9.2) The navigation, as the approved mock-up (navegacion.html): six rules, the same in every section.
  *   1 SELECT walks the section's pages as one chain (no levels, no zoom), stopping at its first and last page.
  *   2 The section's button: from another section, the page last shown there; already inside, the first page of the
@@ -41,9 +45,9 @@ typedef struct { const char *t, *nm; uint8_t g, lv; } nv_t;   /* PAGES title (HO
 typedef struct { const char *nm, *tab; } ng_t;                /* a group: its name, its tab's when the name is too wide */
 typedef struct { const nv_t *e; const ng_t *g; uint8_t n, ng; } ch_t;
 #define NV(t, nm, g, lv) {t, nm, g, lv}
-static const nv_t CE_HOME[] = {NV(0, "ECO", 0, 0), NV(0, "MACROS", 0, 0), NV(0, "BEING", 1, 1), NV(0, "ROUTES", 1, 1),
-                               NV(0, "GEN 1", 2, 2), NV(0, "GEN 2", 2, 2), NV(0, "GEN 3", 2, 2)};
-static const ng_t CG_HOME[] = {{"ECO", 0}, {"BEING", 0}, {"GEN", 0}};
+static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV(0, "VISUAL", 1, 0),   /* (ACID FM 3a: ux_nav.h UXH_*; was 0.9.2's */
+                               NV(0, "GEN 1", 2, 2), NV(0, "GEN 2", 2, 2), NV(0, "GEN 3", 2, 2)};   /* ECO MACROS BEING ROUTES) */
+static const ng_t CG_HOME[] = {{"TRACKS", 0}, {"VISUAL", 0}, {"GEN", 0}};
 static const nv_t CE_SYN[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("MORPH", 0, 1, 1),
                               NV("RETRIG", 0, 1, 1), NV("ROTOR", 0, 1, 1), NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1),
                               NV("WORDS", 0, 1, 1), NV("FOCUS", 0, 2, 2)};
@@ -132,7 +136,7 @@ static uint32_t nv_page(uint32_t sec, uint32_t e)
     return NPAGES;
 }
 static int nv_ok(uint32_t sec, uint32_t e) { return sec == SEC_HOME ? e < NELEM(CE_HOME) : nv_page(sec, e) < NPAGES; }
-/* the entry shown: HOME's from its state (ui.hlv, ui.hset, GEN's page); the others the one remembered when it is the page
+/* the entry shown: HOME's its page (ux_nav.c) or GEN's; the others the one remembered when it is the page
  * shown, else the page's own (put by code: in the group left, the default page's, then the chain's first), else
  * (PHRASES, CHANCE: out of the chain) the one left */
 static uint32_t nav_cur(void)
@@ -140,7 +144,7 @@ static uint32_t nav_cur(void)
     uint32_t sec = nav_sec(), key = nav_key(sec), e = nav_mem(key), k, pass, s;
     const ch_t *c = &CHAINS[key];
     if (sec == SEC_HOME)
-        return gen_on() ? 4u + gen_page() : (ui.hlv ? 2u : 0u) + (ui.hset[ui.hlv ? 1 : 0] & 1u);
+        return gen_on() ? UXH_GEN0 + gen_page() : ux_home_page();
     s = ((((ui.page * 31u + key) * 131u + e) * 257u + TSEL->eng_req) * 8191u + (uint32_t)(uint16_t)TSEL->p[P_E1]) * 7u +
         sys_load + 1u;
     if (s == ui.nav_sig)
@@ -166,16 +170,17 @@ static uint32_t nav_cur(void)
 static uint32_t nav_lv(void) { return nav_ch(nav_sec())->e[nav_cur()].lv; }   /* the 0.8.5 lens level it is drawn as */
 static uint32_t pd_level(void) { return nav_lv(); }
 static uint32_t save_level(void) { return nav_lv(); }
-static uint32_t home_level(void) { return gen_on() ? 2u : ui.hlv ? 1u : 0u; }
-static uint32_t home_set(void) { return ui.hset[home_level() & 1u] & 1u; }
-static int home_macros(void) { return ui.home && !ui.menu && !gen_on() && home_set(); }   /* MACROS / ROUTES: M1..M4 */
-/* the entries shown now (on this track, at this LOAD), in order: their indices in v; how many */
+static uint32_t home_level(void) { return gen_on() ? 2u : 0u; }   /* (the 0.8.5 lens level: GEN 2, HOME's pages 0) */
+static uint32_t home_set(void) { return !gen_on() && ux_home_page() == UXH_VISUAL; }
+static int home_macros(void) { return ui.home && !ui.menu && home_set(); }   /* VISUAL: M1..M4 (spec 4.3) */
+/* the entries shown now (on this track, at this LOAD), in order: their indices in v; how many. HOME's: TRACKS VISUAL, in
+ * GEN its pages (SELECT never crosses between them) */
 static uint32_t nav_list(uint32_t sec, uint8_t *v)
 {
     const ch_t *c = nav_ch(sec);
     uint32_t k, n = 0;
     for (k = 0; k < c->n; k++)
-        if (nv_ok(sec, k))
+        if (nv_ok(sec, k) && (sec != SEC_HOME || (k >= UXH_GEN0) == (gen_on() != 0)))
             v[n++] = (uint8_t)k;
     return n;
 }
@@ -202,9 +207,10 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
     if (k >= c->n)
         return;
     e = k;
-    nav_mem_put(key, e);
+    if (sec != SEC_HOME || e < UXH_N)                   /* (HOME's memory: TRACKS / VISUAL only, never GEN) */
+        nav_mem_put(key, e);
     if (sec == SEC_HOME) {
-        if (e >= 4u) {                                  /* GEN: the generator's screen, HOME's last group */
+        if (e >= UXH_GEN0) {                            /* GEN: the generator's screen, HOME + SELECT */
             if (!gen_on()) {
                 if (chain_busy()) {
                     ui_message("STOP TO EDIT");
@@ -213,12 +219,9 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
                 confirm_open(CF_DICE_ALL, song.sel);
                 gen_open();
             }
-            gen_page_put(e - 4u);
-        } else {
-            if (gen_on())
-                ui.confirm = 0;
-            ui.hlv = (uint8_t)(e >> 1);
-            ui.hset[e >> 1] = (uint8_t)(e & 1u);
+            gen_page_put(e - UXH_GEN0);
+        } else if (gen_on()) {
+            ui.confirm = 0;
         }
         if (!ui.home)
             go_home();
@@ -236,12 +239,19 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
         ui.act = outside && (PAGES[i].graph == GR_USER || c->e[e].lv == SV_PROJ) ? 4u : 0u;
     page_flash();
 }
-/* rule 2: a section's button */
+/* rule 2: a section's button. HOME (ACID FM 3a): from elsewhere or GEN the page last shown on HOME, on it the other one */
 static void nav_button(uint32_t sec)
 {
     const ch_t *c = nav_ch(sec);
     uint32_t e, g, j, k;
-    if (nav_sec() != sec || (sec != SEC_HOME && ui.home)) {
+    if (sec == SEC_HOME) {
+        if (ui.home && !gen_on())
+            ux_home_flip();
+        else
+            nav_go(SEC_HOME, ux_home_page(), 1);
+        return;
+    }
+    if (nav_sec() != sec || ui.home) {
         nav_go(sec, nav_mem(nav_key(sec)), 1);
         return;
     }

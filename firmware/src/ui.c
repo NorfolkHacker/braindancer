@@ -260,7 +260,6 @@ static struct {
     uint8_t nmem[13];            /* (0.9.2) each section's page last shown, its chain's entry ^ its default (ui_lens.c
                                   * nav_mem: EDIT one per kind of track) */
     uint8_t fxmod;               /* (0.8.5) FX: the effect last shown (BUSES' tile lit) */
-    uint8_t hlv, hset[2];        /* .. HOME: ECO (0) or BEING (1), each one's page (HOME / MACROS, HOME / ROUTES) */
     uint8_t focus;               /* .. EDIT > FOCUS: the parameter (E1..E8: 0..7) */
     uint8_t stage;               /* .. ENV > STAGE: the stage (ATK DEC SUS REL: 0..3) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
@@ -645,7 +644,9 @@ static int fx_mod_ok(uint32_t m) { return page_visible(fx_page(FX_MHEAD[m % FX_N
 
 /* (0.8.5) a lens page shown (every section's, the menu's, a layer's map): the mock-up's layout, its tabs and breadcrumb */
 static int name_on(void);                               /* (ui_name.c: NAME keeps its own layout) */
+#include "ux_nav.h"                                     /* (ACID FM 3a) HOME: TRACKS / VISUAL */
 #include "ui_lens.c"
+#include "ux_nav.c"
 static uint32_t fx_level(void)
 {
     if (fx_trk_k(ui.page) >= 0)
@@ -676,7 +677,7 @@ static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
  * their header on BG, as every other page's) */
 static int hud_home(void)
 {
-    return !ui.uboot && !seq_counting() && lz_low() && lz_fam() == LZ_HOME && home_level() == 0u;   /* (0.9.7 AIR too) */
+    return 0;                                           /* (ACID FM 3a: HOME is ux_home.c's; HUD's code goes in 3a task 6) */
 }
 /* the tab lit: the section's group shown, the menu's tab, a layer's view */
 static uint32_t menu_tab(void);

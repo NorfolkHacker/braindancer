@@ -22,7 +22,8 @@ static void ux_header(uint32_t trk, const char *sound, const char *right)
     cv_begin(240, UX_H_LINE + UX_H_HEAD, UX_BG);
     ux_topline();
     GFX_HOOK_ALIGN(0, UX_H_LINE, 0, UX_H_LINE + UX_H_HEAD, AL_V, "header left");
-    x = cv_text_on(x, ty, &UF_HDR, pre, UX_MID, UX_BG);
+    if (trk)                                            /* (0: no track, the name alone: HOME's ACID FM) */
+        x = cv_text_on(x, ty, &UF_HDR, pre, UX_MID, UX_BG);
     if (sound && *sound)
         ux_text_grad(x, ty, &UF_HDR, sound, UX_BG);
     if (right && *right) {
