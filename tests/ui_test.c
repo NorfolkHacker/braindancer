@@ -10854,8 +10854,12 @@ static int test_ux_nav_sections(void)
     uint32_t t, sec;
     for (t = 0; t < NTRK; t++)
         for (sec = SEC_EDIT; sec < SEC_N; sec++) {
+            const char *w = UXN_WANT[t * (SEC_N - 1u) + sec - SEC_EDIT];
             uxn_walk(t, sec, b, sizeof b);
-            printf("WANT T%u %s: \"%s\",\n", (unsigned)t + 1u, SEC_NAME[sec], b);
+            if (!str_eq(b, w)) {
+                printf("  T%u %s: \"%s\"\n    wanted \"%s\"\n", (unsigned)t + 1u, SEC_NAME[sec], b, w);
+                ok = 0;
+            }
         }
     bad += check("ACID FM 3a: every section's button but HOME lands where it did (taps, SELECT, memory, held + SELECT)", ok);
     ui_power_on();
