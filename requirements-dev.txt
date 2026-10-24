@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 NorfolkHacker
+# Build (tools/build.py: fonts, icons, tables; the versions the CI uses), the installer CLI, the ABOUT QR tool
+Pillow==12.3.0
+numpy==2.3.5
+fonttools==4.61.1
+mido==1.3.3
+python-rtmidi==1.5.8
+segno==1.6.1
