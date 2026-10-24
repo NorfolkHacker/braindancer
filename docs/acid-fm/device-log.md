@@ -25,3 +25,14 @@
 - Installed build/acid-fm-vc12.fwsc (T 12, NVOICE 8; dev identity FM-1_900): `done: the FM-1 runs FM-1_900`
 - CPU TEST after a power cycle: PEAK 100 %, LATE 113, no clicks heard. T stays 12; 14 and 16 not run
   (docs/acid-fm/voices.md)
+
+## 2026-10-24 — piece 2, ACID FM 0.2 (Task 6)
+
+- Release built on a clean HEAD d1f235b97dc867dd5bf0aaf2f416d1a783057f4d: acid-fm-0.2.fwsc, 610122 B, identity FM-1_902,
+  sha256 e401c493a5ce47f63e21be726f99fbcb48e58095e5140dcde9af1f8fb46447f0
+- Installed over the vc12 test build: `done: the FM-1 runs FM-1_902`; console `status`: acid-fm v0.2, CORES 2
+- Right after the install's restart the console showed audio_late 143 (all within the first 16 s, none after); after a
+  power cycle: audio_late 0, audio_max_us 863 over 2 minutes idle — the lates belong to the post-install restart only
+- The user confirmed on the device: splash v0.2, T3 PHASE at power-on, no ANIMAL / WHEEL in PRESETS, 4 projects in
+  SAVE › LIBRARY › PROJECTS, save / load
+- Proven commit: d1f235b97dc867dd5bf0aaf2f416d1a783057f4d
