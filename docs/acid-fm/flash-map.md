@@ -61,8 +61,10 @@ area or update records on its front page; its docs/ folder was not read.
 ## What writes where: the update loader
 
 - `firmware/loader/loader.c` limits the RAM driver to `FL_RANGE_OK = [0x4000,0x97000) + [0xE0000,0xFC000)`.
-- `ldr_core.c` after a successful update scans every 4K boundary - 256 (`0x93F00`, `0x94F00`, ... up to `0xFBF00`) between
-  `LDR_REC_LO 0x93000` and `LDR_REC_HI 0xFC000`, and erases the whole sector below any 80-byte record that looks like an
+- `ldr_core.c` after a successful update scans, for `s` from `LDR_REC_HI 0xFC000` down to (excluding) `LDR_REC_LO 0x93000`
+  in 0x1000 steps, the 80 bytes at `s - 0x100`: the last 256 bytes of the sector below `s`, so the slot offset inside
+  each sector is 0xF00. That is 105 candidate slots (`0x93F00`, `0x94F00`, ... `0xFBF00`), 73 of them skipped
+  (sectors inside the store window below), 32 read. It erases the whole sector below any 80-byte record that looks like an
   update record (bytes 6..7 = `0x5441`, first CRC16 matches bytes 2..79). It skips only `[LDR_DATA_LO 0x97000,
   LDR_DATA_HI 0xE0000)`, "Felucca's store".
 - Consequences: gap 2 and the sample area are inside the skipped window, so the loader never erases them. Gap 1
@@ -77,8 +79,9 @@ area or update records on its front page; its docs/ folder was not read.
 
 Evidence: erased (`0xFF`) in all 4 sectors of the backup. No address constant, write or read in `firmware/`, `web/` or
 `tools/` other than the loader/record-scan above and the `VM` descriptor (start of the SDK `VM` area, not read by us).
-The stock V15 left it empty in the backup (taken after V15 had been replaced by JIANT; if V15 ever wrote it, JIANT's
-install did not erase it, so most likely V15 never did before the backup).
+The stock V15 left it empty in the backup. That is weak evidence: it is one lightly used device, and the backup was
+taken after V15 had been replaced by JIANT. JIANT's install does not erase this range, so V15 probably never wrote it
+on this unit, but a heavily used V15 might.
 
 Why not "free": the shipped update loader can erase it (record scan above, window starts at 0x97000, not 0x93000), and
 the SPL's own record scan covers it. That is code we ship touching it, so the strict criterion fails today. Also it is
@@ -90,7 +93,7 @@ magic: probability about 2^-17 per sector for random data, but a cheap guard). T
 the rest of `VM`. Official V15, if the user goes back to stock, may use `VM` (it is the SDK config store); in the
 backup it did not use this part.
 
-## Gap 2: 0xDA000..0xDBFFF (8 KiB) - verdict: free for ACID FM
+## Gap 2: 0xDA000..0xDBFFF (8 KiB) - verdict: free, with the SPL-record guard every sample sector needs
 
 Evidence: erased in both sectors of the backup. `storage.c` documents it free ("0xDA000..0xDBFFF free"), the only
 tree references are that comment and the `_Static_assert` family that keeps the song objects below the sample area. It is
@@ -99,9 +102,18 @@ inside `[LDR_DATA_LO, LDR_DATA_HI)` so the update loader skips it and `FL_RANGE_
 neighbouring object spills over: `st_sector()` computes its addresses from object numbers and none lands here
 (`OBJ_SONGIDX` 0xD8000/0xD9000, `OBJ_UPRESET0` from 0xDC000).
 Stock V15: lies in the SDK `VM` area, like the 0x97000..0xE7FFF Felucca store that JIANT already overwrites; the backup
-shows V15 did not use it. If a user goes back to stock, V15 would find sample bytes where it expects erased VM
+shows no sign of V15 using it on this lightly used unit (not proof for others). If a user goes back to stock, V15 would find sample bytes where it expects erased VM
 sectors; the same is already true for every JIANT project, so this adds no new class of harm, and it does not matter for
 what we run.
+
+SPL caveat: the loader's skip window protects against the loader only. The SPL's own power-on scan for an update
+record (the same 80-byte record at every 4K-256 slot, see "The update-record guard") is not shown to ignore
+0x97000..0xE0000; that Felucca's store lives there and works is circumstantial. Gap 2 has two slots, 0xDAF00 and
+0xDBF00. It is judged free only with that guard.
+
+JIANT/Felucca: JIANT (and Felucca) use 0xDA000..0xDBFFF as free by comment only; nothing of theirs writes it, so a
+device that goes back to JIANT loses nothing there, but JIANT would not protect samples stored there either (see
+"JIANT and Felucca" below).
 
 Caveat for piece 4: it is a separate 8 KiB extent (the song index separates it from 0xB8000..0xD7FFF), not part of the
 128 KiB contiguous run. The controller must show it to the user before piece 4 uses it (spec 6.1).
@@ -110,7 +122,7 @@ Caveat for piece 4: it is a separate 8 KiB extent (the song index separates it f
 
 Per the backup, 12 of 20 sectors are in use, by data nothing we ship reads:
 
-- **0xE8000** (1 sector): `55 AA AA 55 91 6A 20 00 ...`, 172 non-`FF` bytes at the start, the rest `FF`. A header with magic
+- **0xE8000** (1 sector): `55 AA AA 55 91 6A 20 00 ...`, 150 non-`FF` bytes, all within the first 173 bytes (offsets 0..172), the rest `FF`. A header with magic
   `0x55AAAA55` followed by a short record; looks like a JieLi VM/system-config header (last sector of `VM`). Its
   `+0xF00` slot (0xE8F00) is the stock firmware's update-record location, as `ldr_core.c` notes ("the stock firmware's:
   0xE8F00"); it is erased now. The loader erases this sector if a record appears there. Owner: official V15 / SDK VM.
@@ -143,8 +155,40 @@ Verdicts per part:
 If the user accepts losing the stock firmware's factory tones (restorable from the backup via the unbrick tool), the
 0xEA000..0xF9FFF run becomes 80 KiB contiguous; that is the user's decision, not a fact about the flash.
 
+## The update-record guard (applies to every sample sector)
+
+The SPL looks for an update record at power-on in slots at `sector + 0xF00` (4K - 256). `fm1pkg_make.py:159` and
+`ldr_core.c` both test the same 80-byte record `r` at that slot; it is taken for a record when all of:
+- `r[0] | r[1] != 0` (the CRC16, little endian, is nonzero),
+- `r[6] == 0x41 and r[7] == 0x54` (little-endian 16-bit `0x5441`, "AT"),
+- `crc16(r[2:80]) == LE16(r[0:2])` (CRC-CCITT, poly 0x1021, init 0, MSB first, as `fm1pkg_make.crc16` / `ota_crc16(p, 78, 0)`).
+
+For random data the chance is about 2^-24 for the magic times 2^-16 for the CRC, per sector, negligible, but the
+SPL then runs the loader on a sample. This applies to every sector of 0xB8000..0xD7FFF (32 slots) and gap 2 (2 slots).
+Requirement for piece 4, plainly: the sample writer must ensure no sample sector's `+0xF00` slot can be taken for an
+update record. Either reject and alter any 256-byte tail block that matches the test above (flip a bit of the sample
+data, which is harmless for audio; test on the data about to be written), or reserve the slot (do not store sample
+data in the last 256 bytes of each sector). Which is better is not decided by evidence here; testing the slot is the
+cheaper one. Whether the SPL ignores 0x97000..0xE0000 is unknown and should not be relied on.
+
+## JIANT and Felucca
+
+JIANT 0.9.x and Felucca store songs 5..8 at 0xB8000..0xD7FFF (`storage.c` flash-map comment, "songs 2..4 ... at
+0xA0000..0xB7FFF", the other four in the sectors above) and ACID FM now reserves that range as the sample area.
+- A device that has samples from ACID FM and goes back to JIANT: JIANT's songs 5..8 read those sectors as song objects
+  (commit-record magic and CRCs fail, so they read as empty); the first time JIANT saves song 5..8 it erases and
+  overwrites the sample sectors, so the breaks there are lost. Gap 2 is not used by JIANT, so samples stored only there
+  survive a JIANT visit.
+- An ACID FM installed over a JIANT that had songs 5..8: those songs' sectors are the sample area and contain valid
+  JIANT song objects (`FELU` commit records). Piece 4's sample directory must treat foreign data there as empty/invalid
+  (validate its own magic and CRC, never trust or crash on anything else), and the user should be told songs 5..8 are
+  gone/ignored. The installer does not erase the range (the loader writes only the app area).
+- The backup here had 0/32 sectors used in this range (JIANT songs not saved), so this is the code's behaviour, not
+  something seen on the device.
+
 ## The sample area
 
 Guaranteed: **128 KiB**, 0xB8000..0xD7FFF (32 sectors, contiguous, `FL_SMP_LO..HI`).
 Judged free in addition: **8 KiB**, gap 2 at 0xDA000..0xDBFFF (separate extent). Gap 1 (16 KiB) and the gap-3 sectors
-are not added. Total: 136 KiB, of which 128 KiB contiguous.
+are not added. Total: 136 KiB, of which 128 KiB contiguous. Both extents are subject to the update-record guard above;
+and 0xB8000..0xD7FFF is JIANT's song 5..8 store, so foreign data in it must read as empty.
