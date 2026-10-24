@@ -4,7 +4,7 @@
 /* (0.8.5) SAVE's lens (ui.c save_*): the panels of its three levels, drawn as the approved HTML mock-up (SAVE, the
  * proposal "LENTE"), in the lens's panel (240 x 140 at y 84; the mock-up's coordinates less 84). Included by
  * ui_graph.c.
- *   LIBRARY  PROJECT: the eight projects as tiles (4 x 2, 56 x 66): the number, the name (its section A's), its four
+ *   LIBRARY  PROJECT: the four projects as tiles (4 x 1, 56 x 66): the number, the name (its section A's), its four
  *            sections as chips A..D (stored: the section's colour; empty: dark), the project shown TINT with a THEME
  *            frame, its section picked framed TEXT. TOOLS: the six tools as rows (the one picked TINT).
  *   PROJECT  the project's four sections large (stored: their colour, the one picked full with a TEXT frame, the

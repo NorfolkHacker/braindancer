@@ -612,6 +612,10 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.2", items: [
+    ["0.2: ANIMAL y WHEEL se retiran: un sonido guardado con ellos se carga como ANALOG, y T3 al encender es PHASE (los números de program change se corren).", "0.2: ANIMAL and WHEEL are retired: a stored sound that used them loads as ANALOG, and T3 at power-on is PHASE (program-change numbers shift)."],
+    ["4 canciones; el resto de la flash queda reservado para los breakbeats, que llegan en una versión posterior.", "4 songs; the rest of the flash is kept for breakbeats, coming in a later version."],
+    ["El presupuesto de voces, medido en el FM-1: 12 a la vez con los dos núcleos, 8 por pista.", "The voice budget, measured on the FM-1: 12 at once on two cores, 8 per track."]]},
   {v: "0.1", items: [
     ["0.1: JIANT FM 0.9.18 con el nombre ACID FM; compilación, sitio, instalación y vuelta atrás probados. Lo que sigue de esta lista es la historia de JIANT.", "0.1: JIANT FM 0.9.18 renamed ACID FM; build, site, install and rollback proven. What follows in this list is JIANT's history."]]},
   {v: "0.9.18", items: [

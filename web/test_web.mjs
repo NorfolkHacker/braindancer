@@ -1647,7 +1647,7 @@ const PROFILES = {
   v16: { identity: "FM-1_016", name: "FM-1", after: "FM-1_015" },
   jiant: { identity: "FM-1_900", name: "JIANT", info: infoOf("JIANT v0.9.12", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (0.9.12) USB name "JIANT" */
   jiantFm: { identity: "FM-1_900", name: "JIANT FM", info: infoOf("JIANT v0.9.11", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* 0.7.0..0.9.11 */
-  acidFm: { identity: "FM-1_900", name: "ACID FM", info: infoOf("ACID FM v0.1", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (ACID FM 0.1) */
+  acidFm: { identity: "FM-1_900", name: "ACID FM", info: infoOf("ACID FM v0.2", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (ACID FM 0.2) */
   felucca: { identity: "FM-1_961", name: "Felucca", info: infoOf("FELUCCA v1.6.1", 4), objs: FELUCCA_OBJS, after: "FM-1_015" },
   felucca10: { identity: "FM-1_910", name: "Felucca", info: infoOf("FELUCCA v1.0", 4, { backup: false }), after: "FM-1_015" },
   skiff: { identity: "FM-1_732", name: "Skiff", info: infoOf("FELUCCA v1.3.2", 6), objs: SKIFF_OBJS, after: "FM-1_015" },
@@ -1678,7 +1678,7 @@ async function installerFlows() {
   x = await run("jiantFm");
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.11", "installer: Install over JIANT 0.9.11 (USB name 'JIANT FM'): written");
   x = await run("acidFm");
-  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "ACID FM v0.1", "installer: Install over ACID FM (USB name 'ACID FM'): written");
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "ACID FM v0.2", "installer: Install over ACID FM (USB name 'ACID FM'): written");
   x = await run("jiant", { name: "Felucca" });
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant", "installer: JIANT under the name Windows cached ('Felucca'): known by INFO, written");
   for (const name of ["2- JIANT", "JIANT 1", "JIANT MIDI 1"]) {

@@ -1,0 +1,19 @@
+ACID FM piece 2 (trim) — deferred items, each tagged with the piece that should pick it up.
+Read this when writing the plan for that piece.
+
+[piece 4] The sample writer must guard every sample sector's +0xF00 slot against looking like an update record
+          (docs/acid-fm/flash-map.md, "The update-record guard"); stay inside the loader's skip window
+          [0x97000,0xE0000); treat foreign data (a JIANT's songs 5..8) in the sample area as empty, never crash;
+          FL_STORE_OK / FL_RANGE_OK still span the sample area, so carve it out with the writer; ask the user
+          before using the 0xDA000..0xDBFFF gap.
+[piece 4] NSONG / NSONG_INDEX are defined under #ifndef in both song_chain.c and storage.c with nothing tying them:
+          give them one home or a static assert.
+[piece 4] DRUM-X and BREAK get their own voices outside the shared budget (spec §5); re-run the CPU TEST on the
+          device after BREAK lands (docs/acid-fm/voices.md: T is already at the CPU limit in the worst case).
+[piece 5] Re-run the CPU TEST on the device after TAPE.
+[piece 3] tools/landing_anim/capture.c, tools/gen_cheatsheets.py, tools/gen_readme_hero.py and tools/video/* still
+          list ANIMAL / WHEEL.
+[any]     regress reports 45 presets with no golden hash (pre-existing).
+[any]     params.c P_WRDEP / P_WDUST are dead slots kept for the stored layout.
+[any]     tools/build.py accepts a non-ASCII digit via isdigit() and then raises ValueError (use isascii()).
+[any]     docs/acid-fm/flash-map.md has three unwrapped long lines.

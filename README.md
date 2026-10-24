@@ -8,13 +8,18 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/acid-fm/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/acid-fm/manual/)**
 
-## Status: 0.1
+## Status: 0.2
 
-0.1 is JIANT FM 0.9.18 under a new name: the pipeline (build, tests, site, install, rollback) proven end to end.
+0.2 is the trim, on top of 0.1 (JIANT FM 0.9.18 under a new name, the pipeline proven end to end):
+
+- ANIMAL and WHEEL are retired: stored sounds that used them load as ANALOG, and T3 at power-on is PHASE.
+- 4 songs; 128 KiB of flash reserved for breaks, plus an 8 KiB gap: a 136 KiB sample area for breakbeats (coming later).
+- The voice budget is measured on the FM-1: 12 voices at once on two cores, 8 per track.
+
 The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-acid-fm-design.md`):
 
 1. Pipeline (0.1)
-2. Trim: engines for IDM, the voice ceiling measured, room made for samples
+2. Trim (0.2): engines for IDM, the voice ceiling measured, room made for samples
 3. The ACID screen theme
 4. BREAK: load breakbeats from the web page, chop and rearrange them
 5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
