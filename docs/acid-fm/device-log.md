@@ -1,0 +1,19 @@
+# Device log
+
+## 2026-10-24 — piece 1
+
+- Backup: ~/fm1-backups/2026-10-24-jiant/fm1-recovery-20261024-130125/full-flash-before.bin (MvaveFM1Unbricker
+  `backup`), sha256 8531fc3aedf14ef1bddb4cca34a46a6d168d1dfe061d73a6a644e255fb9c5349, both reads identical; flash ID
+  0x856014; the FM-1 entered UBOOT1.00 with `fm1_unbrick.py softkey --port "JIANT FM"`
+- Before: identity FM-1_909 (JIANT 0.9.9-beta4a), port "JIANT FM"
+- Release rebuilt on a clean HEAD dcb092c2a7a90f3a8f36bf14a60d62c40d79535a: acid-fm-0.1.fwsc, 610122 B, identity
+  FM-1_901, sha256 0f5a56111a62f264123a8581c0b10b8cfc2093d18afe3b96b0fa2e37b957157d
+- Installed acid-fm-0.1.fwsc with tools/fm1_install.py: `done: the FM-1 runs FM-1_901`; port "ACID FM",
+  USB iManufacturer "NorfolkHacker", iProduct "ACID FM". The user confirmed on the device: splash, ABOUT
+  (MENU > SYSTEM > ABOUT), sound, keys and knobs, save / load
+- Rolled back to JIANT 813869db36ca5f08955c97682249498bf7a41c4c (upstream web/STABLE, 0.9.9-beta4a, built locally):
+  `done: the FM-1 runs FM-1_909`, port "JIANT FM"
+- Re-installed acid-fm-0.1.fwsc: `done: the FM-1 runs FM-1_901`, port "ACID FM"
+- Proven commit: dcb092c2a7a90f3a8f36bf14a60d62c40d79535a
+- Site / STABLE builds are dev builds (identity FM-1_900, felucca-v0.1-<sha>.fwsc) from the same sources; the
+  device-proven release is FM-1_901.
