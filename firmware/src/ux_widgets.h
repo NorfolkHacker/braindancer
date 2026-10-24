@@ -38,15 +38,17 @@ static void ux_knobs(const ux_knob_t k[4], int32_t hot);
 static void ux_knob_touch(uint32_t k);                                          /* knob k (0..3) just moved: stamp the time */
 static int32_t ux_knob_hot(void);                                               /* the knob touched less than UX_HOT_MS ago, or -1 */
 #define UX_HOT_MS 600u
-/* The load rules (spec 5.3; 3a task 7), one pure rule: HOME VISUAL's panel drawn at most every UX_VIS_MS, every
- * UX_VIS_SLOW_MS while load_tight (voice.c: the audio over its budget) or under MENU's LOAD LITE, UX_VIS_ECO_MS under LOAD
- * ECO (sys_load 1 / 2); frozen (nothing drawn, the last picture kept) while the overload guard sheds (load_diag.shed rose since
- * the last frame) or the governor's gov_lite; the glow, on every page, level 0 while load_tight. now / last: ms */
-#define UX_VIS_MS 66u
-#define UX_VIS_SLOW_MS 100u
-#define UX_VIS_ECO_MS 133u
+/* The load rules (spec 5.3; 3a task 7, fix 1), one pure rule: HOME VISUAL's panel drawn at most every UX_VIS_MS, every
+ * UX_VIS_SLOW_MS while load_tight (voice.c: the audio over its budget) or under MENU's LOAD LITE / ECO (sys_load 1 / 2);
+ * frozen (nothing drawn, the last picture kept) for UX_SHED_HOLD_MS after the overload guard last shed (load_diag.shed rose;
+ * since_shed: ms since then, UX_NO_SHED none seen) and while the governor's gov_lite is on; the glow, on every page, level 0
+ * while load_tight. now / last: ms */
+#define UX_VIS_MS 100u
+#define UX_VIS_SLOW_MS 200u
+#define UX_SHED_HOLD_MS 400u
+#define UX_NO_SHED 0xFFFFFFFFu
 typedef struct { uint8_t draw, glow; } ux_pace_t;
-static ux_pace_t ux_pace(uint32_t now, uint32_t last, uint32_t tight, uint32_t shed_rose, uint32_t gov_lite, uint32_t sys_load,
+static ux_pace_t ux_pace(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite, uint32_t sys_load,
                          uint32_t glow);
 static uint32_t ux_glow_eff(uint32_t glow_level);                               /* the glow as the load allows (ux_pace) */
 static void ux_panel_begin(uint32_t glow_level);                                /* canvas 240x150 for LCD y 56: BG + glow (ux_glow_eff) */

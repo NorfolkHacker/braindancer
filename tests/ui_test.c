@@ -102,10 +102,12 @@ static void lcd_wake_now(void) { host_pw_log(3u); }
 static int16_t scope_buf[SCOPE_N];
 static uint32_t scope_w;
 static uint32_t host_blit_rows;                    /* rows blitted (what a frame draws) */
+static uint32_t host_blit_px;                      /* (ACID FM 3a) pixels blitted (what a frame sends the LCD) */
 static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *p)
 {
     uint32_t i, j;
     host_blit_rows += h;
+    host_blit_px += w * h;
     for (j = 0; j < h && y + j < 240u; j++)
         for (i = 0; i < w && x + i < 240u; i++) host_screen[(y + j) * 240u + x + i] = p[j * w + i];
 }
@@ -11056,8 +11058,17 @@ static int test_ux_tracks(void)
 
 /* HOME VISUAL (ACID FM 3a task 7, ux_home.c; spec 4.3, 5.3): rings of the blend round the centre, their colours turning with
  * the bar (stopped: a slow drift), their brightness the level; the song's name and SECTION . BAR over them; KNOB 1..4 M1..M4,
- * a turn in the status line. The load rules: the panel redrawn at most every 66 ms, every 100 ms while load_tight (and under
- * MENU's LOAD LITE; LOAD ECO 133 ms), frozen while the overload guard sheds or gov_lite; a page entered is drawn at once */
+ * a turn in the status line. The load rules (fix 1): the panel redrawn at most every 100 ms, every 200 ms while load_tight or
+ * under MENU's LOAD LITE / ECO, frozen 400 ms after the overload guard's last shed and while gov_lite; a page entered is drawn
+ * at once; the rings' colours step at most every 200 ms */
+static uint32_t vis_gap(void)                       /* ms between the next two VISUAL panels drawn (0: none in 1.6 s) */
+{
+    uint32_t n = ux_vis_draws, t, i;
+    for (i = 0; i < 100u && ux_vis_draws == n; i++) frame();
+    t = uxv.ms; n = ux_vis_draws;
+    for (i = 0; i < 100u && ux_vis_draws == n; i++) frame();
+    return ux_vis_draws == n ? 0u : uxv.ms - t;
+}
 static int test_ux_visual(void)
 {
     int bad = 0, ok;
@@ -11069,42 +11080,32 @@ static int test_ux_visual(void)
     ui_power_on(); frame();
     press(B_HOME); frame();
     ok = ux_home_at(UXH_VISUAL);
-    n = ux_vis_draws;
-    fm1_ms += 10u; frame();                                         /* (26 ms after the last) */
-    ok &= ux_vis_draws == n;
-    fm1_ms += 40u; frame();                                         /* 82 ms: drawn */
-    ok &= ux_vis_draws == n + 1u;
-    n = ux_vis_draws;
-    for (p0 = 0; p0 < 4u; p0++) frame();                            /* 64 ms: not yet */
-    ok &= ux_vis_draws == n;
-    frame();                                                        /* 80 ms */
-    ok &= ux_vis_draws == n + 1u;
-    bad += check("3a VISUAL: the panel redrawn at most every 66 ms", ok);
+    p0 = vis_gap(); p1 = vis_gap();
+    ok &= p0 >= 100u && p0 < 116u && p1 >= 100u && p1 < 116u;     /* (frames 16 ms apart: the first at or past 100 ms) */
+    bad += check("3a VISUAL: the panel redrawn at most every 100 ms", ok);
     load_tight = 1;
-    n = ux_vis_draws; frame();                                      /* (the last draw 16 ms ago) */
-    frames(64);
-    ok = ux_vis_draws == n;                                         /* 80 ms: not yet while tight */
-    frames(32);
-    ok &= ux_vis_draws == n + 1u;                                   /* 112 ms */
+    p0 = vis_gap(); p1 = vis_gap();
+    ok = p1 >= 200u && p1 < 216u;
     load_tight = 0;
-    ui_load = LOAD_LITE; n = ux_vis_draws; frame(); frames(64);       /* (MENU > LOAD: ui_input puts it in sys_load) */
-    ok &= ux_vis_draws == n;
-    frames(32);
-    ok &= ux_vis_draws == n + 1u;
-    ui_load = LOAD_ECO; n = ux_vis_draws; frame(); frames(96);
-    ok &= ux_vis_draws == n;
-    frames(48);
-    ok &= ux_vis_draws == n + 1u;
+    ui_load = LOAD_LITE; p0 = vis_gap(); p1 = vis_gap();           /* (MENU > LOAD: ui_input puts it in sys_load) */
+    ok &= p1 >= 200u && p1 < 216u;
+    ui_load = LOAD_ECO; p0 = vis_gap(); p1 = vis_gap();
+    ok &= p1 >= 200u && p1 < 216u;
     ui_load = LOAD_FULL; frame();
-    bad += check("3a VISUAL: every 100 ms while load_tight or MENU LOAD LITE, 133 ms under LOAD ECO", ok);
-    frames(200); fm1_ms += 100u;                                   /* (the next frame due) */
-    load_diag.shed++;                                               /* the guard shed a voice: frozen that frame */
-    n = ux_vis_draws; frame();
+    p0 = vis_gap(); p1 = vis_gap();
+    ok &= p1 >= 100u && p1 < 116u;
+    bad += check("3a VISUAL: every 200 ms while load_tight or MENU LOAD LITE / ECO", ok);
+    frames(300);
+    load_diag.shed++; frame();                                      /* the guard shed a voice: frozen 400 ms */
+    p0 = fm1_ms; n = ux_vis_draws;
+    frames(384);
     ok = ux_vis_draws == n;
-    load_diag.shed += 3u; frame();
+    load_diag.shed++; frame();                                      /* again: 400 ms from this one */
+    p0 = fm1_ms;
+    frames(384);
     ok &= ux_vis_draws == n;
-    frame();                                                        /* no more shedding: drawn again */
-    ok &= ux_vis_draws == n + 1u;
+    while (ux_vis_draws == n && fm1_ms - p0 < 1000u) frame();
+    ok &= fm1_ms - p0 >= 400u && fm1_ms - p0 < 416u;                /* drawn again 400 ms after the last shed */
     gov_lite = LOAD_LITE; n = ux_vis_draws; frames(800);            /* the governor's LOAD LITE: frozen all along */
     ok &= ux_vis_draws == n;
     turn(EN_K2, 2); frame();                                        /* (frozen: the knob row still answers at once) */
@@ -11114,12 +11115,36 @@ static int test_ux_visual(void)
     ok &= ux_vis_draws == n + 1u;
     gov_lite = 0; fm1_ms += 100u; frame();
     ok &= ux_vis_draws == n + 2u;
-    bad += check("3a VISUAL: frozen while the overload guard sheds or gov_lite (knobs still shown; a page entered drawn)", ok);
+    bad += check("3a VISUAL: frozen 400 ms after the guard's last shed and while gov_lite (knobs shown; a page entered drawn)", ok);
+    {   /* (fix 1) the rings step at most every 200 ms: a redraw between two steps sends the LCD next to nothing */
+        uint32_t i, k0, px, steps = 0, mid = 0, mid_max = 0, step_min = 240u * 240u, t0 = fm1_ms;
+        frames(300);
+        t0 = fm1_ms;
+        for (i = 0; i < 63u; i++) {                                 /* (~1 s, stopped: the drift) */
+            k0 = ux_vis_draws; px = host_blit_px;
+            frame();
+            px = host_blit_px - px;
+            if (ux_vis_draws == k0) continue;
+            if (uxv.q_ms == fm1_ms) { steps++; if (px < step_min) step_min = px; }
+            else { mid++; if (px > mid_max) mid_max = px; }
+        }
+        printf("ui:   (VISUAL, 1 s stopped: %u colour steps, each >= %u px sent; %u redraws between, each <= %u px sent)\n",
+               steps, step_min, mid, mid_max);
+        ok = steps >= 4u && steps <= 6u && mid >= 3u && mid_max < 240u * UX_H_PANEL / 20u && step_min > 240u * UX_H_PANEL / 2u &&
+             fm1_ms - t0 < 1100u;
+        bad += check("3a VISUAL: the rings change at most every 200 ms; a redraw between sends < 5 % of the panel", ok);
+    }
     load_tight = 1;
     ok = ux_glow_eff(3) == 0u;
     load_tight = 0;
     ok &= ux_glow_eff(3) == 3u && ux_glow_eff(2) == 2u;
-    bad += check("3a load: the glow level 0 on every ux page while load_tight", ok);
+    ui_power_on(); ux_levels_reset(); ui.force = 1; frame(); frame();   /* TRACKS, stopped (nothing moves): the glow */
+    ok &= ux_home_at(UXH_TRACKS) && ux_px(150u, UX_Y_PANEL + 100u) != UX_BG;
+    load_tight = 1; frame();                                        /* load goes tight: the glow off on the next frame */
+    ok &= ux_px(150u, UX_Y_PANEL + 100u) == UX_BG;
+    load_tight = 0; frame();
+    ok &= ux_px(150u, UX_Y_PANEL + 100u) != UX_BG;
+    bad += check("3a load: the glow level 0 on every ux page while load_tight (TRACKS: at once, not at its next change)", ok);
 
     ui_power_on(); frame(); press(B_HOME); frame();                 /* the colours turn with the bar */
     song.playing = 1;
@@ -11138,13 +11163,16 @@ static int test_ux_visual(void)
     ok = str_eq(b, "ACID FM") && f == &UF_TTL;                      /* no name: ACID FM */
     str_cpy(proj_name, "VELVET PYLON", sizeof proj_name);
     f = ux_vis_name(b);
-    ok &= str_eq(b, "VELVET PYLON") && text_w(f, b) <= 224;
+    ok &= str_eq(b, "VELVET PYLON") && text_w(f, b) <= 232;
     str_cpy(proj_name, "WWWWWWWWWWWW", sizeof proj_name);
     f = ux_vis_name(b);
-    ok &= text_w(f, b) <= 224 && str_len(b) == 12u;                 /* (a wide name: a smaller face, all of it) */
+    ok &= text_w(f, b) <= 232 && str_len(b) == 12u;                 /* (a wide name: a smaller face, all of it) */
     str_cpy(proj_name, "MY_SONG!", sizeof proj_name);
     f = ux_vis_name(b);
-    ok &= f != &UF_TTL || str_eq(b, "MY SONG");                     /* (a letter UF_TTL lacks: not drawn as a hole) */
+    ok &= str_eq(b, "MY SONG");                                     /* (a letter UF_TTL lacks: a space, in every face) */
+    str_cpy(proj_name, "WWWWWWWWWW_!", sizeof proj_name);
+    f = ux_vis_name(b);
+    ok &= f != &UF_TTL && str_eq(b, "WWWWWWWWWW");                  /* (the fallback face keeps the sanitised name) */
     proj_name[0] = 0;
     ux_vis_sub(b);
     ok &= str_eq(b, "BAR 1/1");
