@@ -81,18 +81,22 @@ macro that sets all four together. Off by default except in the generator's BOC 
   largest value at which the heaviest test song (6 tracks busy, every effect on, BREAK playing) renders without
   dropouts and stays under the CPU target (§9). Piece 2 measures 8, 10 and 12 and records the result.
 - DRUM-X and BREAK no longer take voices from that budget: each track running one has its own fixed voices
-  (DRUM-X as JIANT plays it; BREAK two, §6.3).
+  (DRUM-X as JIANT plays it; BREAK two, §6.3). Built in piece 4 with BREAK (one mechanism for both).
 - JIANT's averaged overload guard stays as the safety net.
 
 ## 6. BREAK sampler
 
 ### 6.1 Storage
 
-- One sample area in flash. Felucca kept user samples in 0xA0000..0xDBFFF (240 KiB); JIANT gave that region to its
-  songs (`storage.c`). Piece 2 re-lays the data region: the app shrinks by what §4 and §8 remove and the data region
-  starts lower; songs keep the space they need (measured); the rest is the sample area. **Target: at least 240 KiB.**
-  If the measured layout gives less, the user chooses between fewer song slots and less break space. The final
-  bounds go into `fm1_flash.h`; the build fails if the app grows into them.
+- One sample area in flash, in the data region above the app slot. The app slot (0x4000..0x93000) cannot give
+  space: JieLi's flash table pins its end (cfg_tool.bin follows it) and every firmware update rewrites the whole
+  slot, so samples there would be wiped by each update. Space comes from JIANT's song storage instead.
+- **Songs: 4** (user, 2026-10-24), was 8. Song 1 stays in the project slots (0x97000..0x9EFFF), songs 2..4 at
+  0xA0000..0xB7FFF; songs 5..8's sectors, **0xB8000..0xD7FFF (128 KiB, contiguous), become the sample area**. The
+  song index keeps its layout (8 rows; rows 5..8 unused), so stored indexes stay readable. Other gaps
+  (0x93000..0x96FFF, 0xDA000..0xDBFFF, 0xE8000..0xFBFFF) join only if piece 2 proves no firmware we run uses them;
+  with the first two that is about 152 KiB. The bounds go into `fm1_flash.h`; a build check keeps every storage
+  object out of the sample area.
 - Up to **8 breaks**. Format: mono **IMA ADPCM, 4 bits**, at 32000, 22050, 16000 or 11025 Hz (≈ 16 / 11 / 8 /
   5.5 KB a second).
 - Each break has a header: name (8 chars), sample rate, length in samples, original BPM, bars, up to **32 slice
@@ -141,7 +145,8 @@ One-press actions on a BREAK track, each one undo step, also used by the generat
 
 ## 7. Generator (on the device)
 
-Replaces JIANT's GEN (HOME + SELECT, as in JIANT). Pure C, deterministic.
+Replaces JIANT's GEN (HOME + SELECT, as in JIANT), and JIANT's 43 genre tables are removed with it (until then GEN
+keeps working as JIANT's). Pure C, deterministic.
 
 - **Seeded as songgen:** one seed draws every value in a fixed order; any value the user sets (STYLE, BPM, KEY,
   SCALE, BARS, DENSITY) replaces only its own, so setting one never changes the others. Same seed + same settings
@@ -210,7 +215,7 @@ One spec → plan → implementation cycle per piece:
 
 1. **Pipeline:** fork, ACID FM identity, native Linux build, tests passing, Pages site on `acid-fm`, a proven
    install of the rebranded build on the user's FM-1 and a proven rollback.
-2. **Trim:** remove ANIMAL and WHEEL, remove the 43 genres' tables (VOICE stays, §4), measure the voice ceiling and set `NVOICE` (§5); measure freed flash,
+2. **Trim:** remove ANIMAL and WHEEL (VOICE stays, §4), songs 8 → 4 and the sample area reserved (§6.1), the flash gaps investigated, measure the voice ceiling and set `NVOICE` (§5); measure freed flash,
    RAM and CPU; re-lay the flash data region and set the sample area's final bounds (§6.1). (The skins and
    creatures go in piece 3, so the final bounds are confirmed after it.)
 3. **ACID UI** (§8): a complete redesign of the splash and every screen, with its own design spec first.
