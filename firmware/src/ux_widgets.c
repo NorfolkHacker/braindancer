@@ -39,11 +39,16 @@ static void ux_knob_touch(uint32_t k)
     ux_hot_t = UX_NOW();
 }
 
+static int32_t ux_knob_hot(void)
+{
+    return ux_hot_k >= 0 && UX_NOW() - ux_hot_t < UX_HOT_MS ? ux_hot_k : -1;
+}
+
 static void ux_knobs(const ux_knob_t k[4], int32_t hot)
 {
     int32_t i;
-    if (hot < 0 && ux_hot_k >= 0 && UX_NOW() - ux_hot_t < UX_HOT_MS)
-        hot = ux_hot_k;
+    if (hot < 0)
+        hot = ux_knob_hot();
     cv_begin(240, UX_H_KNOBS, UX_BG);
     for (i = 0; i < 4; i++) {
         int32_t x = UX_COL_X0 + i * UX_COL_PITCH, on = i == hot, fw;

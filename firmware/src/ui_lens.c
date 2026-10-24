@@ -208,8 +208,9 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
         return;
     e = k;
     if (sec == SEC_HOME && e >= UXH_GEN0 && !gen_on() && chain_busy()) {
-        ui_message("STOP TO EDIT");                     /* (GEN refused while the song plays: TRACKS, HOME's next, said why) */
-        e = UXH_TRACKS;
+        uint32_t p = ui.home && !ui.menu ? ux_home_page() : UXH_TRACKS;
+        ui_message("STOP TO EDIT");                     /* (GEN refused while the song plays, said why (spec 0 rule 6): the */
+        e = p < UXH_GEN0 ? p : UXH_TRACKS;              /* page stays (VISUAL), from elsewhere TRACKS) */
     }
     nav_mem_put(key, e);
     if (sec == SEC_HOME) {

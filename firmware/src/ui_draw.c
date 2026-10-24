@@ -2205,6 +2205,7 @@ static void ui_draw(void)
 {
     static uint8_t counting;
     ui.frame++;
+    ux_levels_tick();                                   /* (ACID FM 3a) the tracks' peaks into HOME's history, every frame */
     if (counting != (uint8_t)seq_counting()) {          /* a count-in began or ended: the page drawn again after it */
         counting = (uint8_t)seq_counting();
         ui.force = 1;

@@ -2562,13 +2562,17 @@ static void ui_input_frame(void)
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40, ui.knob_ms = fm1_ms;
         }
+        if (ui.home)
+            ux_knob_touch(k);                           /* (ACID FM 3a) its column (TRACKS: its line) lit UX_HOT_MS */
         if (home_macros()) {                            /* (ACID FM 3a) HOME's VISUAL: M1..M4 */
             macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);
-        } else if (ui.home) {
-            int16_t *vp;
-            const param_desc_t *d = home_param(k, &vp);
-            *vp = (int16_t)param_turn(d, *vp, accel(EN_K1 + k, s, d->fmt == F_ENUM ? 0 : d->max - d->min));
-            knob_cap(TSEL, (uint32_t)(vp - TSEL->p));
+        } else if (ui.home) {                           /* (3a task 6) TRACKS: the LEVELs of the four holding the selected
+                                                         * track (T5, T6: T3..T6), as GLO's layer */
+            track_t *t = &trk[k + trk_base4()];
+            int16_t *vp = &t->p[P_LEVEL];
+            *vp = (int16_t)clamp(*vp + accel(EN_K1 + k, s, TP[P_LEVEL].max - TP[P_LEVEL].min), TP[P_LEVEL].min,
+                                 TP[P_LEVEL].max);
+            knob_cap(t, P_LEVEL);
         } else {
             edit_param(k, s);
         }

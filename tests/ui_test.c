@@ -164,6 +164,7 @@ static void ui_power_on(void)
         if ((dice_secs >> i) & 1u) memset(proj_slot[i].raw, 0, 4);
     dice_secs = 0;
     memset(&ui, 0, sizeof ui);
+    ux_levels_reset();                            /* (ACID FM 3a) HOME's level histories flat */
     cin_left = cin_total = 0;                     /* (no count-in) */
     memset(&nm, 0, sizeof nm);                    /* NAME closed, no project name */
     proj_name[0] = 0;
@@ -6303,7 +6304,7 @@ static int test_screen_off(void)
 
     scr_idle(31u * 60000u);
     n = host_pw_n;
-    home_param(0, &vp);
+    vp = &TSEL->p[P_LEVEL];                           /* (ACID FM 3a: HOME's KNOB 1 is T1's LEVEL) */
     v0 = *vp;
     for (i = 0; i < 20u; i++) turn(EN_K1, 1);        /* a knob turned to wake it, still turning (on past the wake) */
     ok = scr_woke(n) && *vp == v0;
@@ -6765,7 +6766,7 @@ static int test_layer_knob_race(void)
             uint32_t i;
             ui_power_on();
             song.rec = 1; seq_start(); go_home(); frames(64);
-            home_param(k, &vp);
+            vp = &TSEL->p[trk_engp(TSEL)->knob[k]];      /* (the sound's KNOB k: ACID FM 3a's HOME turns levels) */
             c = *vp;
             btn_down(LB[l]); frames(560);
             for (i = 0; i < 4u; i++) { rc_enc(EN_K1 + k, l ? -1 : 1, 1); frame(); }
@@ -6783,7 +6784,7 @@ static int test_layer_knob_race(void)
     {
         int16_t *vp, c;
         uint32_t i;
-        home_param(0, &vp);
+        vp = &TSEL->p[P_LEVEL];                      /* (ACID FM 3a: HOME's KNOB 1 is T1's LEVEL) */
         c = *vp;
         btn_down(B_FX); frames(560);
         for (i = 0; i < 5u; i++) { rc_enc(EN_K1, 1, 1); frame(); }
@@ -6799,8 +6800,7 @@ static int test_layer_knob_race(void)
     ui_power_on();
     go_home(); frames(64);
     {
-        int16_t *vp, c;
-        home_param(0, &vp);
+        int16_t *vp = &TSEL->p[P_LEVEL], c;          /* (ACID FM 3a: HOME's KNOB 1 is T1's LEVEL) */
         c = *vp;
         rc_enc(EN_K1, 1, 1); frame(); frame();
         ok = *vp == c + 1;
@@ -10624,15 +10624,15 @@ static int test_organic(void)
     int16_t cut;
     ui_power_on();
     go_home(); frames(400);
-    cut = TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
+    cut = TSEL->p[P_LEVEL];
     turn(EN_K1, 2);
-    ok = !mac_latch && TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != cut;   /* HOME: the sound's four */
-    cut = TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
+    ok = !mac_latch && TSEL->p[P_LEVEL] != cut;   /* HOME: the levels (ACID FM 3a) */
+    cut = TSEL->p[P_LEVEL];
     btn_down(B_LFO); frames(560); btn_up(B_LFO); frames(64);
     ok &= mac_latch && !ui.layer;                  /* LFO held, let go: latched (its cards drawn, no layer open) */
     macro_v[0] = macro_v[1] = 0;                   /* (the macros as an earlier test left them: from 0) */
     turn(EN_K1, 5);
-    ok &= macro_v[0] == 5 && TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] == cut;   /* (M1, not the sound's KNOB 1) */
+    ok &= macro_v[0] == 5 && TSEL->p[P_LEVEL] == cut;   /* (M1, not T1's LEVEL) */
     go_page(GR_ADSR); frames(64);
     turn(EN_K2, 1);
     ok &= mac_latch && macro_v[1] == 1;            /* on another page too */
@@ -10641,7 +10641,7 @@ static int test_organic(void)
     go_home(); frames(64);
     turn(EN_K1, 1);
     ok &= macro_v[0] == 5;
-    bad += check("MACRO: LFO held, let go: latched (M1..M4 on the knobs, any page); LFO again: off; HOME the sound's", ok);
+    bad += check("MACRO: LFO held, let go: latched (M1..M4 on the knobs, any page); LFO again: off; HOME the levels", ok);
     ui_power_on();
     for (k = 0; k < NTRK; k++)
         for (j = 0; j < 12u; j++)
@@ -10867,9 +10867,9 @@ static int test_ux_nav_sections(void)
 /* HOME (ACID FM 3a, ux_nav.c; spec 4.1 / 4.2 / 4.3): three pages, TRACKS -> VISUAL -> GEN (user, 2026-10-24: GEN with no
  * combo). A HOME tap from elsewhere: the page last shown there, GEN too (power-on: TRACKS); on HOME: the next one, round;
  * SELECT walks TRACKS VISUAL GEN 1..3 (JIANT's GEN pages until piece 6) and stops at the ends; HOME held: MENU; HOME + SELECT
- * straight to GEN 1; OCT- in GEN: TRACKS; a stored HOME entry that is no more: TRACKS. TRACKS' knobs the sound's four (until
- * 3a task 6), VISUAL's M1..M4; the MACRO layer (LFO held) still M1..M4. TRACKS / VISUAL: the placeholder (header, knob row,
- * status line saying what HOME does next, footer HOME . page and n / 3); GEN JIANT's screen, its footer HOME . GEN and
+ * straight to GEN 1; OCT- in GEN: TRACKS; a stored HOME entry that is no more: TRACKS. TRACKS' knobs the four tracks'
+ * levels (3a task 6: test_ux_tracks), VISUAL's M1..M4; the MACRO layer (LFO held) still M1..M4. TRACKS / VISUAL: header, knob
+ * row, status line saying what HOME does next, footer HOME . page and n / 3; GEN JIANT's screen, its footer HOME . GEN and
  * GEN n/3. (Was 0.9.2's: ECO MACROS BEING ROUTES GEN 1..3, a HOME tap the next group) */
 static int ux_home_at(uint32_t p)
 {
@@ -10986,11 +10986,11 @@ static int test_ux_nav_home(void)
     ui.nmem[0] = (uint8_t)(UXH_VISUAL ^ NAV_DEF[0]);                /* (the byte as before: the entry ^ the default) */
     ok &= ux_home_page() == UXH_VISUAL;
     bad += check("3a HOME: page memory the same 13 bytes (entry ^ default); a HOME entry that is no more: TRACKS", ok);
-    ui_power_on(); frame();                                         /* TRACKS: the sound's four knobs */
-    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
+    ui_power_on(); frame();                                         /* TRACKS: T1..T4's levels (3a task 6) */
+    c = (uint32_t)TSEL->p[P_LEVEL];
     k = macro_v[0];
     turn(EN_K1, 1); frame();
-    ok = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c && macro_v[0] == k && !home_macros();
+    ok = (uint32_t)TSEL->p[P_LEVEL] == c + 1u && macro_v[0] == k && !home_macros();
     press(B_HOME); frame();                                         /* VISUAL: M1..M4 */
     turn(EN_K1, 3); frame();
     ok &= home_macros() && macro_v[0] == (uint8_t)(k + 3u);
@@ -11002,8 +11002,8 @@ static int test_ux_nav_home(void)
     ok &= macro_v[0] == (uint8_t)(k + 5u);
     press(B_LFO); frame();
     ok &= !mac_latch;
-    bad += check("3a HOME: TRACKS the sound's knobs; VISUAL M1..M4; the MACRO layer (LFO held) still M1..M4", ok);
-    ui_power_on(); ui.force = 1; frame();                           /* the placeholder drawn: every strip */
+    bad += check("3a HOME: TRACKS the tracks' levels; VISUAL M1..M4; the MACRO layer (LFO held) still M1..M4", ok);
+    ui_power_on(); ui.force = 1; frame();                           /* drawn: every strip */
     ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
          ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u && ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;
     {
@@ -11013,7 +11013,94 @@ static int test_ux_nav_home(void)
         ok &= memcmp(a + UX_Y_FOOT * 240, host_screen + UX_Y_FOOT * 240, 240u * UX_H_FOOT * 2u) != 0 &&
               memcmp(a + UX_Y_STATUS * 240, host_screen + UX_Y_STATUS * 240, 240u * UX_H_STATUS * 2u) != 0;
     }
-    bad += check("3a HOME: the placeholder drawn (header, knobs, status hint, footer; VISUAL's footer and hint not TRACKS')", ok);
+    bad += check("3a HOME: drawn (header, knobs, status hint, footer; VISUAL's footer and hint not TRACKS')", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* HOME TRACKS (ACID FM 3a task 6, ux_home.c; spec 4.3): six ridgelines, each its track's level history (ux_home.c the one
+ * reader of trk[c].peak: a point every UXR_MS, UXR_N of them, scrolling right to left); the four tracks the knobs control
+ * (the window of four holding the selected one) in their knobs' colours, the other two dimmed; KNOB 1..4 their LEVELs, the
+ * turned knob's column and line lit for UX_HOT_MS, the status line its track's name and level; GEN refused while a song plays:
+ * the page stays, STOP TO EDIT in the status line (UX_ACCENT) */
+static uint16_t ux_px(uint32_t x, uint32_t y) { return swap16(host_screen[y * 240u + x]); }
+static int test_ux_tracks(void)
+{
+    int bad = 0, ok;
+    uint32_t i, c, lv[NTRK];
+    uint16_t col;
+    const char *st;
+    ui_power_on(); frame();
+    for (c = 0; c < NTRK; c++) lv[c] = (uint32_t)trk[c].p[P_LEVEL];
+    turn(EN_K2, 3); frame();                                        /* T1 selected: KNOB 2 is T2's LEVEL */
+    ok = (uint32_t)trk[1].p[P_LEVEL] == lv[1] + 3u && (uint32_t)trk[0].p[P_LEVEL] == lv[0] &&
+         (uint32_t)trk[2].p[P_LEVEL] == lv[2] && ux_knob_hot() == 1;
+    st = ux_home_status(&col);
+    ok &= st[0] == 'T' && st[1] == '2' && str_len(st) > 12u && col == UX_TEXT;   /* ("T2 <sound> . LEVEL n") */
+    {
+        char want[12] = "LEVEL ";
+        fmt_int(want + 6, (int32_t)((uint32_t)trk[1].p[P_LEVEL] * 99u / 127u));
+        ok &= str_len(st) > str_len(want) && str_eq(st + str_len(st) - str_len(want), want);
+    }
+    fm1_ms += UX_HOT_MS; frame();                                   /* the turn's moment over: the hint again */
+    st = ux_home_status(&col);
+    ok &= ux_knob_hot() < 0 && str_eq(st, "HOME AGAIN: VISUAL") && col == UX_MID;
+    track_select(4); frame();                                       /* T5 selected: KNOB 1..4 are T3..T6 */
+    for (c = 0; c < NTRK; c++) lv[c] = (uint32_t)trk[c].p[P_LEVEL];
+    turn(EN_K1, -2); frame();
+    ok &= (uint32_t)trk[2].p[P_LEVEL] == lv[2] - 2u && (uint32_t)trk[0].p[P_LEVEL] == lv[0] &&
+          (uint32_t)trk[4].p[P_LEVEL] == lv[4];
+    turn(EN_K4, 1); frame();
+    ok &= (uint32_t)trk[5].p[P_LEVEL] == lv[5] + 1u;
+    bad += check("3a TRACKS: KNOB 1..4 the levels of the four holding the selected track (T5: T3..T6); status the turn", ok);
+
+    ui_power_on(); ux_levels_reset(); frame();
+    ok = 1;
+    for (c = 0; c < NTRK; c++)                                      /* (power-on: silent, flat) */
+        for (i = 0; i < UXR_N; i++) ok &= ux_hist(c, i) == 0u;
+    trk[2].peak = 7000;                                             /* T3 sounds for a moment */
+    fm1_ms += UXR_MS; ux_levels_tick();
+    ok &= trk[2].peak == 0 && ux_hist(2, 0) > 200u && ux_hist(1, 0) == 0u;   /* (read and cleared: the one reader) */
+    {
+        uint32_t top = ux_hist(2, 0);
+        for (i = 0; i < 10u; i++) { fm1_ms += UXR_MS; ux_levels_tick(); }
+        ok &= ux_hist(2, 10) == top && ux_hist(2, 0) < top / 4u;    /* scrolled ten points, falling off */
+    }
+    for (i = 0; i < UXR_N + 24u; i++) { fm1_ms += UXR_MS; ux_levels_tick(); }   /* (the fall-off, then a whole ring) */
+    for (i = 0; i < UXR_N; i++) ok &= ux_hist(2, i) == 0u;           /* silent again: flat */
+    trk[0].peak = 7000;
+    fm1_ms += 5u * UXR_MS; ux_levels_tick();                        /* (a late frame: the points it missed) */
+    ok &= ux_hist(0, 4) > 200u && ux_hist(0, 0) < ux_hist(0, 4);
+    bad += check("3a TRACKS: the level history scrolls a point every UXR_MS, the peak read and cleared; silence goes flat", ok);
+
+    ui_power_on(); ux_levels_reset(); ui.force = 1; frame();       /* stopped: flat lines on their baselines */
+    ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
+         ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u && ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;
+    ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(1)) == UX_SLIDE && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) == UX_ACCENT &&
+          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_SLIDE;
+    track_select(4); ui.force = 1; frame();                         /* T5: T3..T6 in the knobs' colours, T1 T2 dimmed */
+    ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(2)) == UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) == UX_VIOLET &&
+          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(5)) == UX_ACCENT && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(0)) != UX_ACID &&
+          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(0)) != UX_BG && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(1)) != UX_SLIDE;
+    bad += check("3a TRACKS: drawn (every strip); the four the knobs control in their colours (T5: T3..T6), the others dim", ok);
+
+    ui_power_on(); frame();                                         /* GEN refused while a song plays: the page stays */
+    press(B_HOME); frame();
+    ok = ux_home_at(UXH_VISUAL);
+    chain.running = 1;
+    press(B_HOME); frame();
+    st = ux_home_status(&col);
+    ok &= ux_home_at(UXH_VISUAL) && msg_is("STOP TO EDIT") && str_eq(st, "STOP TO EDIT") && col == UX_ACCENT;
+    fm1_ms += 1000u; frames(70);
+    turn(EN_SELECT, 1); frame();
+    ok &= ux_home_at(UXH_VISUAL) && msg_is("STOP TO EDIT");
+    press(B_SEQ); frame(); press(B_HOME); frame();                  /* from elsewhere: the page last shown, VISUAL */
+    ok &= ux_home_at(UXH_VISUAL);
+    chain.running = 0;
+    ui_power_on(); frame(); press(B_HOME); frame();
+    press(B_HOME); frame();
+    ok &= ux_home_at(UXH_GEN);                                      /* (stopped: GEN) */
+    bad += check("3a TRACKS: GEN refused while a song plays: VISUAL stays (HOME, SELECT), STOP TO EDIT in UX_ACCENT", ok);
     ui_power_on();
     return bad;
 }
@@ -12275,6 +12362,7 @@ int main(void)
     bad += test_large_face();
     bad += test_ux_nav_sections();
     bad += test_ux_nav_home();
+    bad += test_ux_tracks();
     bad += test_lz_edit();
     bad += test_lz_env();
     bad += test_lz_mod();

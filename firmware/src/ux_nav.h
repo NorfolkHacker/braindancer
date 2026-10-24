@@ -18,4 +18,20 @@ static const char *ux_home_count(void);                 /* .. its page of HOME's
 static const char *ux_home_hint(void);                  /* the status line: what HOME does next, "HOME AGAIN: VISUAL" */
 static void ux_home_draw(void);                         /* (ux_home.c) TRACKS / VISUAL on the screen (GEN: JIANT's) */
 
+/* TRACKS' ridgelines (ux_home.c, 3a task 6): each track's level history, UXR_N points a UXR_MS apart (~2 s), drawn over x
+ * UXR_X0 .. UXR_X0 + UXR_W - 1 of the panel, row r's baseline at panel y UXR_BASE(r), a peak UXR_PEAK px high; the strip's
+ * caption and the strip under them */
+#define UXR_N 112u
+#define UXR_MS 18u
+#define UXR_X0 58
+#define UXR_W 160u
+#define UXR_PEAK 24
+#define UXR_BASE(r) (26 + 17 * (int32_t)(r))
+#define UXR_CAP_Y 116
+#define UXR_STRIP_Y 128
+static void ux_levels_tick(void);                       /* every UI frame (ui_draw): the one reader of trk[c].peak */
+static void ux_levels_reset(void);                      /* the histories flat */
+static uint32_t ux_trk_peak(uint32_t c);                /* track c's peak this frame, 0..255 (ui_engvis.c's creatures) */
+static void ux_knob_touch(uint32_t k);                  /* (ux_widgets.c) knob k just turned: its column lit UX_HOT_MS */
+
 #endif

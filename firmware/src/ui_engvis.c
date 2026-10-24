@@ -177,9 +177,7 @@ static int32_t vx_level(const track_t *t, uint32_t k, int32_t en_home)
     if (en_home >= 0)
         v = en_home;                                     /* (HOME: its own, eco_step's) */
     else {
-        v = ((track_t *)t)->peak * 256 / 7000;
-        ((track_t *)t)->peak = 0;
-        v = v > 256 ? 256 : v;
+        v = (int32_t)ux_trk_peak((uint32_t)(t - trk)) * 256 / 255;   /* (ACID FM 3a: ux_home.c reads the peaks, once a frame) */
         v = v > vxs.en[k] ? v : vxs.en[k] + (v - vxs.en[k] - 2) / 3;
     }
     v = v > 4 ? v : 0;                                   /* (HOME's level rests a little above 0: silence) */

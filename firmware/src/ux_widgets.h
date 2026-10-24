@@ -36,6 +36,7 @@ static void ux_header(uint32_t trk, const char *sound, const char *right);
  * UX_HOT_MS after the touch, then normal. */
 static void ux_knobs(const ux_knob_t k[4], int32_t hot);
 static void ux_knob_touch(uint32_t k);                                          /* knob k (0..3) just moved: stamp the time */
+static int32_t ux_knob_hot(void);                                               /* the knob touched less than UX_HOT_MS ago, or -1 */
 #define UX_HOT_MS 600u
 static void ux_panel_begin(uint32_t glow_level);                                /* canvas 240x150 for LCD y 56: BG + glow */
 static void ux_panel_end(void);                                                 /* push the panel (changed cells only) */
