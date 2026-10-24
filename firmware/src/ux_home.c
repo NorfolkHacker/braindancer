@@ -178,6 +178,7 @@ static void ux_trk_right(char *b)                       /* the header's right: "
     str_cpy(b + str_len(b), " \xB7 ", 32 - str_len(b));
     ux_transport(b + str_len(b), 32 - str_len(b));
 }
+static const char *ux_vis_legend(void);                 /* (VISUAL's) */
 /* the status line: a message (a refusal in UX_ACCENT), a turned knob's track and level, else what HOME does next */
 #define UX_STOP "STOP TO EDIT"
 static const char *ux_home_status(uint16_t *col)
@@ -195,6 +196,10 @@ static const char *ux_home_status(uint16_t *col)
         str_cpy(b + str_len(b), "%", sizeof b - str_len(b));
         *col = UX_TEXT;
         return b;
+    }
+    if (ux_home_page() == UXH_VISUAL && ux_vis_legend()) {   /* the first time on VISUAL: which ring is which */
+        *col = UX_MID;
+        return ux_vis_legend();
     }
     if (c >= 0) {
         char d[16];
@@ -341,24 +346,38 @@ static uint32_t ux_tracks_sig(void)
     return h;
 }
 
-/* ---- VISUAL (3a task 7): the rings of the blend round the panel's centre, band k's colour the blend at (phase - k x 44),
- * the blend run there and back (512 a turn) so the bands flow outward without a seam; the phase a quarter turn a bar while
- * playing (the bar position, chain.bar_pos: a turn every two bars), a slow drift stopped (a turn in ~12 s); their strength the
- * tracks' level, 22 .. 52 % of the blend over BG in four steps (ux_levels_tick's: no work of its own on the audio). Both
- * move in steps (fix 1): phase and level are taken at most every UXV_STEP_MS, the phase in UXV_PH_Q steps, so a redraw
- * between two steps paints the same rings and cv_blit_cells sends only what changed (the LCD's SPI is the cost: a whole
- * panel is ~72 KB). Over them a darker band and the song's name and where it is: readability first (spec 0) */
+/* ---- VISUAL (3a task 7; polish): six thin rings on the dark, one a track's - T1 outside .. T6 at the centre - over a soft
+ * glow at the centre. Each ring is a colour of the blend, the blend at (phase - k x UXV_RING_STEP) run there and back (512 a
+ * turn, no seam), turning with the bar (a turn every four bars from chain.bar_pos; stopped, a slow drift); its brightness its
+ * track's level (the loudest point of ux_levels_tick's history in the last step: no work of its own on the audio), eased half
+ * the way each step, a silent track's ring a dim LINE grey; a ring on a hit swells a px each side. Everything moves in steps
+ * (fix 1): taken at most every UXV_STEP_MS, so a redraw between two steps paints the same picture and cv_blit_cells sends
+ * nothing of it (the LCD's SPI is the cost: a whole panel is ~72 KB). Over them a darker band, the song's name and where it
+ * is: readability first (spec 0). The first time on VISUAL the status line says which ring is which (spec 0.7) */
 static uint32_t ux_vis_draws;                           /* VISUAL panels drawn (the host tests count them) */
 static struct {
-    uint32_t bars, ms, q_ms, shed, shed_ms;             /* bars passed; the last panel's time; the last step's; load_diag.shed
-                                                         * seen, the time it last rose */
-    uint16_t qph;                                       /* the rings' phase (0..511) and strength (%) at the last step */
-    uint8_t frac, qa, q_ok, shed_any;                   /* the bar position last seen (0..255); a step taken; a shed seen */
+    uint32_t bars, ms, q_ms, shed, shed_ms, intro_ms;   /* bars passed; the last panel's time; the last step's; load_diag.shed
+                                                         * seen, the time it last rose; the ring legend's start */
+    uint16_t qph;                                       /* the rings' phase (0..511) at the last step */
+    uint8_t b[NTRK];                                    /* each track's ring brightness (0..255), eased */
+    uint8_t frac, q_ok, shed_any, intro;                /* the bar position last seen (0..255); a step taken; a shed seen; the
+                                                         * legend shown (once a power-on) */
 } uxv;
-#define UXV_STEP_MS 200u                                /* the rings change at most every 200 ms (5 colour steps a second) */
-#define UXV_PH_Q 8u                                     /* .. their phase in steps of 8 / 512 */
-#define UXV_RING_STEP 44u                               /* blend steps (of 512) from one band to the next */
-#define UXV_IDLE_MS 24u                                 /* stopped: a phase step every 24 ms */
+#define UXV_STEP_MS 200u                                /* the rings change at most every 200 ms (5 steps a second) */
+#define UXV_PH_Q 4u                                     /* .. their phase in steps of 4 / 512 (a few a step: smooth) */
+#define UXV_RING_STEP 40u                               /* blend steps (of 512) from one ring to the next */
+#define UXV_IDLE_MS 48u                                 /* stopped: a phase step every 48 ms (a turn in ~25 s) */
+#define UXV_SWELL 160u                                  /* a ring this bright (a hit) is a px wider each side */
+#define UXV_INTRO "RINGS: T1 OUTSIDE \x86 T6 CENTRE"     /* (UF_HDR's arrow, 0x86) */
+#define UXV_INTRO_MS 4000u
+static const char *ux_vis_legend(void)                  /* the ring legend while it shows (UXV_INTRO_MS, once), else NULL */
+{
+    if (!uxv.intro) {
+        uxv.intro = 1;
+        uxv.intro_ms = fm1_ms;
+    }
+    return fm1_ms - uxv.intro_ms < UXV_INTRO_MS ? UXV_INTRO : 0;
+}
 static uint32_t ux_vis_phase(void)
 {
     uint32_t bar = chain_bar(), f;
@@ -369,23 +388,27 @@ static uint32_t ux_vis_phase(void)
     if (f < uxv.frac)                                   /* the bar line passed */
         uxv.bars++;
     uxv.frac = (uint8_t)f;
-    return (uxv.bars * 256u + f) & 511u;
+    return ((uxv.bars * 256u + f) / 2u) & 511u;
 }
-static uint32_t ux_vis_level(void)                      /* the loudest track's level now (0..255) */
+static uint32_t ux_vis_level(uint32_t c)                /* track c's loudest point of the last step (~200 ms, 0..255) */
 {
-    uint32_t c, m = 0;
-    for (c = 0; c < NTRK; c++)
-        if (uxr.lv[c] > m) m = uxr.lv[c];
+    uint32_t a, m = 0;
+    for (a = 0; a <= UXV_STEP_MS / UXR_MS; a++)
+        if (ux_hist(c, a) > m) m = ux_hist(c, a);
     return m;
 }
-static void ux_vis_step(void)                           /* phase and strength, at most every UXV_STEP_MS */
+static void ux_vis_step(void)                           /* phase and brightness, at most every UXV_STEP_MS (a page entered: now) */
 {
-    if (uxv.q_ok && fm1_ms - uxv.q_ms < UXV_STEP_MS)
+    uint32_t c;
+    if (uxv.q_ok && fm1_ms - uxv.q_ms < UXV_STEP_MS && !ui.force)
         return;
-    uxv.q_ok = 1;
     uxv.q_ms = fm1_ms;
     uxv.qph = (uint16_t)(ux_vis_phase() & ~(UXV_PH_Q - 1u));
-    uxv.qa = (uint8_t)(22u + (ux_vis_level() >> 6) * 10u);   /* 22 32 42 52 % */
+    for (c = 0; c < NTRK; c++) {
+        uint32_t t = ux_vis_level(c);
+        uxv.b[c] = (uint8_t)(!uxv.q_ok || ui.force ? t : ((uint32_t)uxv.b[c] + t + 1u) / 2u);   /* (eased: half the way) */
+    }
+    uxv.q_ok = 1;
 }
 /* the song's name (the project's, as loaded or saved; none: ACID FM) into b (16 bytes) and its face: the letters UF_TTL has
  * (capitals, figures, space - . /; another sign a space, in every face), in UF_TTL while it fits 232 px, else UF_VAL, then
@@ -411,24 +434,34 @@ static const aafont_t *ux_vis_name(char *b)
 static void ux_vis_sub(char *b) { ux_where_bar(b, 32, 1); }   /* "SECTION B · BAR 3/8", "BAR 1/2" */
 static void ux_visual_panel(void)
 {
-    uint16_t col[UX_RING_N], scr[UX_RING_N];
-    uint32_t k, ph, a;
+    uint8_t e[2u + 2u * NTRK];
+    uint16_t col[3u + 2u * NTRK], scr[3u + 2u * NTRK];
+    uint32_t k, n = 0, gl = ux_glow_eff(2);
     char nm[16], sub[32];
     const aafont_t *f = ux_vis_name(nm);
     int32_t cy = f == &UF_TTL ? UF_TTL_CAP_Y : f == &UF_VAL ? UF_VAL_CAP_Y : UF_HDR_CAP_Y;
     int32_t ch = f == &UF_TTL ? UF_TTL_CAP_H : f == &UF_VAL ? UF_VAL_CAP_H : UF_HDR_CAP_H;
     int32_t top = ((int32_t)UX_H_PANEL - (ch + 9 + UF_LBL_CAP_H)) / 2, ty = top - cy, sy = top + ch + 9 - UF_LBL_CAP_Y, w;
     ux_vis_step();
-    ph = uxv.qph;
-    a = uxv.qa;
-    for (k = 0; k < UX_RING_N; k++) {
-        uint32_t i = (ph + 512u - k * UXV_RING_STEP % 512u) & 511u;
-        uint16_t c = UX_BLEND[i < 256u ? i : 511u - i];
-        col[k] = ux_mix(UX_BG, c, (int32_t)a);
-        scr[k] = ux_mix(UX_BG, c, (int32_t)a * 2 / 5);  /* (under the text: TEXT on it stays near its contrast on BG) */
+    /* the segments from the centre out: the glow's three steps (inside 12, 22, the first ring), then each ring and the gap
+     * outside it (the glow fading over the gaps; past the last ring BG). A segment's glow is the panel glow's colour at its
+     * middle radius (ux_glow_col, ring 0 outermost at ~120 px); ring k is track NTRK - 1 - k (T6 at the centre) */
+#define UXV_GLOW(r) ux_glow_col(gl, UX_GLOW_N - 1u - ((r) * UX_GLOW_N / 128u < UX_GLOW_N ? (r) * UX_GLOW_N / 128u : UX_GLOW_N - 1u))
+    e[n] = 0; col[n++] = UXV_GLOW(6u);
+    e[n] = 1; col[n++] = UXV_GLOW(17u);
+    for (k = 0; k < NTRK; k++) {
+        uint32_t c = NTRK - 1u - k, br = uxv.b[c], sw = br >= UXV_SWELL, i = (uxv.qph + 512u - k * UXV_RING_STEP) & 511u;
+        uint16_t bl = UX_BLEND[i < 256u ? i : 511u - i];
+        e[n] = (uint8_t)(2u + 4u * k + (sw ? 0u : 1u));               /* the ring's inner edge (swollen: a px in) */
+        col[n++] = k ? UXV_GLOW(UX_RING_R[2u + 4u * k] - 4u) : UXV_GLOW(27u);   /* (inside it: the gap or the glow) */
+        e[n] = (uint8_t)(2u + 4u * k + (sw ? 3u : 2u));               /* .. its outer edge */
+        col[n++] = ux_mix(UX_LINE, bl, (int32_t)(12u + br * 88u / 255u));     /* silent: LINE with a hint of its colour */
     }
+    col[n] = UX_BG;                                     /* past the last ring */
+    for (k = 0; k <= n; k++)
+        scr[k] = ux_mix(UX_BG, col[k], 40);             /* (under the text: TEXT on it stays near its contrast on BG) */
     cv_begin_raw(240, UX_H_PANEL, UX_BG);               /* (the rings write every pixel: no fill under them) */
-    ux_rings(col, scr, top - 8, top + ch + 9 + UF_LBL_CAP_H + 8);
+    ux_rings(e, n, col, scr, top - 8, top + ch + 9 + UF_LBL_CAP_H + 8);
     w = text_w(f, nm);
     GFX_HOOK_CELL(2, ty, 238, ty + f->h);                /* (a name up to 232 px wide: its ink to 2 px of the edges) */
     cv_text_on((240 - w) / 2, ty, f, nm, UX_TEXT, ux_under(120, top + ch / 2));

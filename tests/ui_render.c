@@ -1091,14 +1091,17 @@ static void setup(int s)
             chain.running = 1; chain.row = 0; chain.config.count = 2;
             chain.config.row[0].slot = 1; chain.config.row[0].bars = 8; chain.remaining = 6;
             chain.bar_pos = chain_bar() * 5u / 8u;
-            for (i = 0; i < 6u; i++) {               /* (a beat's worth of levels: the rings bright) */
-                trk[0].peak = 6800; trk[2].peak = 5200;
+            for (i = 0; i < 12u; i++) {              /* (the last ~200 ms: T1 T3 loud, T2 T5 on their beats, T4 soft, T6 silent:
+                                                      * its ring, the innermost, dim) */
+                trk[0].peak = 7000; trk[1].peak = i % 2u ? 0 : 4200; trk[2].peak = 5600;
+                trk[3].peak = 1800; trk[4].peak = i % 3u ? 0 : 6000; trk[5].peak = 0;
                 fm1_ms += UXR_MS;
                 ux_levels_tick();
             }
         } else {
             song.playing = 0;
-            ux_hot_k = -1;                           /* (no knob turned: the hint) */
+            ux_hot_k = -1;                           /* (no knob turned, the ring legend shown before: the hint) */
+            uxv.intro = 1; uxv.intro_ms = fm1_ms - UXV_INTRO_MS;
         }
         break;
     }

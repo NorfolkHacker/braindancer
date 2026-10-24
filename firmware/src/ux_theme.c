@@ -140,49 +140,48 @@ static void ux_glow(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t level)
 }
 
 /* the rings' table: for each row's |dy| (0 .. UX_RING_ROWS - 1, the row's centre dy + 1/2 from the canvas centre, which
- * lies between pixels) and each of the 2 x UX_RING_N edges (band k's outer edge (k + 1) W - GAP, then its gap's (k + 1) W),
- * the count of columns dx >= 0 (centre dx + 1/2) inside it: (2dx + 1)^2 + (2dy + 1)^2 < (2R)^2. (.bss: built on the first
- * VISUAL panel) */
+ * lies between pixels) and each radius R of UX_RING_R, the count of columns dx >= 0 (centre dx + 1/2) inside it:
+ * (2dx + 1)^2 + (2dy + 1)^2 < (2R)^2. (.bss: built on the first VISUAL panel) */
 #define UX_RING_ROWS 75u
-#define UX_RING_E (2u * UX_RING_N)
-static uint8_t ux_rtab[UX_RING_ROWS * UX_RING_E];
+#define UX_RING_EMAX 16u                                 /* edges a call may use */
+static uint8_t ux_rtab[UX_RING_ROWS * UX_RING_NR];
 static int16_t ux_rw, ux_rh;
 static void ux_ring_tab(int32_t w, int32_t h)
 {
     int32_t dy, j, hw = w / 2;
     for (dy = 0; dy < (int32_t)UX_RING_ROWS; dy++)
-        for (j = 0; j < (int32_t)UX_RING_E; j++) {
-            int32_t r = (j / 2 + 1) * UX_RING_W - (j & 1 ? 0 : UX_RING_GAP), v = 4 * r * r - (2 * dy + 1) * (2 * dy + 1), n = 0;
+        for (j = 0; j < (int32_t)UX_RING_NR; j++) {
+            int32_t r = UX_RING_R[j], v = 4 * r * r - (2 * dy + 1) * (2 * dy + 1), n = 0;
             if (v > 0)
                 n = ((int32_t)ux_isqrt((uint32_t)v - 1u) + 1) / 2;   /* (the odd 2dx + 1 whose square is under v) */
-            ux_rtab[(uint32_t)dy * UX_RING_E + (uint32_t)j] = (uint8_t)(n > hw ? hw : n);
+            ux_rtab[(uint32_t)dy * UX_RING_NR + (uint32_t)j] = (uint8_t)(n > hw ? hw : n);
         }
     ux_rw = (int16_t)w;
     ux_rh = (int16_t)h;
 }
-static void ux_rings(const uint16_t col[UX_RING_N], const uint16_t scrim[UX_RING_N], int32_t sy0, int32_t sy1)
+static void ux_rings(const uint8_t *e, uint32_t ne, const uint16_t *col, const uint16_t *scrim, int32_t sy0, int32_t sy1)
 {
-    uint16_t c0[UX_RING_E + 1u], c1[UX_RING_E + 1u];
+    uint16_t c0[UX_RING_EMAX + 1u], c1[UX_RING_EMAX + 1u];
     int32_t w = (int32_t)cv_w & ~1, h = (int32_t)cv_h & ~1, cx = w / 2, hh, y;
     uint32_t s;
+    if (ne > UX_RING_EMAX) ne = UX_RING_EMAX;
     if (h > (int32_t)(2u * UX_RING_ROWS)) h = (int32_t)(2u * UX_RING_ROWS);
     hh = h / 2;
-    for (s = 0; s <= UX_RING_E; s++) {                  /* segment s: band s / 2 (even), a gap (odd), past the last (BG) */
-        int band = s < UX_RING_E && !(s & 1u);
-        c0[s] = swap16(band ? col[s / 2u] : UX_BG);
-        c1[s] = swap16(band ? scrim[s / 2u] : UX_BG);
+    for (s = 0; s <= ne; s++) {
+        c0[s] = swap16(col[s]);
+        c1[s] = swap16(scrim[s]);
     }
     if (w != ux_rw || h != ux_rh) ux_ring_tab(w, h);
     for (y = 0; y < h; y++) {
-        const uint8_t *t = &ux_rtab[(uint32_t)(y < hh ? hh - 1 - y : y - hh) * UX_RING_E];
+        const uint8_t *t = &ux_rtab[(uint32_t)(y < hh ? hh - 1 - y : y - hh) * UX_RING_NR];
         const uint16_t *c = y >= sy0 && y < sy1 ? c1 : c0;
-        int32_t prev = 0, e;
-        for (s = 0; s <= UX_RING_E; s++) {
-            e = s < UX_RING_E ? t[s] : cx;
-            if (e > prev) {                             /* the segment on this row: one span each side of the centre */
-                ux_gspan(cx - e, cx - 1 - prev, y, 0, w, c[s]);
-                ux_gspan(cx + prev, cx + e - 1, y, 0, w, c[s]);
-                prev = e;
+        int32_t prev = 0, x;
+        for (s = 0; s <= ne; s++) {
+            x = s < ne ? t[e[s] % UX_RING_NR] : cx;
+            if (x > prev) {                             /* the segment on this row: one span each side of the centre */
+                ux_gspan(cx - x, cx - 1 - prev, y, 0, w, c[s]);
+                ux_gspan(cx + prev, cx + x - 1, y, 0, w, c[s]);
+                prev = x;
             }
         }
     }

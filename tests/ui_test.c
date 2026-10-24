@@ -11061,6 +11061,11 @@ static int test_ux_tracks(void)
  * a turn in the status line. The load rules (fix 1): the panel redrawn at most every 100 ms, every 200 ms while load_tight or
  * under MENU's LOAD LITE / ECO, frozen 400 ms after the overload guard's last shed and while gov_lite; a page entered is drawn
  * at once; the rings' colours step at most every 200 ms */
+static uint32_t ux_cdist(uint16_t a, uint16_t b)    /* RGB565 channel steps apart (r, b in 32nds; g in 64ths) */
+{
+    int32_t d[3] = {(a >> 11) - (b >> 11), ((a >> 5) & 63) - ((b >> 5) & 63), (a & 31) - (b & 31)};
+    return (uint32_t)((d[0] < 0 ? -d[0] : d[0]) + (d[1] < 0 ? -d[1] : d[1]) + (d[2] < 0 ? -d[2] : d[2]));
+}
 static uint32_t vis_gap(void)                       /* ms between the next two VISUAL panels drawn (0: none in 1.6 s) */
 {
     uint32_t n = ux_vis_draws, t, i;
@@ -11117,22 +11122,23 @@ static int test_ux_visual(void)
     ok &= ux_vis_draws == n + 2u;
     bad += check("3a VISUAL: frozen 400 ms after the guard's last shed and while gov_lite (knobs shown; a page entered drawn)", ok);
     {   /* (fix 1) the rings step at most every 200 ms: a redraw between two steps sends the LCD next to nothing */
-        uint32_t i, k0, px, steps = 0, mid = 0, mid_max = 0, step_min = 240u * 240u, t0 = fm1_ms;
+        uint32_t i, k0, px, steps = 0, mid = 0, mid_max = 0, step_min = 240u * 240u, step_max = 0, t0 = fm1_ms;
         frames(300);
         t0 = fm1_ms;
         for (i = 0; i < 63u; i++) {                                 /* (~1 s, stopped: the drift) */
             k0 = ux_vis_draws; px = host_blit_px;
+            trk[0].peak = i % 9u ? 0 : 7000;                        /* (T1 on a beat: its ring pulses) */
             frame();
             px = host_blit_px - px;
             if (ux_vis_draws == k0) continue;
-            if (uxv.q_ms == fm1_ms) { steps++; if (px < step_min) step_min = px; }
+            if (uxv.q_ms == fm1_ms) { steps++; if (px < step_min) step_min = px; if (px > step_max) step_max = px; }
             else { mid++; if (px > mid_max) mid_max = px; }
         }
-        printf("ui:   (VISUAL, 1 s stopped: %u colour steps, each >= %u px sent; %u redraws between, each <= %u px sent)\n",
-               steps, step_min, mid, mid_max);
-        ok = steps >= 4u && steps <= 6u && mid >= 3u && mid_max < 240u * UX_H_PANEL / 20u && step_min > 240u * UX_H_PANEL / 2u &&
-             fm1_ms - t0 < 1100u;
-        bad += check("3a VISUAL: the rings change at most every 200 ms; a redraw between sends < 5 % of the panel", ok);
+        printf("ui:   (VISUAL, 1 s stopped, T1 pulsing: %u steps sending %u .. %u px; %u redraws between, each <= %u px sent)\n",
+               steps, step_min, step_max, mid, mid_max);
+        ok = steps >= 4u && steps <= 6u && mid >= 3u && mid_max < 240u * UX_H_PANEL / 20u && step_max > 240u * 20u &&
+             step_max <= 240u * UX_H_PANEL + 240u * 60u && fm1_ms - t0 < 1100u;
+        bad += check("3a VISUAL: the rings change at most every 200 ms; a redraw between sends < 5 % of the panel; a step only what changed", ok);
     }
     load_tight = 1;
     ok = ux_glow_eff(3) == 0u;
@@ -11150,13 +11156,13 @@ static int test_ux_visual(void)
     song.playing = 1;
     chain.bar_pos = 0; p0 = ux_vis_phase();
     chain.bar_pos = chain_bar() / 2u; p1 = ux_vis_phase();
-    ok = ((p1 - p0) & 511u) == 128u;                                /* (half a bar: a quarter turn, 512 every two bars) */
+    ok = ((p1 - p0) & 511u) == 64u;                                 /* (half a bar: an eighth of a turn, 512 every four bars) */
     chain.bar_pos = chain_bar() / 4u; p0 = ux_vis_phase();          /* (the bar line passed: the next bar) */
-    ok &= ((p0 - p1) & 511u) == 192u;
+    ok &= ((p0 - p1) & 511u) == 96u;
     song.playing = 0;
     p0 = ux_vis_phase(); fm1_ms += 2400u; p1 = ux_vis_phase();      /* stopped: a slow drift */
     ok &= p1 != p0 && ((p1 - p0) & 511u) < 160u;
-    bad += check("3a VISUAL: the rings' phase follows the bar position (2 bars a turn); stopped, a slow drift", ok);
+    bad += check("3a VISUAL: the rings' phase follows the bar position (4 bars a turn); stopped, a slow drift", ok);
 
     ui_power_on(); frame(); press(B_HOME); frame();
     f = ux_vis_name(b);
@@ -11192,6 +11198,41 @@ static int test_ux_visual(void)
     ok &= ux_home_at(UXH_TRACKS) && str_eq(ft, "1 / 3 \xB7 LVL \xB7 LVL \xB7 LVL \xB7 LVL");
     bad += check("3a VISUAL: the name (ACID FM when none; fitted), SECTION . BAR, footer M1..M4, a macro's turn in the status", ok);
 
+    {   /* (polish) ring k its track's (T1 outside .. T6 at the centre): bright on its hits, eased, a silent track's dim */
+        uint32_t i, b0;
+        uint16_t t1, t6;
+        ui_power_on(); frame();
+        for (i = 0; i < 4u && !ux_home_at(UXH_VISUAL); i++) press(B_HOME);
+        ux_levels_reset();
+        for (i = 0, p0 = 0; i < 100u && p0 < 4u; i++) {          /* (four steps of T1 loud, T3 on every third frame) */
+            p1 = uxv.q_ms;
+            trk[0].peak = 7000; trk[2].peak = i % 3u ? 0 : 6000; frame();
+            p0 += uxv.q_ms != p1;
+        }
+        t1 = ux_px(220u, UX_Y_PANEL + 18u);                         /* (T1's ring, r ~115; T6's, r ~34: above the name band) */
+        t6 = ux_px(120u, UX_Y_PANEL + 40u);
+        ok = uxv.b[0] > 120u && uxv.b[2] > 60u && uxv.b[5] == 0u && uxv.b[1] == 0u;
+        ok &= ux_cdist(t6, UX_LINE) < 12u && ux_cdist(t1, UX_LINE) > 20u;
+        p0 = uxv.q_ms;
+        for (i = 0; i < 40u && uxv.q_ms == p0; i++) frame();        /* silence again: a step (its window may still hold hits), */
+        b0 = uxv.b[0];
+        p0 = uxv.q_ms;
+        for (i = 0; i < 40u && uxv.q_ms == p0; i++) frame();        /* .. and the next */
+        ok &= uxv.b[0] < b0 && uxv.b[0] >= b0 / 2u - 1u && uxv.b[5] == 0u;   /* (eased: half the way down a step) */
+        bad += check("3a VISUAL: each ring its track's level (T1 outside, T6 inside): a silent track's ring dim; eased", ok);
+        uxv.intro = 0;                                              /* the first time on VISUAL: which ring is which */
+        ui_power_on(); frame();
+        for (i = 0; i < 4u && !ux_home_at(UXH_VISUAL); i++) press(B_HOME);
+        st = ux_home_status(&col);
+        ok = str_eq(st, UXV_INTRO) && col == UX_MID && text_w(&UF_HDR, UXV_INTRO) <= 224;
+        frames(UXV_INTRO_MS + 100u);
+        st = ux_home_status(&col);
+        ok &= str_eq(st, "HOME AGAIN: GENERATE");
+        press(B_HOME); press(B_HOME); press(B_HOME); frames(3000);  /* (round again: not again; GEN's message gone) */
+        st = ux_home_status(&col);
+        ok &= ux_home_at(UXH_VISUAL) && str_eq(st, "HOME AGAIN: GENERATE");
+        bad += check("3a VISUAL: the first time, the status line says which ring is which, then the hint", ok);
+    }
     ui_power_on(); frame(); press(B_HOME); ui.force = 1; frame();   /* drawn: every strip, rings over the whole panel */
     ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
          ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 240u * 100u && ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u &&
