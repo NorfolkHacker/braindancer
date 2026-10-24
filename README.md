@@ -13,7 +13,7 @@ the Rephlex catalogue.
 0.2 is the trim, on top of 0.1 (JIANT FM 0.9.18 under a new name, the pipeline proven end to end):
 
 - ANIMAL and WHEEL are retired: stored sounds that used them load as ANALOG, and T3 at power-on is PHASE.
-- 4 songs; 128 KiB of flash reserved for breaks, plus an 8 KiB gap: a 136 KiB sample area for breakbeats (coming later).
+- 4 songs; 128 KiB of flash reserved for breaks (an 8 KiB gap may join later), for breakbeats coming in a later version.
 - The voice budget is measured on the FM-1: 12 voices at once on two cores, 8 per track.
 
 The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-acid-fm-design.md`):
