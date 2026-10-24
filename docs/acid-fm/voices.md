@@ -1,56 +1,58 @@
 # The voice budget (NVOICE)
 
-`NVOICE` (firmware/src/core.h) is the voices per part and the budget the parts share. It is a build option:
-`FELUCCA_NVOICE=N ./build.sh` (1..16, default 8; `tools/build.py` passes it as `-DFELUCCA_NVOICE=N`). The device step
-(Task 5 of piece 2) measures 8, 10 and 12 with JIANT's CPU TEST song (SAVE > TOOLS > 6 CPU TEST) and sets the default.
+Two build options, both passed by `tools/build.py` as `-D`:
+
+- `FELUCCA_NVOICE=N` (core.h `NVOICE`, 1..16, default 8): the voices each part holds (`track_t.v[NVOICE]`, RAM).
+- `FELUCCA_VOICES_2CORE=T` (voice.c `VOICES_2CORE`, NVOICE..min(NPART * NVOICE, 16), default 12): the TOTAL voices all
+  parts share while the second core plays (the device's default, CORES 2). This is "as many voices as the hardware can
+  handle", and what piece 2's device step (Task 5) measures: T = 12, 14, 16 with NVOICE 8, using JIANT's CPU TEST song
+  (SAVE > TOOLS > 6 CPU TEST). Task 5 sets the default T.
+
+The three caps on the shared total (`voice_cap()`): LOAD ECO 6; one core (REC held at power-on, or core 1 given up)
+NVOICE; two cores VOICES_2CORE. The load governor (`gov_cap`, audio.c `gov_tick`) lowers it further under load; its
+ceiling `GOV_MAX` = max(VOICES_2CORE, NVOICE + 4) now follows T (it was a fixed NVOICE + 4 = 12, which would have
+silently held 14 and 16 to 12).
 
 History: `NVOICE 8` is in the first commit of the tree (5684e18, "Felucca 0.8-beta source") with no reason recorded in
 the code, README or docs. JIANT 0.9.12 (329aff5) added `VOICES_2CORE 12` in voice.c: the shared budget is 12 while the
 second core takes parts (MENU > SYSTEM > ABOUT says CORES 2), NVOICE otherwise, and ECO 6. So on a two-core device the
 shared cap is already 12 whatever NVOICE is (see Caveat).
 
-## Build checks per N (host build of the real image, `./build.sh`)
+## Build checks per T (NVOICE 8; packages `build/acid-fm-vc12.fwsc`, `-vc14`, `-vc16`, git-ignored)
 
-| N | app (B) | slot free (B) | RAM .data+.bss (of 98304) | pool (B) / spare | RAM code (of 25600) | farthest RAM-code call reach spare (B) |
-|---|---------|---------------|---------------------------|------------------|---------------------|-----------------------------------------|
-| 8  | 553708 | 30628 | 75156 | 310544 / 8928 | 19456 | 333004 |
-| 10 | 553804 | 30532 | 76212 (+1056) | 310544 / 8928 | 19456 | 332956 |
-| 12 | 553788 | 30548 | 77268 (+2112) | 310544 / 8928 | 19456 | 332956 |
+| T | app (B) | slot free (B) | RAM .data+.bss (of 98304) | pool (B) / spare | RAM code (of 25600) |
+|---|---------|---------------|---------------------------|------------------|---------------------|
+| 12 (default) | 553708 | 30628 | 75156 | 310544 / 8928 | 19456 |
+| 14 | 553708 | 30628 | 75156 | 310544 / 8928 | 19456 |
+| 16 | 553708 | 30628 | 75156 | 310544 / 8928 | 19456 |
 
-All build checks passed at 8, 10 and 12 (no FAIL). RAM grows 528 B per voice of NVOICE (`track_t.v[NVOICE]` for 6 parts);
-the pool does not depend on NVOICE (its users, eng_digital's `[NPART][NVOICE][4]` arrays, are not in the default build).
-Packages for the device: `build/acid-fm-nv8.fwsc`, `build/acid-fm-nv10.fwsc`, `build/acid-fm-nv12.fwsc` (git-ignored).
+All build checks passed. T changes only constants (same sizes; the packages differ). target_budget passes the same at
+each T. Per-part NVOICE (earlier measurement, T=12): 10 gives RAM 76212 (+1056), 12 gives 77268 (+2112), app +80 / +96 B,
+all checks passing; nothing hit a ceiling. History: `NVOICE 8` is in the first commit (5684e18) with no reason recorded;
+JIANT 0.9.12 (329aff5) added the 12 with the second core.
+
+## What else scales with T (checked)
+
+- `voice_cap()` readers (voice.c voice_room / voice_victim, the MENU > ABOUT cap display): all read the function.
+- audio.c governor: `gov_tick` ceiling was NVOICE + 4; now `GOV_MAX`. `gov_cap` is a byte starting at 16, so T <= 16
+  (static-asserted). The shed / floor numbers (4 least, -2 on a shed) are absolute and do not scale.
+- fx.c `mc_two()` / the core-1 split (`mc_cost`, `mc_split`) work per part, not per total voice; core 1's buffers
+  (`c1_buf`, `c1_mix`) are block-sized, not voice-sized; its stack is call depth, not voice count (the build's RAM and
+  RAM-code checks pass). No fixed-size structure is sized by 12.
+- Per-part arrays stay NVOICE. T <= NPART * NVOICE (48) is asserted.
+- The audio ISR's 80 % overload guard and `load_tight` measure core 0's half, so they hold at any T; they cost the
+  render more at 14 / 16, which is what the device step measures.
 
 ## Host cost
 
-`tests/target_budget.py` (static count of instructions in the render loops of the pi32v2 disassembly) is the only
-host measurement that runs here: it is the same for every N except `drum_render` (347 -> 350 instructions, 33 in loops
-both) and `mod_begin` (216 -> 218, 160 in loops both): the render loops do not get longer, because they run per active
-voice and N only sets how many may be active. All lines pass the +10 % budget at 10 and 12 as at 8.
+`tests/target_budget.py` (static loop counts) is unchanged by T. There is no host number for the CPU TEST song:
+`tests/regress.c` counts with macOS `proc_pid_rusage` (0 instr here) and `tests/cpu_vg.py` needs valgrind (not installed;
+skipped). The device measurement is the authority.
 
-There is no host instructions-per-sample number for the CPU TEST song: `tests/regress.c` counts instructions with
-macOS `proc_pid_rusage` (absent on Linux: 0 instr) and `tests/cpu_vg.py` needs valgrind, which is not installed (it
-skips). `regress` built with `-DFELUCCA_NVOICE=10/12` reports 4 golden changes and 4 voice / routing check failures,
-expected: the goldens and those checks encode the budget of 8. The device measurement is the authority.
+## Device measurements (Task 5), keyed by T (NVOICE 8)
 
-## Caveat for the device step
-
-`VOICES_2CORE` is a constant 12 in voice.c, independent of NVOICE. With CORES 2 the shared cap is 12 at NVOICE 8, 10
-and 12 alike (each part holds NVOICE voices, so 12 sounding voices need parts to share them); only with one core
-(`mc_two()` false) does NVOICE set the cap. The governor `gov_cap` is bounded by NVOICE + 4 (audio.c). To compare 8 / 10 /
-12 on a two-core device, VOICES_2CORE has to follow NVOICE, or the test has to be run with one core.
-
-## NVOICE-dependent storage checked
-
-Nothing stored or on the wire depends on NVOICE: `track_t.v[NVOICE]` is RAM only (project.c copies `p` and `step`,
-never the track or voice structs); the editor protocol, project, song and preset formats do not mention it.
-Other users are loops and caps (voice.c, audio.c, eng_drum.c bounds, ui_lzedit.c, eng_digital.c arrays not built).
-`voice.c:834` has `i < 8u`: the 8 EDIT knobs (P_E0..), not voices.
-
-## Device measurements (Task 5)
-
-| N | CPU TEST mean load % | PEAK | LATE | SHED | clicks heard (yes/no) |
+| T | CPU TEST mean load % | PEAK | LATE | SHED | clicks heard (yes/no) |
 |---|----------------------|------|------|------|-----------------------|
-| 8  |  |  |  |  |  |
-| 10 |  |  |  |  |  |
 | 12 |  |  |  |  |  |
+| 14 |  |  |  |  |  |
+| 16 |  |  |  |  |  |

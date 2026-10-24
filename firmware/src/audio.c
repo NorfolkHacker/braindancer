@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* I2S output (ALNK0 -> external codec) and the
  * audio ISR: per half buffer, blocks of CTL samples: mix_block (fx.c: events ->
  * each synth part -> dist -> level / pan -> sends -> buses -> master) -> USB audio (uac_tap) -> the metronome's
@@ -137,7 +138,7 @@ static uint16_t gov_hot, gov_calm, gov_win, gov_lcalm;
 static uint8_t gov_sheds, gov_floor;
 static void gov_tick(int over, int hot, int under, int shed)
 {
-    uint32_t c = gov_cap > NVOICE + 4u ? NVOICE + 4u : gov_cap;
+    uint32_t c = gov_cap > GOV_MAX ? GOV_MAX : gov_cap;
     if (shed) {
         c = c > 6u ? c - 2u : 4u;
         if (!gov_win) gov_sheds = 0;
@@ -155,7 +156,7 @@ static void gov_tick(int over, int hot, int under, int shed)
         }
     } else {
         gov_hot = 0;
-        if (under && ++gov_calm >= 172u) { gov_calm = 0; if (c < NVOICE + 4u) c++; }
+        if (under && ++gov_calm >= 172u) { gov_calm = 0; if (c < GOV_MAX) c++; }
     }
     if (gov_lite && (under ? ++gov_lcalm >= 1720u : (gov_lcalm = 0, 0))) gov_lite = 0;
     gov_cap = (uint8_t)c;

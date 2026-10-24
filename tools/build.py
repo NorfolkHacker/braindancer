@@ -243,6 +243,9 @@ def build_app():
     v = os.environ.get("FELUCCA_NVOICE")       # firmware/src/core.h: the voice budget (ACID FM 0.2), 1..16
     if v and v.isdigit() and 1 <= int(v) <= 16:
         flags.append(f"-DFELUCCA_NVOICE={int(v)}")
+    v = os.environ.get("FELUCCA_VOICES_2CORE")  # firmware/src/voice.c: the shared voices with two cores (ACID FM 0.2), 1..16
+    if v and v.isdigit() and 1 <= int(v) <= 16:
+        flags.append(f"-DFELUCCA_VOICES_2CORE={int(v)}")
     v = os.environ.get("FELUCCA_USB_LAYOUT")   # firmware/src/usb.c: how the USB composite presents itself (#67), 0..3
     if v in ("0", "1", "2", "3"):
         flags.append(f"-DFELUCCA_USB_LAYOUT={v}")
