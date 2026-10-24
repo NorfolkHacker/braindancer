@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Host test of the UI (firmware/src/ui*.c with the sound sources of hostsim.c;
  * the display and the HAL are stubs, the buttons and knobs are driven through them):
  *   SOUNDS     a sound load (PRESETS knob / page, TOOLS INIT, user preset) changes the sound only: the
@@ -143,9 +144,9 @@ static int check(const char *what, int ok)
 }
 
 /* main.c felucca_init, on the parts of 0.9.8 (TRK_OLD: T1 ANALOG ACID, T2 FM6 PAD, T3 LOFI PULSE LD, T4 DRUM-X, T5 PHASE,
- * T6 WHEEL, each its preset's sound with its sends), the music the UI tests, the renders (ui_render.c) and the CPU
- * sections (cpu_vg.c) are written on; (0.9.9) the device's own power-on (TRK_DEF: DRUM-X VOICE ANIMAL LOFI ANALOG FM6)
- * is ui_power_on_099 */
+ * T6 WHEEL, each its preset's sound with its sends; ACID FM 0.2: T6 ANALOG's first, WHEEL retired), the music the UI
+ * tests, the renders (ui_render.c) and the CPU sections (cpu_vg.c) are written on; (0.9.9) the device's own power-on
+ * (TRK_DEF: DRUM-X VOICE PHASE LOFI ANALOG FM6; T3 was ANIMAL) is ui_power_on_099 */
 static void ui_power_on(void)
 {
     uint32_t i;
@@ -5545,7 +5546,8 @@ static int test_fm4_retired(void)
 {
     int bad = 0, ok = 1;
     uint32_t i, k, e, total, seen = 0, all = ((1u << NENGINES) - 1u) & ~(1u << ENGI_DIGITAL) & ~(1u << ENGI_PHYS) &
-        ~(1u << ENGI_SAMPLE) & ~(1u << ENGI_GRAIN) & ~(1u << ENGI_SLICE) & ~(1u << ENGI_TRIO);
+        ~(1u << ENGI_SAMPLE) & ~(1u << ENGI_GRAIN) & ~(1u << ENGI_SLICE) & ~(1u << ENGI_TRIO) & ~(1u << ENGI_WHEEL) &
+        ~(1u << ENGI_ANIMAL);
     int16_t p[P_COUNT];
     uint8_t v[FP_SIZE + 1u];
     ui_power_on();
@@ -5557,8 +5559,8 @@ static int test_fm4_retired(void)
         if (e < NENGINES)
             seen |= 1u << e;
     }
-    bad += check("PRESETS: the list holds every engine's presets but the retired ones' (DIGITAL PHYS SAMPLE GRAIN SLICE TRIO)",
-                 seen == all && NENG_SHOWN == NENGINES - 6u);
+    bad += check("PRESETS: the list holds every engine's presets but the retired ones' (DIGITAL PHYS SAMPLE GRAIN SLICE TRIO WHEEL ANIMAL)",
+                 seen == all && NENG_SHOWN == NENGINES - 8u);
     go_page(GR_BROWSE);
     set_engine_of(TSEL, 0);
     for (i = 0, seen = 0; i < NENG_SHOWN; i++) {
@@ -5566,12 +5568,14 @@ static int test_fm4_retired(void)
         seen |= 1u << TSEL->eng_req;
     }
     bad += check("PRESETS KNOB 2: the engines in order (0.9.9: DRUM first, NOISE last, round), DIGITAL skipped, back to the first",
-                 seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == ENGI_PHASE &&
+                 seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == ENGI_NOISE &&
                  eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_LOFI && eng_step(ENGI_DRUM, 1) == ENGI_VOICE &&
-                 eng_step(ENGI_VOICE, 1) == ENGI_ANIMAL && eng_step(ENGI_DRUM, -1) == ENGI_NOISE && eng_step(ENGI_NOISE, 1) == ENGI_DRUM);
+                 eng_step(ENGI_VOICE, 1) == ENGI_PHASE && eng_step(ENGI_PHASE, 1) == ENGI_LOFI &&
+                 eng_step(ENGI_DRUM, -1) == ENGI_NOISE && eng_step(ENGI_NOISE, 1) == ENGI_DRUM);
     {   /* the display order (engines.c ENGINE_ORDER, 0.9.9): every engine one can pick once; the PRESETS list follows it
-         * (was ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL: test_engine_order_099 has PROGRAM CHANGE's) */
-        static const char *const ORDER[] = {"DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6", "PHASE", "WHEEL", "NOISE"};
+         * (was ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL: test_engine_order_099 has PROGRAM CHANGE's; ACID FM
+         * 0.2: WHEEL and ANIMAL retired) */
+        static const char *const ORDER[] = {"DRUM", "VOICE", "PHASE", "LOFI", "ANALOG", "FM6", "NOISE"};
         uint32_t last = 0xFFu, r = 0, n = 0;
         ok = NENG_SHOWN == NELEM(ORDER);
         for (i = 0; ok && i < NENG_SHOWN; i++)
@@ -5586,7 +5590,7 @@ static int test_fm4_retired(void)
             last = e;
             r++;
         }
-        bad += check("engines shown DRUM VOICE ANIMAL LOFI ANALOG FM6 PHASE WHEEL NOISE (ENGINE_ORDER); PRESETS lists them so",
+        bad += check("engines shown DRUM VOICE PHASE LOFI ANALOG FM6 NOISE (ENGINE_ORDER); PRESETS lists them so",
                      ok && r == NENG_SHOWN);
     }
     /* a user preset stored with engine 1: kept as it is, it loads as FM6 with the converted patch */
@@ -9418,7 +9422,8 @@ static int test_click_menu(void)
             midi_enqueue(0x0Cu | 0xC1u << 8 | 9u << 16, 1u);   /* PROGRAM CHANGE 9 on channel 2 */
             mix_block(o, CTL); frame();
             ok = all > 9u && e < NENGINES && trk[1].eng_req == e && song.sel == sel0;
-            midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* the 128th (0.8.3: ANIMAL's), or past the list: nothing */
+            midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* the 128th (0.8.3: ANIMAL's; ACID FM 0.2: retired), or past
+                                                         * the list: nothing */
             mix_block(o, CTL); frame();
             if (all > 127u) {
                 song.sel = 1;
@@ -10512,7 +10517,7 @@ static int test_scope(void)
             bad += ok ? 0 : 1;
         }
     bad += check("SCOPE: ON the creature left of the SCOPE card and the chips; OFF on the whole panel, no card, no chips (every engine, every skin)",
-                 nseen >= 4u * 7u);
+                 nseen >= 4u * 5u);                               /* (ACID FM 0.2: five, WHEEL and ANIMAL retired) */
     ui_power_on(); frame();
     return bad;
 }
@@ -11576,10 +11581,10 @@ static int test_fx_live(void)
 }
 
 /* ---------------------------------------------------------------------------- 0.9.4 the engines' creatures --- */
-/* (0.9.4, ui_engvis.c) VOICE's head (WORDS on and off), ANIMAL's creature, DRUM-X's kit on EDIT's SOUND / SOUND 1..4 and
- * HOME's BEING (0.9.6: ANALOG's cell, FM6's colony there and on OPERATOR / OP ENV / OPERATOR 2, WHEEL's worms, NOISE's
- * swarm, PHASE's snail, LOFI's caterpillar): drawn instead of the being (their own state read that frame), moving while the track sounds, still once
- * it is silent; ANIMAL's MODE turned in silence: the creature changes (a glide), then holds still */
+/* (0.9.4, ui_engvis.c) VOICE's head (WORDS on and off), DRUM-X's kit on EDIT's SOUND / SOUND 1..4 and
+ * HOME's BEING (0.9.6: ANALOG's cell, FM6's colony there and on OPERATOR / OP ENV / OPERATOR 2, NOISE's
+ * swarm, PHASE's snail, LOFI's caterpillar): drawn instead of the being (their own state read that frame), moving while
+ * the track sounds, still once it is silent. (ACID FM 0.2: ANIMAL's creature and WHEEL's worms retired with them) */
 static uint16_t vxt_a[240 * 140];
 static void vxt_run(uint32_t ms, int audio)               /* frames of 16 ms, the audio between them */
 {
@@ -11645,15 +11650,13 @@ static int test_engvis(void)
 {
     static const struct { uint32_t e; const char *pre, *page; uint8_t k; const char *what; } C[] = {
         {5, "CANTOR ES", "EDIT 1", 0, "VOICE WORDS, EDIT"}, {5, "TALK BOX", "EDIT 2", 0, "VOICE vowels, EDIT"},
-        {5, "SINGER EN", 0, 0, "VOICE, HOME BEING"}, {ENGI_ANIMAL, "CANARY", "EDIT 1", 1, "ANIMAL bird, EDIT"},
-        {ENGI_ANIMAL, "CRICKET", "EDIT 2", 1, "ANIMAL insect, EDIT"}, {ENGI_ANIMAL, "DOG BARK", 0, 1, "ANIMAL mammal, HOME BEING"},
+        {5, "SINGER EN", 0, 0, "VOICE, HOME BEING"},
         {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"}, {ENGI_DRUM, "DRUM-X", "EDIT 1", 2, "DRUM-X kit, EDIT KIT"},
         {ENGI_DRUM, "DRUM-X", 0, 2, "DRUM-X kit, HOME BEING"},
         {ENGI_ANALOG, "ACID", "EDIT 1", 3, "ANALOG cell, EDIT"}, {ENGI_ANALOG, "SOFT PAD", 0, 3, "ANALOG cell, HOME BEING"},
         {ENGI_FM6, "TINE EP", "EDIT 1", 4, "FM6 colony, EDIT"}, {ENGI_FM6, "TINE EP", "OPERATOR", 4, "FM6 colony, OPERATOR"},
         {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"},
         {ENGI_FM6, "MARIMBA", 0, 4, "FM6 colony, HOME BEING"},
-        {7, "ROCK DRIVE", "EDIT 1", 5, "WHEEL worms, EDIT"}, {7, "GOSPEL", 0, 5, "WHEEL worms, HOME BEING"},
         {11, "RAIN", "EDIT 1", 6, "NOISE swarm, EDIT"}, {11, "SEA", 0, 6, "NOISE swarm, HOME BEING"},
         {2, "BRASS", "EDIT 1", 7, "PHASE snail, EDIT"}, {2, "CZ PIANO", 0, 7, "PHASE snail, HOME BEING"},
         {3, "BYTEBEAT", "EDIT 1", 8, "LOFI caterpillar BYTE, EDIT"}, {3, "FLOAT PAD", "EDIT 2", 8, "LOFI caterpillar FLOAT, EDIT"},
@@ -11665,7 +11668,7 @@ static int test_engvis(void)
         if (!mv || !st) printf("  %s: %s\n", C[c].what, !mv ? "still while it plays" : "moving in silence");
         ok &= mv && st;
     }
-    bad += check("0.9.4 / 0.9.6 the engines' creatures (VOICE ANIMAL DRUM-X ANALOG FM6 WHEEL NOISE PHASE LOFI; EDIT, FM6's OPERATOR "
+    bad += check("0.9.4 / 0.9.6 the engines' creatures (VOICE DRUM-X ANALOG FM6 NOISE PHASE LOFI; EDIT, FM6's OPERATOR "
                  "pages, HOME): move with the sound, still in silence", ok);
     {   /* (0.9.9) VOICE's tract (SCOPE OFF, the whole panel; WORDS on): an open vowel opens the jaw down (the chin
          * drops; the condyle glides forward), the lips apart; a nasal drops the velum and the branch to the nose opens (its ink over the
@@ -11706,25 +11709,6 @@ static int test_engvis(void)
                         chin[1][1], ink[1], ink[2], pul, wav);
         bad += check("0.9.9 VOICE's tract: an open vowel opens the jaw down (its condyle gliding forward); a nasal drops the velum and opens "
                      "the branch to the nose; glottal pulses up the tube and waves out while it sings", ok);
-    }
-    {   /* MODE turned in silence: the creature glides to the mammal, then holds */
-        int32_t m0, m1;
-        int changed;
-        vxt_case(ENGI_ANIMAL, "CANARY", "EDIT 1", 1, &mv, &st);
-        m0 = vxs.w[0];
-        vxt_snap();
-        TSEL->p[P_E0] = AN_GLOTT;
-        vxt_run(64, 0);
-        changed = !vxt_same();
-        vxt_run(1500, 0);
-        m1 = vxs.w[0];
-        vxt_snap();
-        vxt_run(400, 0);
-        ok = changed && m0 < 160 && m1 > 230 && vxt_same();
-        bad += check("0.9.4 ANIMAL: MODE WHSTL -> GLOTT turns the bird into a mammal (a glide), then it holds still", ok);
-        TSEL->p[P_E3] = 0;                              /* SIZE all the way down: a mammal leaning back to the bird */
-        vxt_run(1500, 0);
-        bad += check("0.9.4 ANIMAL: SIZE leans GLOTT's mammal towards the bird", vxs.w[0] < m1 - 40);
     }
     {   /* (0.9.10) LOFI's V1 "DIP": CHIP turned in silence glides the caterpillar (8BIT) into the chip (1BIT), then it
          * holds; 4BIT / STEP half way, 4B/2 nearly; the other knobs change the drawing (in silence too), which stays still */
@@ -11851,7 +11835,8 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
  * (0.9.1's numbering, the level the page is drawn as), its pages; each must be reached at that level */
 typedef struct { uint8_t fam, lv, kind; const char *t[13]; } old_lv_t;   /* kind: EDIT's (0 synth 1 FM6 2 DRUM), 9 any */
 static const old_lv_t OLD_LV[] = {
-    {FAM_EDIT, 0, 0, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 0, {"FILTER", "MORPH", "RETRIG", "ROTOR", "VOICE", "VOICE 2", "WORDS"}},
+    {FAM_EDIT, 0, 0, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 0, {"FILTER", "MORPH", "RETRIG", "VOICE", "VOICE 2", "WORDS"}},   /* (ACID FM 0.2: ROTOR
+                                                         * gone with WHEEL) */
     {FAM_EDIT, 2, 0, {"FOCUS"}},
     {FAM_EDIT, 0, 1, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 1, {"FILTER", "VOICE", "VOICE 2"}},
     {FAM_EDIT, 2, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
@@ -12180,13 +12165,14 @@ static void ui_power_on_099(void)
     load_depth--;
     song.sel = 0;
 }
-/* (0.9.9) the power-on parts: T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6, each its preset, dry, every
+/* (0.9.9) the power-on parts: T1 DRUM-X, T2 VOICE, T3 PHASE (ACID FM 0.2: was ANIMAL), T4 LOFI, T5 ANALOG, T6 FM6, each
+ * its preset, dry, every
  * sequencer empty; DRUM on T1 alone (the DRUM-X kit, the grid, GEN's drum track); INIT SYSTEM / NEW PROJECT the same;
  * each part sounds a note with no effects, none clipping */
 static int test_power_on_099(void)
 {
-    static const char *const ENG[NPART] = {"DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6"};
-    static const char *const PRE[NPART] = {"DRUM-X", "SINGER EN", "CMOS BIRD", "BYTEBEAT", "FAT BASS", "TINE EP"};
+    static const char *const ENG[NPART] = {"DRUM", "VOICE", "PHASE", "LOFI", "ANALOG", "FM6"};
+    static const char *const PRE[NPART] = {"DRUM-X", "SINGER EN", "BRASS", "BYTEBEAT", "FAT BASS", "TINE EP"};
     int bad = 0, ok = 1;
     uint32_t i, k, b, drums = 0, live;
     int16_t p0[NTRK][P_COUNT];
@@ -12202,7 +12188,7 @@ static int test_power_on_099(void)
         drums += drum_track(&trk[i]);
     }
     ok &= load_depth == 0 && song.sel == 0u && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
-    bad += check("0.9.9 power-on: T1 DRUM-X, T2 VOICE SINGER EN, T3 ANIMAL CMOS BIRD, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP", ok);
+    bad += check("0.9.9 power-on: T1 DRUM-X, T2 VOICE SINGER EN, T3 PHASE BRASS, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP", ok);
     ok = drums == 1u && drum_track(&trk[0]) && drum_elsewhere(&trk[1]) == 1u && !drum_elsewhere(&trk[0]) && perc_kit(&trk[0]);
     ok &= trk[1].p[P_VLANG] == LG_EN && trk[1].p[P_VLYR] != 0;     /* (VOICE sings English words, its LYRIC's) */
     for (i = 0; i < NPART; i++)
@@ -12277,8 +12263,8 @@ static int test_power_on_099(void)
  * saved on 0.9.8's parts loads as it was saved, whatever the power-on */
 static int test_engine_order_099(void)
 {
-    static const char *const IDX[NENGINES] = {"ANALOG", 0, "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-", "DRUM",
-                                              "NOISE", "FM6", "-", "ANIMAL"};
+    static const char *const IDX[NENGINES] = {"ANALOG", 0, "PHASE", "LOFI", "-", "VOICE", "-", "-", "-", "-", "DRUM",
+                                              "NOISE", "FM6", "-", "-"};   /* (ACID FM 0.2: 7 WHEEL, 14 ANIMAL retired) */
     int bad = 0, ok = 1;
     uint32_t i, e, k, n, all, seen = 0;
     project_store_t st;
@@ -12288,7 +12274,7 @@ static int test_engine_order_099(void)
         ok &= !IDX[e] || str_eq(ENGINES[e]->name, IDX[e]);
     ok &= ENGI_DRUM == 10u && ENGI_VOICE == 5u && ENGI_ANIMAL == 14u && ENGI_LOFI == 3u && ENGI_ANALOG == 0u && ENGI_FM6 == 12u &&
           ENGI_PHASE == 2u && ENGI_WHEEL == 7u && ENGI_NOISE == 11u;
-    bad += check("0.9.9 engine order: ENGINES[] as before (0 ANALOG .. 10 DRUM 11 NOISE 12 FM6 14 ANIMAL)", ok);
+    bad += check("0.9.9 engine order: ENGINES[] as before (0 ANALOG .. 10 DRUM 11 NOISE 12 FM6; 7, 14 reserved)", ok);
     for (n = 0, ok = 1; n < NENG_SHOWN; n++) {         /* place -> engine -> place */
         e = eng_vis(n);
         ok &= eng_ok(e) && eng_rank(e) == n && !((seen >> e) & 1u);
@@ -12302,7 +12288,8 @@ static int test_engine_order_099(void)
         ok &= k == eng_vis(n);
         k = eng_step(k, 1);
     }
-    ok &= k == ENGI_DRUM && eng_step(eng_step(ENGI_ANIMAL, 1), -1) == ENGI_ANIMAL && eng_step(ENGI_DIGITAL, 1) == (FELUCCA_FM4 ? ENGI_DRUM : ENGI_PHASE);
+    ok &= k == ENGI_DRUM && eng_step(eng_step(ENGI_PHASE, 1), -1) == ENGI_PHASE && eng_step(ENGI_DIGITAL, 1) == (FELUCCA_FM4 ? ENGI_DRUM : ENGI_NOISE) &&
+          eng_step(ENGI_ANIMAL, 1) == eng_step(ENGI_ANALOG, 1);   /* (a retired one: from ANALOG's place) */
     bad += check("  the selector: place <-> engine round trips (every engine once; DIGITAL / retired ones at FM6 / ANALOG's)", ok);
     preset_all_pos(&all);
     k = 0;

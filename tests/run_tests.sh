@@ -32,7 +32,7 @@
 #                   one-step undo of both (SAVE held), REC on TRACKS / SEQ / ARP, STEP and ARP while recording,
 #                   MIDI IN ROUT, saves refused while playing and the OVERWRITE? dialog, MUTE on TRACKS KNOB 1,
 #                   the DRUM grid (keys, knobs, LEDs, pages, live recording into it, BEAT from PATTERNS).
-#                   (0.9.9) The power-on parts (T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6, dry, each
+#                   (0.9.9) The power-on parts (T1 DRUM-X, T2 VOICE, T3 PHASE (was ANIMAL), T4 LOFI, T5 ANALOG, T6 FM6, dry, each
 #                   sounding), the engines' display order (place <-> engine round trips; PROGRAM CHANGE in 0.9.8's), a
 #                   project of 0.9.8's tracks unchanged; the other UI tests on 0.9.8's tracks (engines.c TRK_OLD).
 # Audio / persistence / editor: the real C paths against simulated DMA and NOR flash: bounded overload
@@ -105,10 +105,6 @@
 # NOISE (tests/noise_test.c): the engine (src/eng_noise.c): COLR's slope (white, pink, brown), the filter and the
 #                   register clock following the key, META periodic at the key, no DC, no clipping at the
 #                   corners, a note from silence the same twice, the cost per voice; demos in build/noise_demo/.
-# ANIMAL (tests/animal_test.c, 0.8.3): the engine (src/eng_animal.c): CMOS's relaxation oscillator on the key, the owner's
-#                   video (chirps at 1.0 .. 1.3 kHz with rising hooks, 2.4 .. 4.5 a second; a trill of 8 .. 10), the cricket's
-#                   carrier and chirp rate, TEMP (Dolbear), the Hopf whistle's onset by bifurcation and its pitch, every
-#                   preset sounding, no DC, ending, the same twice, no clipping at any mode's corners; demos in build/animal_demo/.
 # VOICE words (tests/voice_test.c, 0.8.5): the VOICE engine singing (src/sing.c): Spanish by rules and Japanese romaji on word
 #                   lists (phonemes, syllables), English through its dictionary, every bank word's syllables; the lyric
 #                   generator (the same lyric per seed, phrases as long as the pattern's notes, bank words); the vowels' F1 / F2,
@@ -326,9 +322,6 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/noise_test" tests/noise_test.c -lm
     mkdir -p build/noise_demo
     run "NOISE: colour slopes, key-tracked filter and clock, META period, DC, clipping, retrigger, cost, demos" "$OUT/noise_test" build/noise_demo
-    $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/animal_test" tests/animal_test.c -lm
-    mkdir -p build/animal_demo
-    run "ANIMAL: CMOS on the key and the owner's video, cricket, TEMP, Hopf onset, presets, DC, clipping, retrigger, demos" "$OUT/animal_test" build/animal_demo
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/voice_test" tests/voice_test.c -lm
     mkdir -p build/voice_demo
     run "VOICE words: ES / JA / EN reading, the generator, formants, fricatives, plosives, clicks, DC, the lyric, POS, LOOP, demos" "$OUT/voice_test" build/voice_demo

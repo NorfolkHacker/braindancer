@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Host test of the modulation matrix (firmware/src/mod.c), same sources as the firmware (through hostsim.c):
  *   build/host/mod_test [DEMO_DIR]      (run_tests.sh builds and runs it; demos in build/mod_demo/)
  * 1. off: slots that do nothing (SRC, DST or AMT at 0) render bit-identically to no matrix at all; the
@@ -13,7 +14,7 @@
  *    channel the selected track).
  * 4. cost: instructions per sample (kernel-counted) of a heavy GRAIN preset (PHYS, retired in TONIC, was here) and of a 4-part mix with every
  *    slot of every part active, against the same with the matrix off; fails above MOD_COST_MAX.
- * 5. demos: LFO -> CUT, VEL -> AMP, MODW -> VIB, LFO -> ANALOG SYNC DTN, AT -> WHEEL DRV as WAVs in DEMO_DIR. */
+ * 5. demos: LFO -> CUT, VEL -> AMP, MODW -> VIB, LFO -> ANALOG SYNC DTN, AT -> ANALOG DRIVE as WAVs in DEMO_DIR. */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -92,8 +93,7 @@ static void fresh(uint32_t e, uint32_t pi)        /* the boot state (no FX tails
     memset(ap_ph, 0, sizeof ap_ph); memset(ap_free, 0, sizeof ap_free); memset(ap_sh, 0, sizeof ap_sh);
     memset(trk, 0, sizeof trk);
     memset(mod_c, 0, sizeof mod_c);
-    memset(drw_t, 0, sizeof drw_t); memset(drw_v, 0, sizeof drw_v);   /* (0.7.8: WHEEL's rotors and DUST, DRIFT's clock: */
-    memset(drift_clk, 0, sizeof drift_clk); mns_clk = 0;               /* each phrase from the same start) */
+    memset(drift_clk, 0, sizeof drift_clk); mns_clk = 0;   /* (0.7.8: DRIFT's clock: each phrase from the same start) */
     host_tracks_init();
     for (k = 0; k < NPART; k++)
         host_preset(&trk[k], k ? 0u : e, k ? 0u : pi);
@@ -318,24 +318,25 @@ static void test_math(void)
     check("every per-block value restored", t->p[P_DIST] == 64 && t->p[P_CHOR] == 64 && t->p[P_LRATE] == 100 && t->p[P_LD_PIT] == 0);
 
     /* an engine parameter: its descriptor's range */
-    e_trio = eng_by_name("WHEEL");                 /* (JIANT 0.4: TRIO folded into ANALOG; WHEEL's DRV 0..127, SUB -8..8) */
-    k_pw = edit_by_label(e_trio, "DRV", 6);
+    e_trio = eng_by_name("ANALOG");                /* (JIANT 0.4: TRIO folded into ANALOG; ACID FM 0.2: WHEEL retired,
+                                                    * ANALOG's DRIVE 0..127, INT -24..24 as WHEEL's DRV, SUB) */
+    k_pw = edit_by_label(e_trio, "DRIVE", 6);
     fresh(e_trio, 0);
     lfo_at(t, 32767);
     t->p[P_E0 + k_pw] = 100;
     slot(t, 0, MS_LFO, MD_E1 + (int32_t)k_pw, 40);
     mod_begin(t);
-    check("LFO -> WHEEL DRV: clamped to its range (0..127)", t->p[P_E0 + k_pw] == 127);
+    check("LFO -> ANALOG DRIVE: clamped to its range (0..127)", t->p[P_E0 + k_pw] == 127);
     mod_end(t);
-    t->p[P_E0 + 1] = 0;                            /* SUB: -8..8 */
-    slot(t, 0, MS_MODW, MD_E1 + 1, -32);
+    t->p[P_E0 + 7] = 0;                            /* INT: -24..24 */
+    slot(t, 0, MS_MODW, MD_E1 + 7, -32);
     t->mw = 127;
     mod_begin(t);
-    check("MODW -> E2 -32: half its range down (WHEEL SUB -8..8: -8)",
-          t->p[P_E0 + 1] == (((((127 * 258) * -32) >> 6) * (ENGINES[e_trio]->edit[1].max - ENGINES[e_trio]->edit[1].min)) >> 15) &&
-          t->p[P_E0 + 1] < -3);
+    check("MODW -> E8 -32: half its range down (ANALOG INT -24..24: -24)",
+          t->p[P_E0 + 7] == (((((127 * 258) * -32) >> 6) * (ENGINES[e_trio]->edit[7].max - ENGINES[e_trio]->edit[7].min)) >> 15) &&
+          t->p[P_E0 + 7] < -3);
     mod_end(t);
-    check("the engine parameters restored", t->p[P_E0 + k_pw] == 100 && t->p[P_E0 + 1] == 0);
+    check("the engine parameters restored", t->p[P_E0 + k_pw] == 100 && t->p[P_E0 + 7] == 0);
     check("DST names: E1..E8 by the engine's labels", str_eq(mod_dst_name(t, MD_E1 + (int32_t)k_pw), "DRIVE") &&
                                                           str_eq(mod_dst_name(t, MD_CUT), "CUT"));
 
@@ -600,12 +601,12 @@ static int demos(const char *dir)
         fclose(f);
         n++;
     }
-    /* AT -> WHEEL DRV: an organ chord, channel aftertouch pushes the drive up and down */
-    e = eng_by_name("WHEEL");
+    /* AT -> ANALOG DRIVE: a chord, channel aftertouch pushes the drive up and down (ACID FM 0.2: was WHEEL's organ) */
+    e = eng_by_name("ANALOG");
     fresh(e, 0);
-    slot(t, 0, MS_AT, MD_E1 + (int32_t)edit_by_label(e, "DRV", 6), 63);
+    slot(t, 0, MS_AT, MD_E1 + (int32_t)edit_by_label(e, "DRIVE", 6), 63);
     slot(t, 1, MS_AT, MD_CUT, 20);
-    if ((f = demo_open(dir, "at_wheel_drv", 6u * FS / CTL * CTL))) {
+    if ((f = demo_open(dir, "at_analog_drv", 6u * FS / CTL * CTL))) {
         trk_note_on(t, 48, 100);
         trk_note_on(t, 55, 100);
         trk_note_on(t, 64, 100);
@@ -622,12 +623,13 @@ static int demos(const char *dir)
         fclose(f);
         n++;
     }
-    printf("mod: %u demos in %s (lfo_cut, vel_amp, modw_vib, lfo_sync_dtn, at_wheel_drv)\n", n, dir);
+    printf("mod: %u demos in %s (lfo_cut, vel_amp, modw_vib, lfo_sync_dtn, at_analog_drv)\n", n, dir);
     return n == 5u;
 }
 
 /* (JIANT 0.7.8) DRIFT, WHEEL's ROTOR DEPTH and DUST, the NOISE source: each one off as before (127 stored: the
- * slots of the retired DIGITAL hold 127 in every project), on: its own sound */
+ * slots of the retired DIGITAL hold 127 in every project), on: its own sound. (ACID FM 0.2) WHEEL retired: its ROTOR
+ * DEPTH and DUST checks gone, the slots still hold 127 */
 static uint64_t phrase_on(uint32_t e, uint32_t id, int32_t v)   /* in a fork()ed child: every state as it was */
 {
     int fd[2];
@@ -654,16 +656,13 @@ static uint64_t phrase_on(uint32_t e, uint32_t id, int32_t v)   /* in a fork()ed
 }
 static void test_jiant_078(void)
 {
-    uint32_t ea = eng_by_name("ANALOG"), ew = eng_by_name("WHEEL");
-    uint64_t a0 = phrase_on(ea, P_COUNT, 0), w0 = phrase_on(ew, P_COUNT, 0), h;
-    check("0.7.8: DRIFT, ROTOR DEPTH, DUST at their stored defaults (127) bit-identical",
-          phrase_on(ea, P_DRIFT, 127) == a0 && phrase_on(ew, P_WRDEP, 127) == w0 && phrase_on(ew, P_WDUST, 127) == w0);
+    uint32_t ea = eng_by_name("ANALOG");
+    uint64_t a0 = phrase_on(ea, P_COUNT, 0), h;
+    check("0.7.8: DRIFT at its stored default (127) bit-identical", phrase_on(ea, P_DRIFT, 127) == a0);
     fresh(ea, 0);
     check("0.7.8: a fresh track holds 127 in DRIFT's, DUST's and DEPTH's slots",
           trk[0].p[P_DRIFT] == 127 && trk[0].p[P_WDUST] == 127 && trk[0].p[P_WRDEP] == 127);
     check("0.7.8: ANALOG with DRIFT 100 % sounds its own", phrase_on(ea, P_DRIFT, 0) != a0);
-    check("0.7.8: WHEEL with ROTOR DEPTH 0 % sounds its own", phrase_on(ew, P_WRDEP, 0) != w0);
-    check("0.7.8: WHEEL with DUST 100 % sounds its own (its crackle and hiss)", phrase_on(ew, P_WDUST, 0) != w0);
     fresh(ea, 0);
     trk[0].p[P_M1SRC] = MS_NOISE; trk[0].p[P_M1DST] = MD_CUT; trk[0].p[P_M1AMT] = 40;
     h = phrase();

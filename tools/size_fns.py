@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 # Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+# Portions Copyright (C) 2026 NorfolkHacker
 """Build the main-loop code for size (build.py): the functions defined in SIZE_FILES get LLVM's
 minsize (about -Oz) while everything else (the sound, render and ISR code, the flash and OTA code,
 the main loop) keeps -Os. The JieLi clang 4 has no '#pragma clang attribute' and its minsize
@@ -34,7 +35,7 @@ SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "cpu_safe.c", "icons.c", "u
               # MASTER pot's boot and poll, FM6's patch store, the kit's names and grids, MOD's names, the PUNCH lane
               "pfx.c", "master.c", "audio.c", "mod.c", "fx.c", "drumx_voice.c", "eng_drum.c", "eng_fm6.c",
               # (0.9.15) for their event code below (what runs every sample or block there stays -Os)
-              "perform.c", "voice.c", "song_play.c", "eng_wheel.c", "eng_formant.c", "eng_animal.c", "slicer.c",
+              "perform.c", "voice.c", "song_play.c", "eng_formant.c", "slicer.c",   # (ACID FM 0.2: WHEEL, ANIMAL retired)
               "eng_analog.c", "eng_lofi.c", "eng_noise.c", "eng_phase.c", "fugue.c", "../hal/fm1_input.h"]
 # (0.9.14) of what an interrupt reaches, the code that runs once an event (a USB control transfer, a MIDI message, a
 # step, a note, a recorded key), not once a sample or a block: built for size as the main loop is (1.9 KB, the room
@@ -47,13 +48,13 @@ EVENT_PFX = ("ep0_", "e0_", "ep1_", "ep3_", "sysex_", "midi_", "um_", "uart_midi
              # (0.9.15) a note (its voice found, started, ended), a key, a section or song row in, the FX layer's buffer
              # effect started or switched (a 1/16 at most), a fault: not a sample's or a block's work
              "trk_note_on", "trk_note_off", "voice_start", "voice_victim", "voice_room", "mono_play", "input_on",
-             "input_off", "wheel_note_on", "formant_note_on", "animal_init", "drum_oct_note", "sec_apply", "chain_apply",
+             "input_off", "formant_note_on", "drum_oct_note", "sec_apply", "chain_apply",
              "srec_finish", "scene_capture", "fx_trip", "rev_state_clear", "sl_enter", "perf_buf_start", "perf_buf_select",
              "perf_buf_done", "perf_glt_step", "perf_switch", "perf_press", "perf_hush_end", "pfx_resync", "pfx_note",
              "pfx_hush", "pfx_lane_", "strn_note", "scale_steps", "cg_near", "dxo_part", "trk_nvoice", "lofi_note_on",
-             "noise_note_on", "animal_note_on", "analog_note_on", "phase_note_on", "fm6_note_of", "glide_set", "glide_from",
+             "noise_note_on", "analog_note_on", "phase_note_on", "fm6_note_of", "glide_set", "glide_from",
              "mono_pick", "mono_remove", "lowest_held", "srec_", "trk_fade_out", "voice_kill", "trk_all_off", "fg_reset",
-             "fg_release", "step_set_lmode", "st_micro_set", "lofi_desc", "noise_desc", "animal_desc", "formant_desc",
+             "fg_release", "step_set_lmode", "st_micro_set", "lofi_desc", "noise_desc", "formant_desc",
              "param_desc_of", "param_fit", "uac_rate_set", "uac_ep4_reset", "fl_reset", "rev_line_clear", "dly_line_clear",
              "rev_clear", "dly_lo_reset", "slicer_start", "slicer_drop", "perf_drop_slicer", "dx_mute_set", "mc_lost",
              "uin_ep_config", "fm1__anim_frame", "sy_tok", "trk_chance", "drum_oct_of", "perf_key",

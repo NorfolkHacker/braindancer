@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT 0.5: the beings, in lines. A sound page without a graph of its own (the engine's EDIT pages) shows a creature
  * as a thermal camera's isotherms: four nested outlines of one body, each as hot as the being is there (heat_col:
  * the outer membrane cold, the core hot), the nuclei hottest. Colour is intensity: the output's level warms every
@@ -36,8 +37,9 @@ static const genome_t GENOME[9] = {
 };
 /* (JIANT 0.5) a species per engine: ANALOG the radiolarian, PHASE the swirling amoeba, LOFI the blunt diatom, VOICE the
  * hydra (a mouth of tentacles), WHEEL the ciliate (a fringe of pipes), NOISE the spore, FM6 the pollen grain (its
- * operators' geometry), the retired slots the worm; (0.8.3) ANIMAL the larva */
-static const uint8_t EGEN[NENGINES] = {0, 5, 1, 2, 5, 7, 5, 3, 5, 5, 0, 4, 6, 5, 8};
+ * operators' geometry), the retired slots the worm; (0.8.3) ANIMAL the larva. (ACID FM 0.2) WHEEL and ANIMAL retired:
+ * the worm; the ciliate and the larva unused */
+static const uint8_t EGEN[NENGINES] = {0, 5, 1, 2, 5, 7, 5, 5, 5, 5, 0, 4, 6, 5, 5};
 static const genome_t LANE_G_HOME = {12, 0, 10, 3, 18, 0, 6};   /* HOME: a DRUM-X track's being (spiky, a beat) */
 typedef struct {
     int32_t spikes, len, wob, lob, nuc, sep, fray, ripple;   /* len wob sep fray ripple 0..256 */

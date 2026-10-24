@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* (JIANT 0.6.83) CPU cost on any host with valgrind: the instruction counts of the audio path, counted by callgrind
  * (the same on every run: exact, unlike the time), section by section, for tests/cpu_vg.py to compare with
  * tests/cpu_baseline_vg.txt. The proc_pid_rusage counts of regress / reverb_test / mod_test exist on the Mac only;
@@ -8,7 +9,6 @@
  * Each section: the state set, a warm-up, then CALLGRIND_ZERO_STATS, NB blocks of mix_block (the whole audio block:
  * the sequencer, the parts, the buses, the master) and CALLGRIND_DUMP_STATS_AT(its name). Sections:
  *   eng/<ENGINE>   one part, 8 notes held (VOICE: 4), the engine's heaviest preset (hostsim.c's list)
- *   eng/ANIMAL.<MODE>  (0.8.3) ANIMAL's five sources at their heaviest: 8 notes, no gaps (GROUP HOLD), every option on
  *   rev/<TYPE>     a pad soaked in the reverb, each REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD)
  *   dly/<RATE>     (0.8.4) a pad into the delay, its line at the full rate, half, a quarter (fx.c dly_lo)
  *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on
@@ -113,11 +113,7 @@ int main(void)
 {
     static const struct { const char *eng, *pre; uint32_t notes; } E[] = {
         {"ANALOG", "FAT BASS", 8}, {"PHASE", "STRING", 8}, {"LOFI", "BYTE BENT", 8}, {"VOICE", "WOW BASS", 4},
-        {"WHEEL", "ROCK DRIVE", 8}, {"DRUM", "", 8}, {"NOISE", "METAL", 8}, {"FM6", "BRASS", 8}, {"ANIMAL", "ROAR", 8}};
-    static const int16_t AM[AN_NMODE][8] = {           /* (0.8.3) ANIMAL's modes, every option on, no gaps */
-        {AN_CMOS, 127, 127, 64, 63, 127, 0, 40}, {AN_PULSE, 127, 127, 26, 63, 127, 0, 22},
-        {AN_WHSTL, 127, 127, 40, 63, 127, 0, 22}, {AN_WING, 127, 127, 64, 63, 127, 0, 22},
-        {AN_GLOTT, 127, 127, 64, 63, 127, 0, 40}};
+        {"DRUM", "", 8}, {"NOISE", "METAL", 8}, {"FM6", "BRASS", 8}};   /* (ACID FM 0.2: WHEEL, ANIMAL retired) */
     static const char *const RT[5] = {"ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"};
     char name[40];
     uint32_t i, e;
@@ -134,21 +130,6 @@ int main(void)
             for (k = 0; k < NVOICE; k++) n += trk[0].v[k].active;
             if (n < 4u) { printf("cpu_vg: the part does not sound (%u voices)\n", n); return 1; }
         }
-    }
-    for (i = 0; i < AN_NMODE; i++) {                    /* (0.8.3) ANIMAL's five sources */
-        uint32_t k;
-        vg_quiet();
-        set_engine_of(&trk[0], ENGI_ANIMAL);
-        trk[0].engine = trk[0].eng_req;
-        for (k = 0; k < 8u; k++)
-            trk[0].p[P_E0 + k] = AM[i][k];
-        trk[0].p[P_MUTE] = 0; trk[0].p[P_VOICE] = V_POLY; trk[0].p[P_SUS] = 127;
-        for (k = 0; k < 64u; k++)
-            mix_block(vo, CTL);
-        for (k = 0; k < 8u; k++)
-            trk_note_on(&trk[0], 48 + 4 * k, 100);
-        snprintf(name, sizeof name, "eng/ANIMAL.%s", N_ANIMAL_MODE[i]);
-        vg_section(name);
     }
     for (i = 0; i < 2u; i++) {                          /* (0.8.5) VOICE singing words (sing.c): 4 voices, a lyric */
         for (e = 0; e < NENGINES && ENGINES[e] != &ENG_FORMANT; e++)

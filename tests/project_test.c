@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Host test of the project formats (firmware/src/project.c, -DPROJ_HOST part): a format 4 ("FUN4", 8-byte
  * steps: before the drum grid), a format 3 ("FUN3", 57 parameters per track: before the modulation matrix), a
  * format 2 ("FUN2", 53: before the SLICER) and a format 1 ("FUN1") project, built byte for byte as the
@@ -34,7 +35,8 @@ static int check(const char *what, int ok)
 /* the value parameter k (old id) of track t had in the old project */
 static int16_t oldv(uint32_t t, uint32_t k) { return (int16_t)(t * 100u + k * 3u + 1u); }
 
-static const uint8_t OLD_ENG[PROJ_LT] = {7, 0, 5, 0};   /* WHEEL, ANALOG, VOICE; the drum track: 0 (no engine) */
+static const uint8_t OLD_ENG[PROJ_LT] = {2, 0, 5, 0};   /* PHASE, ANALOG, VOICE; the drum track: 0 (no engine). (ACID FM
+                                                        * 0.2: was WHEEL, 7, retired: its tracks load as ANALOG) */
 static void fill_v2_track(proj_trk_v2_t *d, uint32_t t)
 {
     uint32_t k;
@@ -144,7 +146,8 @@ static void fill_v3_track(proj_trk_v3_t *d, uint32_t t)
     uint32_t k;
     for (k = 0; k < PROJ_NP_V3; k++)
         d->p[k] = oldv3(t, k);
-    d->engine = (uint8_t)(t == 3u ? 11u : t == 2u ? 7u : t * 3u);   /* (0 3 7 11: not a retired one, PHYS 9, TRIO 6) */
+    d->engine = (uint8_t)(t == 3u ? 11u : t == 2u ? 5u : t * 3u);   /* (0 3 5 11: not a retired one, PHYS 9, TRIO 6,
+                                                                     * WHEEL 7 (ACID FM 0.2; was 7)) */
     d->preset = (uint8_t)(t + 1u);
     for (k = 0; k < NSTEP; k++) {
         step8_t *s = &d->step[k];
@@ -258,9 +261,9 @@ int main(void)
         ok &= track_ok(&q.t[t], &v2.t[t], t, t == 3u, 127, 127);   /* (G_DRLVL / G_DRREV 525 / 526: 127) */
     bad += check("FUN2 -> FUN6: every parameter mapped, SLICER and matrix OFF (4 tracks)", ok);
 
-    bad += check("FUN2 -> FUN6: engine bytes kept (WHEEL 7, ANALOG 0, VOICE 5)",
-                 q.t[0].engine == 7 && q.t[1].engine == 0 && q.t[2].engine == 5 &&
-                 str_eq(ENGINES[7]->name, "WHEEL") && str_eq(ENGINES[5]->name, "VOICE") && NENGINES > 8);
+    bad += check("FUN2 -> FUN6: engine bytes kept (PHASE 2, ANALOG 0, VOICE 5)",
+                 q.t[0].engine == 2 && q.t[1].engine == 0 && q.t[2].engine == 5 &&
+                 str_eq(ENGINES[2]->name, "PHASE") && str_eq(ENGINES[5]->name, "VOICE") && NENGINES > 8);
     bad += check("FUN2 -> FUN6: the drum track -> part 4, DRUM (its kit on load), steps kept (lanes as hits)",
                  q.parts == NPART && q.t[3].engine == ENGI_DRUM && str_eq(ENGINES[ENGI_DRUM]->name, "DRUM") &&
                  TRK_OLD[3][0] == ENGI_DRUM && q.t[3].preset == PROJ_DEF_KEEP &&
@@ -303,9 +306,10 @@ int main(void)
          steps_grid_same(q2.t[3].step, v3.t[0].step) && !memcmp(&q2.t[0], &q.t[0], sizeof q.t[0]);
     bad += check("FUN3 before 1.0: the drum track -> part 4 (LEVEL / REV from G_DRLVL / G_DRREV)", ok);
 
-    /* a FUN6 round trip: stored as is (a matrix slot set; another engine: WHEEL, 7 (GRAIN, 8, is retired in JIANT); a
+    /* a FUN6 round trip: stored as is (a matrix slot set; another engine: LOFI, 3 (GRAIN, 8, is retired in JIANT, WHEEL,
+     * 7, in ACID FM); a
      * DRUM track with notes on its lanes stays so: only an older format is converted) */
-    q.t[1].engine = 7;
+    q.t[1].engine = 3;
     q.t[2].p[P_M2SRC] = 6;
     q.t[2].p[P_M2DST] = 11;
     q.t[2].p[P_M2AMT] = -17;
@@ -313,8 +317,8 @@ int main(void)
     q.t[0].step[0] = (step_t){{36, 42, 0, 0}, 2, ST_NOTE, 0, 96, 1u << DV_SNARE, 1u << DV_SNARE};
     q.sum = proj_sum(&q);
     memcpy(&buf, &q, sizeof q);
-    bad += check("FUN6 -> FUN6: as stored (a matrix slot, engine 7, a DRUM step with notes and hits)",
-                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q) && q2.t[1].engine == 7 &&
+    bad += check("FUN6 -> FUN6: as stored (a matrix slot, engine 3, a DRUM step with notes and hits)",
+                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q) && q2.t[1].engine == 3 &&
                  q2.t[2].p[P_M2AMT] == -17 && q2.t[0].step[0].n == 2u && q2.t[0].step[0].hit == 1u << DV_SNARE);
     q.t[0].engine = 3;
     q.t[0].step[0] = q.t[0].step[1];
@@ -878,6 +882,42 @@ int main(void)
              h.t[2].p[P_E0] == ENGINES[ENGI_PHYS_TO]->presets[0].e[0] && !eng_ok(ENGI_GRAIN) && !eng_ok(ENGI_SLICE) &&
              !eng_ok(ENGI_SAMPLE) && eng_live(ENGI_SLICE) == ENGI_PHYS_TO;
         bad += check("JIANT: GRAIN and SLICE tracks (retired) load as ANALOG, their engine motion gone, LEVEL and sends kept", ok);
+    }
+    {   /* (ACID FM 0.2) WHEEL (7) and ANIMAL (14) tracks, retired: ANALOG's first preset, their engine motion gone, the
+         * rest kept; neither is shown (ENGINE_ORDER) */
+        static project_t g, h;
+        static project_store_t gs;
+        const preset_t *pr = &ENGINES[ENGI_PHYS_TO]->presets[0];
+        uint32_t n, shown = 0;
+        memset(&g, 0, sizeof g);
+        g.magic = PROJ_MAGIC; g.size = sizeof g; g.parts = NPART; g.phys = PROJ_PHYS;
+        chain_defaults(&g.chain);
+        for (t = 0; t < PROJ_LT; t++) {
+            for (i = 0; i < P_COUNT; i++) g.t[t].p[i] = param_desc_of(0, i)->def;
+            memcpy(g.fm6[t], FM6_INIT, FM6_PACKED);
+            memcpy(g.dx, DX_KIT_DEF, sizeof g.dx);
+        }
+        g.t[1].engine = ENGI_WHEEL; g.t[1].p[P_E0] = 99; g.t[1].p[P_LEVEL] = 55;
+        g.t[2].engine = ENGI_ANIMAL; g.t[2].p[P_E3] = 3; g.t[2].p[P_LEVEL] = 66;
+        g.motion.count = 3; g.motion.on = 4;
+        g.motion.event[0] = (motion_event_t){2u << 6 | 1u, P_E2, 30};
+        g.motion.event[1] = (motion_event_t){2u << 6 | 2u, P_REV, 40};
+        g.motion.event[2] = (motion_event_t){1u << 6 | 3u, P_E5, 50};   /* (place: track << 6 | step) */
+        g.sum = proj_sum(&g);
+        ok = proj_pack_vb(&gs, &g) && proj_import(&h, &gs, sizeof gs) && h.t[1].engine == ENGI_PHYS_TO &&
+             h.t[2].engine == ENGI_PHYS_TO && h.t[1].p[P_LEVEL] == 55 && h.t[2].p[P_LEVEL] == 66 &&
+             h.motion.count == 1u && h.motion.event[0].param == P_REV;
+        for (i = 0; i < 8u; i++)
+            ok &= h.t[1].p[P_E0 + i] == pr->e[i] && h.t[2].p[P_E0 + i] == pr->e[i];
+        ok &= h.t[1].p[P_ATK] == pr->env[0] && h.t[2].p[P_REL] == pr->env[3];
+        bad += check("ACID FM 0.2: WHEEL and ANIMAL tracks (retired) load as ANALOG's first preset, their engine motion gone",
+                     ok);
+        for (n = 0; n < NENG_SHOWN; n++)
+            shown |= 1u << eng_vis(n);
+        bad += check("ACID FM 0.2: WHEEL and ANIMAL retired (eng_gone, not eng_ok, not shown, played as ANALOG)",
+                     eng_gone(ENGI_WHEEL) && eng_gone(ENGI_ANIMAL) && !eng_ok(ENGI_WHEEL) && !eng_ok(ENGI_ANIMAL) &&
+                     !(shown & (1u << ENGI_WHEEL | 1u << ENGI_ANIMAL)) && eng_live(ENGI_WHEEL) == ENGI_PHYS_TO &&
+                     eng_live(ENGI_ANIMAL) == ENGI_PHYS_TO && NENGINES == 15);
     }
     {   /* (JIANT 0.6) FUNC: six tracks in FUNB's 3840 bytes, only the steps that are not empty stored */
         static project_t f, g, h;

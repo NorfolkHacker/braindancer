@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* (0.9.1) MICRO in 64ths of a step (core.h ST_MICRO: the sixteenth in cwhen, the 64ths above it in flags' SF_MFINE), live
  * recording off the grid (seq.c rec_note, REC Q), its playback (seq_tick: late by a queue, early by the step before
  * ending sooner), FUNC's block 'M' 'F' (project.c), the editor and SEQ > NOTE's knob, on the real sources (ui_test.c's).
@@ -37,7 +38,8 @@ static uint32_t mfnv(uint32_t h, const void *p, uint32_t n)
 
 /* ---- 2. a project of before: the steps' MICRO set as 0.9.0 stored it (cwhen's bits 4-7, sixteenths) ---- */
 #define MICRO_OLD_090 0xd5c5b5c5u
-#define MICRO_PACK_090 0x55f3c173u
+#define MICRO_PACK_090 0xd76964c6u    /* (ACID FM 0.2: the fixture's T6 ANALOG's first, WHEEL retired; 0.9.0's
+                                         * own bytes, with T6 WHEEL, 0x55f3c173) */
 static void old_steps(void)
 {
     static const int8_t M16[8] = {0, 3, -2, 7, -8, 1, -5, 4};

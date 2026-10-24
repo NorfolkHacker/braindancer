@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Adapted from MIDI control contribution by ChanceTheMaker (2026).
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Shared USB/TRS channel controls. Included by seq.c after its input helpers.
  * USB and TRS intentionally share channel state, matching the existing routing.
  * A synth part has one live bend/wheel state; channels assigned to the same part
@@ -209,10 +210,10 @@ static const uint8_t MIDI_CC_MAP[][2] = {
 /* per engine (ENGINES[] order): CC74's E index + 1 in the high nibble, CC71's in the low one, 0 = none */
 static const uint8_t MIDI_CC_ENG[NENGINES] = {
     0x56, 0x00, 0x30, 0x80, 0x50, 0x07, 0x67, 0x00,   /* ANALOG CUT RES, -, PHASE DCW, LOFI TONE, SAMPLE CUT, VOICE Q,
-                                                       * TRIO CUT RES, WHEEL - */
+                                                       * TRIO CUT RES, WHEEL - (retired) */
     0x80, 0x30, 0x30, 0x34, 0x30,                     /* GRAIN TONE, PHYS BRIT, DRUM TONE, NOISE FREQ RES, FM6 MLVL */
     0x80,                                             /* SLICE TONE (retired: ANALOG's played) */
-    0x23,                                             /* ANIMAL PRESS (TOUCH CLICK BUZZ MOUTH), CHAOS (COUPLE Q DRIFT ROUGH) */
+    0x00,                                             /* ANIMAL (retired in ACID FM 0.2: ANALOG's played) */
 };
 /* a CC sets parameter id of track t as a knob would: 0..127 over its range (the map's and MIDI LEARN's) */
 static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)

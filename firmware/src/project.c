@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Projects: four slots. The slots live in .noinit RAM: they
  * survive resets and UBOOT entry. With FELUCCA_FLASH (default) every save
  * also goes to flash through storage.c, and an
@@ -388,7 +389,8 @@ static void proj_fm4(project_t *q)
 #endif
 }
 
-/* tracks of a retired engine (PHYS 9 in TONIC; SAMPLE 4, GRAIN 8, SLICE 13 in JIANT: core.h eng_gone) -> ANALOG with its first preset's EDIT values
+/* tracks of a retired engine (PHYS 9 in TONIC; SAMPLE 4, GRAIN 8, SLICE 13 in JIANT; WHEEL 7, ANIMAL 14 in ACID FM
+ * 0.2: core.h eng_gone) -> ANALOG with its first preset's EDIT values
  * and envelope; the mix, the sends, the matrix and the steps stay. Their motion events on the EDIT values go (PHYS's
  * meanings do not carry over). After proj_phys and proj_perc (a PHYS DRUM of before 1.0, a SAMPLE PERC are DRUM by
  * then). Idempotent */

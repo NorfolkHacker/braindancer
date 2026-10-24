@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+# Portions Copyright (C) 2026 NorfolkHacker
 """Target-side cost estimate of the hot DSP code, from the pi32v2 objdump listing tools/build.py writes
 (build/felucca.dis). For each engine's render function and the audio ISR: the instructions
 inside loops (every address range closed by a backward branch: the per-sample loops and what they
@@ -15,7 +16,7 @@ import re
 import sys
 
 FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_render_custom", "phase_render", "lofi_render", "formant_render",
-         "wheel_render", "wheel_block", "analog_ext", "analog_morph", "lofi_byte_render",   # (JIANT 0.4: SYNC RING SAW3, BYTE)
+         "analog_ext", "analog_morph", "lofi_byte_render",   # (JIANT 0.4: SYNC RING SAW3, BYTE; ACID FM 0.2: WHEEL gone)
          "drum_render", "noise_render", "fm6_render", "fm6_op_run", "fm6_op_fb",
          "dx_run", "dx_layer",                              # DRUM-X (drumx_voice.c): a hit, osc + noise; (0.6.49) LAYER
          "drum_side_add", "drum_mix", "drum_bus",           # (JIANT 0.6.48) DRUM-X IMAGE and SENDs; (0.7.9) the kit's curve
@@ -28,9 +29,8 @@ FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_re
          "click_render",                                    # the metronome's click (click.c), while it sounds
          "mod_begin", "mod_voice", "mod_end",                 # the modulation matrix (mod.c), called when active
          "perf_begin", "perf_mute", "perf_pre", "perf_block", "perf_master",   # the FX layer (perform.c), when busy
-         "rev_room", "rev_spring", "dist_amp", "dx_hands_step", "drw_dust",                # the reverb bus (fx.c): REVERB TYPE ROOM / SPRING
+         "rev_room", "rev_spring", "dist_amp", "dx_hands_step",                # the reverb bus (fx.c): REVERB TYPE ROOM / SPRING
          "dly_lo",                                          # (0.8.4) the delay at half / a quarter rate (fx.c)
-         "animal_render",                                   # (JIANT 0.8.3) ANIMAL (eng_animal.c): its five sources (one loop a voice)
          "formant_word_render", "formant_block",           # (JIANT 0.8.5) VOICE singing words (eng_formant.c, sing.c)
          "djf_block"]                                      # (0.9.1) the master DJ FILTER (fx.c), while it is off the middle
 # built only with FELUCCA_FM4=1 (DIGITAL, src/eng_digital.c; not in the default build, so not in BUDGET): absent,

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* FELUCCA core types: tracks, voices, engines, parameters.
  * Four tracks, each a synth part: its own engine, preset, parameters, voices and 64-step
  * pattern. The parts share one budget of NVOICE sounding voices (voice.c). Drums are the DRUM
@@ -20,9 +21,10 @@
 #endif
 #define NENGINES 15              /* the stores' engine numbers 0..14 (engines.c ENGINES[], append-only; 0.8.3: 14 ANIMAL) */
 #define ENGI_DIGITAL 1u          /* reserved without FELUCCA_FM4: never selectable (eng_ok), its sounds load as FM6 */
-#define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - 5)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
-                                                * in the display order of engines.c ENGINE_ORDER (PHYS 9, and in
-                                                * JIANT SAMPLE 4, GRAIN 8, SLICE 13: retired) */
+#define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - 7)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
+                                                * in the display order of engines.c ENGINE_ORDER (PHYS 9, in JIANT
+                                                * SAMPLE 4, TRIO 6, GRAIN 8, SLICE 13, in ACID FM WHEEL 7 and
+                                                * ANIMAL 14: retired) */
 /* (JIANT 0.6.71) the second core (hal/fm1_multicore.h; fx.c mix_block hands it some synth tracks). MC_CPU(): the core
  * running this, for the scratch each core has its own of (fx.c part_buf and the mix, mod.c's matrix, fm6_core.c's
  * buses, voice.c's filter flags). The host (tests): no second core; mc_host runs its jobs at once, as core 1 */
@@ -124,7 +126,7 @@ enum {                          /* per-track parameters */
 /* (JIANT 0.7.8) three more in DIGITAL's last slots; SUS and LEVEL slots hold 127 in every project and preset before them,
  * so 127 is each one's "as before": DRIFT and DUST read 127 as 0 % (F_PCTINV, as HUMAN), R.DEPTH 127 as 100 % */
 #define P_DRIFT P_FM3_SUS              /* EDIT > MORPH KNOB 2: each voice's pitch (and filter) wandering slowly, its own way */
-#define P_WDUST P_FM3_LEVEL            /* WHEEL's EDIT > ROTOR: an old organ's crackle and hiss */
+#define P_WDUST P_FM3_LEVEL            /* WHEEL's EDIT > ROTOR: an old organ's crackle and hiss (WHEEL retired) */
 #define P_WRDEP P_FM4_SUS              /* .. the rotor's depth (the Leslie's swirl), 100 % as before */
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.8.5) VOICE's words (sing.c), EDIT > WORDS, in slots of other engines' (0 there in every project and preset
@@ -205,20 +207,22 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
 #define ENGI_GRAIN 8u
 #define ENGI_SLICE 13u
 #define ENGI_SAMPLE 4u
-#define ENGI_ANIMAL 14u          /* (JIANT 0.8.3) eng_animal.c */
+#define ENGI_ANIMAL 14u          /* (JIANT 0.8.3; retired in ACID FM 0.2: eng_gone) */
 #define ENGI_PHASE 2u            /* (0.9.9: named for the power-on parts and the display order, engines.c) */
 #define ENGI_LOFI 3u
 #define ENGI_VOICE 5u            /* eng_formant.c ENG_FORMANT */
-#define ENGI_WHEEL 7u
+#define ENGI_WHEEL 7u            /* (retired in ACID FM 0.2: eng_gone) */
 #define ENGI_NOISE 11u
 #define ENGI_TRIO 6u             /* (JIANT 0.4) folded into ANALOG (analog_from_trio) */
 /* (JIANT) the retired engines: PHYS, and the sample engines SAMPLE GRAIN SLICE (their 123 KB of samples and GRAIN's
  * 27 KB of RAM went to DRUM-X and the effects). Their numbers stay reserved (engines.c ENG_GONE), never offered; a sound
  * of theirs that arrives -- a project, a user preset, the editor -- plays as ANALOG's first preset (SAMPLE's old PERC
- * set as DRUM first: drum_from_perc) */
+ * set as DRUM first: drum_from_perc). (ACID FM 0.2) WHEEL and ANIMAL retired the same way: they do not fit the
+ * instrument */
 static inline int eng_gone(uint32_t e)
 {
-    return e == ENGI_PHYS || e == ENGI_SAMPLE || e == ENGI_GRAIN || e == ENGI_SLICE || e == ENGI_TRIO;
+    return e == ENGI_PHYS || e == ENGI_SAMPLE || e == ENGI_GRAIN || e == ENGI_SLICE || e == ENGI_TRIO ||
+           e == ENGI_ANIMAL || e == ENGI_WHEEL;
 }
 /* (JIANT 0.4) a sound stored before 0.4 -> today's E values, in place: LOFI (3) {.., SWP, VIB, ARP, TONE} -> {.., CUT
  * (its TONE), VIB, BEND 0, MASK 0}; ANALOG (0) KTR -> INT 0 (the key tracking fixed at its old default). Projects

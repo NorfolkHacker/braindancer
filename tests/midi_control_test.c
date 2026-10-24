@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * End-to-end channel input and external-clock tests using the real queues,
  * UART parser, ownership model, sequencer, voice renderer and UI source. */
 #define UI_TEST_NO_MAIN 1
@@ -325,9 +326,10 @@ static int cc_map_test(void)
         }
     }
     bad += check("every engine's CC74 / CC71 target is a continuous EDIT value (or none)", ok);
-    trk[2].eng_req = trk[2].engine = 7u;               /* WHEEL: no brightness, no resonance */
+    trk[2].eng_req = trk[2].engine = 7u;               /* an engine of no CC74 / CC71 target (MIDI_CC_ENG 0): WHEEL's
+                                                        * number (ACID FM 0.2: retired; no engine kept has none) */
     memcpy(before, trk[2].p, sizeof before); queued(0xB2, 74, 3, 1); queued(0xB2, 71, 3, 1);
-    bad += check("CC74 / CC71 on WHEEL: ignored", !memcmp(before, trk[2].p, sizeof before));
+    bad += check("CC74 / CC71 on an engine of no target (7, WHEEL's, retired): ignored", !memcmp(before, trk[2].p, sizeof before));
     memcpy(before, trk[0].p, sizeof before);
     queued(0xB0, 121, 0, 1);
     bad += check("CC121 resets no mapped parameter (RP-015)", !memcmp(before, trk[0].p, sizeof before));

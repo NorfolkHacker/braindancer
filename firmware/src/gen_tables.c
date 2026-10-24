@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT (0.6.91) the song generator's knowledge, as constant tables (gen.c reads them; included by it). Everything a
  * genre knows is written here, nothing is computed: a genre is a row, its drums a map of priorities (after Mutable
  * Instruments' Grids: a level a step a lane, a hit where the level clears the density), its bass one of ~50 archetypes
@@ -293,7 +294,7 @@ static const garp_t ARP[AP_N] = {
 enum { LD_MOTIF, LD_OSTINATO, LD_SPARSE, LD_TINTI, LD_MECH, LD_HOOK, LD_NONE };
 
 /* ------------------------------------------------------------------------------------------ sounds and mix --- */
-#define EG_WH 7u                                        /* WHEEL (the others: song_dice.c) */
+/* (the engines: song_dice.c EG_*; ACID FM 0.2: WHEEL and ANIMAL retired, their recipes and weights on FM6 and NOISE) */
 /* a recipe: three engines it may take (the first the likeliest), words of the factory presets that fit (any engine),
  * then what the role asks of the sound: ADSR ranges, the filter (type: LP HP BP, 255 the engine's own), its cutoff and
  * resonance, the envelope on it, a slow LFO on it, drive and chorus, glide, the voice mode */
@@ -317,7 +318,7 @@ static const grecipe_t RECIPE[SR_N] = {
     [SR_PAD]      = {{EG_A, EG_FM, EG_PH}, {"JUNO PAD", "GLASS PAD", "SOFT PAD"}, {55, 100}, {80, 100}, {100, 120}, {80, 115}, 0, {44, 68}, {10, 25}, {5, 20}, {8, 20}, {4, 16}, {0, 0}, {25, 60}, 0, V_POLY},
     [SR_STRINGS]  = {{EG_A, EG_PH, EG_FM}, {"STRINGS", "FM STRINGS", "VOX PAD"}, {40, 80}, {80, 100}, {105, 125}, {70, 100}, 0, {50, 76}, {8, 20}, {0, 12}, {6, 16}, {4, 14}, {0, 0}, {40, 70}, 0, V_POLY},
     [SR_CHOIR]    = {{EG_VO, EG_VO, EG_FM}, {"CHOIR", "OOH PAD", "CHANT"}, {60, 100}, {90, 100}, {105, 120}, {85, 115}, 0, {60, 90}, {0, 10}, {0, 8}, {6, 12}, {3, 10}, {0, 0}, {50, 80}, 0, V_POLY},
-    [SR_ORGAN]    = {{EG_WH, EG_WH, EG_PH}, {"DUB ORGAN", "JAZZ PERC", "SOFT KEYS"}, {0, 2}, {64, 64}, {127, 127}, {25, 45}, 0, {60, 90}, {0, 10}, {0, 0}, {0, 0}, {0, 0}, {0, 15}, {0, 20}, 0, V_POLY},
+    [SR_ORGAN]    = {{EG_FM, EG_FM, EG_PH}, {"DUB ORGAN", "JAZZ PERC", "SOFT KEYS"}, {0, 2}, {64, 64}, {127, 127}, {25, 45}, 0, {60, 90}, {0, 10}, {0, 0}, {0, 0}, {0, 0}, {0, 15}, {0, 20}, 0, V_POLY},
     [SR_EP]       = {{EG_FM, EG_PH, EG_FM}, {"TINE EP", "DX KEYS", "CZ PIANO"}, {0, 2}, {70, 90}, {20, 50}, {50, 75}, 0, {60, 90}, {0, 15}, {5, 20}, {0, 0}, {0, 0}, {0, 0}, {10, 30}, 0, V_POLY},
     [SR_STAB]     = {{EG_A, EG_PH, EG_FM}, {"DUB STAB", "DIGI STAB", "BRASS"}, {0, 6}, {55, 72}, {30, 70}, {25, 45}, 0, {50, 78}, {15, 40}, {15, 40}, {0, 0}, {0, 0}, {0, 15}, {15, 40}, 0, V_POLY},
     [SR_DUBCHORD] = {{EG_A, EG_PH, EG_FM}, {"DUB STAB", "DUB ORGAN", "PWM STR"}, {0, 8}, {50, 70}, {20, 60}, {30, 50}, 2, {46, 66}, {25, 45}, {10, 30}, {0, 0}, {0, 0}, {0, 0}, {20, 50}, 0, V_POLY},
@@ -602,12 +603,14 @@ static const uint8_t GX_PADS[13] = {SR_PAD, SR_STRINGS, SR_CHOIR, SR_ORGAN, SR_E
 static const uint8_t GX_ARPS[8] = {SR_PLUCK, SR_BELL, SR_CHIP, SR_KEYS, SR_SINEKEY, SR_EP, SR_GTR, SR_STAB};
 static const uint8_t GX_LEADS[8] = {SR_LEAD, SR_VOXLEAD, SR_CHIP, SR_HOOVER, SR_BELL, SR_PLUCK, SR_WOW, SR_ORGAN};
 static const uint8_t GX_TEX[8] = {SR_NOISE, SR_TEXTURE, SR_DRONE, SR_CHOIR, SR_PAD, SR_ORGAN, SR_BELL, SR_STRINGS};
-/* any engine on any role (the weights a role, RL_BASS .. RL_TEX; NOISE never a bass, a lead or an arp: unpitched) */
+/* any engine on any role (the weights a role, RL_BASS .. RL_TEX; NOISE never a bass, a lead or an arp: unpitched).
+ * (ACID FM 0.2) WHEEL's column is FM6's, ANIMAL's NOISE's (the engines retired; the shape kept: NOISE so on a bass, a
+ * lead or an arp now and then, at ANIMAL's small weight) */
 #define GX_NENG 8u
-static const uint8_t GX_ENG[GX_NENG] = {EG_A, EG_FM, EG_PH, EG_LO, EG_VO, EG_WH, EG_NO, ENGI_ANIMAL};
+static const uint8_t GX_ENG[GX_NENG] = {EG_A, EG_FM, EG_PH, EG_LO, EG_VO, EG_FM, EG_NO, EG_NO};
 static const uint8_t GX_ENG_W[RL_N][GX_NENG] = {
     {0},
-    {20, 14, 14, 12, 8, 8, 0, 2},                       /* bass (0.9.13: ANIMAL a quarter as often) */
+    {20, 14, 14, 12, 8, 8, 0, 2},                       /* bass (0.9.13: ANIMAL a quarter as often; NOISE's now) */
     {14, 12, 12, 8, 14, 12, 4, 2},                      /* chords */
     {14, 10, 12, 12, 16, 6, 0, 4},                      /* lead */
     {12, 14, 14, 14, 8, 8, 0, 3},                       /* arp */

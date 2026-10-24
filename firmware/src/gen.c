@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT (0.6.91) the song generator, second version: HOME + SELECT opens GEN, a screen of three pages (GENRE SEED
  * ENERGY FORM; DRUMS BASS CHORDS ARP; LEAD COMPLEX SWING HUMAN), OCT+ makes the piece, HOME (or OCT-) is done. Included by
  * ui_input.c after song_dice.c (whose helpers it shares: the roles, dhold, euclid, dname_has, dlevel ..).
@@ -94,10 +95,11 @@ static char gmut_name[20];
 
 static void gclear(step_t *s) { memset(s, 0, sizeof *s); s->time = ST_REST; }
 /* (0.8.6) EXPLORE: on (this piece is EXPLORE's), dirty (an EXPLORE piece set DIV and PLAYHEADS, which a genre's piece
- * puts back), the engine gen_sound takes (-1: the recipe's), ANIMAL and VOICE tracks so far (two each at most, as FM6);
+ * puts back), the engine gen_sound takes (-1: the recipe's), VOICE tracks so far (two at most, as FM6; ACID FM 0.2:
+ * ANIMAL's count gone with it);
  * (0.9.13) w: how wild (the COMPLEX knob: 100 every rule broken, as 0.8.6 .. 0.9.12), nmax: a chord's notes at most
  * (the CPU budget), np: the tracks so far in a loop or DIV of their own */
-static struct { uint8_t on, dirty, nan, nvo; int8_t eng; uint8_t w, nmax, np; } gx = {0, 0, 0, 0, -1, 100, 4, 0};
+static struct { uint8_t on, dirty, nvo; int8_t eng; uint8_t w, nmax, np; } gx = {0, 0, 0, -1, 100, 4, 0};
 static int gxw(uint32_t pct) { return gch(pct * gx.w / 100u); }   /* (0.9.13) EXPLORE: a chance, as wild as COMPLEX */
 
 static void gnote(step_t *s, const int32_t *n, uint32_t cnt, int32_t vel, uint32_t flags)
@@ -1819,7 +1821,8 @@ static void gen_parts(void)
  * chords on any degrees in any order (non-functional: a chord a triad the mode takes, any quality, now and then a
  * borrowed, secondary or flat-side chord: the out-of-key moves), its chords 8 to 48 steps long and the loop 8 to 64
  * (odd metres: 3/4, 5/4, 7/8 ..); each track its own loop and DIV (1/8, 1/32, 8T, 16T: polyrhythm), any engine on any
- * role (ANIMAL, VOICE singing words, FM6 twice at most as the genres, ANIMAL and VOICE twice at most), DRUM-X's octaves
+ * role (VOICE singing words, FM6 twice at most as the genres, VOICE twice at most; ACID FM 0.2: ANIMAL retired),
+ * DRUM-X's octaves
  * per sound on the steps (x2 x4 x8, SHORT GHOST FLAM), hits off the grid, step components scattered (RAND OCT BEND
  * ECHO PULSE WALK CLIMB ARP TONAL JUMP REV, some every other loop), PLAYHEADS, MUTATE, the delay's pitch and spray,
  * any reverb. What it keeps: every note in the key the SCALE page shows but the colours' (the CHORD page as the chords
@@ -1890,17 +1893,16 @@ static void gx_prog(void)
     }
     if (!gs.pn) { gs.pdeg[0] = 0; gs.pq[0] = Q_TRI; gs.pn = 1; }
 }
-/* a role's engine (the budgets: FM6, ANIMAL, VOICE twice each at most) */
+/* a role's engine (the budgets: FM6, VOICE twice each at most) */
 static int8_t gx_engine(uint32_t r)
 {
     uint32_t tries, e = EG_A;
     for (tries = 0; tries < 8u; tries++) {
         e = GX_ENG[gpickw(GX_ENG_W[r % RL_N], GX_NENG)];
-        uint32_t two = 1u + (gx.w > 60u);                /* (0.9.13: ANIMAL, VOICE once each under COMPLEX 61) */
-        if (!(e == ENGI_FM6 && gs.fm6 >= 2u) && !(e == ENGI_ANIMAL && gx.nan >= two) && !(e == EG_VO && gx.nvo >= two)) break;
+        uint32_t two = 1u + (gx.w > 60u);                /* (0.9.13: VOICE once under COMPLEX 61) */
+        if (!(e == ENGI_FM6 && gs.fm6 >= 2u) && !(e == EG_VO && gx.nvo >= two)) break;
         e = EG_A;
     }
-    gx.nan += e == ENGI_ANIMAL;
     gx.nvo += e == EG_VO;
     return (int8_t)e;
 }
@@ -1996,9 +1998,10 @@ static void gx_mutate(void)
  * SPRING, the texture left out, then the arp, then the lead (gx_fit_sounds, before the parts); the delay's grain off,
  * a PLAYHEAD less, a note less in every chord (two at least), the long releases shorter, the texture cleared
  * (gx_fit_piece, after them). The genres and RANDOM are left as they were */
-static const uint8_t GC_ENG[NENGINES] = {27, 79, 45, 27, 27, 64, 27, 44, 27, 27, 70, 60, 79, 27, 22};   /* (ANALOG ..
-                                                         * ANIMAL by number; the retired ones as ANALOG, DIGITAL as FM6) */
-static const uint8_t GC_VOX[NENGINES] = {19, 26, 15, 17, 19, 23, 19, 22, 19, 19, 11, 16, 26, 19, 11};
+static const uint8_t GC_ENG[NENGINES] = {27, 79, 45, 27, 27, 64, 27, 27, 27, 27, 70, 60, 79, 27, 27};   /* (ANALOG ..
+                                                         * 14 by number; the retired ones as ANALOG, DIGITAL as FM6;
+                                                         * ACID FM 0.2: WHEEL 7, ANIMAL 14 retired) */
+static const uint8_t GC_VOX[NENGINES] = {19, 26, 15, 17, 19, 23, 19, 19, 19, 19, 11, 16, 26, 19, 19};
 static const uint8_t GC_REV[5] = {0, 25, 32, 10, 47};   /* ROOM SPRING SHIMMER RESO CLOUD */
 static const uint8_t GC_DIVQ[6] = {1, 2, 4, 8, 3, 6};   /* a DIV's steps a beat, x 4 / 4 (1/4 .. 1/32, 8T, 16T) */
 #define GC_GRAIN 25u
@@ -2069,7 +2072,7 @@ static void gx_fit_sounds(void)
                 (best == NTRK || GC_ENG[trk[k].eng_req % NENGINES] > GC_ENG[trk[best].eng_req % NENGINES])) best = k;
         if (best == NTRK) break;
         r = gs.role[best]; e = trk[best].eng_req;
-        gs.fm6 -= e == ENGI_FM6; gx.nan -= e == ENGI_ANIMAL; gx.nvo -= e == EG_VO;
+        gs.fm6 -= e == ENGI_FM6; gx.nvo -= e == EG_VO;
         gx.eng = (int8_t)(gch(50) ? EG_LO : EG_A);
         gen_sound(&trk[best], r, gsnd(r));
         gx.eng = -1;
@@ -2296,7 +2299,7 @@ static void gen_make(void)
     /* the choices from the seed: the genre (RANDOM), the root, the scale, the progression, the bass */
     gseed(GS_PICK);
     gx.on = (uint8_t)(dice_force_style < 0 && gp.genre == GEN_EXPLORE);
-    gx.nan = gx.nvo = gx.np = 0; gx.eng = -1; gx.w = gp.complex; gx.nmax = 4;
+    gx.nvo = gx.np = 0; gx.eng = -1; gx.w = gp.complex; gx.nmax = 4;
     if (!gx.on && gx.dirty) {                           /* (0.8.6) after an EXPLORE piece: DIV and PLAYHEADS as a genre's
                                                          * piece has them (1/16, none) */
         for (k = 0; k < NTRK; k++) trk[k].p[P_SDIV] = 2;

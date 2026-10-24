@@ -5,8 +5,6 @@ analog_render 581
 phase_render 102
 lofi_render 253
 formant_render 312
-wheel_render 267
-wheel_block 86
 analog_ext 782
 analog_morph 808
 lofi_byte_render 164
@@ -38,8 +36,6 @@ rev_spring 127
 drum_bus 104
 dist_amp 84
 dx_hands_step 36
-drw_dust 29
-animal_render 731
 dly_lo 2949
 formant_word_render 338
 formant_block 122

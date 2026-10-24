@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT (0.6.91) the song generator (firmware/src/gen.c) measured: every genre at several seeds and settings, on the
  * host build of the UI tests. What a piece must always have: the same piece from the same settings (deterministic);
  * one scale on every melodic track, every note in it (the bass's chromatic approaches excepted) and in its register;
@@ -534,7 +535,7 @@ int main(void)
      * a piece that plays (two melodic parts at least, sound at a safe level, the voice and engine budgets), its SCALE and
      * CHORD pages the key it plays in (every note in it but the coloured chords' and the approaches), storable; and
      * very different from the next: the tempos, the keys, the loops' lengths and DIVs, the drum maps, the engines
-     * (ANIMAL and VOICE among them), the components, PLAYHEADS. A genre's piece the same before and after one */
+     * (VOICE among them; ACID FM 0.2: never a retired one), the components, PLAYHEADS. A genre's piece the same before and after one */
     {
         static const uint32_t SEEDS = 60u;
         uint32_t sd, nmel_bad = 0, page_bad = 0, chord_bad = 0, key_bad = 0, key_col = 0, key_appr = 0, nn = 0;
@@ -577,7 +578,7 @@ int main(void)
                 const track_t *t = &trk[k];
                 uint32_t r = gs.role[k], len = dlen(t), on = 0, c = 0, b;
                 if (drum_track(t)) { dk++; if (gs.act[RL_DRUM]) for (i = 0; i < len; i++) lms += step_lm_any(&t->step[i]) != 0; continue; }
-                fm += t->eng_req == ENGI_FM6; an += t->eng_req == ENGI_ANIMAL; vo += t->eng_req == EG_VO;
+                fm += t->eng_req == ENGI_FM6; an += eng_gone(t->eng_req % NENGINES); vo += t->eng_req == EG_VO;
                 if (!seen_eng[t->eng_req % NENGINES]) { seen_eng[t->eng_req % NENGINES] = 1; neng++; }
                 words += t->eng_req == EG_VO && t->p[P_VLANG] > 0;
                 for (b = 0; b < 12u; b++) c += (scale_mask(t) >> b) & 1u;
@@ -610,7 +611,7 @@ int main(void)
             }
             poly += lens_differ;
             if (mel < 2u) { nmel_bad++; printf("  EXPLORE seed %u: %u melodic parts playing\n", gp.seed, mel); }
-            if (fm > 2u || an > 2u || vo > 2u || dk > 1u) budget_bad++;
+            if (fm > 2u || an || vo > 2u || dk > 1u) budget_bad++;   /* (an: a retired engine, ACID FM 0.2) */
             {   /* the CHORD page: an in-scale type on the chord track, its chords in the key */
                 uint32_t pd = gs.trk_of[RL_PAD];
                 if (pd < NTRK && gs.act[RL_PAD]) {
@@ -647,7 +648,7 @@ int main(void)
                peak_max, vmax_all, vref);
         bad += gcheck("  60 seeds: each named EXPLORE nnnn, each another piece (no two the same)", !name_bad && !same);
         bad += gcheck("  each plays: two melodic parts at least, sound (RMS), never stuck at full scale", !nmel_bad && !quiet && !loud);
-        bad += gcheck("  the budgets: FM6 / ANIMAL / VOICE on two tracks at most, one DRUM track, no more voices than a genre's",
+        bad += gcheck("  the budgets: FM6 / VOICE on two tracks at most, no retired engine, one DRUM track, no more voices than a genre's",
                       !budget_bad && vmax_all <= vref);
         bad += gcheck("  the SCALE page its key on every track (a mode of seven, QUANT on); the CHORD page in-scale, its chords in the key",
                       !page_bad && !chord_bad);
@@ -657,8 +658,8 @@ int main(void)
                       nbpm >= 20u && bpm_lo < 90u && bpm_hi > 150u && nsc >= 6u && nlen >= 12u && odd > 0u && ndm >= 12u);
         bad += gcheck("  the rules broken: polyrhythm (a third of the pieces), DIVs, components, DRUM-X octaves, PLAYHEADS",
                       poly * 3u >= SEEDS && divs && comps && lms && heads);
-        bad += gcheck("  any engine: six at least, ANIMAL and VOICE among them, VOICE singing words",
-                      neng >= 6u && seen_eng[ENGI_ANIMAL] && seen_eng[EG_VO] && words);
+        bad += gcheck("  any engine: six at least, VOICE among them, VOICE singing words; never WHEEL or ANIMAL (retired)",
+                      neng >= 6u && !seen_eng[ENGI_ANIMAL] && !seen_eng[ENGI_WHEEL] && seen_eng[EG_VO] && words);
         bad += gcheck("  every piece storable, the automation inside its 64", !store_bad);
         bad += gcheck("  (0.9.13) every piece inside the CPU budget of two cores (gc_cost: 65 % of a half)", !cpu_bad);
         mc_host_v12 = 0;
@@ -789,7 +790,8 @@ int main(void)
     {   /* (0.9.13) the sounds' movement: every genre, RANDOM and EXPLORE x 20 seeds. A pitch LFO only as a soft vibrato
          * (at most a third of a semitone, ~5 Hz, fading in: never the old 2-semitone siren on the lead, track 5), the
          * filter moving on most melodic parts (its envelope or a slow LFO), a release in its role's range (never dry),
-         * a progression of two chords or more on most pieces, ANIMAL rare in EXPLORE */
+         * a progression of two chords or more on most pieces; (ACID FM 0.2) no part on a retired engine (WHEEL, ANIMAL: their
+         * genres' recipes and EXPLORE's weights on FM6 and NOISE) */
         uint32_t gg, sd, n = 0, pit = 0, pit_bad = 0, mel = 0, fmod = 0, rel_bad = 0, prog = 0, xp = 0, anim = 0, xtr = 0;
         static const uint8_t RL_LO[RL_N] = {0, 40, 70, 55, 50, 70};   /* (EXPLORE's CPU budget may shorten a long one to 84) */
         gen_reset();
@@ -807,7 +809,7 @@ int main(void)
                     fmod += t->p[P_ED_FLT] != 0 || t->p[P_LD_FLT] != 0;
                     if (d) { pit++; if (d > 2 || t->p[P_LFADE] < 60 || t->p[P_LRATE] < 80) { pit_bad++; printf("  pitch LFO %d rate %d fade %d: %s %u T%u\n", t->p[P_LD_PIT], t->p[P_LRATE], t->p[P_LFADE], gs.g->name, gp.seed, k + 1u); } }
                     if (t->p[P_REL] < RL_LO[r]) { rel_bad++; printf("  release %d: %s %u T%u role %u\n", t->p[P_REL], gs.g->name, gp.seed, k + 1u, r); }
-                    if (gg == GEN_EXPLORE) { xtr++; anim += t->eng_req == ENGI_ANIMAL; }
+                    xtr++; anim += eng_gone(t->eng_req % NENGINES);
                 }
                 pd = gs.trk_of[RL_PAD];
                 if (pd < NTRK && gs.act[RL_PAD]) for (i = 0; i < NSTEP; i++) ch += trk[pd].step[i].time == ST_NOTE && trk[pd].step[i].n >= 2u;
@@ -815,11 +817,11 @@ int main(void)
                 xp += gg == GEN_EXPLORE;
             }
         printf("gen: sounds x %u pieces: a soft vibrato on %u of %u melodic parts, the filter moving on %u; a progression in %u;"
-               " ANIMAL on %u of EXPLORE's %u parts\n", n, pit, mel, fmod, prog, anim, xtr);
+               " a retired engine on %u of %u parts\n", n, pit, mel, fmod, prog, anim, xtr);
         bad += gcheck("(0.9.13) pitch LFO a soft vibrato only (<= 1/3 semitone, ~5 Hz, fading in), on few parts", !pit_bad && pit * 4u < mel);
         bad += gcheck("(0.9.13) the filter moving on 90 % of the melodic parts; releases in their role's range", fmod * 10u >= mel * 9u && !rel_bad);
-        bad += gcheck("(0.9.13) a chord progression (two chords or more) in 90 % of the pieces; ANIMAL on under 5 % of EXPLORE's parts",
-                      prog * 10u >= n * 9u && anim * 20u < xtr);
+        bad += gcheck("(0.9.13) a chord progression (two chords or more) in 90 % of the pieces; no retired engine on any genre's part",
+                      prog * 10u >= n * 9u && !anim && xtr);
     }
     {   /* (0.9.17) the dice's variety and its melodies (tests/dice_metrics.c measures them at length): OCT+ pressed 24
          * times a genre (MICRO HOUSE among them: the owner's), a part the same as the press before (90 % of its steps,
