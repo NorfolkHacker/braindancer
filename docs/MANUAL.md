@@ -51,7 +51,7 @@ files.
 
 1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track. (0.9.9) The tracks
    start as **T1 DRUM-X** (the factory kit), **T2 VOICE** (SINGER EN: it sings words), **T3 PHASE** (BRASS; ACID FM 0.2, was ANIMAL),
-   **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (FAT BASS) and **T6 FM6** (TINE EP), each its preset's sound, dry.
+   **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (ACID) and **T6 FM6** (PAD), each its preset's sound, dry. With nothing to restore, T1, T5 and T6 also carry a short demo at 124 BPM (beat, acid line, pad): press PLAY; the status line says DEMO until your first edit or a PLAY→STOP. NEW PROJECT starts empty.
 2. Turn **ALGORITHM** to pick a track (T1–T6). With **TRACKS 4** (a setting; the default is 6 since the power-on demo) it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.

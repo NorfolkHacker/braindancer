@@ -12614,12 +12614,16 @@ static int test_power_on_099(void)
 /* (ACID FM 3b) the power-on demo: T1 BEAT, T5 ACID with its ACID line, T6 FM6's first PAD with PATTERNS PAD, T2..T4 empty,
  * 124 BPM; PLAY sounds T1 / T5 / T6 within a bar; HOME's status says DEMO until the first edit or a PLAY -> STOP;
  * NEW PROJECT empty; RESTORE LAST's autosave is not the demo */
+static int32_t demo_peak[NPART];                 /* the loudest block of each part (trk[].peak) */
 static uint32_t demo_voices(uint32_t *mask, uint32_t bars)
 {
     int32_t o[2u * CTL];
     uint32_t b, n = bars * 4u * beat_samples() / CTL + 4u, p, i, mx = 0;
+    memset(demo_peak, 0, sizeof demo_peak);
     for (b = 0; b < n; b++) {
         mix_block(o, CTL);
+        for (p = 0; p < NPART; p++)
+            if (trk[p].peak > demo_peak[p]) demo_peak[p] = trk[p].peak;
         for (p = 0; p < NPART; p++)
             for (i = 0; i < NVOICE; i++)
                 if (trk[p].v[i].active) { *mask |= 1u << p; mx++; }
@@ -12656,6 +12660,8 @@ static int test_power_on_demo(void)
     ok &= trk_live == NTRK && (ui_rec_prefs & (PREF_SIX >> 8));
     press(B_PLAY);
     ok &= demo_voices(&m, 1) > 0u && (m & 1u) && (m & 16u) && (m & 32u) && song.playing == 1;
+    ok &= !(m & (2u | 4u | 8u));                                            /* T2..T4: no voice in that bar */
+    ok &= demo_peak[0] > 0 && demo_peak[4] > 0 && demo_peak[5] > 0 && !demo_peak[1] && !demo_peak[2] && !demo_peak[3];   /* levels too */
     bad += check("  new settings: TRACKS 6; PLAY: voices on T1, T5 and T6 within a bar", ok);
     song.playing = 0;
     transport_req = 2;

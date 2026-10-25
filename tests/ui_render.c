@@ -1050,19 +1050,34 @@ static void setup(int s)
         song.octave = 2; song.rec = 1; usb.config = 1;
         song.playing = 0; break;                  /* (ACID FM 3a task 6: stopped, the ridgelines flat) */
     }
+    case S_HOME_DEMO: {                           /* (3b) the power-on demo (power_on_parts, new settings: TRACKS 6) PLAYING for real: the
+                                                   * sequencer and the engines run ~2.3 s (mix_block), the real peaks feed the ridgelines
+                                                   * at the UI's cadence (T1, T5, T6 active; T2..T4 flat), the DEMO hint on the status line */
+        int32_t o[2 * CTL];
+        uint32_t b, us = 0;
+        load_depth++; power_on_parts(); load_depth--;
+        memset(&favorites, 0, sizeof favorites);
+        settings_fresh();
+        rp_apply();
+        song.master_q12 = 4096;
+        ux_levels_reset();
+        transport_req = 1;
+        for (b = 0; b < 3200u; b++) {
+            events_block(CTL);
+            mix_block(o, CTL);
+            us += CTL * 1000000u / 44100u;
+            fm1_ms += us / 1000u; us %= 1000u;
+            if (b % 5u == 4u) ux_levels_tick();   /* (ui_draw's tick: every 16 ms frame, ~22 blocks; finer here, the ring's own cadence) */
+        }
+        break;
+    }
     case S_HOME_PLAY:                             /* (ACID FM 3a task 6) TRACKS playing: ~2 s of levels behind each line, */
-    case S_HOME_DEMO:                             /* (3b) the power-on demo (power_on_parts), playing mid-bar, its hint */
     case S_HOME_T5:                               /* T1's acid line on its 5th step (an accent, a slide); T5: T3..T6 lit */
     case S_HOME_TURN: {                           /* .. T5's LEVEL just turned (KNOB 3): its column, line and readout */
         uint32_t i, c;
         static const uint8_t AN[16] = {36, 0, 48, 39, 43, 0, 36, 1, 46, 41, 0, 48, 36, 0, 43, 39};   /* (0 rest, 1 tie) */
         for (i = 0; i < NTRK; i++) trk[i].seq_idx = 4;
-        if (s == S_HOME_DEMO) {
-            load_depth++; power_on_parts(); load_depth--;
-            trks_put(1);
-            song.playing = 1;
-        }
-        for (i = 0; i < 16u && s != S_HOME_DEMO; i++) {   /* an acid line: accents on 5 and 12, slides into 4 and 10 */
+        for (i = 0; i < 16u; i++) {               /* an acid line: accents on 5 and 12, slides into 4 and 10 */
             step_t *st = &trk[0].step[i];
             memset(st, 0, sizeof *st);
             st->time = AN[i] == 0u ? ST_REST : AN[i] == 1u ? ST_TIE : ST_NOTE;
@@ -1080,7 +1095,7 @@ static void setup(int s)
             fm1_ms += UXR_MS;
             ux_levels_tick();
         }
-        if (s != S_HOME_PLAY && s != S_HOME_DEMO) track_select(4);
+        if (s != S_HOME_PLAY) track_select(4);
         if (s == S_HOME_TURN) { trk[4].p[P_LEVEL] = 92; ux_knob_touch(2); }
         break;
     }

@@ -91,7 +91,7 @@ static const menu_flag_t MENU_FLAGS[] = {
     {MI_RESTORE, PREF_RESTORE_ON, {"OFF", "ON"}},      /* 1.2, #130; JIANT 0.6.40: OFF (the default), no autosave, power-on as
                                                         * INIT SYSTEM; ON, the last session back (project.c) */
     {MI_SCLLED, PREF_SCALE_LEDS, {"OFF", "ON"}},      /* 1.2, Discussion #127: ON, the keys show the scale (ui_input.c) */
-    {MI_TRACKS, PREF_SIX, {"4", "6"}},                /* (JIANT 0.6.18) 4 tracks (the default) or all 6 (voice.c trk_live) */
+    {MI_TRACKS, PREF_SIX, {"4", "6"}},                /* (JIANT 0.6.18) 4 tracks or all 6, the default since ACID FM 3b (voice.c trk_live) */
 };
 /* SPEAKER EQ (settings.lowcut, fx.c fx_lowcut): an EQ on the master for the small speaker, not a speaker switch
  * (#42: "OFF" read as the speaker off). FLAT is the old OFF (0, stored as before). The built-in speaker cannot be
