@@ -252,6 +252,7 @@ naming the layer and what OCT/keys do). EDIT layer K1–K4 = the engine's page 1
 **Files:** `firmware/src/ux_home.c`, `ux_widgets.c` (pace), tests; `docs/superpowers/plans/2026-10-24-acid-fm-piece3a-deferred.txt` (mark done).
 
 - TRACKS ridge panel pace while `load_tight`: 100 → 200 ms (spec §5); LOAD LITE/ECO also 200 ms.
+- Ridge height: cap each ridgeline's peak so it stays within its own row (≈ the row spacing); tall peaks no longer spill into the row above (they made T5's acid line look like T4 playing). Test: no ridge pixel of track k above its row top.
 - Tempo on HOME (spec §5): TRACKS knobs LEVEL · LEVEL · LEVEL · BPM; the three-track window follows the selected track; BPM edits `G_BPM` as GLO › GLOBAL does (range, accel, BPM LOCK, external clock shows "CLOCK: USB"/"CLOCK: TRS" on a turn); ridgelines mark the three controlled tracks in K1–K3 colours; tests: window per selected track, BPM turn equals GLO's edit, lock/clock cases, render S_HOME_BPM.
 - HC font slot thrash on EDIT pages: profile which Huffman faces each EDIT page draws; keep ≤ 2 per page or pin the
   slot assignment; one sentence in the report.
