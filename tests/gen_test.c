@@ -964,10 +964,13 @@ int main(void)
             int ok = 1;
             static const char *const WALK[12] = {"EXPLORE", "RANDOM", "IDM", "BROKEN", "BREAKS", "D'N'BASS", "ACID",
                                                  "ELECTRO", "MICRO", "RETRO", "AMBIENT", "DRIFT"};
+            static const char *const FULL[10] = {"IDM", "BROKEN BEAT", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO", "MICRO",
+                                                 "RETROBOC", "AMBIENT", "DRIFT"};
             uint32_t w;
             gp.genre = GEN_EXPLORE;
             for (w = 0; w < 24u; w++) {                 /* (3b) ten genres shown: forward twice round, then back twice */
-                gen_value(0, 0, v); ok &= !strcmp(v, WALK[w % 12u]);
+                gen_value(0, 0, v); ok &= !strcmp(v, WALK[w % 12u]);   /* (the card's names) */
+                if (w % 12u > 1u) ok &= !strcmp(GEN_SHOWN_NAME[w % 12u - 2u], FULL[w % 12u - 2u]);
                 ok &= w % 12u < 2u ? gp.genre == (w % 12u ? 0u : GEN_EXPLORE) : gp.genre == 1u + GEN_SHOWN[w % 12u - 2u];
                 gen_knob(0, 1);
             }

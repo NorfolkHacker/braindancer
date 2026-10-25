@@ -2715,7 +2715,7 @@ static void gen_value(uint32_t p, uint32_t k, char *b)
     uint32_t v;
     b[0] = 0;
     if (p == 0u) {
-        if (k == 0u) { str_cpy(b, gp.genre == GEN_EXPLORE ? "EXPLORE" : gp.genre ? gen_shown_index(gp.genre) != 255u ? GEN_SHOWN_NAME[gen_shown_index(gp.genre)] : GENRE[(gp.genre - 1u) % NGENRE].name : "RANDOM", 16); return; }
+        if (k == 0u) { str_cpy(b, gp.genre == GEN_EXPLORE ? "EXPLORE" : gp.genre ? gen_shown_index(gp.genre) != 255u ? GEN_SHOWN_CARD[gen_shown_index(gp.genre)] : GENRE[(gp.genre - 1u) % NGENRE].name : "RANDOM", 16); return; }
         if (k == 1u) { b[0] = (char)('0' + gp.seed / 1000u % 10u); b[1] = (char)('0' + gp.seed / 100u % 10u); b[2] = (char)('0' + gp.seed / 10u % 10u); b[3] = (char)('0' + gp.seed % 10u); b[4] = 0; return; }
         if (k == 3u) { str_cpy(b, GEN_FORM[gp.form % 3u], 16); return; }
         v = gp.energy;
@@ -2794,8 +2794,15 @@ static void gen_panel(void)
         GFX_HOOK_ALIGN(x, 102, x + bw - 2, 116, AL_HV, "GEN section letter centred");
         cv_text_in(x, 102 + CAP_IN(X, 14), bw - 2, &AF_X, l, T_INK, sec_col(sc));
     }
-    str_cpy(v, "LAST: ", sizeof v);
-    str_cpy(v + 6, gp.last[0] ? gp.last : "-", sizeof v - 6);
+    if (p == 0u && gp.hot == 0u) {                      /* (3b) the genre's card turned: its full name across the panel */
+        str_cpy(v, "GENRE: ", sizeof v);
+        k = gen_shown_index(gp.genre);
+        str_cpy(v + 7, gp.genre == GEN_EXPLORE ? "EXPLORE" : !gp.genre ? "RANDOM" : k != 255u ? GEN_SHOWN_NAME[k] :
+                GENRE[(gp.genre - 1u) % NGENRE].name, sizeof v - 7);
+    } else {
+        str_cpy(v, "LAST: ", sizeof v);
+        str_cpy(v + 6, gp.last[0] ? gp.last : "-", sizeof v - 6);
+    }
     cv_clip_text(6, 126, &AF_X, v, T_MID, T_SURF, 150);
     cv_text_r(234, 126, &AF_X, "OCT+ MAKE", T_ACCENT, T_SURF);
 }

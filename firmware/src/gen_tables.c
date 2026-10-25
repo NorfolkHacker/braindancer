@@ -600,8 +600,11 @@ static const ggenre_t GENRE[] = {
 static const uint8_t GEN_SHOWN[GEN_NSHOWN] = {41 /* IDM */, 42 /* BROKEN */, 30 /* BREAKS */, 31 /* DRUM & BASS */, 4 /* ACID HOUSE */,
                                               11 /* ELECTRO */, 2 /* MICRO HOUSE */, 26 /* BOOM BAP */, 37 /* AMBIENT */,
                                               39 /* IMPRESSION */};
-/* (names as the spec's, three shortened to fit GEN's card, about seven letters: BROKEN BEAT, DRILL'N'BASS, RETROBOC) */
-static const char *const GEN_SHOWN_NAME[GEN_NSHOWN] = {"IDM", "BROKEN", "BREAKS", "D'N'BASS", "ACID", "ELECTRO",
+static const char *const GEN_SHOWN_NAME[GEN_NSHOWN] = {"IDM", "BROKEN BEAT", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO",
+                                                       "MICRO", "RETROBOC", "AMBIENT", "DRIFT"};
+/* the GEN card holds about seven letters: the same names where they fit, else a short one (the full name is drawn across
+ * the panel, gen.c gen_panel, while the genre's card is the one turned) */
+static const char *const GEN_SHOWN_CARD[GEN_NSHOWN] = {"IDM", "BROKEN", "BREAKS", "D'N'BASS", "ACID", "ELECTRO",
                                                        "MICRO", "RETRO", "AMBIENT", "DRIFT"};
 /* a stored genre's place among the ten, 255 if it is RANDOM, EXPLORE or hidden */
 static uint32_t gen_shown_index(uint32_t genre)
