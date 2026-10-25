@@ -117,11 +117,13 @@ static void settings_jiant_once(persist_t *p)
 }
 
 /* (0.9.7) at power-on with no settings saved (a new FM-1, an erased store): the defaults of new settings, SKIN AIR (settings
- * saved before keep what they hold: 0 COLORS ..). (ACID FM 0.3: the byte is not read, one skin; written as JIANT's) */
+ * saved before keep what they hold: 0 COLORS ..; (3b) TRACKS 6). (ACID FM 0.3: the byte is not read, one skin; written as JIANT's) */
 static void settings_fresh(void)
 {
 #ifdef FELUCCA_FAVORITES
     favorites.factory[15][20] = SKIN_AIR;
+    favorites.factory[15][28] |= 0x80u;            /* (ACID FM 3b) MENU > TRACKS 6 (ui.c PREF_SIX >> 8): a six-track sequencer; settings
+                                                     * saved before keep what they hold (0 = 4, as JIANT's default was) */
 #endif
 }
 

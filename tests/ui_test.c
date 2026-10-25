@@ -12647,14 +12647,16 @@ static int test_power_on_demo(void)
     for (i = 0; i < trk[5].preset; i++) ok &= PR_TAG(&f6->presets[i]) != PT_PAD;   /* the first of its type */
     ok &= !trk[4].p[P_DIST] && !trk[5].p[P_REV];                            /* (dry) */
     bad += check("3b power-on demo: T1 BEAT, T5 ACID + ACID line, T6 first FM6 PAD + PAD line, T2..T4 empty, 124 BPM, not dirty", ok);
-    ui_rec_prefs &= (uint8_t)~(PREF_SIX >> 8);
+    ui_rec_prefs &= (uint8_t)~(PREF_SIX >> 8);                              /* (settings saved with TRACKS 4: kept) */
     rp_apply();
-    ok = trk_live == 4u;                                                    /* (the default: T5 / T6 asleep) .. */
-    autosave_boot(1);                                                       /* .. until the boot, nothing restored, wakes them */
+    ok = trk_live == 4u;
+    memset(&favorites, 0, sizeof favorites);                                /* new settings (nothing saved, power-on's settings_fresh): TRACKS 6 */
+    settings_fresh();
+    rp_apply();
     ok &= trk_live == NTRK && (ui_rec_prefs & (PREF_SIX >> 8));
     press(B_PLAY);
     ok &= demo_voices(&m, 1) > 0u && (m & 1u) && (m & 16u) && (m & 32u) && song.playing == 1;
-    bad += check("  PLAY: voices on T1, T5 and T6 within a bar", ok);
+    bad += check("  new settings: TRACKS 6; PLAY: voices on T1, T5 and T6 within a bar", ok);
     song.playing = 0;
     transport_req = 2;
     ui_power_on_099();

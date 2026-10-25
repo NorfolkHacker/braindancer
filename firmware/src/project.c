@@ -2512,9 +2512,6 @@ static int autosave_boot(int allowed)
 #else
     (void)allowed;
 #endif
-    if (demo_on)                                          /* (ACID FM 3b) nothing restored: the demo's T5 and T6 play, so MENU > TRACKS 6
-                                                           * (the default 4 puts them to sleep; a restored session keeps the player's) */
-        trks_put(1);
     as.saved = as.seen = autosave_sig();
     as.t = fm1_ms;
     return rc;

@@ -42,6 +42,12 @@ static int startup_case(int saved, int restore, int noprefs)
         for (i2 = 0; i2 < 2000; i2++) web_render(128);   /* (past the splash) */
         okf &= settings.palette == UI_ACID_INDEX && T_BG == UI_PALETTES[UI_ACID_INDEX].bg && T_SURF == T_BG &&
                ui_skin == SKIN_AIR && ui_scope == 0u;
+        {   /* (ACID FM 3b) the demo's T5 / T6 play: new settings are TRACKS 6 */
+            int okd = !seq_is_empty(&trk[0]) && !seq_is_empty(&trk[4]) && !seq_is_empty(&trk[5]) && song.g[G_BPM] == 124 &&
+                      trk_live == NTRK && (ui_rec_prefs & (PREF_SIX >> 8));
+            printf("startup: no settings, no autosave: the demo, TRACKS 6 %s\n", okd ? "ok" : "FAIL");
+            okf &= okd;
+        }
         printf("startup: empty flash, no settings: ACID, the one skin, SCOPE OFF (new settings) %s\n", okf ? "ok" : "FAIL");
         return !okf;
     }
@@ -62,7 +68,7 @@ static int startup_case(int saved, int restore, int noprefs)
         ok &= st_load(OBJ_SONGIDX, &got, sizeof got) < 0;
     {   /* (ACID FM 3b) no autosave in any case: the power-on demo (T1 BEAT, T5 ACID line, T6 pad, 124 BPM, six tracks) */
         int okd = !seq_is_empty(&trk[0]) && !seq_is_empty(&trk[4]) && !seq_is_empty(&trk[5]) && seq_is_empty(&trk[1]) &&
-                  song.g[G_BPM] == 124 && demo_on && trk_live == NTRK;
+                  song.g[G_BPM] == 124 && demo_on && (noprefs ? trk_live == NTRK : trk_live == 4u);   /* (new settings: TRACKS 6; saved ones keep theirs) */
         printf("startup: no autosave: the demo is loaded %s\n", okd ? "ok" : "FAIL");
         ok &= okd;
     }

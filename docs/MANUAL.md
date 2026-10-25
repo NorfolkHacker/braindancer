@@ -52,7 +52,7 @@ files.
 1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track. (0.9.9) The tracks
    start as **T1 DRUM-X** (the factory kit), **T2 VOICE** (SINGER EN: it sings words), **T3 PHASE** (BRASS; ACID FM 0.2, was ANIMAL),
    **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (FAT BASS) and **T6 FM6** (TINE EP), each its preset's sound, dry.
-2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4** it stops at T4: T5 and T6 appear only with TRACKS 6 (see
+2. Turn **ALGORITHM** to pick a track (T1–T6). With **TRACKS 4** (a setting; the default is 6 since the power-on demo) it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
 4. Turn **KNOB 1–4**: on HOME › TRACKS they are the LEVELs of the four tracks around the selected one; on **EDIT** the engine's controls.
@@ -88,7 +88,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | Control | What it does |
 | --- | --- |
 | **SELECT** (encoder) | Alone (0.9.2): **walks the section's pages**, one page a detent, as one chain, stopping at its first and last page (no levels, no zoom; see [How navigation works](#how-navigation-works-six-rules-092)). In the MENU: its pages. With a button held: **HOME** + SELECT **GEN**, **EDIT / SEQ / LFO / FX** + SELECT that part's **dice**, **GLO** + SELECT the **tempo**, **ENV / SCL / ARP / SAVE** + SELECT walk that section's chain from wherever you are. |
-| **ALGORITHM** (encoder) | Selects the track from any page: T1–T6 (T1–T4 with TRACKS 4). The track is always ALGORITHM's (0.9.2: PRESETS no longer picks it on ENV, LFO, CHORD, ARP). In the MENU: the next / previous tab. With a layer held: its view, MAP ↔ KNOBS ↔ STATE. |
+| **ALGORITHM** (encoder) | Selects the track from any page: T1–T6 (T1–T4 if TRACKS is set to 4; the default is 6). The track is always ALGORITHM's (0.9.2: PRESETS no longer picks it on ENV, LFO, CHORD, ARP). In the MENU: the next / previous tab. With a layer held: its view, MAP ↔ KNOBS ↔ STATE. |
 | **PRESETS** (encoder) | **Always presets** (0.9.2): the selected track's sounds (every engine's factory presets, then your user presets) on every page; on the **SEQ** pages the **patterns** (it opens the PHRASES loader with the next pattern picked: OCT+ loads it, OCT− back to the SEQ page); on **GEN** the GENRE. In the MENU and with a button held it does nothing. It never changes page, track, module or row. |
 | **KNOB 1–4** | The four cards (columns) on screen. A page that picks something picks it with **KNOB 1** (the step, the bar, the slot, the stage, the operator, the kit's sound, the row). With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU › SYSTEM › KNOB SPEEDUP turns this off). In the MENU: KNOB n the setting on card n. |
 | **MASTER** | The output volume. |
@@ -2086,7 +2086,7 @@ every setting, its values and its meaning: nothing changes in the saved settings
 | SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow (was LEDS: OFF, DIM LO, DIM HI, INV); (0.7.3) the glow's LEDs take turns frame to frame, so it no longer hums through the speaker once the music stops |
 | | 2 | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
-| | 2 | TRACKS | **4** (default), 6 — the same as GLO › SYSTEM KNOB 1 |
+| | 2 | TRACKS | 4, **6** (default) — the same as GLO › SYSTEM KNOB 1 |
 | | 3 | LOAD | ECO, LITE, **FULL** (default) — the same as GLO › SYSTEM KNOB 2 |
 | | 4 | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
 | AUDIO › CLICK | 1 | CLICK | OFF, REC (while a track is armed and playing), ON |
@@ -2327,7 +2327,7 @@ browser, the MIDI ports it saw, the FM-1's firmware, the step it stopped at).
 
 ### The firmware
 
-**T5 or T6 is silent.** TRACKS is set to 4 (the default): T5 and T6 are asleep. GLO > SYSTEM > TRACKS **6** (or
+**T5 or T6 is silent.** TRACKS is set to 4 (the default is 6): T5 and T6 are asleep. GLO > SYSTEM > TRACKS **6** (or
 MENU > AUDIO > TRACKS). The screen tells you when you play into an asleep track.
 
 **After clearing a sequence, notes still played on all tracks.** This was fixed in v0.6.28: a clear now ends the
