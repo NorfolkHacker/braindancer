@@ -1803,8 +1803,12 @@ static void track_select(uint32_t i)
 
 #include "ui_events.c"                            /* SEQ > AUTO LIST: the locks and events as a list (an action page) */
 /* EDIT > SOUND / SOUND 2 (ui_dx.c, included by ui_input.c): the DRUM-X sound edited and its patch (0 A, 1 B); (ACID FM 3b task
- * 5) the kit's pages the ux ones (ux_section.c), its settings ui_dx.c's views (fld_*) */
-static uint8_t dx_ui_lane, dx_ui_side;
+ * 5) the kit's pages the ux ones (ux_section.c), its settings ui_dx.c's views (fld_*). (Its fix: a pick each track, spec 2.1
+ * "one selection per track": back on a track, its drum and side; RAM only, BD and A at power-on. dx_ui_lane / dx_ui_side
+ * name the selected track's) */
+static uint8_t dx_ui_lane_tr[NTRK], dx_ui_side_tr[NTRK];
+#define dx_ui_lane (dx_ui_lane_tr[song.sel % NTRK])
+#define dx_ui_side (dx_ui_side_tr[song.sel % NTRK])
 
 /* ---------------------------------------------------- action pages --- */
 /* Pages whose purpose is an action (SEQ > PATTERNS, SAVE > USER, PROJECT, TOOLS): the knobs pick,

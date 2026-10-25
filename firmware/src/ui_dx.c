@@ -7,25 +7,31 @@
  * DECAY), SOUND 2 (DRUM NOISE COLOR WAVE) and MORE's kit and drum rows. They edit the section's kit (drumx_voice.c dx_kit,
  * dx_lay, dx_tone, dx_hands; eng_drum.c dx_snd, dx_mot: saved with the section, project.c FUNA), as JIANT's SOUND 1..4,
  * KIT 3 and X-MOD pages did (their arithmetic kept, a detent each):
- *   DRUM (KNOB 1 on SOUND and SOUND 2: one pick, dx_ui_lane; a key struck on the track picks its drum too, dx_follow)
+ *   DRUM (KNOB 1 on SOUND and SOUND 2: one pick a track, dx_ui_lane; a key struck on the track picks its drum too, and a
+ *   step held on the grid its lane's: dx_follow)
  *   the drum's side's PITCH, DECAY, NOISE, COLOR, PITCH MOD (SIDE: A or B; KIT's MORPH plays between the two)
  *   its mode byte as three: WAVE (SINE FM METAL BELL), NOISE TYPE (LP BP HP), SNAP (the noise's tail a quarter: JIANT's one
  *   MODE knob of 24 "FM BP+"); MOD TYPE (the pitch modulation: DECAY LONG NOISE SINE), DRIVE (OFF / ON)
- *   CLANG (JIANT's LAYER: a second oscillator, a metal edge .. a clang), FEEDBACK (the drum's own: hidden, the kit's does
- *   it), SEND TO (OFF CHO DLY REV) and SEND (how much: JIANT's one SEND knob of 49)
+ *   CLANG (JIANT's LAYER: a second oscillator, a metal edge .. a clang), FEEDBACK (the drum's own, besides the kit's: gen.c
+ *   sets the snare's), SEND TO (OFF CHO DLY REV) and SEND (how much: JIANT's one SEND knob of 49; OFF while SEND TO is)
  *   the kit's: METAL (TONE's BP, a band-pass on the hats, rim and bell), FEEDBACK, HANDS (the clap's); MORPH LFO (X-MOD:
  *   RATE DEPTH SHAPE RANDOM) */
-static uint8_t dx_ui_seen = 0xFFu;                   /* the last key note followed */
+static uint32_t dx_kb_seen;                          /* the keys down at the last look (seq.c kb_prev) */
 static uint32_t dx_lane_picked(void) { return dx_ui_lane & 7u; }   /* (params.c page_id) */
 
-/* a key struck on the track (seq.c key_on: last_note) picks the drum it plays */
+/* (3b task 5 fix) each UI pass (ui_input.c): the drum picked follows the user's own hands only, never MIDI IN or the
+ * sequencer playing (seq.c last_note follows both; and no 8,192-sample redraw a note in): a key struck on a DRUM track
+ * picks that track's drum (any page; seq.c keyboard_block's keys, kb_prev / kb_note / kb_trk, read here, the ISR untouched);
+ * a step held on the DRUM grid picks its lane's (ui.lane: the hit it got, the LEVEL SOUND's KNOB 2 locks) */
 static void dx_follow(void)
 {
-    if (last_note != dx_ui_seen) {
-        if (dx_ui_seen != 0xFFu)                     /* (the first look only takes note of it) */
-            dx_ui_lane = (uint8_t)drum_lane(last_note);
-        dx_ui_seen = last_note;
-    }
+    uint32_t cur = kb_prev, up = cur & ~dx_kb_seen, k;
+    dx_kb_seen = cur;
+    for (k = 0; up && k < 27u; k++)
+        if (((up >> k) & 1u) && kb_note[k] != KB_SILENT && drum_track(&trk[kb_trk[k] % NTRK]))
+            dx_ui_lane_tr[kb_trk[k] % NTRK] = (uint8_t)drum_lane(kb_note[k]);
+    if (grid_on() && drum_track(TSEL) && lock_held())
+        dx_ui_lane = (uint8_t)(ui.lane % NLANE);
 }
 static int32_t dx_step(int32_t s) { return s > 0 ? 1 : -1; }   /* (JIANT: a detent a step on the small ranges) */
 /* the drum picked's side's values (PITCH .. COLOR: drumx_voice.c DXP_*) */
@@ -77,14 +83,18 @@ static void dx_turn(uint32_t id, int32_t s, uint32_t knob)
         dx_lay[ln] = (uint8_t)(la | fb << 4);
         return;
     }
-    case ID_DX_SENDTO: {                                /* (the bus: from OFF, the amount JIANT's first, 1 of 16) */
-        uint32_t b = (uint32_t)clamp((int32_t)DXS_BUS(dx_snd[ln]) + dx_step(s), 0, 3);
+    case ID_DX_SENDTO: {                                /* (the bus: from OFF, the amount JIANT's first, 1 of 16; back */
+        uint32_t b = (uint32_t)clamp((int32_t)DXS_BUS(dx_snd[ln]) + dx_step(s), 0, 3);   /* to OFF: 0, JIANT's OFF) */
         int32_t a = DXS_AMT(dx_snd[ln]);
-        dx_snd[ln] = (uint8_t)(b << 6 | (uint32_t)(b && a < 3 ? 3 : a));
+        dx_snd[ln] = (uint8_t)(b ? b << 6 | (uint32_t)(a < 3 ? 3 : a) : 0u);
         return;
     }
-    case ID_DX_SEND: {                                  /* (16 amounts, as JIANT's SEND: 4 n - 1) */
-        int32_t a = clamp((DXS_AMT(dx_snd[ln]) + 1) / 4, 1, 16);
+    case ID_DX_SEND: {                                  /* (16 amounts, as JIANT's SEND: 4 n - 1; the bus OFF: nothing, */
+        int32_t a = clamp((DXS_AMT(dx_snd[ln]) + 1) / 4, 1, 16);   /* said why, spec 0 rule 6) */
+        if (!DXS_BUS(dx_snd[ln])) {
+            ui_message("SEND TO IS OFF: PICK A BUS");
+            return;
+        }
         a = clamp(a + dx_step(s), 1, 16);
         dx_snd[ln] = (uint8_t)(DXS_BUS(dx_snd[ln]) << 6 | (uint32_t)(a * 4 - 1));
         return;
@@ -127,7 +137,13 @@ static const param_desc_t *dx_ref(uint32_t id, int16_t **valp)
     case ID_DX_CLANG: v = (int16_t)DX_LAY_L(dx_lay[ln]); break;
     case ID_DX_LFB: v = (int16_t)DX_LAY_FB(dx_lay[ln]); break;
     case ID_DX_SENDTO: v = (int16_t)DXS_BUS(dx_snd[ln]); break;
-    case ID_DX_SEND: v = (int16_t)(clamp((DXS_AMT(dx_snd[ln]) + 1) / 4, 1, 16) * 100 / 16); break;
+    case ID_DX_SEND:
+        if (!DXS_BUS(dx_snd[ln])) {                     /* (no bus: OFF, no bar) */
+            v = 0;
+            return &FLD_DX_SENDOFF;
+        }
+        v = (int16_t)(clamp((DXS_AMT(dx_snd[ln]) + 1) / 4, 1, 16) * 100 / 16);
+        break;
     case ID_DX_BP:
         if (!DX_TONE_BP(dx_tone)) {
             v = 0;

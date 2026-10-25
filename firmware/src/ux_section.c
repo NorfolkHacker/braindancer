@@ -12,8 +12,9 @@
  *   status   a message (STOP TO EDIT in ACCENT), else the knob just turned: its full name and value ("RELEASE . 420MS"),
  *            else the section's first-time hint ("ARP AGAIN: NEXT PAGE", once a power-on, spec 0 rule 7), else on MORE
  *            what its controls do
- *   footer   SECTION . PAGE at the left; n / N of the section's chain (N counts MORE) and the knobs' names (the knob row's,
- *            when they fit) at the right
+ *   footer   SECTION . PAGE at the left; at the right n / N of the section's chain (N counts MORE) and NEXT the page the
+ *            section's button goes to (spec 0 rule 1: where the next press goes; the knob row's names not again), MORE its
+ *            knobs' names (SETTING, the row picked). One rule on every page drawn here (3b task 5 fix)
  * Strips as HOME's (dc_frame / cv_blit_cells): only the changed cells go out. Included after ux_more.c (and ux_home.c:
  * ux_under, ux_trk_name). */
 
@@ -108,6 +109,21 @@ static void uxs_val(const param_desc_t *d, int32_t v, char *b, uint32_t nb)
         str_cpy(b + str_len(b), c, nb - str_len(b));
 }
 
+/* (3b task 5 fix) setting id's value v (d its descriptor) as shown: uxs_val's; FM6's ALGORITHM at 0 (JIANT's PAT: the patch's own
+ * algorithm plays) "P" and that algorithm's number, "P 5" (PAT named a pattern elsewhere; the status line adds UXS_ALGP_SAY) */
+static const char *const UXS_ALGP[] = {"P "};
+#define UXS_ALGP_SAY " (THE PATCH'S)"
+static int uxs_algp(uint32_t glo, uint32_t id, int32_t v) { return !glo && id == P_E0 && !v && trk_eng(TSEL) == ENGI_FM6; }
+static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t id, char *b, uint32_t nb)
+{
+    if (!uxs_algp(glo, id, v)) {
+        uxs_val(d, v, b, nb);
+        return;
+    }
+    str_cpy(b, UXS_ALGP[0], nb);
+    fmt_int(b + str_len(b), (int32_t)(fm6_patch[song.sel % NTRK][FP_ALG] & 31u) + 1);
+}
+
 #define UXS_HINT " AGAIN: NEXT PAGE"                    /* (after the section's name: what its button does next) */
 #define UXM_HINT "SELECT SCROLLS \xB7 KNOB 2 SETS"      /* MORE: what its controls do (KNOB 1 picks: its column says so) */
 #define UXS_PICK "SETTING"                              /* MORE's KNOB 1 */
@@ -181,7 +197,7 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         const param_desc_t *d = page_desc(pg, c, &vp);
         if (!d || !vp || !d->label || d->label[0] == '-')
             continue;
-        uxs_val(d, *vp, k[c].value, sizeof k[c].value);
+        uxs_vtext(d, *vp, pg->scope == SC_GLOBAL, page_id(pg, c), k[c].value, sizeof k[c].value);
         k[c].label = uxs_label(nav_sec(), pg->scope == SC_GLOBAL, page_id(pg, c), d->label);
         if (d->max > d->min) {
             int32_t b = clamp(((int32_t)*vp - d->min) * 255 / (d->max - d->min), 0, 255);
@@ -190,20 +206,38 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
     }
 }
 
-/* the footer's right: cnt ("3 / 3"), then the knob row's names as it shows them (spec 0 rule 4: the same names; JIANT's short
- * labels were not: DIST under DRIVE) when they fit beside w, the footer's left */
-static void uxs_foot(const char *w, const ux_knob_t k[4], const char *cnt, char *b, uint32_t nb)
+/* the page the section's button goes to from here, by its name in the chain ("OPERATOR"); 0: none (ui_lens.c nav_next) */
+static const char *uxs_next(void)
+{
+    static char b[24];
+    uint32_t sec = nav_sec(), e;
+    if (sec == SEC_HOME || (e = nav_next(sec)) == 0xFFu || e == nav_cur())
+        return 0;
+    str_cpy(b, nv_name(sec, e, nv_page(sec, e)), sizeof b);
+    return b;
+}
+/* the footer's right (3b task 5 fix: one rule, spec 0 rule 1): cnt ("1 / 4"), then NEXT and next, the page the section's
+ * button goes to ("1 / 4 . NEXT OPERATOR"); on MORE its knobs' names instead ("4 / 4 . SETTING . CUTOFF": what KNOB 1 picks
+ * and KNOB 2 sets). The count alone when nothing follows or it would not fit beside w, the footer's left */
+static const char *const UXS_FOOT[] = {" \xB7 NEXT ", " \xB7 "};
+static void uxs_foot(const char *w, const ux_knob_t k[4], const char *cnt, const char *next, char *b, uint32_t nb)
 {
     char t[48];
     uint32_t c, n = 0;
     str_cpy(b, cnt, nb);
     str_cpy(t, cnt, sizeof t);
-    for (c = 0; c < 4u; c++)
-        if (k[c].label[0]) {
-            str_cpy(t + str_len(t), " \xB7 ", sizeof t - str_len(t));
-            str_cpy(t + str_len(t), k[c].label, sizeof t - str_len(t));
-            n++;
-        }
+    if (str_eq(k[0].label, UXS_PICK)) {                 /* (MORE) */
+        for (c = 0; c < 4u; c++)
+            if (k[c].label[0]) {
+                str_cpy(t + str_len(t), UXS_FOOT[1], sizeof t - str_len(t));
+                str_cpy(t + str_len(t), k[c].label, sizeof t - str_len(t));
+                n++;
+            }
+    } else if (next && next[0]) {
+        str_cpy(t + str_len(t), UXS_FOOT[0], sizeof t - str_len(t));
+        str_cpy(t + str_len(t), next, sizeof t - str_len(t));
+        n++;
+    }
     if (n && 8 + text_w(&UF_LBL, w) + 16 + text_w(&UF_LBL, t) <= 232)
         str_cpy(b, t, nb);
 }
@@ -231,8 +265,11 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
             int16_t *vp;
             const param_desc_t *d = page_desc(pg, (uint32_t)h, &vp);
             if (d && vp && d->label && d->label[0] != '-') {
-                uxs_val(d, *vp, v, sizeof v);
-                nm = uxs_label(sec, pg->scope == SC_GLOBAL, page_id(pg, (uint32_t)h), d->label);
+                uint32_t id = page_id(pg, (uint32_t)h);
+                uxs_vtext(d, *vp, pg->scope == SC_GLOBAL, id, v, sizeof v);
+                nm = uxs_label(sec, pg->scope == SC_GLOBAL, id, d->label);
+                if (uxs_algp(pg->scope == SC_GLOBAL, id, *vp))
+                    str_cpy(v + str_len(v), UXS_ALGP_SAY, sizeof v - str_len(v));
             }
         }
         if (nm && nm[0]) {
@@ -1179,8 +1216,6 @@ static void ux_section_draw(void)
     }
     if (ux_knob_hot() >= 0)                             /* (a knob turned: the page found out) */
         uxs_hint_sec = 0xFF;
-    if (pg->fam == FAM_EDIT && edit_kind() == 2u)       /* (3b task 5) DRUM-X: a key struck picks its drum (ui_dx.c) */
-        dx_follow();
     dc_frame(ui.force);
     all = dc_all;
     {   /* the header: T3 . the sound, the transport */
@@ -1242,9 +1277,9 @@ static void ux_section_draw(void)
         uxs_picture(pg, k);
         ux_panel_end();
     }
-    {   /* the footer: where, n / N and the knobs' names (when they fit) */
+    {   /* the footer: where, n / N and NEXT the next page (MORE: its knobs' names), when they fit */
         const char *w = uxs_where();
-        uxs_foot(w, k, uxs_count(), b, sizeof b);
+        uxs_foot(w, k, uxs_count(), uxs_next(), b, sizeof b);
         sig = str_hash(str_hash(1u, w), b);
         if (all || sig != foot_sig) {
             foot_sig = sig;

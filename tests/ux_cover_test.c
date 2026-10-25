@@ -109,8 +109,6 @@ static const uxc_hid_t UXC_HIDDEN[] = {
     {UXC_DRM, TRK, P_PRIO, "PRIORITY on a kit: no effect, it picks the note of a MONO voice (voice.c mono_stack)"},
     {UXC_DRM, TRK, P_DIST, "the FILTER page's DRV on a kit: the same setting as FX > SENDS DRIVE (P_DIST); the kit has its own "
                            "DRIVE (KIT 2), three drives were one too many"},
-    {UXC_DRM, TRK, ID_DX_LFB, "a drum's own FEEDBACK (SOUND 4's FEEDBK): the kit's FEEDBACK does it for every drum; every factory "
-                              "kit leaves it 0"},
 };
 
 static const uint8_t UXC_SECS[] = {UXC_SYN, UXC_FM6, UXC_DRM, UXC_DIG, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL};
@@ -257,7 +255,8 @@ int main(int argc, char **argv)
     uxc_reach(UXC_DRM, 0, got);                         /* (3b task 5: SOUND's LEVEL, every drum's; the kit's fields) */
     ok &= got[TRK][P_LN0] && got[TRK][P_LN7] && got[TRK][ID_DX_LANE] && !got[TRK][ID_DX_XRND];
     uxc_reach(UXC_DRM, 1, got);
-    ok &= got[TRK][ID_DX_XRND] && got[TRK][ID_DX_SEND] && !got[TRK][ID_DX_LFB] && !got[TRK][P_VOICE];
+    ok &= got[TRK][ID_DX_XRND] && got[TRK][ID_DX_SEND] && got[TRK][ID_DX_LFB] && !got[TRK][P_VOICE];   /* (task 5 fix: a
+                                                         * drum's FEEDBACK shown, gen.c sets the snare's) */
     uxc_reach(UXC_FM6, 1, got);
     ok &= got[TRK][ID_FO_DTUN] && got[TRK][ID_FO_ELVL] && got[TRK][P_E7] && !got[TRK][P_ALLOC];
     bad += check("ux cover: the reach counts the pages' knobs (every step and slot) and the MORE rows, and sees a gap", ok);

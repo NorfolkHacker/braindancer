@@ -650,15 +650,18 @@ static const param_desc_t FLD_DX_DESC[] = {
     [ID_DX_XRND - ID_DX_LANE] = PD("RANDOM", F_PCT, 0, 127, 0),
 };
 static const param_desc_t FLD_DX_BPOFF = PE("METAL", N_DX_OFF, 0);   /* (METAL's band-pass off) */
+static const param_desc_t FLD_DX_SENDOFF = PE("SEND", N_DX_OFF, 0);   /* (3b task 5 fix: SEND TO OFF, no amount) */
 static const param_desc_t FLD_FO_FIXED = PE("FREQ", N_FO_HZ, 0);   /* (an operator FIXED: its COARSE a decade) */
 typedef char fld_desc_ok[NELEM(FLD_DESC) == ID_FO_END - ID_FO_OP && NELEM(FLD_DX_DESC) == ID_DX_END - ID_DX_LANE ? 1 : -1];
 /* EDIT's MORE on an FM6 track (spec 2.1): what SOUND, OPERATOR and OP ENV leave, grouped: the filter first (the one most
- * turned: CUTOFF a detent away), the patch's, the picked operator's (its heading names it: OP 3); ALLOC hidden as on the
- * synths (tests/ux_cover_test.c UXC_HIDDEN) */
+ * turned: CUTOFF a detent away), the patch (which one plays, its carriers' DETUNE), the modulators' (MOD TIME, MOD VEL: SOUND's
+ * MOD LEVEL and MOD RATIO's family), the picked operator's (its heading names it: OP 3); ALLOC hidden as on the synths
+ * (tests/ux_cover_test.c UXC_HIDDEN). (3b task 5 fix: TONE heads filter and tone rows only) */
 static const ux_row_t UXM_FM6_ROWS[] = {
     {UXM_H_FILTER, UXR_HEAD, 0}, {P_FTYPE, UXR_TRACK, 0}, {P_FCUT, UXR_TRACK, 0}, {P_FRES, UXR_TRACK, 0},
     {P_DIST, UXR_TRACK, 0},
-    {UXM_H_TONE, UXR_HEAD, 0}, {P_E7, UXR_TRACK, 0}, {P_E6, UXR_TRACK, 0}, {P_E4, UXR_TRACK, 0}, {P_E5, UXR_TRACK, 0},
+    {UXM_H_PATCH, UXR_HEAD, 0}, {P_E7, UXR_TRACK, 0}, {P_E6, UXR_TRACK, 0},
+    {UXM_H_MOD, UXR_HEAD, 0}, {P_E4, UXR_TRACK, 0}, {P_E5, UXR_TRACK, 0},
     {UXM_H_OP, UXR_HEAD, 0}, {ID_FO_MODE, UXR_TRACK, UXR_ON(ENGI_FM6)}, {ID_FO_DTUN, UXR_TRACK, UXR_ON(ENGI_FM6)},
     {ID_FO_VEL, UXR_TRACK, UXR_ON(ENGI_FM6)},
     {UXM_H_VOICE, UXR_HEAD, 0}, {P_VOICE, UXR_TRACK, 0}, {P_GLIDE, UXR_TRACK, 0}, {P_GLMODE, UXR_TRACK, 0},
@@ -667,8 +670,8 @@ static const ux_row_t UXM_FM6_ROWS[] = {
 static const ux_more_t UXM_FM6 = {UXM_FM6_ROWS, (uint8_t)(sizeof UXM_FM6_ROWS / sizeof UXM_FM6_ROWS[0])};
 /* .. on a DRUM-X track: the kit's (KIT 2's E5..E8, KIT 3's, STEREO), the picked drum's (its heading names it: DRUM . SD),
  * MORPH's LFO (JIANT's X-MOD), the part's filter. Hidden on purpose (tests/ux_cover_test.c UXC_HIDDEN): VOICE's four (a kit
- * plays its drums as hits: voice.c trk_vmode), the filter's DRIVE (FX > SENDS DRIVE's own setting), a drum's FEEDBACK (the
- * kit's does it for every drum) */
+ * plays its drums as hits: voice.c trk_vmode), the filter's DRIVE (FX > SENDS DRIVE's own setting). (3b task 5 fix: a drum's
+ * own FEEDBACK shown, after CLANG as on JIANT's SOUND 4: the generator sets the snare's, gen.c) */
 static const ux_row_t UXM_DRM_ROWS[] = {
     {UXM_H_KIT, UXR_HEAD, 0}, {P_E4, UXR_TRACK, 0}, {P_E5, UXR_TRACK, 0}, {P_E6, UXR_TRACK, 0}, {P_E7, UXR_TRACK, 0},
     {ID_DX_KFB, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_BP, UXR_TRACK, UXR_ON(ENGI_DRUM)},
@@ -676,7 +679,8 @@ static const ux_row_t UXM_DRM_ROWS[] = {
     {UXM_H_DRUM, UXR_HEAD, 0}, {ID_DX_SIDE, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_PMOD, UXR_TRACK, UXR_ON(ENGI_DRUM)},
     {ID_DX_PMT, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_NTYPE, UXR_TRACK, UXR_ON(ENGI_DRUM)},
     {ID_DX_SNAP, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_DRV, UXR_TRACK, UXR_ON(ENGI_DRUM)},
-    {ID_DX_CLANG, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_SENDTO, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_CLANG, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_LFB, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_SENDTO, UXR_TRACK, UXR_ON(ENGI_DRUM)},
     {ID_DX_SEND, UXR_TRACK, UXR_ON(ENGI_DRUM)},
     {UXM_H_MLFO, UXR_HEAD, 0}, {ID_DX_XRATE, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_XDEP, UXR_TRACK, UXR_ON(ENGI_DRUM)},
     {ID_DX_XSHP, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_XRND, UXR_TRACK, UXR_ON(ENGI_DRUM)},

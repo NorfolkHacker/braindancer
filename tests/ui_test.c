@@ -7510,7 +7510,7 @@ static int test_dx_sound(void)
     set_engine_of(TSEL, ENGI_DRUM);
     bad += check("EDIT > SOUND / SOUND 2: on a DRUM track only", ok);
     go_title("DRUM SOUND");
-    dx_ui_lane = 0; dx_ui_side = 0; dx_ui_seen = last_note;   /* (no key since: the page keeps its lane) */
+    dx_ui_lane = 0; dx_ui_side = 0;                    /* (no key since: the page keeps its lane) */
     turn(EN_K1, 1); turn(EN_K1, 1);                    /* LANE: CP */
     dx_ui_side = 1;                                    /* SIDE: B (MORE's) */
     k = dx_kit[2].b[DXP_PITCH];
@@ -13100,22 +13100,16 @@ static int test_ux_section_draw(void)
     return bad;
 }
 
-/* (3b task 3 fix) the footer's names are the knob row's (spec 0 rule 4: one name everywhere; JIANT's DIST was the footer's
- * where the knob said DRIVE): every page of the six sections on every engine, MORE's too, gives the footer the count and,
- * when they fit, exactly the knob row's labels in order */
-static int uxs_foot_agrees(const char *w, const ux_knob_t k[4], const char *cnt, const char *b)
+/* (3b task 3 fix; task 5 fix: one rule) the footer says where the next press goes, never the knob row's names again: every
+ * page of the six sections on every engine gives "n / N . NEXT <the next page>" (spec 0 rule 1), the count alone when there
+ * is no next page or it would not fit; MORE keeps its knobs' names, SETTING and the pick's */
+static int uxs_foot_agrees(const char *cnt, const char *next, const char *b)
 {
     char want[64];
-    uint32_t c, n = 0;
     str_cpy(want, cnt, sizeof want);
-    for (c = 0; c < 4u; c++)
-        if (k[c].label[0]) {
-            str_cpy(want + str_len(want), " \xB7 ", sizeof want - str_len(want));
-            str_cpy(want + str_len(want), k[c].label, sizeof want - str_len(want));
-            n++;
-        }
-    (void)w;
-    return str_eq(b, want) || str_eq(b, cnt);
+    str_cpy(want + str_len(want), " \xB7 NEXT ", sizeof want - str_len(want));
+    str_cpy(want + str_len(want), next, sizeof want - str_len(want));
+    return str_eq(b, want);
 }
 static int test_ux_section_foot(void)
 {
@@ -13133,14 +13127,16 @@ static int test_ux_section_foot(void)
             if (f >= NELEM(FAMS) || PAGES[p].graph == GR_MORE)
                 continue;
             uxs_knobs(&PAGES[p], k);
-            uxs_foot("ARP \xB7 ARP", k, "1 / 3", b, sizeof b);
+            uxs_foot("ARP \xB7 ARP", k, "1 / 3", "ARP 2", b, sizeof b);
             n++;
-            named += !str_eq(b, "1 / 3");
-            if (!uxs_foot_agrees("ARP \xB7 ARP", k, "1 / 3", b)) {
-                printf("  page %s: footer \"%s\" against knobs %s %s %s %s\n", PAGES[p].title, b, k[0].label, k[1].label,
+            named += uxs_foot_agrees("1 / 3", "ARP 2", b);
+            if (!uxs_foot_agrees("1 / 3", "ARP 2", b)) {
+                printf("  page %s: footer \"%s\" (knobs %s %s %s %s)\n", PAGES[p].title, b, k[0].label, k[1].label,
                        k[2].label, k[3].label);
                 ok = 0;
             }
+            uxs_foot("ARP \xB7 ARP", k, "1 / 3", 0, b, sizeof b);
+            ok &= str_eq(b, "1 / 3");
         }
     }
     {   /* FX > DIST: the knob says DRIVE, so does the footer (it said DIST) */
@@ -13148,16 +13144,16 @@ static int test_ux_section_foot(void)
             ;
         uxk_engine(ENGI_ANALOG);
         uxs_knobs(&PAGES[p], k);
-        uxs_foot("FX \xB7 DIST", k, "2 / 16", b, sizeof b);
-        ok &= p < NPAGES && str_eq(k[0].label, "DRIVE") && str_eq(b, "2 / 16 \xB7 DRIVE \xB7 TYPE \xB7 TONE");
+        uxs_foot("FX \xB7 DIST", k, "2 / 16", "AUTO PAN", b, sizeof b);
+        ok &= p < NPAGES && str_eq(k[0].label, "DRIVE") && str_eq(b, "2 / 16 \xB7 NEXT AUTO PAN");
         if (!ok) printf("  FX DIST footer \"%s\"\n", b);
     }
-    bad += check("ACID FM 3b: the footer's names are the knob row's, on every page and engine (FX DIST: DRIVE, not DIST)",
-                 ok && n > 100u && named > 50u);
+    bad += check("ACID FM 3b: the footer says NEXT and the next page, on every page and engine, no knob's name again",
+                 ok && n > 100u && named == n);
     uxs_syn_on(ENGI_ANALOG);                            /* MORE: SETTING and the pick's name, as its knob row */
     turn(EN_SELECT, 3);
     uxs_knobs(cur_page(), k);
-    uxs_foot(uxs_where(), k, uxs_count(), b, sizeof b);
+    uxs_foot(uxs_where(), k, uxs_count(), uxs_next(), b, sizeof b);
     ok = str_eq(k[1].label, "GLIDE MODE") && str_eq(b, "4 / 4 \xB7 SETTING \xB7 GLIDE MODE");
     if (!ok) printf("  MORE footer \"%s\"\n", b);
     bad += check("ACID FM 3b: MORE's footer names its knobs as its knob row does (SETTING, the pick's name)", ok);
@@ -13923,7 +13919,6 @@ static void uxe_on(uint32_t e)                           /* T1 on engine e, EDIT
     uxs_syn_on(e);
     fop_op = fop_stg = 0;
     dx_ui_lane = dx_ui_side = 0;
-    dx_ui_seen = last_note;
     frame();
 }
 static int uxe_cells_ok(void)                            /* a forced redraw: within DC_MAX, nothing stale (3a's budget) */
@@ -14016,8 +14011,8 @@ static int test_edit_fm6(void)
     bad += check("ACID FM 3b: an operator FIXED: RATIO reads FREQ, its decade (1HZ .. 1KHZ)", ok);
     uxe_on(ENGI_FM6);
     turn(EN_SELECT, 3);
-    ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DRIVE|[TONE]|PATCH|DETUNE|MOD TIME|MOD VEL|[OP 1]|FREQ MODE|"
-                                         "OP DETUNE|VELOCITY|[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD");
+    ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DRIVE|[PATCH]|PATCH|DETUNE|[MOD]|MOD TIME|MOD VEL|[OP 1]|"
+                                         "FREQ MODE|OP DETUNE|VELOCITY|[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD");
     if (!ok) printf("  FM6 MORE: %s\n", uxe_more_list(&UXM_FM6));
     bad += check("ACID FM 3b: FM6's MORE lists what its pages leave (EDIT 2's four, the operator's three, FILTER, VOICE; ALLOC "
                  "hidden)", ok);
@@ -14083,8 +14078,8 @@ static int test_edit_drm(void)
     turn(EN_SELECT, 1);
     ok &= strstr(uxe_more_list(&UXM_DRM), "[DRUM \xB7 SD]") != 0;
     turn(EN_SELECT, -2);
-    last_note = (uint8_t)DRUM_LANE_NOTE[3]; frame();    /* (a key struck: the hi-hat's) */
-    ok &= dx_ui_lane == 3u && str_eq(uxe_value(0), "CH");
+    key_down(key_at(1, 3)); frame(); key_up(key_at(1, 3)); frame();   /* (a key struck on the track: its drum) */
+    ok &= dx_ui_lane == drum_lane(last_note) && dx_ui_lane != 1u && str_eq(uxe_value(0), N_DX_LANE[dx_ui_lane & 7u]);
     bad += check("ACID FM 3b: DRUM-X's drum picked on SOUND is SOUND 2's and MORE's (its heading DRUM . SD); a key struck "
                  "picks its drum", ok);
     uxe_on(ENGI_DRUM);                              /* LEVEL: the drum's P_LN*, a setting (locks, automation) */
@@ -14151,7 +14146,7 @@ static int test_edit_drm(void)
     uxe_on(ENGI_DRUM);
     turn(EN_SELECT, 3);
     ok = str_eq(uxe_more_list(&UXM_DRM), "[KIT]|NOISE|CLICK|FOLD|DRIVE|FEEDBACK|METAL|HANDS|STEREO|[DRUM \xB7 BD]|SIDE|PITCH MOD|"
-                                         "MOD TYPE|NOISE TYPE|SNAP|DRIVE|CLANG|SEND TO|SEND|[MORPH LFO]|RATE|DEPTH|SHAPE|RANDOM|"
+                                         "MOD TYPE|NOISE TYPE|SNAP|DRIVE|CLANG|FEEDBACK|SEND TO|SEND|[MORPH LFO]|RATE|DEPTH|SHAPE|RANDOM|"
                                          "[FILTER]|FILTER|CUTOFF|RESO");
     if (!ok) printf("  DRUM MORE: %s\n", uxe_more_list(&UXM_DRM));
     bad += check("ACID FM 3b: DRUM-X's MORE lists what its pages leave (KIT 2 and 3, the drum's, MORPH LFO, FILTER; VOICE hidden)",
@@ -14303,6 +14298,207 @@ static int test_ux_knob_widths_fm6_drm(void)
     dx_ui_lane = 0;
     bad += check("ACID FM 3b: every label and value FM6's and DRUM-X's EDIT knob rows and MORE lists can show fits its column, "
                  "and every word they and the pictures draw has its glyphs", ok && n > 5000u);
+    ui_power_on();
+    return bad;
+}
+
+/* (3b task 5 fix) the review's findings and the user's decisions on FM6's and DRUM-X's EDIT */
+static int test_edit_t5_fix(void)
+{
+    int bad = 0, ok;
+    uint32_t i, k4;
+    track_t *t;
+    char b[64];
+    {   /* 1. REC + EDIT clears every drum's LEVEL automation and locks (P_LN0..7: JIANT's LEVELS pages' ids) */
+        uxe_on(ENGI_DRUM);
+        t = TSEL;
+        go_home(); frame();
+        for (i = 0; i < 8u; i++)
+            motion_set_lock(t, i, P_LN0 + i, 20);
+        motion_set_event(t, 9, P_LN5, 40);
+        btn_down(B_REC); frame();
+        btn_down(B_EDIT); frame(); btn_up(B_EDIT); frame();
+        btn_up(B_REC); frames(20);
+        ok = msg_is("EDIT AUTOMATION CLEARED") && motion_find(t, 9, P_LN5) < 0;
+        for (i = 0; i < 8u; i++)
+            ok &= motion_find(t, i, P_LN0 + i) < 0;
+        bad += check("3b task 5 fix: REC + EDIT clears every drum's LEVEL locks and automation (P_LN0..7)", ok);
+    }
+    {   /* 2. SEND TO back to OFF writes the byte JIANT's OFF was (0); SEND does nothing while the bus is OFF, and says why */
+        uint8_t v[24];
+        uint8_t bar;
+        uxe_on(ENGI_DRUM);
+        turn(EN_SELECT, 3);
+        dx_ui_lane = 1;
+        dx_snd[1] = 0;
+        uxe_more_set(&UXM_DRM, ID_DX_SENDTO, 1);
+        ok = dx_snd[1] == 0x43u;
+        uxe_more_set(&UXM_DRM, ID_DX_SENDTO, -1);
+        ok &= dx_snd[1] == 0u;
+        uxe_more_set(&UXM_DRM, ID_DX_SENDTO, 1); uxe_more_set(&UXM_DRM, ID_DX_SENDTO, 1); uxe_more_set(&UXM_DRM, ID_DX_SENDTO, 1);
+        ok &= DXS_BUS(dx_snd[1]) == 3u;
+        uxe_more_set(&UXM_DRM, ID_DX_SENDTO, -1); uxe_more_set(&UXM_DRM, ID_DX_SENDTO, -1); uxe_more_set(&UXM_DRM, ID_DX_SENDTO, -1);
+        ok &= dx_snd[1] == 0u;
+        if (!ok) printf("  SEND TO: byte 0x%02x\n", dx_snd[1]);
+        ui.msg_t = 0;
+        uxe_more_set(&UXM_DRM, ID_DX_SEND, 3);
+        ok &= dx_snd[1] == 0u && msg_is("SEND TO IS OFF: PICK A BUS");
+        (void)uxm_row_text(&UXM_DRM.rows[uxe_row(&UXM_DRM, ID_DX_SEND)], (char *)v, sizeof v, &bar);
+        ok &= str_eq((const char *)v, "OFF") && !bar;
+        if (!ok) printf("  SEND while OFF: byte 0x%02x, row \"%s\", message \"%s\"\n", dx_snd[1], (const char *)v, ui.msg);
+        bad += check("3b task 5 fix: DRUM-X's SEND TO back to OFF writes 0 (JIANT's OFF); SEND while OFF changes nothing, reads OFF "
+                     "and says why", ok);
+    }
+    {   /* 3. a drum's own FEEDBACK in MORE's drum group */
+        uint8_t l0;
+        uxe_on(ENGI_DRUM);
+        turn(EN_SELECT, 3);
+        dx_ui_lane = 1;
+        l0 = dx_lay[1];
+        uxe_more_set(&UXM_DRM, ID_DX_LFB, 1);
+        ok = strstr(uxe_more_list(&UXM_DRM), "[DRUM \xB7 SD]|SIDE|PITCH MOD|MOD TYPE|NOISE TYPE|SNAP|DRIVE|CLANG|FEEDBACK|SEND TO") != 0 &&
+             DX_LAY_FB(dx_lay[1]) == (uint32_t)clamp((int32_t)DX_LAY_FB(l0) + 1, 0, 15) && DX_LAY_L(dx_lay[1]) == DX_LAY_L(l0);
+        dx_lay[1] = l0;
+        bad += check("3b task 5 fix: a drum's own FEEDBACK is in MORE's drum group (after CLANG), writing its nibble", ok);
+    }
+    {   /* 4. ALGORITHM at the patch's own: the patch's algorithm's number, not PAT */
+        const uint8_t a0 = fm6_patch[0][FP_ALG];
+        uint16_t col;
+        uxe_on(ENGI_FM6);
+        fm6_patch[song.sel % NTRK][FP_ALG] = 4;
+        TSEL->p[P_E0] = 1;
+        frames(UX_HOT_MS + 100u);
+        turn(EN_K1, -1);
+        ok = TSEL->p[P_E0] == 0 && str_eq(uxe_value(0), "P 5") &&
+             str_eq(uxs_status(cur_page(), &col), "ALGORITHM \xB7 P 5 (THE PATCH'S)");
+        if (!ok) printf("  ALGORITHM: \"%s\", status \"%s\"\n", uxe_value(0), uxs_status(cur_page(), &col));
+        fm6_patch[song.sel % NTRK][FP_ALG] = 31;
+        ok &= str_eq(uxe_value(0), "P 32") && text_w(&UF_VAL, uxe_value(0)) <= UX_COL_W - 4;
+        TSEL->p[P_E0] = 7;
+        ok &= str_eq(uxe_value(0), "7");
+        fm6_patch[song.sel % NTRK][FP_ALG] = a0;
+        bad += check("3b task 5 fix: FM6's ALGORITHM at the patch's own reads P and the patch's algorithm (P 5), not PAT", ok);
+    }
+    {   /* 5. the OP picked (FM6) and the drum picked (DRUM-X) are each track's own (spec 2.1: one selection per track) */
+        uxe_on(ENGI_FM6);
+        for (i = 1; i < 4u; i++) {
+            set_engine_of(&trk[i], i == 2u ? ENGI_DRUM : ENGI_FM6);
+            trk[i].engine = trk[i].eng_req;
+        }
+        set_engine_of(&trk[0], ENGI_DRUM); trk[0].engine = trk[0].eng_req;
+        track_select(1); frame(); go_title("FM6 OP"); frame();
+        turn(EN_K1, 2);                                  /* T2: OP 3 */
+        track_select(3); frame(); go_title("FM6 OP"); frame();
+        ok = str_eq(uxe_value(0), "1");                  /* (T4's own: still OP 1) */
+        turn(EN_K1, 4);                                  /* T4: OP 5 */
+        track_select(1); frame();
+        ok &= str_eq(cur_page()->title, "FM6 OP") && str_eq(uxe_value(0), "3");
+        track_select(3); frame();
+        ok &= str_eq(uxe_value(0), "5");
+        track_select(1); frame();
+        ok &= str_eq(uxe_value(0), "3") && str_eq(uxm_head(UXM_H_OP), "OP 3");
+        track_select(0); frame(); go_title("DRUM SOUND"); frame();
+        turn(EN_K1, 1);                                  /* T1: SD */
+        track_select(2); frame(); go_title("DRUM SOUND"); frame();
+        ok &= str_eq(uxe_value(0), "BD");
+        for (i = 0; i < 5u; i++) turn(EN_K1, 1);         /* T3: TM (a drum a detent, as JIANT's LANE) */
+        track_select(0); frame();
+        ok &= str_eq(uxe_value(0), "SD") && str_eq(uxm_head(UXM_H_DRUM), "DRUM \xB7 SD");
+        track_select(2); frame();
+        ok &= str_eq(uxe_value(0), "TM");
+        if (!ok) printf("  picks: OP %u %u %u %u, drum %u %u %u %u, page %s\n", fop_op_tr[0], fop_op_tr[1], fop_op_tr[2], fop_op_tr[3],
+                        dx_ui_lane_tr[0], dx_ui_lane_tr[1], dx_ui_lane_tr[2], dx_ui_lane_tr[3], cur_page()->title);
+        bad += check("3b task 5 fix: the OP picked and the drum picked are each track's own (T2 OP 3, T4 OP 5; T1 SD, T3 TM): "
+                     "back on a track, its own", ok);
+    }
+    {   /* 9. the drum picked follows the user's keys and the held step, not MIDI IN or the sequencer */
+        uint32_t k;
+        uxe_on(ENGI_DRUM);
+        turn(EN_SELECT, 1);
+        k = key_at(1, 3);
+        key_down(k); frame(); key_up(k); frame();
+        ok = dx_ui_lane == drum_lane(kb_note[k]) && dx_ui_lane != 0u;
+        dx_ui_lane = 0; frame();
+        midi_event(0x90, (uint8_t)song.sel, DRUM_LANE_NOTE[5], 100); frames(3);
+        midi_event(0x80, (uint8_t)song.sel, DRUM_LANE_NOTE[5], 0); frames(3);
+        ok &= last_note == DRUM_LANE_NOTE[5] && dx_ui_lane == 0u;   /* (the note arrived; the pick stays) */
+        song.playing = 1; frames(400); song.playing = 0; frame();
+        ok &= dx_ui_lane == 0u;
+        go_home(); frame();
+        key_down(k); frame(); key_up(k); frame();        /* (a key struck elsewhere: the track's drum picked all the same) */
+        go_title("DRUM SOUND"); frame();
+        ok &= dx_ui_lane == drum_lane(kb_note[k]);
+        bad += check("3b task 5 fix: the drum picked follows a key struck on the track (on any page), not MIDI IN or the "
+                     "sequencer playing", ok);
+    }
+    {   /* 9, 10. a step held on the DRUM grid: the drum is its lane's; KNOB 1 / 3 / 4 on SOUND say why they do not lock */
+        ui_power_on();
+        song.sel = 3; t = &trk[3];
+        set_engine_of(t, ENGI_DRUM); t->engine = t->eng_req;
+        track_defaults_steps(t); t->p[P_SLEN] = 16;
+        go_home(); open_family(FAM_SEQ); frame();
+        tap_key(key_at(1, 2));                           /* lane CP */
+        dx_ui_lane = 5;
+        k4 = key_at(0, 4);
+        fm1_in.notes |= 1u << k4; host_notes |= 1u << k4; frame();
+        turn(EN_SELECT, 1); turn(EN_SELECT, 1);          /* KIT, then SOUND */
+        ok = lp_page_is("DRUM SOUND") && dx_ui_lane == 2u && lock_id(1) == P_LN2;
+        if (!ok) printf("  held: page %s, drum %u\n", ui.plk_src ? PAGES[ui.plk_src - 1u].title : "-", (unsigned)dx_ui_lane);
+        ui.msg_t = 0;
+        turn(EN_K1, 1);
+        ok &= msg_is("LANE KEYS PICK THE DRUM") && motion_lock_count(t) == 0u;
+        ui.msg_t = 0;
+        turn(EN_K3, 2);
+        ok &= msg_is("KIT SOUND: NO STEP LOCK") && motion_lock_count(t) == 0u;
+        ui.msg_t = 0;
+        turn(EN_K4, -2);
+        ok &= msg_is("KIT SOUND: NO STEP LOCK") && motion_lock_count(t) == 0u;
+        turn(EN_K2, -3);
+        ok &= motion_lock_count(t) == 1u && motion_lock_get(t, 4, P_LN2, (int16_t *)b);
+        fm1_in.notes &= ~(1u << k4); frame();
+        bad += check("3b task 5 fix: a step held on the DRUM grid picks its lane's drum (SOUND's LEVEL locks it); KNOB 1, 3 and 4 "
+                     "on SOUND say why they do not lock", ok);
+    }
+    {   /* 7. FM6's MORE: PATCH (PATCH DETUNE) near the top, MOD (MOD TIME MOD VEL); TONE nowhere */
+        uxe_on(ENGI_FM6);
+        turn(EN_SELECT, 3);
+        ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DRIVE|[PATCH]|PATCH|DETUNE|[MOD]|MOD TIME|MOD VEL|[OP 1]|"
+                                             "FREQ MODE|OP DETUNE|VELOCITY|[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD");
+        if (!ok) printf("  FM6 MORE: %s\n", uxe_more_list(&UXM_FM6));
+        bad += check("3b task 5 fix: FM6's MORE groups PATCH (PATCH, DETUNE) after FILTER and MOD (MOD TIME, MOD VEL)", ok);
+    }
+    {   /* 8. one footer rule on every owned page: n / N . NEXT <the page EDIT goes to>; MORE: SETTING . <row> */
+        static const uint8_t ENG[] = {ENGI_ANALOG, ENGI_PHASE, ENGI_LOFI, ENGI_NOISE, ENGI_VOICE, ENGI_FM6, ENGI_DRUM};
+        uint32_t e, p, n = 0;
+        ok = 1;
+        for (e = 0; e < NELEM(ENG); e++) {
+            uxe_on(ENG[e]);
+            for (p = 0; p < 4u; p++) {
+                ux_knob_t k[4];
+                char w[32], want[64];
+                str_cpy(w, uxs_where(), sizeof w);
+                uxs_knobs(cur_page(), k);
+                uxs_foot(w, k, uxs_count(), uxs_next(), b, sizeof b);
+                str_cpy(want, uxs_count(), sizeof want);
+                if (cur_page()->graph == GR_MORE) {
+                    str_cpy(want + str_len(want), " \xB7 SETTING \xB7 ", sizeof want - str_len(want));
+                    str_cpy(want + str_len(want), k[1].label, sizeof want - str_len(want));
+                    press(B_EDIT); frame();
+                } else {                                 /* (exactly this: no knob's name repeated) */
+                    press(B_EDIT); frame();
+                    str_cpy(want + str_len(want), " \xB7 NEXT ", sizeof want - str_len(want));
+                    str_cpy(want + str_len(want), nav_page_name(), sizeof want - str_len(want));
+                }
+                n++;
+                if (!str_eq(b, want) || 8 + text_w(&UF_LBL, w) + 16 + text_w(&UF_LBL, b) > 232) {
+                    printf("  %s %s: footer \"%s\", wanted \"%s\"\n", ENGINES[ENG[e]]->name, w, b, want);
+                    ok = 0;
+                }
+            }
+        }
+        bad += check("3b task 5 fix: one footer on every EDIT page (synths, FM6, DRUM-X): n / N . NEXT the page EDIT goes to "
+                     "(no knob name repeated); MORE: SETTING . its row", ok && n == 4u * NELEM(ENG));
+    }
     ui_power_on();
     return bad;
 }
@@ -14494,6 +14690,7 @@ int main(void)
     bad += test_ux_knob_widths_fm6_drm();
     bad += test_edit_fm6();
     bad += test_edit_drm();
+    bad += test_edit_t5_fix();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

@@ -675,8 +675,15 @@ static void lock_turn(uint32_t k, int32_t s, uint64_t held)
         ui_message("STOP TO EDIT");
         return;
     }
-    if (id == 0xFFu)
-        return;                                         /* (an empty card: nothing to lock) */
+    if (id == 0xFFu) {                                  /* (an empty card: nothing to lock) */
+        const page_t *lp = ui.plk_src && ui.plk_src <= NPAGES ? &PAGES[ui.plk_src - 1u] : 0;
+        uint32_t v = lp ? page_id(lp, k & 3u) : 0xFFu;
+        if (v == ID_DX_LANE)                            /* (3b task 5 fix) DRUM-X's SOUND, a step held: the drum is the */
+            ui_message("LANE KEYS PICK THE DRUM");      /* grid's lane (ui_dx.c dx_follow); the kit's sound is the */
+        else if (fld_is(v) && v >= ID_DX_LANE)        /* section's, no step's (spec 0 rule 6: said why) */
+            ui_message("KIT SOUND: NO STEP LOCK");
+        return;
+    }
     ui.plk_rm &= ~held;                                 /* (held for a lock: its hit stays) */
     d = track_desc(t, id);
     s = accel(EN_K1 + k, s, d->fmt == F_ENUM ? 0 : d->max - d->min);
@@ -1403,6 +1410,9 @@ static void rec_clear_auto(uint32_t b)
                     if (PAGES[i].id[k] < P_COUNT && !(f == FAM_EDIT && PAGES[i].id[k] == P_DIST))   /* (EDIT > FILTER's
                                                          * DRV is the part's DIST: FX's) */
                         m[PAGES[i].id[k] / 32u] |= 1u << (PAGES[i].id[k] % 32u);
+        if (f == FAM_EDIT)                              /* (3b task 5 fix) every drum's LEVEL: DRUM-X's SOUND names P_LN0 */
+            for (k = P_LN0; k <= P_LN7; k++)            /* and turns the drum picked's (params.c page_id), as JIANT's */
+                m[k / 32u] |= 1u << (k % 32u);          /* LEVELS pages held all eight */
     }
     for (k = 0; k < NTRK; k++)
         if (b == B_GLO || k == song.sel)
@@ -1962,6 +1972,7 @@ static void scale_link(void)
 }
 
 static void ui_input_frame(void);
+static void dx_follow(void);                            /* (ui_dx.c) the drum picked follows the keys, the step held */
 static void ui_input(void)
 {
     cpt_poll();                                         /* (0.9.14) CPU TEST measured as it plays (ui_menu.c) */
@@ -2477,6 +2488,7 @@ static void ui_input_frame(void)
         else if (ui.home || cur_page()->graph != GR_MORE || !ux_more_knob(UXM_SELECT, s))
             nav_select(s);                              /* (ACID FM 3b: MORE scrolls; before its first row the page before) */
     }
+    dx_follow();                                        /* (3b task 5 fix: before the knobs, the drum their locks take) */
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();
         int16_t *hv;

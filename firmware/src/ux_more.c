@@ -13,7 +13,7 @@
 
 /* the headings' words (ux_more.h UXM_H_*) */
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "MSEQ", "DELAY", "REVERB", "CHORUS",
-                                              "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO"};
+                                              "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH"};
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
 static const char *uxm_head(uint32_t h)
 {

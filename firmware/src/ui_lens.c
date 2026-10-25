@@ -244,11 +244,22 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
         ui.act = outside && (PAGES[i].graph == GR_USER || c->e[e].lv == SV_PROJ) ? 4u : 0u;
     page_flash();
 }
+/* the entry section sec's button goes to from the one shown: the next group's first with a page here (ARP's one: its first);
+ * 0xFF none. (3b task 5 fix: the footer names it, ux_section.c uxs_next) */
+static uint32_t nav_next(uint32_t sec)
+{
+    const ch_t *c = nav_ch(sec);
+    uint32_t g = c->e[nav_cur()].g, j, k;
+    for (j = 1; j <= c->ng; j++)
+        for (k = 0; k < c->n; k++)
+            if (c->e[k].g == (g + j) % c->ng && nv_ok(sec, k))
+                return k;
+    return 0xFFu;
+}
 /* rule 2: a section's button. HOME (ACID FM 3a): from elsewhere the page last shown on HOME, on it the next one, round */
 static void nav_button(uint32_t sec)
 {
-    const ch_t *c = nav_ch(sec);
-    uint32_t e, g, j, k;
+    uint32_t e;
     if (sec == SEC_HOME) {
         if (ui.home || gen_on())
             ux_home_flip();
@@ -260,14 +271,8 @@ static void nav_button(uint32_t sec)
         nav_go(sec, nav_mem(nav_key(sec)), 1);
         return;
     }
-    e = nav_cur();
-    g = c->e[e].g;
-    for (j = 1; j <= c->ng; j++)                        /* (the next group with a page here; ARP's one: its first) */
-        for (k = 0; k < c->n; k++)
-            if (c->e[k].g == (g + j) % c->ng && nv_ok(sec, k)) {
-                nav_go(sec, k, 0);
-                return;
-            }
+    if ((e = nav_next(sec)) != 0xFFu)                   /* (the next group with a page here; ARP's one: its first) */
+        nav_go(sec, e, 0);
 }
 /* rule 1: SELECT, s detents along the chain (no wrap) */
 static void nav_select(int32_t s)

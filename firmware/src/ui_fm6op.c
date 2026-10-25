@@ -4,8 +4,8 @@
  * (JIANT 0.6.10: from Felucca 1.5.1, without its undo: JIANT has none since TONIC) */
 /* FM6's operators (Discussion #76): the six operators of the track's own patch (eng_fm6.c fm6_patch) edited on the device.
  * (ACID FM 3b task 5) On the ux pages (ux_section.c; params.c's views ID_FO_*): EDIT > OPERATOR (OP RATIO FINE LEVEL), OP ENV
- * (OP STAGE RATE LEVEL), MORE's operator rows (FREQ MODE, OP DETUNE, VELOCITY); KNOB 1 the operator on both pages (one pick,
- * fop_op, kept while one goes round them and in MORE), OP ENV's stage the RATE and LEVEL it edits (fop_stg):
+ * (OP STAGE RATE LEVEL), MORE's operator rows (FREQ MODE, OP DETUNE, VELOCITY); KNOB 1 the operator on both pages (one pick
+ * a track, fop_op, kept while one goes round them and in MORE), OP ENV's stage the RATE and LEVEL it edits (fop_stg):
  *   RATIO   the coarse frequency: 0.50, 1..31 (FIXED: 1 10 100 1000 HZ, shown as FREQ)   FINE 0..99   LEVEL 0..99
  *   STAGE   1 ATK, 2 DEC, 3 SUS, 4 REL: the envelope's stage RATE / LEVEL edit             RATE 0..99   LEVEL 0..99
  *   FREQ MODE  RATIO / FIXED      OP DETUNE  -7..+7      VELOCITY  the velocity sensitivity, 0..7
@@ -17,8 +17,12 @@
  * RATIO, MOD TIME their RATEs, MOD VEL their VELOCITY, DETUNE the carriers' pitch, FEEDBACK the feedback, ALGORITHM
  * another algorithm: the picture and which operators are carriers follow ALGORITHM). Included by ui_graph.c. */
 static int32_t accel(uint32_t role, int32_t s, int32_t range);   /* (ui_input.c) */
-static uint8_t fop_op;                               /* the operator shown: 0..5 = OP 1..6 (the patch holds OP 6 first) */
-static uint8_t fop_stg;                              /* OP ENV: the stage KNOB 3 / 4 edit, 0..3 */
+/* (3b task 5 fix) a pick each track (spec 2.1 "one selection per track": back on a track, its operator and stage; RAM only,
+ * OP 1 and ATK at power-on); fop_op / fop_stg name the selected track's */
+static uint8_t fop_op_tr[NTRK];                      /* the operator shown: 0..5 = OP 1..6 (the patch holds OP 6 first) */
+static uint8_t fop_stg_tr[NTRK];                     /* OP ENV: the stage KNOB 3 / 4 edit, 0..3 */
+#define fop_op (fop_op_tr[song.sel % NTRK])
+#define fop_stg (fop_stg_tr[song.sel % NTRK])
 
 /* per view (params.c ID_FO_CRS ..): its byte in an operator's 21 (RATE / LEVEL: + the stage) */
 static const uint8_t FO_OFF[ID_FO_END - ID_FO_OP] = {0, FP_FC, FP_FF, FP_OL, 0, FP_R1, FP_L1, FP_MODE, FP_DET, FP_KVS};

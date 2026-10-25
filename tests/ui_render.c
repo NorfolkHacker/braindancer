@@ -1061,7 +1061,7 @@ static void setup(int s)
         memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 7);
         break;
     case S_DXSEND:                                      /* (0.6.48) SEND: the snare to the REVERB, 75 % (3b task 5: MORE's) */
-        set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 1; dx_ui_seen = last_note;
+        set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 1;
         dx_snd[1] = 3u << 6 | 47u; dx_lay[1] = 0x26;
         memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 15);
         break;
@@ -1264,15 +1264,15 @@ static void setup(int s)
     case S_DRUMX: eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; TSEL->p[P_E0] = 40; go_title("EDIT 1"); break;
     case S_DRUMX_HIT:
         eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; TSEL->p[P_E0] = 100; go_title("EDIT 1");
-        dx_ui_seen = last_note; trk_note_on(TSEL, 36, 120); trk_note_on(TSEL, 42, 100); last_note = 42; events_block(256);
+        trk_note_on(TSEL, 36, 120); trk_note_on(TSEL, 42, 100); last_note = 42; dx_ui_lane = (uint8_t)drum_lane(42); events_block(256);
         break;
     /* EDIT > SOUND / SOUND 2: the snare's patch B, PITCH just turned; the kick's SOUND 2 */
     case S_DX_SOUND:
-        eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 1; dx_ui_side = 1; dx_ui_seen = last_note;
+        eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 1; dx_ui_side = 1;
         nav_scene(SEC_EDIT, "SOUND"); ux_knob_touch(2);
         break;
     case S_DX_SOUND2:
-        eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 0; dx_ui_side = 0; dx_ui_seen = last_note;
+        eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 0; dx_ui_side = 0;
         nav_scene(SEC_EDIT, "SOUND 2");
         break;
     case S_FM6_ALG5: eng(ENGI_FM6); TSEL->p[P_E0] = 5; TSEL->p[P_E1] = 3; go_title("EDIT 1"); ui.hot_col = 1; ui.hot_t = 30; break;
@@ -1546,7 +1546,7 @@ static void setup(int s)
         uint32_t at, n;
         drum(0); go_page(GR_ROLL); ui.cursor = 4; ui.lane = 2;
         grid_hit(TSEL, 4, 2, 1);
-        dx_ui_lane = 2; dx_ui_seen = last_note;           /* (3b task 5: SOUND, the CP's LEVEL; KIT's DECAY) */
+        dx_ui_lane = 2;           /* (3b task 5: SOUND, the CP's LEVEL; KIT's DECAY) */
         motion_set_lock(TSEL, 4, P_LN2, 100); motion_set_lock(TSEL, 4, P_E3, 30);
         fm1_in.notes = 1u << key_at(0, 4);
         n = lock_chain(v, &at);
@@ -1755,7 +1755,7 @@ static void setup(int s)
         apply_preset_to(TSEL, 0);
         TSEL->engine = TSEL->eng_req;
         fop_op = (uint8_t)(pg == 1u || pg == 3u ? 2u : 0u); fop_stg = 1;
-        dx_ui_lane = (uint8_t)(pg == 2u ? 3u : 1u); dx_ui_side = 0; dx_ui_seen = last_note;
+        dx_ui_lane = (uint8_t)(pg == 2u ? 3u : 1u); dx_ui_side = 0;
         if (s == S_EDIT_FM6_ALG4) TSEL->p[P_E0] = 4, TSEL->p[P_E1] = 4;
         if (s == S_EDIT_DRUM_MUTED) dx_mute_set(DXM_LANE(2) | DXM_LANE(6));
         uxs_seen = pg ? 0x3FFu : 0u;
