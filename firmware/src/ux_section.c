@@ -6,8 +6,9 @@
  *            "1.0MS"; MORE's rows and the status line the same), the bar its place in the range, KNOB 1..4 ACID SLIDE VIOLET
  *            ACCENT; MORE: KNOB 1 the setting picked (n/N), KNOB 2 its value
  *   panel    the page's picture over the glow: a synth's EDIT what it sounds like (the engine's signal path, ported; its
- *            FILTER page the filter's response; VOICE singing words the word); MORE its
- *            list (ux_more.c); the sections still to come (3b tasks 5..8) their title and the four values as bars
+ *            FILTER page the filter's response; VOICE singing words the word); FM6's its algorithm (the picked operator
+ *            outlined; OP ENV its envelope); DRUM-X's the picked drum's hit (dx_run) and the eight drums; MORE its
+ *            list (ux_more.c); the sections still to come (3b tasks 6..8) their title and the four values as bars
  *   status   a message (STOP TO EDIT in ACCENT), else the knob just turned: its full name and value ("RELEASE . 420MS"),
  *            else the section's first-time hint ("ARP AGAIN: NEXT PAGE", once a power-on, spec 0 rule 7), else on MORE
  *            what its controls do
@@ -34,6 +35,14 @@ static const uxs_name_t UXS_NAME[] = {
     {UXS_ALL, ENGI_PHASE, 0, P_E3, "SWEEP"},            /* .. its ENV: how far the envelope moves DCW */
     {UXS_ALL, ENGI_PHASE, 0, P_E5, "LINE 2"},           /* .. its LINE: line 2 MIX / RING */
     {UXS_ALL, ENGI_NOISE, 0, P_E0, "SOURCE"},           /* .. NOISE's MODE: ANLG DUST LFSR META */
+    {UXS_ALL, ENGI_FM6, 0, P_E0, "ALGORITHM"},          /* (3b task 5) FM6's ALG; FB is FEEDBACK (UXS_LABEL) */
+    {UXS_ALL, ENGI_FM6, 0, P_E2, "MOD LEVEL"},          /* .. MOD (MLVL): the modulators' level, the brightness */
+    {UXS_ALL, ENGI_FM6, 0, P_E3, "MOD RATIO"},          /* .. RATIO (MRAT): the modulators' RATIO moved (an operator's is RATIO) */
+    {UXS_ALL, ENGI_FM6, 0, P_E4, "MOD TIME"},           /* .. MEG: the modulators' envelopes slower / faster */
+    {UXS_ALL, ENGI_FM6, 0, P_E5, "MOD VEL"},            /* .. VMOD: the modulators' VELOCITY moved */
+    {UXS_ALL, ENGI_FM6, 0, P_E7, "PATCH"},              /* .. SLOT: the patch, F1..F8 OWN B1..B32 */
+    {UXS_ALL, ENGI_DRUM, 0, P_E5, "CLICK"},             /* .. DRUM-X's FM ENV: the hit's beater, click, metal edge */
+    {UXS_ALL, ENGI_DRUM, 0, P_DXIMG, "STEREO"},         /* .. IMAGE: the kit across the stereo field */
 };
 static const char *uxs_name_in(const uxs_name_t *t, uint32_t n, uint32_t sec, uint32_t eng, uint32_t glo, uint32_t id)
 {
@@ -66,6 +75,8 @@ static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char
     const char *p = id < 256u ? uxs_name_in(UXS_NAME, NELEM(UXS_NAME), sec, trk_eng(TSEL), glo ? 1u : 0u, id) : 0;
     if (p)
         return p;
+    if (!glo && id >= P_LN0 && id <= P_LN7 && trk_eng(TSEL) == ENGI_DRUM)
+        return "LEVEL";                                 /* (3b task 5) DRUM-X's SOUND: the drum picked's (its name: KNOB 1) */
     if (!l)
         return "";
     for (i = 0; i < NELEM(UXS_LABEL); i++)
@@ -734,10 +745,11 @@ static void uxs_norm(const int32_t *o, int16_t *w)
     for (i = 0; i < UXS_WN; i++)
         w[i] = (int16_t)(mx > 64 ? (int64_t)o[i] * 4096 / mx : 0);
 }
+static int32_t uxs_cols[UXS_WN];                       /* (the pictures' columns: a synth's wave, DRUM-X's hit; one at a time) */
 /* track t's picture (raw: ANALOG's oscillators alone), -4096..4096 */
 static void uxs_wave(const track_t *t, int16_t *w, int raw)
 {
-    static int32_t o[UXS_WN];
+    int32_t *o = uxs_cols;
     const engine_t *e = trk_engp(t);
     uint32_t i, pre, len;
     for (i = 0; i < UXS_WN; i++)
@@ -834,14 +846,295 @@ static void uxs_filter_draw(const track_t *t, const page_t *pg, const char *name
     }
     cv_rect(xc, 14, 1, 99, UX_SLIDE);
 }
-/* the page's picture: MORE its list; the others (until Tasks 4..8 give each its own) the page's title over its four
- * values as bars in the knobs' colours */
+/* ------------------------------------------------------------------------------ FM6's and DRUM-X's pictures --- */
+/* (3b task 5) FM6: the algorithm (ui_graph.c FM6_CELL: each operator's place, the carriers on the bottom row; fm6_routes,
+ * fm6_car_ops, fm6_fb_op: fm6_core.c's FM6_ALG itself) as dots in the blend's colours, numbered, each as large as its level
+ * (a modulator's with MOD LEVEL on it; silent: a ring), joined by lines: a modulator's line waves as many times as its ratio
+ * (MOD RATIO on it; FIXED: straight), the carriers' down to the output, the feedback a loop on its operator as large as
+ * FEEDBACK (0: a hairline). OPERATOR: the operator picked outlined, its ratio top right ("OP 3 x1.50", "OP 3 440HZ").
+ * OP ENV: the picked operator's envelope (L4 to L1 at R1, L2 at R2, L3 at R3, held, back to L4 at R4: a stage as wide as
+ * its rate is slow), the stage picked in KNOB 2's colour. All from the patch and the knobs: a turn redraws it, once */
+#ifndef UXS_FM6_HOOK
+#define UXS_FM6_HOOK(k, x, y, r) ((void)0)              /* (tests/ui_render.c: each operator as drawn, Q4 px: its lint) */
+#endif
+#define UXS_FY0 38               /* the operators' rows: the top one's y at most, the carriers' */
+#define UXS_FY1 112
+#define UXS_FBUS 134             /* the output */
+static int32_t uxs_fop_lvl(const uint8_t *op, int32_t mod, int32_t mlvl)   /* an operator's level drawn, 0..99 */
+{
+    int32_t l = op[FP_OL] % 100u;
+    return l && mod ? clamp(l + mlvl * 3 / 4, 1, 99) : l;   /* (MOD LEVEL: -36 .. +36 dB, 3/4 dB a step of LEVEL) */
+}
+static int32_t uxs_fop_ratio(const uint8_t *op, int32_t mrat, int mod)   /* its ratio x100 (FIXED: 0), MOD RATIO on a modulator */
+{
+    int32_t c = op[FP_FC] & 31;
+    if (op[FP_MODE])
+        return 0;
+    if (mod)
+        c = clamp(c + mrat, 0, 31);
+    return (c ? c * 100 : 50) * (100 + op[FP_FF] % 100u) / 100;
+}
+/* "x1.50" (ratio x100), "440HZ" (FIXED: as fm6_core.c fm6_op_freq) */
+static void uxs_fop_freq(const uint8_t *op, char *b, uint32_t nb)
+{
+    char t[16];
+    uint32_t i, j = 0;
+    fop_freq(op, t);                                    /* ("x1.50", "440 HZ", "1.00 KHZ") */
+    for (i = 0; t[i] && j + 1u < nb; i++)
+        if (t[i] != ' ')
+            b[j++] = t[i] == 'K' && t[i + 1] == 'H' ? 'K' : t[i];
+    b[j] = 0;
+}
+static void uxs_wave_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t cyc, uint16_t c)
+{
+    int32_t i, px = x0, py = y0, dx = x1 - x0, dy = y1 - y0, len = 1, n = 24;
+    for (len = 1; len * len < dx * dx + dy * dy; len++)
+        ;
+    for (i = 1; i <= n; i++) {
+        int32_t w = cyc ? (og_sin((uint32_t)(i * cyc * 65536 / n)) * 3) >> 15 : 0;   /* (3 px either side) */
+        int32_t x = x0 + dx * i / n - dy * w / len, y = y0 + dy * i / n + dx * w / len;
+        cv_line_t(px, py, x, y, c, 1);
+        px = x;
+        py = y;
+    }
+}
+static void uxs_fm6_env(const track_t *t, const char *name)
+{
+    const uint8_t *op = fop_bytes(song.sel);
+    int32_t x[6], y[6], k, w, sg = fop_stg & 3u;
+    uint16_t fill = ux_mix(UX_BG, UX_ACID, 20);
+    char b[24];
+    (void)t;
+    x[0] = 14;
+    y[0] = 120 - op[FP_L1 + 3] % 100u * 90 / 99;        /* (from L4) */
+    for (k = 0; k < 4; k++) {                           /* R1 L1, R2 L2, R3 L3, held, R4 L4 */
+        int32_t r = op[FP_R1 + (k < 3 ? k : 3)] % 100u, l = op[FP_L1 + k] % 100u;
+        w = 6 + (99 - r) * (99 - r) * 40 / 9801;
+        if (k == 3) {                                   /* (the key held: SUS's level on) */
+            x[4] = x[3] + 26;
+            y[4] = y[3];
+            x[5] = x[4] + w;
+            y[5] = 120 - l * 90 / 99;
+        } else {
+            x[k + 1] = x[k] + w;
+            y[k + 1] = 120 - l * 90 / 99;
+        }
+    }
+    for (k = 0; k < 5; k++) {                           /* the fill, then the line: the stage picked in KNOB 2's colour */
+        int32_t xx;
+        for (xx = x[k]; xx < x[k + 1]; xx++) {
+            int32_t yy = y[k] + (y[k + 1] - y[k]) * (xx - x[k]) / (x[k + 1] - x[k] ? x[k + 1] - x[k] : 1);
+            cv_rect(xx, yy, 1, 121 - yy, fill);
+        }
+    }
+    cv_rect(14, 121, 212, 1, UX_LINE);
+    for (k = 0; k < 5; k++) {
+        int st = k < 3 ? k : k == 4 ? 3 : -1;           /* (k 3: the hold) */
+        cv_line_t(x[k], y[k], x[k + 1], y[k + 1], st == sg ? UX_SLIDE : UX_ACID, st == sg ? 3 : 2);
+    }
+    uxs_pic_head(t, name);
+    str_cpy(b, "OP ", sizeof b);
+    str_cpy(b + 3, N_FO_OP[fop_op % 6u], sizeof b - 3);
+    str_cpy(b + str_len(b), " \xB7 ", sizeof b - str_len(b));
+    str_cpy(b + str_len(b), N_FO_STG[sg], sizeof b - str_len(b));
+    k = 228 - text_w(&UF_LBL, b);
+    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "EDIT picture's word");
+    cv_text_on(k, 8, &UF_LBL, b, UX_TEXT, ux_under(k, 12));
+}
+static void uxs_fm6_draw(const track_t *t, const page_t *pg, const char *name)
+{
+    uint32_t tr = song.sel % NTRK, a = fm6_alg_of(t), car = fm6_car_ops(a), fbo = fm6_fb_op(a), k, j, hi = 0, top = 0;
+    const uint8_t *p = fm6_patch[tr];
+    uint8_t m[6];
+    int32_t x[6], y[6], r[6], lv[6], dx, dy, fb, cl = 999, cr = -999, pick = pg->graph == GR_FM6P ? (int32_t)(fop_op % 6u) : -1;
+    char b[24];
+    if (pg->graph == GR_FM6P && pg->id[1] == ID_FO_STG) {
+        uxs_fm6_env(t, name);
+        return;
+    }
+    fm6_routes(a, m);
+    for (k = 0; k < 6u; k++) {
+        hi = (FM6_CELL[a][k] & 7u) > hi ? FM6_CELL[a][k] & 7u : hi;
+        top = (uint32_t)(FM6_CELL[a][k] >> 4) > top ? (uint32_t)FM6_CELL[a][k] >> 4 : top;
+    }
+    dx = hi ? (190 / (int32_t)hi < 52 ? 190 / (int32_t)hi : 52) : 0;
+    dy = top ? ((UXS_FY1 - UXS_FY0) / (int32_t)top < 37 ? (UXS_FY1 - UXS_FY0) / (int32_t)top : 37) : 0;
+    for (k = 0; k < 6u; k++) {
+        const uint8_t *op = p + (5u - k) * FP_OP;
+        x[k] = 120 + ((int32_t)(FM6_CELL[a][k] & 7u) * 2 - (int32_t)hi) * dx / 2;
+        y[k] = UXS_FY1 - (int32_t)(FM6_CELL[a][k] >> 4) * dy;
+        lv[k] = uxs_fop_lvl(op, !((car >> k) & 1u), t->p[P_E2]);
+        r[k] = 6 + lv[k] * 5 / 99;
+        if ((car >> k) & 1u) {
+            cl = x[k] < cl ? x[k] : cl;
+            cr = x[k] > cr ? x[k] : cr;
+        }
+    }
+    uxs_pic_head(t, name);
+    cv_rect(cl, UXS_FBUS, cr + 14 - cl, 1, UX_MID);     /* the output: the carriers' line, an arrow out */
+    cv_line_t(cr + 10, UXS_FBUS - 3, cr + 14, UXS_FBUS, UX_MID, 1);
+    cv_line_t(cr + 10, UXS_FBUS + 3, cr + 14, UXS_FBUS, UX_MID, 1);
+    for (k = 0; k < 6u; k++) {
+        if ((car >> k) & 1u)
+            cv_rect(x[k], y[k] + r[k], 1, UXS_FBUS - y[k] - r[k], lv[k] ? UX_MID : UX_LINE);
+        for (j = 0; j < 6u; j++)                        /* (j modulates k: its ratio waves along the line) */
+            if ((m[k] >> j) & 1u) {
+                int32_t rt = uxs_fop_ratio(p + (5u - j) * FP_OP, t->p[P_E3], 1);
+                uxs_wave_line(x[j], y[j] + r[j], x[k], y[k] - r[k], rt ? clamp((rt + 50) / 100, 1, 12) : 0,
+                              lv[j] ? ux_mix(UX_LINE, UX_BLEND[j * 51u], 30 + lv[j] * 70 / 99) : UX_LINE);
+            }
+    }
+    fb = clamp(p[FP_FB] + t->p[P_E1], 0, 7);            /* FEEDBACK: a loop, as large as it is, from the operator it is taken */
+    {                                                   /* from (FM6_ALG's last FBOUT) into the one it feeds (FBIN): */
+        uint32_t src = fbo;                             /* (algorithms 4 and 6: from OP 4 / OP 5 back to OP 6) */
+        int32_t Xs, Ys, Rs, X = x[fbo], Y = y[fbo], R = r[fbo], w = 5 + fb * 2, h = 4 + fb, xm;
+        uint16_t c = fb ? UX_ACCENT : UX_LINE;
+        int32_t th = fb >= 4 ? 2 : 1;
+        for (k = 0; k < 6u; k++)                        /* (run sixth first: the last FBOUT is what is fed back) */
+            if (FM6_ALG[a][k] & FM6_FBOUT)
+                src = 5u - k;
+        Xs = x[src]; Ys = y[src]; Rs = r[src];
+        xm = (Xs + Rs > X + R ? Xs + Rs : X + R) + w;
+        cv_line_t(Xs + Rs, Ys, xm, Ys, c, th);
+        cv_line_t(xm, Ys, xm, Y - R - h, c, th);
+        cv_line_t(xm, Y - R - h, X, Y - R - h, c, th);
+        cv_line_t(X, Y - R - h, X, Y - R, c, th);
+    }
+    for (k = 0; k < 6u; k++) {                          /* the operators, numbered */
+        char n[2] = {(char)('1' + k), 0};
+        uint16_t c = UX_BLEND[k * 51u];
+        int32_t i, nx = x[k] - text_w(&UF_LBL, n) / 2;
+        if (lv[k]) {
+            for (i = -r[k]; i <= r[k]; i++) {           /* (a disc) */
+                int32_t hw = 0;
+                while ((hw + 1) * (hw + 1) + i * i <= r[k] * r[k])
+                    hw++;
+                cv_rect(x[k] - hw, y[k] + i, 2 * hw + 1, 1, ux_mix(UX_BG, c, 45 + lv[k] * 55 / 99));
+            }
+            cv_text_on(nx, y[k] - 5, &UF_LBL, n, UX_BG, ux_mix(UX_BG, c, 45 + lv[k] * 55 / 99));
+        } else {
+            og_ring(x[k] * 16, y[k] * 16, r[k] * 16, UX_MID);
+            cv_text_on(nx, y[k] - 5, &UF_LBL, n, UX_MID, ux_under(nx, y[k]));
+        }
+        if ((int32_t)k == pick)                         /* (OPERATOR: the operator picked) */
+            og_ring(x[k] * 16, y[k] * 16, (r[k] + 3) * 16, UX_TEXT);
+        UXS_FM6_HOOK((int32_t)k, x[k] * 16, y[k] * 16, r[k] * 16);
+    }
+    if (pick >= 0) {                                    /* its ratio (FIXED: its frequency) */
+        int32_t tx;
+        str_cpy(b, "OP ", sizeof b);
+        str_cpy(b + 3, N_FO_OP[pick], sizeof b - 3);
+        str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
+        uxs_fop_freq(p + (5u - (uint32_t)pick) * FP_OP, b + str_len(b), sizeof b - str_len(b));
+        tx = 228 - text_w(&UF_HDR, b);
+        GFX_HOOK_ALIGN(0, 6 + UF_HDR_CAP_Y, 0, 6 + UF_HDR_CAP_Y + UF_HDR_CAP_H, AL_V | AL_PASS, "EDIT picture's word");
+        cv_text_on(tx, 6, &UF_HDR, b, UX_TEXT, ux_under(tx, 12));
+    }
+}
+
+/* DRUM-X: the drum picked's hit (its stroke as the engine plays it: drumx_voice.c dx_run on a scratch hit, from the kit and
+ * the track's knobs, MORPH where KIT has it, no LFO, then its LEVEL and the kit's DRIVE as eng_drum.c drum_render and
+ * drum_bus do), a fifth of a second, its envelope over the panel; under it the eight drums as cells, each its LEVEL as a
+ * bar, the one picked lit, a muted one dim (EDIT's held layer: its black keys). The drum's name and side top right */
+#define UXS_DXN 8192u            /* the hit drawn, samples (as NOISE's DUST: ~0.19 s) */
+#define UXS_DY 58                /* its axis, its height either side */
+#define UXS_DA 34
+static void uxs_drum_hit(const track_t *t, uint32_t l, int32_t *o)
+{
+    static dx_voice_t v;
+    int32_t y[CTL], lv = clamp(t->p[P_LN0 + (l & 7u)], 0, 127), drv = t->p[P_E7], g = 0, mk = 0, gl;
+    uint32_t i, k, j = 0;
+    const int16_t *p = t->p;
+    memset(&v, 0, sizeof v);
+    v.trig = 1;
+    v.rng = 0x2545F491;
+    if ((l & 7u) == DV_BELL)                            /* (as drum_render: the cowbell 4 dB under) */
+        lv = lv * 100 / 127;
+    gl = lv * lv * 2 + (lv * lv >> 6);
+    if (drv > 0) {                                      /* (drum_bus: DRIVE x1..x4 into the soft clip, its level kept) */
+        g = 4096 + drv * 3 * 4096 / 127;
+        mk = (int32_t)((19661u << 15) / (uint32_t)softclip((19661 * g) >> 12));
+    }
+    for (i = 0; i < UXS_WN; i++)
+        o[i] = 0;
+    for (k = 0; k < UXS_DXN / CTL; k++) {
+        dx_run(&dx_kit[l & 7u], &v, p[P_E0], (p[P_E1] - 64) * 3, p[P_E3] - 64, p[P_E2] - 64, p[P_E4] - 64, p[P_E6], p[P_E5], y,
+               CTL);
+        for (i = 0; i < CTL; i++, j++) {
+            int32_t s = y[i], c = (int32_t)(j * UXS_WN / UXS_DXN);
+            if (lv < 127)
+                s = (int32_t)(((int64_t)s * gl) >> 15);
+            s += s >> 2;
+            if (g)
+                s = (softclip((clamp(s, -131071, 131071) * g) >> 12) * mk) >> 15;
+            s = soft_knee(s, 24000);
+            s = s < 0 ? -s : s;
+            if (s > o[c])
+                o[c] = s;
+        }
+    }
+}
+static void uxs_drum_draw(const track_t *t, const char *name)
+{
+    int32_t *o = uxs_cols;
+    uint32_t l = dx_ui_lane & 7u, i;
+    uint16_t fill = ux_mix(UX_BG, UX_ACID, 30);
+    char b[24];
+    int32_t x;
+    uxs_drum_hit(t, l, o);
+    uxs_pic_head(t, name);
+    str_cpy(b, drum_lane_abbr(t, l), sizeof b);         /* "SD . SNARE . A" */
+    str_cpy(b + str_len(b), " \xB7 ", sizeof b - str_len(b));
+    str_cpy(b + str_len(b), drum_lane_name(t, l), sizeof b - str_len(b));
+    str_cpy(b + str_len(b), dx_ui_side ? " \xB7 B" : " \xB7 A", sizeof b - str_len(b));
+    x = 228 - text_w(&UF_LBL, b);
+    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "EDIT picture's word");
+    cv_text_on(x, 8, &UF_LBL, b, UX_TEXT, ux_under(x, 12));
+    cv_rect(12, UXS_DY, 216, 1, UX_LINE);
+    for (i = 0; i < UXS_WN; i++) {                      /* the hit: its envelope either side of the axis */
+        int32_t xx = 12 + (int32_t)i * 216 / (int32_t)UXS_WN, h = clamp(o[i] * UXS_DA / 32768, 0, UXS_DA);
+        if (h) {
+            cv_rect(xx, UXS_DY - h, 2, 2 * h + 1, fill);
+            cv_rect(xx, UXS_DY - h, 2, 1, UX_ACID);
+            cv_rect(xx, UXS_DY + h, 2, 1, UX_ACID);
+        }
+    }
+    for (i = 0; i < 8u; i++) {                          /* the drums: a cell each, its LEVEL a bar */
+        int32_t cx = 12 + (int32_t)i * 27, cy = 102, lv = clamp(t->p[P_LN0 + i], 0, 127), h = lv * 24 / 127;
+        int on = i == l, mute = dx_lane_muted(i);
+        uint16_t bg = on ? UX_BG2 : ux_under(cx + 12, cy + 20), ink = mute ? UX_LINE : on ? UX_TEXT : UX_MID;
+        const char *ab = drum_lane_abbr(t, i);
+        if (on) {
+            cv_rect(cx, cy, 25, 42, UX_BG2);
+            cv_rect(cx, cy, 25, 1, UX_ACID);
+            cv_rect(cx, cy + 41, 25, 1, UX_ACID);
+            cv_rect(cx, cy, 1, 42, UX_ACID);
+            cv_rect(cx + 24, cy, 1, 42, UX_ACID);
+        }
+        GFX_HOOK_CELL(cx, cy, cx + 25, cy + 42);
+        cv_text_on(cx + 13 - text_w(&UF_LBL, ab) / 2, cy + 4, &UF_LBL, ab, ink, bg);
+        cv_rect(cx + 8, cy + 15, 9, 24, on ? ux_mix(UX_BG2, UX_LINE, 60) : UX_EMPTY);
+        if (h)
+            cv_rect(cx + 8, cy + 39 - h, 9, h, mute ? UX_LINE : on ? UX_ACID : UX_MID);
+    }
+}
+
+/* the page's picture: MORE its list; EDIT's its engine's (above); the others (until Tasks 6..8 give each its own) the page's
+ * title over its four values as bars in the knobs' colours */
 static void uxs_picture(const page_t *pg, const ux_knob_t k[4])
 {
     const aafont_t *f = &UF_TTL;
     int32_t w, x, i;
     if (pg->graph == GR_MORE) {
         ux_more_draw(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top);
+        return;
+    }
+    if (pg->fam == FAM_EDIT && edit_kind() == 1u) {     /* (3b task 5) FM6: its algorithm, OP ENV the operator's envelope */
+        uxs_fm6_draw(TSEL, pg, nav_page_name());
+        return;
+    }
+    if (pg->fam == FAM_EDIT && edit_kind() == 2u) {     /* .. DRUM-X: the drum's hit, the eight drums */
+        uxs_drum_draw(TSEL, nav_page_name());
         return;
     }
     if (pg->fam == FAM_EDIT && !edit_kind()) {          /* (a synth: its wave; the filter's page its response) */
@@ -886,6 +1179,8 @@ static void ux_section_draw(void)
     }
     if (ux_knob_hot() >= 0)                             /* (a knob turned: the page found out) */
         uxs_hint_sec = 0xFF;
+    if (pg->fam == FAM_EDIT && edit_kind() == 2u)       /* (3b task 5) DRUM-X: a key struck picks its drum (ui_dx.c) */
+        dx_follow();
     dc_frame(ui.force);
     all = dc_all;
     {   /* the header: T3 . the sound, the transport */
@@ -913,6 +1208,22 @@ static void ux_section_draw(void)
                 if (param_ref(pg->more->rows[i].kind == UXR_GLOBAL ? 0 : TSEL, pg->more->rows[i].id, &vp) && vp)
                     sig = sig * 33u + (uint16_t)*vp;
             }
+    }
+    if (pg->fam == FAM_EDIT && edit_kind() == 1u) {     /* (3b task 5) FM6: the patch, the knobs, the operator and stage */
+        const uint8_t *pp = fm6_patch[song.sel % NTRK];
+        for (c = 0; c < FP_SIZE; c++)
+            sig = sig * 31u + pp[c];
+        for (c = 0; c < 8u; c++)
+            sig = sig * 31u + (uint16_t)TSEL->p[P_E0 + c];
+        sig = sig * 31u + fop_op * 7u + fop_stg;
+    }
+    if (pg->fam == FAM_EDIT && edit_kind() == 2u) {     /* .. DRUM-X: the kit, the knobs, the levels, the drum, the mutes */
+        const uint8_t *kp = (const uint8_t *)&dx_kit[dx_ui_lane & 7u];
+        for (c = 0; c < sizeof dx_kit[0]; c++)
+            sig = sig * 31u + kp[c];
+        for (c = 0; c < 8u; c++)
+            sig = sig * 31u + (uint16_t)TSEL->p[P_E0 + c] + (uint16_t)TSEL->p[P_LN0 + c] * 131u + dx_lay[c] * 7u;
+        sig = sig * 31u + dx_tone + dx_hands * 257u + dx_ui_lane * 7u + dx_ui_side + (uint32_t)dx_mute * 65537u;
     }
     if (pg->fam == FAM_EDIT && !edit_kind() && pg->graph != GR_MORE) {   /* (a synth's wave: every setting it is drawn from) */
         static const uint8_t W[] = {P_E0, P_E1, P_E2, P_E3, P_E4, P_E5, P_E6, P_E7, P_MORPH, P_VLANG, P_FTYPE, P_FCUT, P_FRES,

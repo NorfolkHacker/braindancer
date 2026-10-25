@@ -79,6 +79,20 @@ static const uxc_id_t UXC_JIANT[] = {
     {SEC_ARP, TRK, P_ASWING}, {SEC_ARP, TRK, P_APROB}, {SEC_ARP, TRK, P_AHOLD}, {SEC_ARP, TRK, P_AORDER},
     {SEC_SCL, TRK, P_ROOT}, {SEC_SCL, TRK, P_SCALE}, {SEC_SCL, TRK, P_QUANT}, {SEC_SCL, TRK, P_CHRD},
     {SEC_SCL, TRK, P_CVOI}, {SEC_SCL, TRK, P_CSTR}, {SEC_SCL, TRK, ID_ALLTR},
+    /* (3b task 5) the patch's and the kit's fields JIANT's special pages turned, reviewed from ui_fm6op.c and ui_dx.c as of
+     * d96b47f (params.c's views name them): FM6's OPERATOR (OP, RATIO, FINE, LEVEL), OP ENV (OP, STAGE, RATE, LEVEL),
+     * OPERATOR 2 (OP, MODE, DETUNE, VEL); DRUM-X's SOUND (LANE, SIDE, PITCH, PMOD), SOUND 2 (LANE, DECAY, NOISE, COLOR), SOUND 3
+     * (LANE, MODE: its wave, noise filter and SNAP, PM.TYPE, DRIVE), SOUND 4 (LANE, LAYER, FEEDBK, SEND: its bus and amount),
+     * KIT 3 (BP, FEEDBK, HANDS), X-MOD (RATE, DEPTH, SHAPE, RAND) */
+    {UXC_FM6, TRK, ID_FO_OP}, {UXC_FM6, TRK, ID_FO_CRS}, {UXC_FM6, TRK, ID_FO_FINE}, {UXC_FM6, TRK, ID_FO_LVL},
+    {UXC_FM6, TRK, ID_FO_STG}, {UXC_FM6, TRK, ID_FO_RATE}, {UXC_FM6, TRK, ID_FO_ELVL}, {UXC_FM6, TRK, ID_FO_MODE},
+    {UXC_FM6, TRK, ID_FO_DTUN}, {UXC_FM6, TRK, ID_FO_VEL},
+    {UXC_DRM, TRK, ID_DX_LANE}, {UXC_DRM, TRK, ID_DX_SIDE}, {UXC_DRM, TRK, ID_DX_PITCH}, {UXC_DRM, TRK, ID_DX_PMOD},
+    {UXC_DRM, TRK, ID_DX_DECAY}, {UXC_DRM, TRK, ID_DX_NOISE}, {UXC_DRM, TRK, ID_DX_COLOR}, {UXC_DRM, TRK, ID_DX_WAVE},
+    {UXC_DRM, TRK, ID_DX_NTYPE}, {UXC_DRM, TRK, ID_DX_SNAP}, {UXC_DRM, TRK, ID_DX_PMT}, {UXC_DRM, TRK, ID_DX_DRV},
+    {UXC_DRM, TRK, ID_DX_CLANG}, {UXC_DRM, TRK, ID_DX_LFB}, {UXC_DRM, TRK, ID_DX_SENDTO}, {UXC_DRM, TRK, ID_DX_SEND},
+    {UXC_DRM, TRK, ID_DX_BP}, {UXC_DRM, TRK, ID_DX_KFB}, {UXC_DRM, TRK, ID_DX_HANDS}, {UXC_DRM, TRK, ID_DX_XRATE},
+    {UXC_DRM, TRK, ID_DX_XDEP}, {UXC_DRM, TRK, ID_DX_XSHP}, {UXC_DRM, TRK, ID_DX_XRND},
 };
 
 /* the settings left off every page and MORE list on purpose, each with why. They keep their stored value */
@@ -88,6 +102,15 @@ static const uxc_hid_t UXC_HIDDEN[] = {
     {UXC_SYN, TRK, P_WDUST, "ROTOR's DUST: as DEPTH"},
     {UXC_SYN, TRK, P_ALLOC, "VOICE 2's ALLOC (ROT / REUSE, how a new note picks a voice): an expert's choice, its default suits "
                             "every sound (3b task 4, the user's 'simplify')"},
+    {UXC_FM6, TRK, P_ALLOC, "ALLOC on FM6: as on the synths (3b task 5)"},
+    {UXC_DRM, TRK, P_VOICE, "VOICE (POLY / MONO ..) on a kit: no effect, DRUM-X plays its drums as hits (voice.c trk_vmode)"},
+    {UXC_DRM, TRK, P_GLIDE, "GLIDE on a kit: no effect, a hit never glides (voice.c trk_note_on: oneshot)"},
+    {UXC_DRM, TRK, P_GLMODE, "GLIDE MODE on a kit: no effect, as GLIDE"},
+    {UXC_DRM, TRK, P_PRIO, "PRIORITY on a kit: no effect, it picks the note of a MONO voice (voice.c mono_stack)"},
+    {UXC_DRM, TRK, P_DIST, "the FILTER page's DRV on a kit: the same setting as FX > SENDS DRIVE (P_DIST); the kit has its own "
+                           "DRIVE (KIT 2), three drives were one too many"},
+    {UXC_DRM, TRK, ID_DX_LFB, "a drum's own FEEDBACK (SOUND 4's FEEDBK): the kit's FEEDBACK does it for every drum; every factory "
+                              "kit leaves it 0"},
 };
 
 static const uint8_t UXC_SECS[] = {UXC_SYN, UXC_FM6, UXC_DRM, UXC_DIG, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL};
@@ -104,7 +127,7 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
 {
     const ch_t *c = &CHAINS[key];
     uint32_t sec = key < SEC_N ? key : SEC_EDIT, e, i, sl, v, r;
-    uint8_t ms = ms_ui_step, sp = sl_ui_step, mo = mod_ui_slot;
+    uint8_t ms = ms_ui_step, sp = sl_ui_step, mo = mod_ui_slot, dl = dx_ui_lane;
     memset(got, 0, 2 * 256);
     for (e = 0; e < c->n; e++) {
         if (!c->e[e].t)
@@ -128,13 +151,14 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
                     mod_ui_slot = (uint8_t)(v & 3u);
                     ms_ui_step = (uint8_t)v;
                     sl_ui_step = (uint8_t)v;
+                    dx_ui_lane = (uint8_t)(v & 7u);     /* (3b task 5: DRUM-X's SOUND, the drum picked's LEVEL) */
                     id = page_id(pg, sl);
                     if (id < 256u)
                         got[pg->scope == SC_GLOBAL][id] = 1;
                 }
         }
     }
-    ms_ui_step = ms; sl_ui_step = sp; mod_ui_slot = mo;
+    ms_ui_step = ms; sl_ui_step = sp; mod_ui_slot = mo; dx_ui_lane = dl;
 }
 
 static const uxc_hid_t *uxc_hidden(uint32_t key, uint32_t glo, uint32_t id)
@@ -209,7 +233,8 @@ int main(int argc, char **argv)
     ok = 1;                                             /* the hidden list: reviewed rows only */
     for (i = 0; i < NELEM(UXC_HIDDEN); i++) {
         const uxc_hid_t *h = &UXC_HIDDEN[i];
-        int real = h->glo ? h->id < G_COUNT : h->id < P_COUNT;   /* (a stored setting: no view, kept as it is) */
+        int real = h->glo ? h->id < G_COUNT : h->id < P_COUNT || fld_is(h->id);   /* (a stored setting: no view, kept as it
+                                                         * is; 3b task 5: a patch's or kit's byte, stored with them) */
         if (!uxc_in_jiant(h->key, h->glo, h->id) || !real || !h->why || str_len(h->why) < 8u ||
             uxc_hidden(h->key, h->glo, h->id) != h) {
             printf("  UXC_HIDDEN[%u]: %s %u: not one JIANT reached there, not a stored setting, no reason, or twice\n",
@@ -229,6 +254,12 @@ int main(int argc, char **argv)
     ok &= got[TRK][P_MS0] && got[TRK][P_MS15] && got[TRK][P_M1SRC] && got[TRK][P_M4AMT];
     uxc_reach(SEC_FX, 0, got);
     ok &= got[GLO][G_SLP0] && got[GLO][G_SLP15] && got[TRK][P_DIST] && got[GLO][G_DTIME];
+    uxc_reach(UXC_DRM, 0, got);                         /* (3b task 5: SOUND's LEVEL, every drum's; the kit's fields) */
+    ok &= got[TRK][P_LN0] && got[TRK][P_LN7] && got[TRK][ID_DX_LANE] && !got[TRK][ID_DX_XRND];
+    uxc_reach(UXC_DRM, 1, got);
+    ok &= got[TRK][ID_DX_XRND] && got[TRK][ID_DX_SEND] && !got[TRK][ID_DX_LFB] && !got[TRK][P_VOICE];
+    uxc_reach(UXC_FM6, 1, got);
+    ok &= got[TRK][ID_FO_DTUN] && got[TRK][ID_FO_ELVL] && got[TRK][P_E7] && !got[TRK][P_ALLOC];
     bad += check("ux cover: the reach counts the pages' knobs (every step and slot) and the MORE rows, and sees a gap", ok);
     printf("ux cover: %u settings JIANT reached, %u hidden on purpose\n", (unsigned)n, (unsigned)nh);
     if (bad)

@@ -493,7 +493,7 @@ static uint32_t large_kind(void)
         return LK_TALL;
     g = cur_page()->graph;
     return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
-           g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS || g == GR_LYRIC || g == GR_LIVE ? LK_LABEL : LK_TALL;
+           g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS || g == GR_LIVE ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
@@ -544,10 +544,15 @@ static uint32_t sec_of_fam(uint32_t f);                 /* (ui_lens.c) */
  * below: what the sections show now */
 static int page_jiant(uint32_t i)
 {
-    if (PAGES[i].graph == GR_MORE)                      /* (ACID FM 3b) MORE: its section's, once on the ux pages */
-        return ux_section_owns(sec_of_fam(PAGES[i].fam));
+    if (PAGES[i].graph == GR_MORE)                      /* (ACID FM 3b) MORE: its section's, once on the ux pages (EDIT's: */
+        return ux_section_owns(sec_of_fam(PAGES[i].fam)) &&   /* the kind of track's, task 5) */
+               (PAGES[i].fam != FAM_EDIT || edit_kind() == (PAGES[i].more == &UXM_FM6 ? 1u : PAGES[i].more == &UXM_DRM ? 2u : 0u));
     if (PAGES[i].graph == GR_SYN)                       /* (3b task 4) a synth's EDIT page 3: ANALOG's VOICE, the others' FILTER */
         return edit_kind() == 0u && (trk_eng(TSEL) == ENGI_ANALOG) == (PAGES[i].id[0] == P_VOICE);
+    if (PAGES[i].graph == GR_FM6P)                      /* (3b task 5) FM6's OPERATOR, OP ENV */
+        return trk_eng(TSEL) == ENGI_FM6;
+    if (PAGES[i].graph == GR_DXP)                       /* .. DRUM-X's SOUND, SOUND 2 */
+        return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
         return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
                                                          * was the same page twice; kept in the table: its index) */
@@ -563,14 +568,12 @@ static int page_jiant(uint32_t i)
         return trk_engp(TSEL) == &ENG_FORMANT;
     if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
-    if (PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG)   /* (0.6.48: IMAGE) */
+    if (PAGES[i].graph == GR_DXIMG)                     /* (0.6.48: IMAGE) */
         return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
         return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].id[0] == P_ALLOC)                      /* (0.8.5) VOICE 2: not a kit's */
         return trk_eng(TSEL) != ENGI_DRUM;
-    if (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV)   /* (0.6.10) OPERATOR, OP ENV, OPERATOR 2: FM6's */
-        return trk_eng(TSEL) == ENGI_FM6;
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_WRDEP)   /* (0.7.8) ROTOR: WHEEL's (retired in ACID FM 0.2): */
         return 0;                                       /* never */
     if (PAGES[i].id[0] == P_LRTRG && PAGES[i].id[1] == 0xFFu)   /* (0.6.12) RETRIG: LOFI BYTE / FLOAT's */
@@ -581,12 +584,16 @@ static int page_jiant(uint32_t i)
              PAGES[i].id[0] <= P_FM4_LEVEL) || (FELUCCA_FM4 && trk_eng(TSEL) == ENGI_DIGITAL);
 }
 /* (3b task 4) EDIT on a synth track is its ux chain's (ui_lens.c CE_SYN: EDIT 1, EDIT 2, a GR_SYN page, MORE): JIANT's other
- * EDIT pages (FILTER, MORPH, RETRIG, VOICE, VOICE 2, WORDS ..) are not shown there; their settings are MORE's rows */
+ * EDIT pages (FILTER, MORPH, RETRIG, VOICE, VOICE 2, WORDS ..) are not shown there; their settings are MORE's rows. (Task 5)
+ * FM6's and DRUM-X's the same (CE_FM6, CE_DRM: EDIT 1, their GR_FM6P / GR_DXP pages, MORE; EDIT 2 MORE's rows) */
 static int page_visible(uint32_t i)
 {
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].scope != SC_ENGINE && PAGES[i].graph != GR_SYN && PAGES[i].graph != GR_MORE &&
-        ux_section_owns(UXS_SEC_EDIT))
+        PAGES[i].graph != GR_FM6P && PAGES[i].graph != GR_DXP && ux_section_owns(UXS_SEC_EDIT))
         return 0;
+    if (PAGES[i].scope == SC_ENGINE && PAGES[i].id[0] == P_E4 && edit_kind() && edit_kind() <= 2u &&
+        ux_section_owns(UXS_SEC_EDIT))                  /* (3b task 5) FM6's and DRUM-X's EDIT 2: MORE's rows (its rule */
+        return 0;                                       /* kept: page_jiant) */
     return page_jiant(i);
 }
 
@@ -754,8 +761,9 @@ static int lock_page_ok(uint32_t i)
 }
 static uint32_t lock_id(uint32_t k)
 {
-    uint32_t id = ui.plk_src && lock_page_ok(ui.plk_src - 1u) ? PAGES[ui.plk_src - 1u].id[k & 3u]
-                                                               : trk_engp(TSEL)->knob[k & 3u];
+    uint32_t id = ui.plk_src && lock_page_ok(ui.plk_src - 1u) ? page_id(&PAGES[ui.plk_src - 1u], k & 3u)   /* (3b task 5: */
+                                                               : trk_engp(TSEL)->knob[k & 3u];   /* what the knob turns:
+                                                         * DRUM-X's SOUND its drum's LEVEL, LOFI's TONE KNOB 1 its MORPH) */
     return id < P_COUNT && motion_param(id) ? id : 0xFFu;
 }
 /* (0.9.12) the pages a step held walks with SELECT (ui_input.c lock_select): the track's EDIT chain (ui_lens.c, as SELECT
@@ -1794,20 +1802,9 @@ static void track_select(uint32_t i)
 }
 
 #include "ui_events.c"                            /* SEQ > AUTO LIST: the locks and events as a list (an action page) */
-/* EDIT > SOUND / SOUND 2 (ui_dx.c, included by ui_input.c): the DRUM-X sound edited and its patch (0 A, 1 B) */
+/* EDIT > SOUND / SOUND 2 (ui_dx.c, included by ui_input.c): the DRUM-X sound edited and its patch (0 A, 1 B); (ACID FM 3b task
+ * 5) the kit's pages the ux ones (ux_section.c), its settings ui_dx.c's views (fld_*) */
 static uint8_t dx_ui_lane, dx_ui_side;
-static uint32_t dx_pagen(const page_t *pg)            /* SOUND 1..3; (0.5.1) X-MOD 4; (0.6.54) SOUND 4: 8 */
-{
-    if (pg->title[0] == 'X')
-        return 4u;
-    return pg->title[5] == ' ' ? (pg->title[6] == '4' ? 8u : (uint32_t)(pg->title[6] - '0')) : 1u;
-}
-static void dx_knob(const page_t *pg, uint32_t k, int32_t s);
-static void dx_cards(const page_t *pg);
-static void dx_kit3_knob(uint32_t k, int32_t s);      /* (0.6.54) KIT 3: TONE's BP, FEEDBK */
-#define DX_KIT3(pg) ((pg)->graph == GR_DXIMG && (pg)->title[0] == 'K')   /* (0.6.58) GR_DXIMG: KIT 3, or STEREO (IMAGE) */
-static void dx_kit3_cards(void);
-static uint32_t dx_sig(void);
 
 /* ---------------------------------------------------- action pages --- */
 /* Pages whose purpose is an action (SEQ > PATTERNS, SAVE > USER, PROJECT, TOOLS): the knobs pick,
@@ -1824,7 +1821,7 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     if (pg->graph == GR_MOTION || pg->graph == GR_PUNCH) return 8u;   /* (0.6.99) PUNCH: KNOB 4 CLEAR */
     if (pg->graph == GR_EVENTS) return 16u;     /* AUTO LIST: no knob is an action; OCT+ adds / toggles (ev_oct) */
     if (pg->graph == GR_TOOLS) return 15u;
-    if (pg->graph == GR_LYRIC) return 8u;       /* (0.8.5) WORDS: OCT+ TYPE (the lyric, ui_name.c) */
+    /* (0.8.5 .. ACID FM 3b task 4) WORDS' OCT+ TYPE: its page MORE's rows now, TYPE LYRIC an action there (ux_more.c) */
     if (pg->graph == GR_SONG)
         return 1u;                               /* (0.8.5) ADD a row (PLAY: the song) */
     if (pg->graph == GR_PATS)
@@ -1849,7 +1846,6 @@ static uint32_t act_col(void)
 {
     if (!ui.home && cur_page()->graph == GR_SONG) return 1u;
     if (!ui.home && cur_page()->graph == GR_EVENTS) return 5u;
-    if (!ui.home && cur_page()->graph == GR_LYRIC) return 4u;
     return !ui.home && cur_page()->graph == GR_PATS ? 2u : ui.act;
 }
 
@@ -1859,7 +1855,6 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
     uint32_t id = cur_page()->id[c & 3u];
     if (cur_page()->graph == GR_MOTION || cur_page()->graph == GR_PUNCH) return "CLEAR";
     if (cur_page()->graph == GR_EVENTS) return ev_act_name();
-    if (cur_page()->graph == GR_LYRIC) return "TYPE";
     if (cur_page()->graph == GR_TOOLS) {
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
         return actions[c < 5u ? c : 4u];
@@ -1882,7 +1877,6 @@ static int act_ready(void)
         return 0;
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
     if (cur_page()->graph == GR_EVENTS) return ev_act_ready();
-    if (cur_page()->graph == GR_LYRIC) return 1;
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);

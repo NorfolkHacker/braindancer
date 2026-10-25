@@ -3535,19 +3535,20 @@ static int test_product_ux(void)
     bad += check("#93 the events used up: AUTOMATION FULL", msg_is("AUTOMATION FULL") && !motion_full);
     {   /* #63: a card shows MOTION's icon while the track's motion changes its parameter */
         uint32_t id;                                     /* (ACID FM 3a: on EDIT 1, HOME has its own knob row; 3b task 4: on
-                                                          * FM6's, T2: a synth's EDIT is the ux pages') */
-        ui_power_on(); track_select(1); go_title("EDIT 1"); frame();
-        id = ENGINES[TSEL->eng_req]->knob[0];
+                                                          * FM6's, T2: a synth's EDIT is the ux pages'; task 5: on ENV, FM6's
+                                                          * EDIT is the ux pages' too: their knob row has no mark yet) */
+        ui_power_on(); track_select(1); go_title("ENV"); frame();
+        id = P_ATK;
         ok = !card_motion(0) && !card_motion(1);
-        song.rec = 2; seq_start(); go_title("EDIT 1"); turn(EN_K1, 1); frame();
+        song.rec = 2; seq_start(); go_title("ENV"); turn(EN_K1, 1); frame();
         ok &= card_motion(0) && !card_motion(1) && !card_motion(2) && !card_motion(3);
-        bad += check("MOTION: a recorded knob marks its card, EDIT 1 (and no other; ACID FM 3a: HOME's were JIANT's)", ok && motion_count(TSEL) == 1);
+        bad += check("MOTION: a recorded knob marks its card, ENV (and no other; ACID FM 3a: HOME's were JIANT's; 3b: EDIT's the ux row)", ok && motion_count(TSEL) == 1);
         song.rec = 0; press(B_PLAY); events_block(32); frame();
         ok = card_motion(0);
-        go_page(GR_MOTION); turn(EN_K1, -1); go_title("EDIT 1"); frame();
+        go_page(GR_MOTION); turn(EN_K1, -1); go_title("ENV"); frame();
         ok &= !card_motion(0) && motion_count(TSEL) == 1;
         bad += check("MOTION: PLAY OFF takes the icon off the card, the events stay", ok);
-        go_page(GR_MOTION); turn(EN_K1, 1); go_title("EDIT 1"); frame();
+        go_page(GR_MOTION); turn(EN_K1, 1); go_title("ENV"); frame();
         ok = card_motion(0);
         track_select(3); frame();
         ok &= !card_motion(0);                           /* (another track: its own motion, none) */
@@ -3561,7 +3562,7 @@ static int test_product_ux(void)
         bad += check("MOTION: a mix parameter's event marks its MIXER card (PAN)", ok);
         go_page(GR_MOTION); turn(EN_K4, 1); press(B_OCTUP); press(B_OCTUP);
         ok = motion_count(TSEL) == 0;
-        go_title("EDIT 1"); frame();
+        go_title("ENV"); frame();
         ok &= !card_motion(0) && !card_motion(1);
         go_page(GR_TRK); frame();
         ok &= !card_motion(1);
@@ -4190,8 +4191,9 @@ static int chain_walk(uint32_t btn, const char *const *want, uint32_t n, const c
         }
     }
     turn(EN_SELECT, 1); frames(2);
-    ok &= str_eq(nav_name(), want[n - 1u]);              /* (the end: it stays) */
+    ok &= str_eq(nav_name(), want[n - 1u]);              /* (the end: it stays; a MORE list longer than its panel scrolls) */
     turn(EN_SELECT, -40); frames(2);
+    turn(EN_SELECT, -40); frames(2);                     /* (3b task 5: MORE scrolled back to its top, then the chain) */
     ok &= str_eq(nav_name(), want[0]);
     for (i = 0; i < nt; i++) {
         press(btn); frames(320);
@@ -4204,6 +4206,9 @@ static int chain_walk(uint32_t btn, const char *const *want, uint32_t n, const c
     ok &= str_eq(nav_name(), want[0]);                   /* (round) */
     return ok;
 }
+static void uxe_more_set(const ux_more_t *m, uint32_t id, int32_t s);   /* (3b task 5, below) */
+static const char *uxe_more_list(const ux_more_t *m);
+static uint32_t uxs_panel_crc(void);
 static int test_edit_cycle(void)
 {
     /* (0.9.2: one chain, SELECT a page a detent; an EDIT tap the next group's first. Was 0.8.5's lens: SELECT a level, the
@@ -4211,8 +4216,8 @@ static int test_edit_cycle(void)
     static const char *const CH_A[] = {"SOUND", "TONE", "VOICE", "MORE"};   /* (JIANT 0.5: ANALOG's FILTER; 0.6.45: MORPH;
                                                          * 3b task 4: the ux pages, a page a group: test_edit_syn_pages) */
     static const char *const TP_A[] = {"TONE", "VOICE", "MORE"};
-    static const char *const CH_F[] = {"EDIT 1", "EDIT 2", "FILTER", "VOICE", "VOICE 2", "OPERATOR", "OP ENV", "OPERATOR 2"};
-    static const char *const TP_F[] = {"FILTER", "OPERATOR"};
+    static const char *const CH_F[] = {"SOUND", "OPERATOR", "OP ENV", "MORE"};   /* (3b task 5: the ux pages, test_edit_fm6) */
+    static const char *const TP_F[] = {"OPERATOR", "OP ENV", "MORE"};
     static const char *const CH_D[] = {"EDIT 1", "EDIT 2", "FILTER", "VOICE", "VOICE 2", "OP1 ENV", "OP2 ENV", "OP3 ENV",
                                        "OP4 ENV", "OP LEVEL"};
     static const char *const TP_D[] = {"FILTER", "OP1 ENV"};
@@ -4236,39 +4241,38 @@ static int test_edit_cycle(void)
     (void)CH_F;
 #else
     set_engine_of(TSEL, ENGI_DIGITAL);
-    bad += check("0.9.2 EDIT chain (engine 1 asked for: FM6, DIGITAL retired): SOUND . TONE (FILTER VOICE VOICE 2) . OPERATOR (OPERATOR OP ENV OPERATOR 2)",
+    bad += check("0.9.2 EDIT chain (engine 1 asked for: FM6, DIGITAL retired; 3b task 5): SOUND . OPERATOR . OP ENV . MORE",
                  TSEL->eng_req == ENGI_FM6 && chain_walk(B_EDIT, CH_F, NELEM(CH_F), TP_F, NELEM(TP_F)));
     (void)CH_D; (void)TP_D;
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CH_K[] = {"KIT", "KIT 2", "KIT 3", "SOUND", "SOUND 2", "SOUND 3", "SOUND 4", "LEVELS",
-                                           "LEVELS 2", "X-MOD", "FILTER", "STEREO", "VOICE"};
-        static const char *const TP_K[] = {"SOUND", "LEVELS", "X-MOD"};
+        static const char *const CH_K[] = {"KIT", "SOUND", "SOUND 2", "MORE"};   /* (3b task 5: test_edit_drm) */
+        static const char *const TP_K[] = {"SOUND", "SOUND 2", "MORE"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("0.9.2 EDIT chain (DRUM): KIT (KIT KIT 2 KIT 3) . SOUND (1..4) . LEVELS (LEVELS LEVELS 2) . TONE (X-MOD FILTER STEREO VOICE)",
+        bad += check("0.9.2 EDIT chain (DRUM; 3b task 5): KIT . SOUND . SOUND 2 . MORE",
                      chain_walk(B_EDIT, CH_K, NELEM(CH_K), TP_K, NELEM(TP_K)));
-        {   /* (0.6.58) KIT 3 turns BP and FEEDBK, (0.7.8) KNOB 3 the CLAP's HANDS, never IMAGE; STEREO's KNOB 1 is IMAGE */
+        {   /* (0.6.58) KIT 3's HANDS (0.7.9: the CLAP's), never IMAGE; STEREO is IMAGE: MORE's rows (3b task 5) */
             uint8_t t0 = dx_tone, h0 = dx_hands;
             int16_t i0 = TSEL->p[P_DXIMG];
-            go_title("KIT 3"); frame();
-            turn(EN_K3, 3); frame();
+            go_title("DRUM MORE"); frame();
+            uxe_more_set(&UXM_DRM, ID_DX_HANDS, 3); frame();
             ok = TSEL->p[P_DXIMG] == i0 && dx_tone == t0 && dx_hands > h0;
             dx_hands = h0;
-            go_title("STEREO"); frame();
-            turn(EN_K1, 5); frame();
+            uxe_more_set(&UXM_DRM, P_DXIMG, 5); frame();
             ok &= TSEL->p[P_DXIMG] > i0 && dx_tone == t0;
             TSEL->p[P_DXIMG] = i0;
-            bad += check("KIT 3: KNOB 3 turns HANDS (0.7.9), not IMAGE; STEREO: KNOB 1 turns IMAGE", ok);
+            bad += check("MORE: HANDS turns the clap's hands (0.7.9), not IMAGE; STEREO turns IMAGE", ok);
         }
-        go_title("LEVELS 2"); frame();
+        go_title("DRUM SOUND"); frame();
+        dx_ui_lane = 5;
         ok = TSEL->p[P_LN5] == 127;
         turn(EN_K2, -3);
         ok &= TSEL->p[P_LN5] == 124 && TSEL->p[P_LN4] == 127 && TSEL->p[P_LN6] == 127;
-        bad += check("LEVELS 2: KNOB 2 turns TOM's level (100 % by default), the other lanes stay", ok);
+        bad += check("SOUND: KNOB 2 turns the picked drum's (TOM's) level (100 % by default), the other drums stay", ok);
         apply_preset_to(TSEL, 0);
         bad += check("a factory preset load: every lane 100 % again", TSEL->p[P_LN5] == 127);
         set_engine_of(TSEL, 0); frame();
-        bad += check("LEVELS 2 of a track no longer DRUM falls back to EDIT 1", str_eq(cur_page()->title, "EDIT 1"));
+        bad += check("DRUM-X's SOUND of a track no longer DRUM falls back to EDIT 1", str_eq(cur_page()->title, "EDIT 1"));
     }
     go_title("OP2 ENV");
     set_engine_of(TSEL, 0); frame();
@@ -4828,10 +4832,10 @@ static uint32_t fop_diff(const uint8_t *a, const uint8_t *b, uint32_t *at)
 static void fop_pick(uint32_t opn) { turn(EN_K1, -9); turn(EN_K1, (int32_t)opn - 1); }
 static int test_fm6_ops(void)
 {
-    static const struct { const char *page; uint32_t k, off; } F[] = {
-        {"OPERATOR", EN_K2, FP_FC}, {"OPERATOR", EN_K3, FP_FF}, {"OPERATOR", EN_K4, FP_OL},
-        {"OPERATOR 2", EN_K2, FP_MODE}, {"OPERATOR 2", EN_K3, FP_DET}, {"OPERATOR 2", EN_K4, FP_KVS},
-        {"OP ENV", EN_K3, FP_R1}, {"OP ENV", EN_K4, FP_L1}};
+    static const struct { const char *page; uint32_t k, off, id; } F[] = {   /* (3b task 5: OPERATOR 2's three MORE's rows) */
+        {"FM6 OP", EN_K2, FP_FC, 0}, {"FM6 OP", EN_K3, FP_FF, 0}, {"FM6 OP", EN_K4, FP_OL, 0},
+        {"FM6 MORE", EN_K2, FP_MODE, ID_FO_MODE}, {"FM6 MORE", EN_K2, FP_DET, ID_FO_DTUN}, {"FM6 MORE", EN_K2, FP_KVS, ID_FO_VEL},
+        {"FM6 OP ENV", EN_K3, FP_R1, 0}, {"FM6 OP ENV", EN_K4, FP_L1, 0}};
     int bad = 0, ok = 1;
     uint32_t opn, f, st, at = 0, n = 0, tr;
     uint8_t v[FP_SIZE + 1u];
@@ -4839,8 +4843,8 @@ static int test_fm6_ops(void)
     set_engine_of(TSEL, ENGI_FM6);
     TSEL->engine = TSEL->eng_req;
     tr = song.sel;
-    go_title("OPERATOR"); frame();
-    ok = str_eq(cur_page()->title, "OPERATOR");
+    go_title("FM6 OP"); frame();
+    ok = str_eq(cur_page()->title, "FM6 OP");
     set_engine_of(TSEL, 0); TSEL->engine = TSEL->eng_req;
     ok &= !page_visible((uint32_t)(cur_page() - PAGES));
     set_engine_of(TSEL, ENGI_FM6); TSEL->engine = TSEL->eng_req;
@@ -4851,44 +4855,46 @@ static int test_fm6_ops(void)
             for (st = 0; st < (F[f].off == FP_R1 || F[f].off == FP_L1 ? 4u : 1u); st++) {
                 uint32_t b = (6u - opn) * FP_OP + F[f].off + st, max = fm6_max(b);
                 int32_t d;
-                go_title(F[f].page); frame();
+                go_title(F[f].id ? "FM6 OP" : F[f].page); frame();
                 fop_pick(opn);
+                if (F[f].id) { go_title(F[f].page); frame(); }   /* (MORE: the operator picked on OPERATOR) */
                 if (F[f].off == FP_R1 || F[f].off == FP_L1) { turn(EN_K2, -4); turn(EN_K2, (int32_t)st); }
                 memcpy(v, fm6_patch[tr], FP_SIZE);
                 d = v[b] < max ? 1 : -1;
                 frames(1600);
-                turn(F[f].k, d);
+                if (F[f].id) uxe_more_set(&UXM_FM6, F[f].id, d); else turn(F[f].k, d);
                 if (fop_diff(v, fm6_patch[tr], &at) != 1 || at != b || fm6_patch[tr][b] != (uint8_t)(v[b] + d) ||
                     fm6_slot[tr] != FM6_OWN || TSEL->p[P_E7] != FM6_OWN) {
                     printf("ui: FM6 ops: OP %u %s KNOB %u stage %u: byte %u, not %u\n", opn, F[f].page, F[f].k - EN_K1 + 1u,
                            st + 1u, at, b);
                     ok = 0;
                 }
-                turn(F[f].k, 200);                       /* the range: never past the byte's highest, nor below 0 */
-                ok &= fm6_patch[tr][b] == max;
-                turn(F[f].k, -200);
+                if (F[f].id) uxe_more_set(&UXM_FM6, F[f].id, 200); else turn(F[f].k, 200);   /* the range: never past */
+                ok &= fm6_patch[tr][b] == max;          /* the byte's highest, nor below 0 */
+                if (F[f].id) uxe_more_set(&UXM_FM6, F[f].id, -200); else turn(F[f].k, -200);
                 ok &= fm6_patch[tr][b] == 0u;
                 n++;
             }
     bad += check("FM6 ops: 6 operators x 14 bytes, each knob writes its byte only (+-1, 0..its highest), SLOT OWN", ok && n == 84u);
-    {   /* (0.6.77) the graphs redraw on an edit: OP ENV's curve with KNOB 3 / 4, the stage, the operator (track
-         * pages: the patch was in the redraw's signature on the engine pages only) */
+    {   /* (0.6.77) the pictures redraw on an edit: OP ENV's curve with KNOB 3 / 4, the stage, the operator; OPERATOR's
+         * chart (3b task 5: the ux panel, ux_section.c) */
         uint32_t s0;
-        go_title("OP ENV"); frame(); fop_pick(2); turn(EN_K2, -4); frame();
-        s0 = graph_signature(); turn(EN_K3, fm6_patch[tr][4u * FP_OP + FP_R1] ? -1 : 1);
-        ok = graph_signature() != s0;
-        frame(); s0 = graph_signature(); turn(EN_K4, fm6_patch[tr][4u * FP_OP + FP_L1] ? -1 : 1);
-        ok &= graph_signature() != s0;
-        frame(); s0 = graph_signature(); turn(EN_K2, 1);
-        ok &= graph_signature() != s0;
-        frame(); s0 = graph_signature(); turn(EN_K1, 1);
-        ok &= graph_signature() != s0;
-        go_title("OPERATOR"); frame(); s0 = graph_signature(); turn(EN_K4, fm6_patch[tr][3u * FP_OP + FP_OL] ? -1 : 1);
-        ok &= graph_signature() != s0;
+        go_title("FM6 OP ENV"); frame(); fop_pick(2); turn(EN_K2, -4); frames(100);
+        s0 = uxs_panel_crc(); turn(EN_K3, fm6_patch[tr][4u * FP_OP + FP_R1] < 50 ? 20 : -20); frames(100);
+        ok = uxs_panel_crc() != s0;
+        s0 = uxs_panel_crc(); turn(EN_K4, fm6_patch[tr][4u * FP_OP + FP_L1] < 50 ? 20 : -20); frames(100);
+        ok &= uxs_panel_crc() != s0;
+        s0 = uxs_panel_crc(); turn(EN_K2, 1); frames(100);
+        ok &= uxs_panel_crc() != s0;
+        s0 = uxs_panel_crc(); turn(EN_K1, 1); frames(100);
+        ok &= uxs_panel_crc() != s0;
+        go_title("FM6 OP"); frames(100); s0 = uxs_panel_crc(); turn(EN_K4, fm6_patch[tr][3u * FP_OP + FP_OL] > 50 ? -40 : 40);
+        frames(100);
+        ok &= uxs_panel_crc() != s0;
         bad += check("FM6 ops: OP ENV's curve and OPERATOR's chart redraw on every knob (rate, level, stage, operator)", ok);
     }
     fm6_trim[tr] = 40; fm6_tgen[tr] = fm6_pgen[tr];     /* (a trimmed patch, then an edit: the trim stays) */
-    go_title("OPERATOR"); frame(); fop_pick(1); turn(EN_K3, 1);
+    go_title("FM6 OP"); frame(); fop_pick(1); turn(EN_K3, 1);
     fm6_block(TSEL);
     ok = fm6_trim[tr] == 40;
     fm6_set_patch(tr, fm6_patch[tr]);                   /* (a patch put in from elsewhere: from none again) */
@@ -7487,7 +7493,8 @@ static int test_clear_all(void)
     return bad;
 }
 
-/* JIANT: EDIT > SOUND / SOUND 2 (ui_dx.c), the DRUM-X kit of the section */
+/* JIANT: EDIT > SOUND / SOUND 2 (ui_dx.c), the DRUM-X kit of the section; (ACID FM 3b task 5) the ux pages DRUM SOUND /
+ * DRUM SOUND 2, SIDE and the mode's other bits MORE's */
 static int test_dx_sound(void)
 {
     int bad = 0, ok;
@@ -7495,28 +7502,28 @@ static int test_dx_sound(void)
     ui_power_on();
     memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);         /* (earlier tests may have turned SOUND's knobs) */
     set_engine_of(TSEL, ENGI_DRUM);
-    for (k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXSND && page_visible(k);   /* (0.8.5: the lens's sets) */
+    for (k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXP && page_visible(k);   /* (0.8.5: the lens's sets) */
     ok = seen;
     set_engine_of(TSEL, 0);
-    for (seen = 0, k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXSND && page_visible(k);
+    for (seen = 0, k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXP && page_visible(k);
     ok &= !seen;
     set_engine_of(TSEL, ENGI_DRUM);
     bad += check("EDIT > SOUND / SOUND 2: on a DRUM track only", ok);
-    go_title("SOUND");
+    go_title("DRUM SOUND");
     dx_ui_lane = 0; dx_ui_side = 0; dx_ui_seen = last_note;   /* (no key since: the page keeps its lane) */
     turn(EN_K1, 1); turn(EN_K1, 1);                    /* LANE: CP */
-    turn(EN_K2, 1);                                    /* SIDE: B */
+    dx_ui_side = 1;                                    /* SIDE: B (MORE's) */
     k = dx_kit[2].b[DXP_PITCH];
     turn(EN_K3, 3);
     ok = dx_ui_lane == 2u && dx_ui_side == 1u && dx_kit[2].b[DXP_PITCH] > k && dx_kit[2].a[DXP_PITCH] == DX_KIT_DEF[2].a[DXP_PITCH];
     bad += check("  SOUND: LANE, SIDE, PTCH edit that sound's patch (the other patch stays)", ok);
-    go_title("SOUND 3");                               /* (0.6.54: MODE on SOUND 3's KNOB 2, KNOB 1 the sound) */
-    turn(EN_K2, 1);
+    go_title("DRUM SOUND 2");                          /* (3b task 5: WAVE on SOUND 2's KNOB 4, KNOB 1 the sound) */
+    turn(EN_K4, 1);
     ok = dx_kit[2].mode != DX_KIT_DEF[2].mode && ((dx_kit[2].mode >> 2) & 3u) <= DXF_HP && dx_ui_lane == 2u;
-    go_title("SOUND 2");
-    turn(EN_K2, -5);
+    go_title("DRUM SOUND");
+    turn(EN_K4, -5);
     ok &= dx_kit[2].b[DXP_DECAY] < DX_KIT_DEF[2].b[DXP_DECAY];
-    bad += check("  SOUND 3: MODE steps the wave / filter / SNAP; SOUND 2: DECAY the side's decay", ok);
+    bad += check("  SOUND 2: WAVE steps the wave; SOUND: DECAY the side's decay", ok);
     key_down(key_at(1, 3)); frame(); key_up(key_at(1, 3)); frame(); frame();   /* a key on the track: its lane */
     ok = dx_ui_lane == drum_lane(last_note);
     bad += check("  a key struck picks the sound it plays", ok);
@@ -9620,12 +9627,12 @@ static int test_lock_pages(void)
     track_defaults_steps(t); t->p[P_SLEN] = 16;
     go_home(); open_family(FAM_SEQ); frame();
     stp = ui.page;
-    n = lock_chain(ch, &at);
-    ok = grid_on() && n >= 4u && at == 0xFFu && str_eq(PAGES[nv_page(SEC_EDIT, ch[0])].title, "EDIT 1") &&
-         str_eq(PAGES[nv_page(SEC_EDIT, ch[1])].title, "EDIT 2");
+    n = lock_chain(ch, &at);                             /* (3b task 5: KIT, SOUND: its LEVEL the drum picked's; KIT 2's */
+    ok = grid_on() && n == 2u && at == 0xFFu && str_eq(PAGES[nv_page(SEC_EDIT, ch[0])].title, "EDIT 1") &&   /* four MORE's */
+         str_eq(PAGES[nv_page(SEC_EDIT, ch[1])].title, "DRUM SOUND");                                       /* rows) */
     for (k = 0; k < n; k++)
-        ok &= lock_page_ok(nv_page(SEC_EDIT, ch[k])) && PAGES[nv_page(SEC_EDIT, ch[k])].graph != GR_DXSND;
-    bad += check("DRUM: the locks' walk is EDIT's chain less what cannot lock (KIT, KIT 2 .. LEVELS; no SOUND 1..4)", ok);
+        ok &= lock_page_ok(nv_page(SEC_EDIT, ch[k])) && PAGES[nv_page(SEC_EDIT, ch[k])].graph != GR_MORE;
+    bad += check("DRUM: the locks' walk is EDIT's chain less what cannot lock (KIT, SOUND; not SOUND 2, MORE)", ok);
     tap_key(key_at(1, 2));                               /* lane 3 (CP) */
     k4 = key_at(0, 4);
     fm1_in.notes |= 1u << k4; host_notes |= 1u << k4; frame();
@@ -9634,18 +9641,20 @@ static int test_lock_pages(void)
     ok &= lp_page_is("EDIT 1") && ui.page == stp && lock_id(3) == P_E3;
     turn(EN_SELECT, 1);
     foot_crumbs(b, sizeof b);
-    bad += check("  a step held (lane CP) + SELECT: KIT (from HOME's four), then KIT 2; STEP stays, the footer LOCK . KIT 2",
-                 ok && lp_page_is("EDIT 2") && ui.page == stp && lock_id(2) == P_E6 && str_eq(b, "LOCK \xB7 KIT 2"));
-    turn(EN_K3, 5);                                      /* FOLD */
+    id = P_LN0 + (dx_ui_lane & 7u);
+    bad += check("  a step held (lane CP) + SELECT: KIT (from HOME's four), then SOUND; STEP stays, the footer LOCK . SOUND",
+                 ok && lp_page_is("DRUM SOUND") && ui.page == stp && lock_id(1) == id && lock_id(2) == 0xFFu &&
+                 str_eq(b, "LOCK \xB7 SOUND"));
+    turn(EN_K2, -5);                                     /* the drum's LEVEL */
     turn(EN_SELECT, -1);
     turn(EN_K4, -3);                                     /* KIT's DECAY */
     turn(EN_SELECT, -4);
     ok = lp_page_is("EDIT 1");                           /* (no wrap) */
     fm1_in.notes &= ~(1u << k4); frame();
-    ok &= motion_lock_get(t, 4, P_E6, &v) && v == motion_base_value(t, P_E6) + 5 && motion_lock_get(t, 4, P_E3, &v) &&
+    ok &= motion_lock_get(t, 4, id, &v) && v == motion_base_value(t, id) - 5 && motion_lock_get(t, 4, P_E3, &v) &&
           v == motion_base_value(t, P_E3) - 3 && motion_lock_count(t) == 2u && motion_lock_steps(3) == 1u << 4;
-    bad += check("  KNOB 3 on KIT 2 locks FOLD, SELECT back, KNOB 4 locks DECAY: both on step 5, the sound unchanged", ok &&
-                 t->p[P_E6] == motion_base_value(t, P_E6));
+    bad += check("  KNOB 2 on SOUND locks the drum's LEVEL, SELECT back, KNOB 4 locks DECAY: both on step 5, the sound unchanged",
+                 ok && t->p[id] == motion_base_value(t, id));
     bad += check("  let go: the step keeps the CP hit alone (the lane selected), the page stays the locks' (KIT)",
                  step_lanes(&t->step[4]) == 1u << 2 && !lock_held() && lp_page_is("EDIT 1") && ui.page == stp);
     turn(EN_SELECT, 1);
@@ -9657,10 +9666,10 @@ static int test_lock_pages(void)
     id = lock_id(0);
     turn(EN_K1, 2);
     fm1_in.notes &= ~(1u << k4); frame();
-    bad += check("  the next hold starts on it (KIT): SELECT on to KIT 2, KNOB 1 locks NOIS", lp_page_is("EDIT 2") &&
-                 id == P_E4 && motion_lock_get(t, 4, P_E4, &v));
+    bad += check("  the next hold starts on it (KIT): SELECT on to SOUND; KNOB 1 (the drum) locks nothing", lp_page_is("DRUM SOUND") &&
+                 id == 0xFFu && motion_lock_count(t) == 2u);
     open_family(FAM_EDIT); frame();
-    bad += check("  EDIT opens on the page the locks took (KIT 2)", str_eq(cur_page()->title, "EDIT 2"));
+    bad += check("  EDIT opens on the page the locks took (SOUND)", str_eq(cur_page()->title, "DRUM SOUND"));
     /* a synth on the roll (armed, stopped: the step being entered is the one held) */
     ui_power_on();
     t = &trk[0];
@@ -10202,13 +10211,14 @@ static int test_scope(void)
         bad += check("SCOPE's settings byte kept where it was (saved, read back; the layout unchanged)", ok);
     }
     ok = 1;
-    for (e = 0; e < NENGINES; e++) {                    /* (every synth: no creature; FM6 and DRUM-X keep theirs until task 5) */
+    for (e = 0; e < NENGINES; e++) {                    /* (3b task 5: no creature anywhere; EDIT is the ux pages' on every
+                                                         * engine but DIGITAL, FELUCCA_FM4's) */
         if (!eng_ok(e) || eng_gone(e)) continue;
         ui_power_on(); set_engine_of(TSEL, e); TSEL->engine = TSEL->eng_req;
-        cv_begin(240, 140, T_BG);
-        ok &= vx_draw(TSEL, 4, 2, 232, 136) == (e == ENGI_DRUM || e == ENGI_FM6);
+        press(B_EDIT); frame();
+        ok &= ux_section_owns(SEC_EDIT) == !(FELUCCA_FM4 && e == ENGI_DIGITAL);
     }
-    bad += check("no synth draws a creature (ANALOG PHASE LOFI NOISE VOICE); FM6 and DRUM-X still do (3b task 5)", ok);
+    bad += check("EDIT on every engine (synths, FM6, DRUM-X) is drawn by the ux pages: no creature (3b task 5)", ok);
     ui_power_on(); frame();
     return bad;
 }
@@ -10719,7 +10729,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
     "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
-    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/5/OPERATOR|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/5/OPERATOR|EDIT/6/OP ENV|EDIT/7/OPERATOR 2|EDIT/6/OP ENV|EDIT/6/OP ENV|HOME/0/*",
+    "EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/2/FM6 OP ENV|EDIT/2/FM6 OP ENV|HOME/0/*",   /* (3b task 5) */
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
@@ -10737,7 +10747,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
     "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
-    "EDIT/0/EDIT 1|EDIT/3/SOUND|EDIT/7/LEVELS|EDIT/9/X-MOD|EDIT/0/EDIT 1|EDIT/3/SOUND|EDIT/4/SOUND 2|EDIT/5/SOUND 3|EDIT/4/SOUND 2|EDIT/4/SOUND 2|HOME/0/*",
+    "EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/2/DRUM SOUND 2|EDIT/2/DRUM SOUND 2|HOME/0/*",   /* (3b task 5) */
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
@@ -11418,7 +11428,7 @@ static int test_ux_visual(void)
 }
 
 /* EDIT (0.9.2, ui_lzedit.c; ACID FM 3b task 4: a synth's on the ux pages, test_edit_syn_pages walks them): EDIT from elsewhere
- * the page left; PRESETS the sounds on every page (rule 3); FM6 keeps JIANT's pages until 3b task 5 (VOICE 2, not a kit's;
+ * the page left; PRESETS the sounds on every page (rule 3); FM6's and DRUM-X's too (3b task 5: SPREAD MORE's, not a kit's;
  * OPERATOR), FOCUS gone */
 static int test_lz_edit(void)
 {
@@ -11436,17 +11446,16 @@ static int test_lz_edit(void)
     turn(EN_PRESET, 1); frame();
     ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && str_eq(cur_page()->title, "EDIT 2");   /* (the next sound) */
     bad += check("0.9.2 EDIT: EDIT from elsewhere the page left; PRESETS the next sound, the page stays", ok);
-    ui_power_on(); set_engine_of(TSEL, ENGI_FM6); TSEL->engine = TSEL->eng_req; go_title("VOICE"); frame();
-    turn(EN_SELECT, 1); frame();
-    ok = str_eq(cur_page()->title, "VOICE 2");
+    ui_power_on(); set_engine_of(TSEL, ENGI_FM6); TSEL->engine = TSEL->eng_req; press(B_EDIT); frame();   /* (3b task 5: */
+    ok = nav_put(SEC_EDIT, "MORE") && cur_page()->more == &UXM_FM6;   /* UNISON's DETUNE (SPREAD) MORE's row) */
     v = TSEL->p[P_DETUNE];
-    turn(EN_K2, 3); frame();
+    uxe_more_set(&UXM_FM6, P_DETUNE, 3); frame();
     ok &= TSEL->p[P_DETUNE] != v;
     set_engine_of(TSEL, ENGI_DRUM); frame();
-    ok &= !nav_put(SEC_EDIT, "VOICE 2") && !nav_put(SEC_EDIT, "FOCUS");
+    ok &= !nav_put(SEC_EDIT, "VOICE 2") && !nav_put(SEC_EDIT, "FOCUS") && !strstr(uxe_more_list(&UXM_DRM), "SPREAD");
     set_engine_of(TSEL, ENGI_FM6); frame();
-    ok &= !nav_put(SEC_EDIT, "FOCUS") && nav_put(SEC_EDIT, "OPERATOR");
-    bad += check("0.9.2 EDIT > TONE (FM6): VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM; no FOCUS", ok);
+    ok &= !nav_put(SEC_EDIT, "FOCUS") && !nav_put(SEC_EDIT, "VOICE 2") && nav_put(SEC_EDIT, "OPERATOR");
+    bad += check("0.9.2 EDIT (FM6; 3b task 5): SPREAD (UNISON's DETUNE) in MORE, not on DRUM; no FOCUS, no VOICE 2", ok);
     ui_power_on();
     return bad;
 }
@@ -11889,120 +11898,8 @@ static int test_fx_live(void)
     return bad;
 }
 
-/* ---------------------------------------------------------------------------- 0.9.4 the engines' creatures --- */
-/* (0.9.4, ui_engvis.c) VOICE's head (WORDS on and off), DRUM-X's kit on EDIT's SOUND / SOUND 1..4 and
- * HOME's BEING (0.9.6: ANALOG's cell, FM6's colony there and on OPERATOR / OP ENV / OPERATOR 2, NOISE's
- * swarm, PHASE's snail, LOFI's caterpillar): drawn instead of the being (their own state read that frame), moving while
- * the track sounds, still once it is silent. (ACID FM 0.2: ANIMAL's creature and WHEEL's worms retired with them) */
-static uint16_t vxt_a[240 * 140];
-static void vxt_run(uint32_t ms, int audio)               /* frames of 16 ms, the audio between them */
-{
-    uint32_t i, n = 0;
-    int32_t o[2 * CTL];
-    for (i = 0; i < ms / 16u; i++) {
-        uint32_t want = (uint32_t)((uint64_t)(i + 1u) * 16u * FS / 1000u), k;
-        while (audio && n < want) {
-            events_block(CTL);
-            mix_block(o, CTL);
-            for (k = 1; k < CTL; k += 2u)
-                scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)clamp(o[2u * k], -32768, 32767);
-            n += CTL;
-        }
-        frame();
-    }
-}
-static int vxt_same(void) { return !memcmp(vxt_a, host_screen + LZ_GRAPH_Y * 240, sizeof vxt_a); }
-static void vxt_snap(void) { memcpy(vxt_a, host_screen + LZ_GRAPH_Y * 240, sizeof vxt_a); }
-/* track 1 as engine e preset pre, a note every beat (DRUM: a beat), on page (0: HOME's BEING): moves while it plays
- * (*mv), still when silent (*st: the panel; HOME, whose beings swim on: the creature's time and level); k the
- * creature's slot in vxs (it ran) */
-static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, int *mv, int *st)
-{
-    uint32_t i, j;
-    ui_power_on();
-    song.master_q12 = 4096;
-    for (i = 1; i < NTRK; i++) trk[i].p[P_MUTE] = 1;
-    song.sel = 0;
-    set_engine_of(TSEL, e);
-    for (i = 0; i < ENGINES[e]->npresets; i++)
-        if (str_eq(ENGINES[e]->presets[i].name, pre)) apply_preset_to(TSEL, i);
-    track_defaults_steps(TSEL);
-    TSEL->p[P_SLEN] = 16;
-    for (i = 0; i < 16u; i++) {
-        step_t *st = &TSEL->step[i];
-        memset(st, 0, sizeof *st);
-        st->time = ST_NOTE; st->vel = 110;
-        if (e == ENGI_DRUM) st->hit = (uint8_t)(1u | (i & 1u ? 8u : 0u) | (i % 8u == 4u ? 2u : 0u) | (i == 14u ? 16u : 0u));
-        else if (i % 4u == 0u) { st->n = 1; st->note[0] = (uint8_t)(60 + (i & 7u)); } else st->time = ST_TIE;
-    }
-    vxt_run(160, 1);                                    /* (the engine's switch faded) */
-    go_title(page);
-    transport_req = 1;
-    vxt_run(1500, 1);
-    j = vxs.fr[k];
-    vxt_snap();
-    vxt_run(160, 1);
-    *mv = !vxt_same() && vxs.fr[k] != j;
-    seq_stop();
-    song.playing = 0;
-    trk_all_off(TSEL);
-    vxt_run(2500, 1);                                   /* (the tails rung out, the level fallen) */
-    for (i = 0; i < NTRK; i++) trk[i].peak = 0;
-    memset(scope_buf, 0, sizeof scope_buf);
-    vxt_run(600, 1);
-    vxt_snap();
-    j = vxs.tm[k];
-    vxt_run(600, 1);
-    *st = page ? vxt_same() : vxs.tm[k] == j && !vxs.en[k];   /* (HOME: its beings swim on; the creature holds) */
-}
-static int test_engvis(void)
-{
-    static const struct { uint32_t e; const char *pre, *page; uint8_t k; const char *what; } C[] = {
-        {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"}, {ENGI_DRUM, "DRUM-X", "EDIT 1", 2, "DRUM-X kit, EDIT KIT"},
-        {ENGI_FM6, "TINE EP", "EDIT 1", 4, "FM6 colony, EDIT"}, {ENGI_FM6, "TINE EP", "OPERATOR", 4, "FM6 colony, OPERATOR"},
-        {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"}};
-        /* (ACID FM 3a: HOME's BEING cases gone with BEING; 3b task 4: the synths' (VOICE ANALOG NOISE PHASE LOFI) gone with
-         * their creatures: their EDIT draws its wave, test_edit_syn_picture) */
-    int bad = 0, ok = 1, mv, st;
-    uint32_t c;
-    for (c = 0; c < NELEM(C); c++) {
-        vxt_case(C[c].e, C[c].pre, C[c].page, C[c].k, &mv, &st);
-        if (!mv || !st) printf("  %s: %s\n", C[c].what, !mv ? "still while it plays" : "moving in silence");
-        ok &= mv && st;
-    }
-    bad += check("0.9.4 / 0.9.6 the engines' creatures (DRUM-X FM6, until 3b task 5; EDIT, FM6's OPERATOR pages): move with "
-                 "the sound, still in silence", ok);
-    {   /* DRUM-X: KIT's beings (EDIT 1) and SOUND 1..4; KIT 2, KIT 3, X-MOD keep the colony; a hit squashes its being, a
-         * ratchet's hits each */
-        static const char *const PG[] = {"EDIT 1", "SOUND", "SOUND 4", "EDIT 2", "KIT 3", "X-MOD"};
-        uint32_t k, h0, n = 0;
-        int ran[6];
-        vxt_case(ENGI_DRUM, "DRUM-X", "EDIT 1", 2, &mv, &st);
-        for (k = 0; k < NELEM(PG); k++) {
-            uint32_t f0;
-            go_title(PG[k]);
-            vxt_run(48, 0);
-            f0 = vxs.fr[2];
-            vxt_run(48, 0);
-            ran[k] = vxs.fr[2] != f0;
-        }
-        ok = ran[0] && ran[1] && ran[2] && !ran[3] && !ran[4] && !ran[5];
-        bad += check("0.9.4 DRUM-X: KIT and SOUND 1..4 draw the kit's beings, KIT 2 / KIT 3 / X-MOD the colony", ok);
-        go_title("EDIT 1");
-        vxt_run(48, 0);
-        h0 = vxs.hitm[3];
-        for (k = 0; k < 3u; k++) {                      /* (a ratchet: three hits, a frame or two apart) */
-            uint32_t h = vxs.hitm[3];
-            trk_note_on(TSEL, 42, 110);
-            vxt_run(48, 1);
-            n += vxs.hitm[3] != h && vxs.last == 3u;
-        }
-        bad += check("0.9.4 DRUM-X: each of a ratchet's hits squashes the hi-hat's being again (the sound last struck: CH)",
-                     n == 3u && vxs.hitm[3] != h0);
-    }
-    ui_power_on();
-    return bad;
-}
+/* (0.9.4 .. ACID FM 3b task 4) the engines' creatures (ui_engvis.c) and JIANT's beings (ui_being.c): gone in 3b task 5, the
+ * user's "get rid of any creatures"; FM6's EDIT draws its algorithm, DRUM-X's its drum's hit (test_edit_fm6, test_edit_drm) */
 
 /* ------------------------------------------------------------------------------------- 0.9.2 navigation --- */
 /* (0.9.2) every page and parameter reachable, by the panel: for every engine (and LOFI BYTE, LOAD ECO), every section's
@@ -12051,10 +11948,9 @@ static const old_lv_t OLD_LV[] = {
     {FAM_EDIT, 0, 0, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 0, {"SYN VOICE", "SYN FILTER", "SYN MORE"}},   /* (ACID FM 0.2: ROTOR
                                                          * gone with WHEEL; 3b task 4: a synth's EDIT its own, FOCUS gone, JIANT's
                                                          * TONE pages MORE's rows) */
-    {FAM_EDIT, 0, 1, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 1, {"FILTER", "VOICE", "VOICE 2"}},
-    {FAM_EDIT, 2, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
-    {FAM_EDIT, 0, 2, {"EDIT 1", "EDIT 2", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "STEREO", "LEVELS", "LEVELS 2", "VOICE"}},
-    {FAM_EDIT, 2, 2, {"SOUND", "SOUND 2", "SOUND 3", "SOUND 4"}},
+    {FAM_EDIT, 0, 1, {"EDIT 1", "FM6 OP", "FM6 OP ENV"}}, {FAM_EDIT, 1, 1, {"FM6 MORE"}},   /* (3b task 5: FM6's and DRUM-X's
+                                                         * EDIT their own; JIANT's other pages MORE's rows) */
+    {FAM_EDIT, 0, 2, {"EDIT 1", "DRUM SOUND", "DRUM SOUND 2"}}, {FAM_EDIT, 1, 2, {"DRUM MORE"}},
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
     {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO 2", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
     {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP", "ARP 2"}},
@@ -12198,8 +12094,10 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {4, 3, 5, 6, 13, 7, 10, 2, 3, 1, 3, 8, 11, 4};   /* (0.9.18, no BAR page: task 5 13 (was 5:
-                                                         * KNOB 1 turned fast to bar 3), task 11 3 (was 4) */
+    static const uint8_t WANT[14] = {7, 3, 5, 6, 13, 7, 10, 2, 3, 1, 3, 7, 11, 4};   /* (0.9.18, no BAR page: task 5 13 (was 5:
+                                                         * KNOB 1 turned fast to bar 3), task 11 3 (was 4); 3b task 5: task 12
+                                                         * 7 (was 8: DECAY on SOUND, no SELECT to SOUND 2), task 1 7 (was 4: FM6's
+                                                         * filter MORE's, its first rows) */
     uint32_t got[14], t, tot = 0;
     int bad = 0, ok, okall = 1;
     int16_t v;
@@ -12207,9 +12105,10 @@ static int test_nav_tasks(void)
         ok = 0;
         switch (t) {
         case 0:                                         /* the filter (CUT) of track 2 */
-            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 1); tk_btn(B_EDIT);
+            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 1); tk_btn(B_EDIT); tk_btn(B_EDIT); tk_btn(B_EDIT);   /* (3b task 5: */
+            tk_go(EN_K1, 1);                            /* T2 FM6: MORE, CUTOFF its second row) */
             v = TSEL->p[P_FCUT]; tk_val(EN_K2, -8);
-            ok = song.sel == 1u && str_eq(cur_page()->title, "FILTER") && TSEL->p[P_FCUT] != v;
+            ok = song.sel == 1u && str_eq(cur_page()->title, "FM6 MORE") && TSEL->p[P_FCUT] != v;
             break;
         case 1:                                         /* the reverb's SIZE */
             tk_start(0); tk_btn(B_FX); tk_btn(B_FX);
@@ -12263,10 +12162,10 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "TRACK") && TSEL->p[P_HRQ] == 0;
             break;
         case 11:                                        /* DRUM-X (track 4): the snare's DECAY */
-            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 3); tk_btn(B_EDIT); tk_go(EN_SELECT, 1); tk_go(EN_K1, 1);
+            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 3); tk_btn(B_EDIT); tk_go(EN_K1, 1);   /* (3b task 5: SOUND's KNOB 4) */
             { uint32_t c = dx_ui_lane & 7u; uint8_t *dv = dx_ui_side ? dx_kit[c].b : dx_kit[c].a, d0 = dv[DXP_DECAY];
-              tk_val(EN_K2, -6);
-              ok = song.sel == 3u && str_eq(cur_page()->title, "SOUND 2") && c == 1u && dv[DXP_DECAY] != d0; }
+              tk_val(EN_K4, -6);
+              ok = song.sel == 3u && str_eq(cur_page()->title, "DRUM SOUND") && c == 1u && dv[DXP_DECAY] != d0; }
             break;
         case 12:                                        /* COMP 2 of step 9 */
             tk_start(1); tk_btn(B_SEQ); tk_go(EN_SELECT, 1); tk_go(EN_K1, 8); tk_val(EN_K2, 1);
@@ -12286,7 +12185,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (80: 0.9.18 no BAR, was 73)", okall && tot == 80u);
+    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (82: 3b task 5, FM6's filter in MORE; 0.9.18 no BAR 80, was 73)", okall && tot == 82u);
     ui_power_on();
     return bad;
 }
@@ -12779,7 +12678,8 @@ static int test_param_knob_same(void)
     for (e = 0; e < NELEM(UXK_ENG); e++) {
         uxk_engine(UXK_ENG[e]);
         for (i = 0; i < NPAGES; i++)
-            for (sl = 0; sl < 4u; sl++)
+            for (sl = 0; sl < 4u && PAGES[i].graph != GR_FM6P && PAGES[i].graph != GR_DXP; sl++)   /* (3b task 5's pages: no
+                                                         * JIANT's to compare, test_edit_fm6 / test_edit_drm) */
                 for (st = 0; st < 64u; st++) {   /* the views' state: MOD's slot, MSEQ's and SL PITCH's step, the reverb's
                                                   * type, AUTO PAN on the tempo, the LFO FREE / TRIG */
                     int16_t *v0, *v1;
@@ -12800,7 +12700,7 @@ static int test_param_knob_same(void)
     for (e = 0; e < NELEM(UXK_ENG); e++) {
         uxk_engine(UXK_ENG[e]);
         for (i = 0; i < NPAGES; i++)
-            for (sl = 0; sl < 4u; sl++)
+            for (sl = 0; sl < 4u && PAGES[i].graph != GR_FM6P && PAGES[i].graph != GR_DXP; sl++)
                 for (st = 0; st < 8u; st++) {
                     static const int8_t S[4] = {1, -1, 3, -5};
                     int32_t s = S[st & 3u];
@@ -12900,7 +12800,7 @@ static int test_ux_more_nav(void)
     int bad = 0, ok;
     ui_power_on(); frame();
     uxk_engine(ENGI_FM6);
-    ok = mp < NPAGES && !page_visible(mp) && !ux_section_owns(SEC_EDIT);   /* (FM6: JIANT's pages, no MORE yet) */
+    ok = mp < NPAGES && !page_visible(mp) && ux_section_owns(SEC_EDIT);   /* (FM6: its own MORE, not the synths', 3b task 5) */
     uxs_syn_on(ENGI_VOICE);
     ok &= nav_sec() == SEC_EDIT && str_eq(cur_page()->title, "EDIT 1") && nav_list(SEC_EDIT, v) == 4u && page_visible(mp);
     ok &= str_eq(uxs_count(), "1 / 4") && str_eq(uxs_where(), "EDIT \xB7 SOUND");
@@ -13415,7 +13315,7 @@ static int test_edit_syn_more_knobs(void)
     turn(EN_K1, 3);
     ok = uxm_key() == SEC_EDIT && uxm_at[SEC_EDIT].sel == 4u;
     song.sel = 1; uxk_engine(ENGI_FM6); frame();        /* (an FM6 track: its own chain, key) */
-    ok &= nav_key(SEC_EDIT) == SEC_N && !ux_section_owns(SEC_EDIT) && uxm_at[SEC_N].sel == 0u;
+    ok &= nav_key(SEC_EDIT) == SEC_N && ux_section_owns(SEC_EDIT) && uxm_at[SEC_N].sel == 0u;   /* (3b task 5: FM6 ux too) */
     song.sel = 0; frame();
     ok &= nav_key(SEC_EDIT) == SEC_EDIT && uxm_at[SEC_EDIT].sel == 4u;
     bad += check("ACID FM 3b: MORE's pick is kept per kind of EDIT track (nav_key), the synths' apart from FM6's", ok);
@@ -13911,6 +13811,502 @@ static int test_ux_knob_widths(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3b task 5: EDIT on FM6 and DRUM-X tracks, the ux pages (ux_section.c); MORE the chain's last (params.c UXM_FM6,
+ * UXM_DRM); the operator's and the kit's bytes as views (params.c ID_FO_*, ID_DX_*: ui_fm6op.c, ui_dx.c)
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static uint32_t uxe_more_page(const ux_more_t *m)
+{
+    uint32_t i;
+    for (i = 0; i < NPAGES && !(PAGES[i].graph == GR_MORE && PAGES[i].more == m); i++)
+        ;
+    return i;
+}
+static const char *uxe_more_list(const ux_more_t *m)   /* MORE's rows shown now, "|" between, a heading in brackets */
+{
+    static char b[400];
+    uint64_t sh = uxm_mask(m);
+    uint32_t r;
+    b[0] = 0;
+    for (r = 0; r < m->n; r++) {
+        char v[24];
+        uint8_t bar;
+        const char *nm;
+        if (!uxm_on(sh, r)) continue;
+        nm = uxm_row_text(&m->rows[r], v, sizeof v, &bar);
+        if (b[0]) str_cpy(b + str_len(b), "|", sizeof b - str_len(b));
+        if (m->rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "[", sizeof b - str_len(b));
+        str_cpy(b + str_len(b), nm, sizeof b - str_len(b));
+        if (m->rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "]", sizeof b - str_len(b));
+    }
+    return b;
+}
+static const char *uxe_labels(void)                     /* the knob row's names, " . " between */
+{
+    static char b[80];
+    ux_knob_t k[4];
+    uint32_t c;
+    uxs_knobs(cur_page(), k);
+    b[0] = 0;
+    for (c = 0; c < 4u; c++) {
+        if (c) str_cpy(b + str_len(b), "|", sizeof b - str_len(b));
+        str_cpy(b + str_len(b), k[c].label, sizeof b - str_len(b));
+    }
+    return b;
+}
+static const char *uxe_value(uint32_t c)                /* knob c's value as the knob row shows it */
+{
+    static ux_knob_t k[4];
+    uxs_knobs(cur_page(), k);
+    return k[c & 3u].value;
+}
+static uint32_t uxe_row(const ux_more_t *m, uint32_t id)   /* the row of setting id in list m */
+{
+    uint32_t r;
+    for (r = 0; r < m->n && !(m->rows[r].kind == UXR_TRACK && m->rows[r].id == id); r++)
+        ;
+    return r;
+}
+static void uxe_more_set(const ux_more_t *m, uint32_t id, int32_t s)   /* MORE: the row picked, KNOB 2 turned s (the input) */
+{
+    uint32_t k = uxm_key();
+    uxm_at[k].sel = (uint8_t)uxe_row(m, id);
+    uxm_at[k].top = 0;
+    turn(EN_K2, s);
+}
+/* the chain walked: EDIT pressed from each page lands on the next group's (round), SELECT stops at the ends */
+static int uxe_walk(const char *const *nm, const char *more_title)
+{
+    uint8_t v[16];
+    uint32_t k;
+    int ok = nav_sec() == SEC_EDIT && nav_list(SEC_EDIT, v) == 4u && str_eq(cur_page()->title, "EDIT 1");
+    for (k = 0; k < 4u; k++) {
+        char w[32];
+        str_cpy(w, "EDIT \xB7 ", sizeof w);
+        str_cpy(w + str_len(w), nm[k], sizeof w - str_len(w));
+        if (!str_eq(uxs_where(), w)) { printf("  page %u: \"%s\"\n", (unsigned)k, uxs_where()); ok = 0; }
+        fmt_int(w, (int32_t)k + 1);
+        str_cpy(w + str_len(w), " / 4", sizeof w - str_len(w));
+        ok &= str_eq(uxs_count(), w);
+        if (k == 3u) ok &= str_eq(cur_page()->title, more_title) && cur_page()->graph == GR_MORE;
+        press(B_EDIT); frame();
+    }
+    ok &= str_eq(cur_page()->title, "EDIT 1");          /* (round) */
+    turn(EN_SELECT, -3); ok &= str_eq(cur_page()->title, "EDIT 1");
+    turn(EN_SELECT, 2); turn(EN_SELECT, 1);
+    ok &= str_eq(cur_page()->title, more_title);
+    turn(EN_SELECT, -1); turn(EN_SELECT, -1); turn(EN_SELECT, -1); turn(EN_SELECT, -1);
+    ok &= str_eq(cur_page()->title, "EDIT 1");
+    return ok;
+}
+/* a picture's discipline: none idle (stopped or playing), one panel for a turn of knob c, the panel changed by it */
+static int uxe_pic_turn(uint32_t c, int32_t s, const char *what)
+{
+    uint32_t n0, n1, h0;
+    int ok = 1;
+    frames(UX_HOT_MS + 100u);
+    n0 = uxs_panels;
+    frames(400);
+    song.playing = 1; frames(400); song.playing = 0;
+    n1 = uxs_panels;
+    if (n1 != n0) { printf("  %s: %u panels idle\n", what, (unsigned)(n1 - n0)); ok = 0; }
+    h0 = uxs_panel_crc();
+    turn(EN_K1 + c, s);
+    frames(400);
+    if (uxs_panels - n1 != 1u) { printf("  %s: %u panels for a turn of KNOB %u\n", what, (unsigned)(uxs_panels - n1), (unsigned)c + 1u); ok = 0; }
+    if (uxs_panel_crc() == h0) { printf("  %s: KNOB %u left the picture as it was\n", what, (unsigned)c + 1u); ok = 0; }
+    return ok;
+}
+
+static void uxe_on(uint32_t e)                           /* T1 on engine e, EDIT open, the first operator, stage, drum, side */
+{
+    uxs_syn_on(e);
+    fop_op = fop_stg = 0;
+    dx_ui_lane = dx_ui_side = 0;
+    dx_ui_seen = last_note;
+    frame();
+}
+static int uxe_cells_ok(void)                            /* a forced redraw: within DC_MAX, nothing stale (3a's budget) */
+{
+    uint32_t i, cells;
+    ui.force = 1; frame();
+    for (i = cells = 0; i < dc_n; i++) cells += dc_st[i].n;
+    if (dc_stale || cells > DC_MAX) printf("  %s: %u cells, stale %u\n", cur_page()->title, (unsigned)cells, (unsigned)dc_stale);
+    return !dc_stale && cells <= DC_MAX;
+}
+static int test_edit_fm6(void)
+{
+    static const char *const NM[4] = {"SOUND", "OPERATOR", "OP ENV", "MORE"};
+    uint32_t tr, b, mp = uxe_more_page(&UXM_FM6);
+    int bad = 0, ok;
+    uint8_t v0;
+    uxe_on(ENGI_FM6);
+    tr = song.sel % NTRK;
+    ok = ux_section_owns(SEC_EDIT) && mp < NPAGES && page_visible(mp) && !page_visible(uxe_more_page(&UXM_SYN)) &&
+         !page_visible(uxe_more_page(&UXM_DRM)) && uxe_walk(NM, "FM6 MORE");
+    bad += check("ACID FM 3b: FM6's EDIT: SOUND, OPERATOR, OP ENV, MORE (EDIT round, SELECT to the ends, n / 4)", ok);
+    uxe_on(ENGI_FM6);
+    ok = str_eq(uxe_labels(), "ALGORITHM|FEEDBACK|MOD LEVEL|MOD RATIO");
+    if (!ok) printf("  SOUND: %s\n", uxe_labels());
+    turn(EN_SELECT, 1);
+    ok &= str_eq(uxe_labels(), "OP|RATIO|FINE|LEVEL") && str_eq(uxe_value(0), "1");
+    if (!ok) printf("  OPERATOR: %s\n", uxe_labels());
+    turn(EN_SELECT, 1);
+    ok &= str_eq(uxe_labels(), "OP|STAGE|RATE|LEVEL") && str_eq(uxe_value(1), "ATK");
+    if (!ok) printf("  OP ENV: %s\n", uxe_labels());
+    bad += check("ACID FM 3b: FM6's knobs in plain words (ALGORITHM, MOD LEVEL, MOD RATIO; OP RATIO FINE LEVEL; OP STAGE RATE "
+                 "LEVEL)", ok);
+    uxe_on(ENGI_FM6);                               /* one operator picked: OPERATOR's is OP ENV's and MORE's */
+    turn(EN_SELECT, 1);
+    turn(EN_K1, 2);
+    ok = fop_op == 2u && str_eq(uxe_value(0), "3");
+    turn(EN_SELECT, 1);
+    ok &= str_eq(uxe_value(0), "3");
+    turn(EN_SELECT, 1);
+    ok &= cur_page()->graph == GR_MORE && strstr(uxe_more_list(&UXM_FM6), "[OP 3]|FREQ MODE|OP DETUNE|VELOCITY") != 0;
+    b = (5u - 2u) * FP_OP + FP_DET;
+    v0 = fm6_patch[tr][b];
+    uxe_more_set(&UXM_FM6, ID_FO_DTUN, 2);
+    ok &= fm6_patch[tr][b] == v0 + 2u;
+    turn(EN_SELECT, -40);                               /* (MORE scrolled back to its top, then the page before) */
+    turn(EN_SELECT, -1);
+    turn(EN_K1, 1);
+    turn(EN_SELECT, -1);
+    ok &= str_eq(uxe_value(0), "4") && fop_op == 3u;
+    bad += check("ACID FM 3b: FM6's operator picked on OPERATOR is OP ENV's and MORE's (its heading OP 3, its DETUNE written)", ok);
+    {   /* an operator's byte edited: the patch the track's own (SLOT OWN), as JIANT's; each the byte JIANT's page wrote */
+        static const struct { uint8_t pg, knob, off, st; int8_t s; } C[] = {
+            {1, 1, FP_FC, 0, 2}, {1, 2, FP_FF, 0, 7}, {1, 3, FP_OL, 0, -5}, {2, 2, FP_R1, 1, -3}, {2, 3, FP_L1, 3, -4}};
+        uint32_t c;
+        ok = 1;
+        for (c = 0; c < NELEM(C); c++) {
+            uint8_t before[FP_SIZE];
+            uint32_t bb, k;
+            int32_t want, sg;
+            uxe_on(ENGI_FM6);
+            ok &= TSEL->p[P_E7] != FM6_OWN;
+            turn(EN_SELECT, C[c].pg);
+            turn(EN_K1, 1);                             /* (OP 2) */
+            if (C[c].pg == 2u) turn(EN_K2, C[c].st);    /* (OP ENV: the stage) */
+            bb = (5u - 1u) * FP_OP + C[c].off + (C[c].pg == 2u ? C[c].st : 0u);
+            memcpy(before, fm6_patch[tr], FP_SIZE);
+            sg = (int32_t)before[bb] + C[c].s < 0 || (int32_t)before[bb] + C[c].s > (int32_t)fm6_max(bb) ? -C[c].s : C[c].s;
+            want = clamp((int32_t)before[bb] + sg, 0, (int32_t)fm6_max(bb));
+            turn(EN_K1 + C[c].knob, sg);
+            for (k = 0; k < FP_SIZE; k++)
+                if (k != bb && fm6_patch[tr][k] != before[k]) { printf("  case %u: byte %u moved too\n", (unsigned)c, (unsigned)k); ok = 0; }
+            if (fm6_patch[tr][bb] != want) { printf("  case %u: byte %u %u, not %d\n", (unsigned)c, (unsigned)bb, fm6_patch[tr][bb], (int)want); ok = 0; }
+            ok &= fm6_slot[tr] == FM6_OWN && TSEL->p[P_E7] == FM6_OWN && str_eq(nav_page_name(), C[c].pg == 1u ? "OPERATOR" : "OP ENV");
+        }
+        uxe_on(ENGI_FM6);                           /* (MORE's operator rows too) */
+        turn(EN_SELECT, 3);
+        uxe_more_set(&UXM_FM6, ID_FO_VEL, 3);
+        ok &= fm6_patch[tr][5u * FP_OP + FP_KVS] == clamp((int32_t)fm6_patch[tr][5u * FP_OP + FP_KVS], 0, 7) &&
+              fm6_slot[tr] == FM6_OWN && TSEL->p[P_E7] == FM6_OWN;
+    }
+    bad += check("ACID FM 3b: editing an FM6 operator's value makes the patch the track's own (SLOT OWN), the one byte JIANT's "
+                 "page wrote", ok);
+    uxe_on(ENGI_FM6);                               /* RATIO of a FIXED operator: its frequency, FREQ */
+    turn(EN_SELECT, 3);
+    uxe_more_set(&UXM_FM6, ID_FO_MODE, 1);
+    turn(EN_SELECT, -40);
+    turn(EN_SELECT, -2);
+    ok = fm6_patch[tr][5u * FP_OP + FP_MODE] == 1u && str_eq(uxe_labels(), "OP|FREQ|FINE|LEVEL") &&
+         str_eq(uxe_value(1), N_FO_HZ[fm6_patch[tr][5u * FP_OP + FP_FC] & 3u]);
+    bad += check("ACID FM 3b: an operator FIXED: RATIO reads FREQ, its decade (1HZ .. 1KHZ)", ok);
+    uxe_on(ENGI_FM6);
+    turn(EN_SELECT, 3);
+    ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DRIVE|[TONE]|PATCH|DETUNE|MOD TIME|MOD VEL|[OP 1]|FREQ MODE|"
+                                         "OP DETUNE|VELOCITY|[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD");
+    if (!ok) printf("  FM6 MORE: %s\n", uxe_more_list(&UXM_FM6));
+    bad += check("ACID FM 3b: FM6's MORE lists what its pages leave (EDIT 2's four, the operator's three, FILTER, VOICE; ALLOC "
+                 "hidden)", ok);
+    {   /* the picture: the algorithm (OP ENV: the envelope), a panel a turn, none idle, each knob's turn seen */
+        static const struct { uint8_t pg, knob; int8_t s; } C[] = {
+            {0, 0, 3}, {0, 1, 3}, {0, 2, 20}, {0, 3, 2}, {1, 0, 1}, {1, 1, 2}, {1, 2, 30}, {1, 3, -30}, {2, 0, 1}, {2, 1, 1},
+            {2, 2, -30}, {2, 3, -40}};
+        uint32_t c;
+        char w[32];
+        ok = 1;
+        for (c = 0; c < NELEM(C); c++) {
+            uxe_on(ENGI_FM6);
+            turn(EN_SELECT, C[c].pg);
+            sprintf(w, "FM6 page %u", (unsigned)C[c].pg);
+            ok &= uxe_pic_turn(C[c].knob, C[c].s, w) && uxe_cells_ok();
+            if (ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) < 1500u) { printf("  %s: no picture\n", w); ok = 0; }
+        }
+    }
+    uxe_on(ENGI_FM6); turn(EN_SELECT, 3); ok &= uxe_cells_ok();   /* (MORE too) */
+    bad += check("ACID FM 3b: FM6's picture (the algorithm, the operator outlined; OP ENV its envelope): one panel a turn, "
+                 "none idle, every knob seen; cells within DC_MAX", ok);
+    {   /* the algorithm drawn is the one ALGORITHM plays: 32 algorithms, 32 pictures */
+        static uint32_t h[33];
+        uint32_t a, j;
+        ok = 1;
+        uxe_on(ENGI_FM6);
+        for (a = 1; a <= 32u; a++) {
+            TSEL->p[P_E0] = (int16_t)a;
+            frames(100);
+            h[a] = uxs_panel_crc();
+            for (j = 1; j < a; j++)
+                if (h[j] == h[a]) { printf("  algorithms %u and %u drawn alike\n", (unsigned)j, (unsigned)a); ok = 0; }
+        }
+    }
+    bad += check("ACID FM 3b: FM6's picture: each of the 32 algorithms its own", ok);
+    ui_power_on();
+    return bad;
+}
+
+static int test_edit_drm(void)
+{
+    static const char *const NM[4] = {"KIT", "SOUND", "SOUND 2", "MORE"};
+    uint32_t mp = uxe_more_page(&UXM_DRM), k;
+    int bad = 0, ok;
+    uxe_on(ENGI_DRUM);
+    ok = ux_section_owns(SEC_EDIT) && mp < NPAGES && page_visible(mp) && uxe_walk(NM, "DRUM MORE");
+    bad += check("ACID FM 3b: DRUM-X's EDIT: KIT, SOUND, SOUND 2, MORE (EDIT round, SELECT to the ends, n / 4)", ok);
+    uxe_on(ENGI_DRUM);
+    ok = str_eq(uxe_labels(), "MORPH|TUNE|TONE|DECAY");
+    turn(EN_SELECT, 1);
+    ok &= str_eq(uxe_labels(), "DRUM|LEVEL|PITCH|DECAY") && str_eq(uxe_value(0), "BD");
+    turn(EN_SELECT, 1);
+    ok &= str_eq(uxe_labels(), "DRUM|NOISE|COLOR|WAVE");
+    if (!ok) printf("  %s\n", uxe_labels());
+    bad += check("ACID FM 3b: DRUM-X's knobs in plain words (KIT: MORPH TUNE TONE DECAY; SOUND: DRUM LEVEL PITCH DECAY; "
+                 "SOUND 2: DRUM NOISE COLOR WAVE)", ok);
+    uxe_on(ENGI_DRUM);                              /* one drum picked: SOUND's is SOUND 2's and MORE's; a key picks it */
+    turn(EN_SELECT, 1);
+    turn(EN_K1, 1);
+    ok = dx_ui_lane == 1u && str_eq(uxe_value(0), "SD");
+    turn(EN_SELECT, 1);
+    ok &= str_eq(uxe_value(0), "SD");
+    turn(EN_SELECT, 1);
+    ok &= strstr(uxe_more_list(&UXM_DRM), "[DRUM \xB7 SD]") != 0;
+    turn(EN_SELECT, -2);
+    last_note = (uint8_t)DRUM_LANE_NOTE[3]; frame();    /* (a key struck: the hi-hat's) */
+    ok &= dx_ui_lane == 3u && str_eq(uxe_value(0), "CH");
+    bad += check("ACID FM 3b: DRUM-X's drum picked on SOUND is SOUND 2's and MORE's (its heading DRUM . SD); a key struck "
+                 "picks its drum", ok);
+    uxe_on(ENGI_DRUM);                              /* LEVEL: the drum's P_LN*, a setting (locks, automation) */
+    turn(EN_SELECT, 1);
+    turn(EN_K1, 1); turn(EN_K1, 1);                     /* (a drum a turn, as JIANT's LANE) */
+    {
+        int16_t l[8];
+        for (k = 0; k < 8u; k++) l[k] = TSEL->p[P_LN0 + k];
+        turn(EN_K2, -9);
+        ok = TSEL->p[P_LN2] == clamp(l[2] - 9, 0, 127) && TSEL->p[P_LN2] != l[2];
+        for (k = 0; k < 8u; k++) ok &= k == 2u || TSEL->p[P_LN0 + k] == l[k];
+        ok &= page_id(cur_page(), 1) == P_LN2 && str_eq(nav_page_name(), "SOUND");
+        ui.plk_src = (uint8_t)(ui.page + 1u);
+        ok &= lock_id(1) == P_LN2 && lock_id(2) == 0xFFu;
+        ui.plk_src = 0;
+    }
+    bad += check("ACID FM 3b: DRUM-X's SOUND LEVEL is the drum picked's level (P_LN0 + the drum; it locks as LEVELS did)", ok);
+    {   /* the kit's values as JIANT's pages wrote them: the side's, the mode's bits, the kit's */
+        dx_lane_t L0;
+        uint8_t lay0, snd0, tone0, hands0, mot0[4];
+        uxe_on(ENGI_DRUM);
+        turn(EN_SELECT, 1); turn(EN_K1, 1);           /* (SD) */
+        L0 = dx_kit[1];
+        turn(EN_K3, 5);                                 /* PITCH: side A */
+        ok = dx_kit[1].a[DXP_PITCH] == clamp(L0.a[DXP_PITCH] + 5, 0, 127) && dx_kit[1].b[DXP_PITCH] == L0.b[DXP_PITCH];
+        turn(EN_K4, -6);
+        ok &= dx_kit[1].a[DXP_DECAY] == clamp(L0.a[DXP_DECAY] - 6, 0, 127);
+        turn(EN_SELECT, 1);
+        turn(EN_K2, 4); turn(EN_K3, -3);
+        ok &= dx_kit[1].a[DXP_NOISE] == clamp(L0.a[DXP_NOISE] + 4, 0, 127) && dx_kit[1].a[DXP_COLOR] == clamp(L0.a[DXP_COLOR] - 3, 0, 127);
+        L0 = dx_kit[1];
+        turn(EN_K4, 1);                                 /* WAVE: bits 0..1 only */
+        ok &= (dx_kit[1].mode & 3u) == (uint32_t)clamp((int32_t)(L0.mode & 3u) + 1, 0, 3) && (dx_kit[1].mode & ~3u) == (L0.mode & ~3u);
+        turn(EN_SELECT, 1);                             /* MORE: SIDE B, then PITCH MOD on B */
+        uxe_more_set(&UXM_DRM, ID_DX_SIDE, 1);
+        L0 = dx_kit[1];
+        uxe_more_set(&UXM_DRM, ID_DX_PMOD, 7);
+        ok &= dx_ui_side == 1u && dx_kit[1].b[DXP_PMOD] == clamp(L0.b[DXP_PMOD] + 7, 0, 127) && dx_kit[1].a[DXP_PMOD] == L0.a[DXP_PMOD];
+        uxe_more_set(&UXM_DRM, ID_DX_NTYPE, -1); uxe_more_set(&UXM_DRM, ID_DX_SNAP, 1); uxe_more_set(&UXM_DRM, ID_DX_PMT, 2);
+        uxe_more_set(&UXM_DRM, ID_DX_DRV, -1);
+        ok &= ((dx_kit[1].mode >> 2) & 3u) == (uint32_t)clamp((int32_t)((L0.mode >> 2) & 3u) - 1, 0, 2) && (dx_kit[1].mode & 0x10u) &&
+              ((dx_kit[1].mode >> 5) & 3u) == (uint32_t)clamp((int32_t)((L0.mode >> 5) & 3u) + 1, 0, 3) && !(dx_kit[1].mode & DX_DRIVE) &&
+              (dx_kit[1].mode & 3u) == (L0.mode & 3u);
+        lay0 = dx_lay[1]; snd0 = dx_snd[1]; tone0 = dx_tone; hands0 = dx_hands; memcpy(mot0, dx_mot, 4);
+        uxe_more_set(&UXM_DRM, ID_DX_CLANG, 1);
+        ok &= DX_LAY_L(dx_lay[1]) == (uint32_t)clamp((int32_t)DX_LAY_L(lay0) + 1, 0, 15) && DX_LAY_FB(dx_lay[1]) == DX_LAY_FB(lay0);
+        dx_snd[1] = 0;
+        for (k = 0; k < 3u; k++)                        /* (REV, a bus a detent: from OFF, JIANT's first amount) */
+            uxe_more_set(&UXM_DRM, ID_DX_SENDTO, 1);
+        ok &= DXS_BUS(dx_snd[1]) == 3u && DXS_AMT(dx_snd[1]) == 3;
+        for (k = 0; k < 7u; k++)                        /* (an amount a detent: 1 of 16 .. 8 of 16) */
+            uxe_more_set(&UXM_DRM, ID_DX_SEND, 1);
+        ok &= DXS_BUS(dx_snd[1]) == 3u && DXS_AMT(dx_snd[1]) == 8 * 4 - 1;
+        uxe_more_set(&UXM_DRM, ID_DX_BP, 2); uxe_more_set(&UXM_DRM, ID_DX_KFB, 1); uxe_more_set(&UXM_DRM, ID_DX_HANDS, 3);
+        ok &= DX_TONE_BP(dx_tone) == (uint32_t)clamp((int32_t)DX_TONE_BP(tone0) + 1, 0, 15) &&
+              DX_TONE_FB(dx_tone) == (uint32_t)clamp((int32_t)DX_TONE_FB(tone0) + 1, 0, 15) &&
+              dx_hands == (uint8_t)clamp((int32_t)hands0 + 1, 0, 15);   /* (a detent a step, as KIT 3) */
+        uxe_more_set(&UXM_DRM, ID_DX_XRATE, 3); uxe_more_set(&UXM_DRM, ID_DX_XDEP, 20);
+        ok &= dx_mot[0] == (uint8_t)clamp(mot0[0] + 1, 0, 8) && dx_mot[1] == (uint8_t)clamp(mot0[1] + 20, 0, 127);
+        (void)snd0;
+    }
+    bad += check("ACID FM 3b: DRUM-X's kit values written as JIANT's SOUND 1..4, KIT 3 and X-MOD pages wrote them (the side's "
+                 "values, the mode's bits, LAYER, SEND, TONE, HANDS, X-MOD)", ok);
+    uxe_on(ENGI_DRUM);
+    turn(EN_SELECT, 3);
+    ok = str_eq(uxe_more_list(&UXM_DRM), "[KIT]|NOISE|CLICK|FOLD|DRIVE|FEEDBACK|METAL|HANDS|STEREO|[DRUM \xB7 BD]|SIDE|PITCH MOD|"
+                                         "MOD TYPE|NOISE TYPE|SNAP|DRIVE|CLANG|SEND TO|SEND|[MORPH LFO]|RATE|DEPTH|SHAPE|RANDOM|"
+                                         "[FILTER]|FILTER|CUTOFF|RESO");
+    if (!ok) printf("  DRUM MORE: %s\n", uxe_more_list(&UXM_DRM));
+    bad += check("ACID FM 3b: DRUM-X's MORE lists what its pages leave (KIT 2 and 3, the drum's, MORPH LFO, FILTER; VOICE hidden)",
+                 ok);
+    {   /* the picture: the drum's hit and the eight drums; a panel a turn, none idle, each knob's turn seen */
+        static const struct { uint8_t pg, knob; int8_t s; } C[] = {
+            {0, 0, 30}, {0, 1, 20}, {0, 2, 30}, {0, 3, -30}, {1, 0, 2}, {1, 1, -40}, {1, 2, 20}, {1, 3, -30}, {2, 0, 1},
+            {2, 1, 40}, {2, 2, 40}, {2, 3, 1}};
+        uint32_t c;
+        char w[32];
+        ok = 1;
+        for (c = 0; c < NELEM(C); c++) {
+            uxe_on(ENGI_DRUM);
+            turn(EN_SELECT, C[c].pg);
+            sprintf(w, "DRUM page %u", (unsigned)C[c].pg);
+            ok &= uxe_pic_turn(C[c].knob, C[c].s, w) && uxe_cells_ok();
+            if (ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) < 1500u) { printf("  %s: no picture\n", w); ok = 0; }
+        }
+        uxe_on(ENGI_DRUM); turn(EN_SELECT, 3); ok &= uxe_cells_ok();   /* (MORE too) */
+        uxe_on(ENGI_DRUM);                          /* (a drum muted by EDIT's black keys: its cell dims) */
+        turn(EN_SELECT, 1);
+        frames(UX_HOT_MS + 100u);
+        k = uxs_panel_crc();
+        dx_mute_set(DXM_LANE(5));
+        frames(100);
+        ok &= uxs_panel_crc() != k;
+        dx_mute_set(0);
+    }
+    bad += check("ACID FM 3b: DRUM-X's picture (the drum's hit, the eight drums with their LEVEL, the one picked lit, a muted one "
+                 "dim): one panel a turn, none idle, every knob seen", ok);
+    uxe_on(ENGI_DRUM);                                  /* EDIT held on the ux pages: the black keys still mute the drums */
+    turn(EN_SELECT, 1);
+    dx_mute_set(0);
+    frames(UX_HOT_MS + 100u);
+    k = uxs_panel_crc();
+    btn_down(B_EDIT); frame(); key_down(black(4)); frame(); key_up(black(4)); frame(); btn_up(B_EDIT); frames(100);
+    ok = (dx_mute & DXM_LANE(4)) && drum_muted(DRUM_LANE_NOTE[4]) && !drum_muted(DRUM_LANE_NOTE[3]) &&
+         str_eq(cur_page()->title, "DRUM SOUND") && uxs_panel_crc() != k;   /* (OH's cell dim) */
+    btn_down(B_EDIT); frame(); key_down(black(4)); frame(); key_up(black(4)); frame(); btn_up(B_EDIT); frames(100);
+    ok &= !dx_mute && str_eq(cur_page()->title, "DRUM SOUND");
+    bad += check("ACID FM 3b: on DRUM-X's EDIT pages, EDIT held + a black key still mutes its drum (the layer unchanged), the "
+                 "page stays, its cell dims", ok);
+    {   /* the hit drawn is the engine's: dx_run itself, the scratch hit as a note's (its LEVEL, the kit's DRIVE after it) */
+        static int32_t o[UXS_WN];
+        uint32_t i, ink = 0;
+        uxe_on(ENGI_DRUM);
+        uxs_drum_hit(TSEL, 0, o);
+        for (i = 0; i < 8u; i++) ink += o[i] > 2000;
+        ok = ink >= 6u && o[UXS_WN - 1u] < o[2];        /* (a kick: loud at once, falling) */
+        TSEL->p[P_LN0] = 0;
+        uxs_drum_hit(TSEL, 0, o);
+        for (i = 0; i < UXS_WN; i++) ok &= o[i] == 0;   /* (LEVEL 0: silent) */
+    }
+    bad += check("ACID FM 3b: DRUM-X's picture is the drum's own hit (dx_run): a kick falls; LEVEL 0 draws silence", ok);
+    ui_power_on();
+    return bad;
+}
+static int uxe_glyphs(const aafont_t *f, const char *s)  /* every byte of s has its glyph in f */
+{
+    for (; *s; s++)
+        if (glyph_at(f, (uint8_t)*s) < 0) return 0;
+    return 1;
+}
+/* (3b task 5) every label and value FM6's and DRUM-X's EDIT knob rows and MORE lists can show fits its column (48 px) and has
+ * its glyphs (the knob row's UF_LBL / UF_VAL, the list's and the status line's UF_HDR); the pictures' words too */
+static int test_ux_knob_widths_fm6_drm(void)
+{
+    static const uint8_t ENG[2] = {ENGI_FM6, ENGI_DRUM};
+    uint32_t e, pgi, c, n = 0, r;
+    int bad = 0, ok = 1;
+    for (e = 0; e < 2u; e++) {
+        const ux_more_t *m = e ? &UXM_DRM : &UXM_FM6;
+        uint32_t fx;
+        for (fx = 0; fx < 2u; fx++) {
+            uxe_on(ENG[e]);
+            if (!e) fm6_patch[song.sel % NTRK][5u * FP_OP + FP_MODE] = (uint8_t)fx;   /* (OP 1 RATIO / FIXED) */
+            else dx_tone = (uint8_t)(fx ? 0x05u : 0u);  /* (METAL off / on) */
+            for (pgi = 0; pgi < NPAGES; pgi++) {
+                const page_t *pg = &PAGES[pgi];
+                if (pg->fam != FAM_EDIT || !nv_ok_page(pgi) || pg->graph == GR_MORE) continue;
+                ui.page = (uint8_t)pgi;
+                for (c = 0; c < 4u; c++) {
+                    uint32_t id = page_id(pg, c), k;
+                    for (k = 0; k < 260u; k++) {        /* (from its bottom up through every value) */
+                        ux_knob_t kk[4];
+                        if (k == 0u) param_knob(TSEL, id, -300, c);
+                        else if (k > 1u) param_knob(TSEL, id, 1, c);
+                        uxs_knobs(pg, kk);
+                        n++;
+                        if (text_w(&UF_LBL, kk[c].label) > UX_COL_W - 4 || text_w(&UF_VAL, kk[c].value) > UX_COL_W - 4 ||
+                            !uxe_glyphs(&UF_LBL, kk[c].label) || !uxe_glyphs(&UF_HDR, kk[c].label) ||
+                            !uxe_glyphs(&UF_VAL, kk[c].value) || !uxe_glyphs(&UF_HDR, kk[c].value)) {
+                            printf("  %s %s knob %u: \"%s\" %d px, \"%s\" %d px\n", ENGINES[ENG[e]]->name, pg->title, (unsigned)c + 1u,
+                                   kk[c].label, text_w(&UF_LBL, kk[c].label), kk[c].value, text_w(&UF_VAL, kk[c].value));
+                            ok = 0;
+                            break;
+                        }
+                    }
+                }
+            }
+            ui.page = (uint8_t)uxe_more_page(m); page_entered();
+            for (r = 0; r < m->n; r++) {
+                uint64_t sh = uxm_mask(m);
+                const ux_row_t *rw = &m->rows[r];
+                uint32_t k;
+                if (!uxm_pick_ok(m, sh, r)) continue;
+                uxm_at[uxm_key()].sel = (uint8_t)r; uxm_at[uxm_key()].top = 0;
+                for (k = 0; k < 260u; k++) {
+                    ux_knob_t kk[4];
+                    if (k == 0u) param_knob(TSEL, rw->id, -300, 1);
+                    else if (k > 1u) param_knob(TSEL, rw->id, 1, 1);
+                    uxs_knobs(cur_page(), kk);
+                    n++;
+                    char v2[24];
+                    uint8_t bar;
+                    const char *nm2 = uxm_row_text(rw, v2, sizeof v2, &bar);
+                    if (text_w(&UF_VAL, kk[0].value) > UX_COL_W - 4 || text_w(&UF_LBL, kk[1].label) > UX_COL_W - 4 ||
+                        text_w(&UF_VAL, kk[1].value) > UX_COL_W - 4 || !uxe_glyphs(&UF_LBL, kk[1].label) ||
+                        !uxe_glyphs(&UF_VAL, kk[1].value) || !uxe_glyphs(&UF_HDR, nm2) || !uxe_glyphs(&UF_HDR, v2)) {
+                        printf("  %s MORE row %u: \"%s\" %d px \"%s\" %d px\n", ENGINES[ENG[e]]->name, (unsigned)r, kk[1].label,
+                               text_w(&UF_LBL, kk[1].label), kk[1].value, text_w(&UF_VAL, kk[1].value));
+                        ok = 0;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    {   /* the pictures' words: each drum's name and side (UF_LBL), each operator's ratio or frequency (UF_HDR), the headings */
+        uint32_t l, c2, f2, m2;
+        uint8_t op[FP_OP];
+        char b[24];
+        for (l = 0; l < 8u; l++) {
+            ok &= uxe_glyphs(&UF_LBL, drum_lane_name(TSEL, l)) && uxe_glyphs(&UF_LBL, drum_lane_abbr(TSEL, l));
+            dx_ui_lane = (uint8_t)l;
+            ok &= uxe_glyphs(&UF_LBL, uxm_head(UXM_H_DRUM)) && uxe_glyphs(&UF_HDR, uxm_head(UXM_H_DRUM));
+        }
+        memset(op, 0, sizeof op);
+        for (m2 = 0; m2 < 2u; m2++)
+            for (c2 = 0; c2 < 32u; c2++)
+                for (f2 = 0; f2 < 100u; f2 += 3u) {
+                    op[FP_MODE] = (uint8_t)m2; op[FP_FC] = (uint8_t)c2; op[FP_FF] = (uint8_t)f2;
+                    uxs_fop_freq(op, b, sizeof b);
+                    n++;
+                    if (!uxe_glyphs(&UF_HDR, b) || text_w(&UF_HDR, b) > 100) { printf("  OP readout \"%s\"\n", b); ok = 0; }
+                }
+        ok &= uxe_glyphs(&UF_LBL, "OP 6 \xB7 REL") && uxe_glyphs(&UF_LBL, " \xB7 A") && uxe_glyphs(&UF_LBL, "123456");
+    }
+    dx_ui_lane = 0;
+    bad += check("ACID FM 3b: every label and value FM6's and DRUM-X's EDIT knob rows and MORE lists can show fits its column, "
+                 "and every word they and the pictures draw has its glyphs", ok && n > 5000u);
+    ui_power_on();
+    return bad;
+}
+
 /* (3b task 3 fix) every GR_MORE row names something real (else params.c param_ref would read &t->p[id] past the track, or
  * song.g past its end): a track setting (< P_COUNT) or a view, a global (< G_COUNT) or a view, an action, a heading; a
  * list holds 64 at most (the visibility mask). A row that does not is never shown, never picked, never written */
@@ -13978,7 +14374,6 @@ int main(void)
     bad += test_lz_layer();
     bad += test_lz_dialogs();
     bad += test_fx_live();
-    bad += test_engvis();
     bad += test_lz_reach();
     bad += test_nav_tasks();
     bad += test_nav_rules();
@@ -14096,6 +14491,9 @@ int main(void)
     bad += test_edit_syn_more_knobs();
     bad += test_edit_syn_picture();
     bad += test_ux_knob_widths();
+    bad += test_ux_knob_widths_fm6_drm();
+    bad += test_edit_fm6();
+    bad += test_edit_drm();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

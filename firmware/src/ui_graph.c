@@ -36,7 +36,7 @@ static void lz_uline(int32_t x, int32_t y, const aafont_t *f, const char *s, uin
 /* the height ADSR and LFO are drawn on: 100 px, or (MENU > LARGE's strip: draw_graph) the strip's ~ 56 */
 static int32_t graph_ht = 100;
 #include "ui_organic.c"                              /* JIANT FM's organic line art (drawn by code) */
-#include "ui_fm6op.c"                                /* (0.6.10, from Felucca 1.5) EDIT > OPERATOR, OP ENV, OPERATOR 2 */
+#include "ui_fm6op.c"                                /* (0.6.10, from Felucca 1.5) FM6's operators (3b task 5: EDIT > OPERATOR, OP ENV) */
 static uint16_t heat_col(int32_t v);
 /* knob c's colour on a lens card, a layer's KNOBS, EDIT's chips: the knob's own (UI_KNOBS: ACID SLIDE VIOLET ACCENT;
  * until ACID FM 0.3 JIANT's palette its value's heat) */
@@ -45,8 +45,8 @@ static uint16_t knob_col(uint32_t c, int32_t ratio, int bip)
     (void)ratio; (void)bip;
     return T_K(c);
 }
-#include "ui_being.c"                                /* (JIANT 0.5) the beings: the engine pages' creatures */
-#include "ui_engvis.c"                               /* (0.9.4) VOICE's head, DRUM-X's kit */
+/* (ACID FM 3b task 5) ui_being.c (JIANT 0.5's beings) and ui_engvis.c (0.9.4's creatures, the last FM6's colony and
+ * DRUM-X's kit) gone: the user's "get rid of any creatures"; the output's level they read (bg_energy) is ui_organic.c's */
 
 /* Matches voice.c: attack is linear, decay and release are exponential
  * (env += (target - env) * k each tick, ~99 % after the set time). Time
@@ -132,24 +132,6 @@ static void graph_lfo(const track_t *t, uint16_t c)
  * DRIFT on and on) and the two hands */
 /* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its
  * height; under it the two waves it is between */
-/* (0.6.48) EDIT > IMAGE (a DRUM track): the eight sounds from left to right as IMAGE places them (as wide as DRV,
- * DIST and the FILTER let it play: dx_img_k), a row each, the kick on top, on a line from the middle */
-static void graph_dximg(const track_t *t)
-{
-    static const char *const AB[DV_NLANE] = {"BD", "SD", "CP", "CH", "OH", "TM", "RS", "CB"};
-    int32_t img = clamp(t->p[P_DXIMG], 0, 127), k = img ? dx_img_k(t) : 0, cx = PANEL_X0 + PANEL_W / 2;
-    uint32_t l;
-    cv_rect(cx, 0, 1, 96, T_RAISE);
-    for (l = 0; l < DV_NLANE; l++) {
-        int32_t p = img ? dx_img_pan(l, img) * k >> 8 : 0, y = (int32_t)l * 12;
-        int32_t x = cx + p * (PANEL_W / 2 - 14) / 64;
-        uint16_t c = k < 256 && img ? T_MID : heat_col(60u + l * 22u);   /* (narrowed by DRV DIST FILTER: grey) */
-        cv_rect(p < 0 ? x : cx, y + 6, p < 0 ? cx - x : x - cx, 1, c);
-        cv_rrect(x - 13, y, 26, 12, 2, c, T_SURF);
-        cv_text_in(x - 13, y + CAP_IN(S, 12), 26, &AF_S, AB[l], T_INK, c);
-    }
-}
-
 /* (ACID FM 3b task 4) graph_sing (EDIT > WORDS: what VOICE sings) and graph_morph (EDIT > MORPH: the wave and where MORPH takes
  * it) gone: those pages are a synth's EDIT MORE rows now (ux_section.c draws the synth's wave, MORPH in it) */
 
@@ -559,7 +541,7 @@ static void fm_bus(int32_t cl, int32_t cr, int32_t bus)
     cv_line(cr + 20, bus - 3, cr + 23, bus, T_MID); cv_line(cr + 20, bus + 3, cr + 23, bus, T_MID);
 }
 
-/* FM6's 32 algorithms as charts (0.9.6: as the colony, ui_engvis.c vx_fm6). FM6_CELL: per operator 1..6 its cell, the column in 24 px steps (bits 0..2) and
+/* FM6's 32 algorithms as charts (0.9.6; ACID FM 3b task 5: EDIT's FM6 picture, ux_section.c uxs_fm6_draw). FM6_CELL: per operator 1..6 its cell, the column in 24 px steps (bits 0..2) and
  * the row above the output bus (bits 4..5; row 0 = the carriers). The routes, the carriers and the feedback
  * operator are fm6_core.c's FM6_ALG itself (fm6_routes, fm6_car_ops, fm6_fb_op). ui_test.c checks the cells
  * against them (a modulator one row above what it modulates, the carriers on the bottom row and only they, one
@@ -752,31 +734,6 @@ static uint16_t heat_col(int32_t v)
 {
     v = clamp(v, 0, 256);
     return v < 128 ? ux_mix(T_SURF, T_ACCENT, v * 100 / 128) : ux_mix(T_ACCENT, T_TEXT, (v - 128) * 100 / 128);
-}
-
-/* DRUM (DRUM-X): the eight sounds as columns, each as high and as hot as its hit now (a muted one crossed); the MORPH
- * A .. B above. sel: the sound edited (EDIT > SOUND), its name in the theme colour; -1 none */
-static void graph_drum(const track_t *t, int32_t sel)
-{
-    const drum_lane_t *K = drum_kit_of(t);
-    int32_t morph = clamp(t->p[P_E0] + dx_mot_v, 0, 127), mx = 30 + morph * 180 / 127;   /* (0.5.1: X-MOD live) */
-    uint32_t l;
-    cv_rect(30, 12, 180, 1, T_LINE);
-    cv_rect(30, 11, mx - 30, 3, heat_col(morph * 2));
-    cv_text(12, 8, &AF_S, "A", morph < 64 ? T_THEME : T_DIM);
-    cv_text_r(226, 8, &AF_S, "B", morph >= 64 ? T_THEME : T_DIM, T_SURF);
-    for (l = 0; l < 8u; l++) {
-        int32_t x = 18 + (int32_t)l * 26, e = K && K[l].x.live ? K[l].x.ea >> 22 : 0, h = 4 + e * 66 / 256;
-        int muted = dx_lane_muted(l);
-        cv_rect(x, 94 - 70, 16, 70, T_SURF);
-        cv_rect(x + 7, 24, 2, 70, T_LINE);
-        if (!muted)
-            cv_rect(x, 94 - h, 16, h, e ? heat_col(e) : T_DIM);
-        else {
-            cv_rect(x + 2, 58, 12, 1, T_DIM);
-        }
-        cv_text_in(x - 4, 100, 24, &AF_S, drum_lane_abbr(t, l), sel == (int32_t)l ? T_THEME : muted ? T_DIM : T_MID, T_SURF);
-    }
 }
 
 static void graph_title(void)
@@ -1034,12 +991,6 @@ static uint32_t graph_signature(void)
             h = (h ^ ((uint32_t)fg_set[ti][k].rate | (uint32_t)fg_set[ti][k].dir << 4 | (uint32_t)(uint8_t)fg_set[ti][k].ivl << 8 |
                       (song.playing ? (uint32_t)fg_head[ti][k].idx << 16 : 0u))) * 16777619u;
     }
-    if (pg->graph == GR_DXIMG)                       /* (0.6.48) IMAGE and how wide it plays */
-        h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
-    if (DX_KIT3(pg))                                 /* (0.8.8) KIT 3's colony lives every frame, as KIT's (was still) */
-        h ^= ui.frame * 2654435761u;
-    if (pg->graph >= GR_FMOP && pg->graph <= GR_FMENV)   /* (0.9.6) FM6's operators: the colony lives, as the beings */
-        h ^= ui.frame / 2u * 2246822519u;
     if (pg->graph == GR_MUTATE) {                    /* (0.6.43) the bar, the settings, FREEZE */
         h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u ^ (uint32_t)mut_back_ok() * 131u) * 16777619u;
         for (i = 0; i < NTRK; i++)
@@ -1057,21 +1008,15 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cwhen << 8 | (uint32_t)cs->ctime << 16 | comp_slot() << 24)) *
             16777619u;                                  /* (0.6.82) COMP 2, WHEN */
     }
-    if (pg->scope == SC_ENGINE && (trk_eng(t) == ENGI_FM6 ||
-                                   (FELUCCA_FM4 && trk_eng(t) == ENGI_DIGITAL)))
+    if (FELUCCA_FM4 && pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DIGITAL)   /* (ACID FM 3b task 5: FM6's and DRUM-X's EDIT
+                                                         * are ux_section.c's, their creatures gone) */
         h ^= (ui.hot_t ? ui.hot_col + 1u : 0u) * 65537u;
-    if (pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DRUM)
-        h ^= ui.frame * 2654435761u;                 /* DRUM-X: the specimen moves every frame */
-    if (pg->graph == GR_DXSND) h ^= ui.frame * 2654435761u ^ dx_sig();
-    if (pg->scope == SC_ENGINE && trk_eng(t) == ENGI_FM6)   /* the patch (PAT's algorithm, levels, FB) */
-        h ^= (fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u;
-    if (fop_page(pg->graph))                         /* (0.6.77) OPERATOR, OP ENV (track pages): the patch, the operator */
-        h = (h ^ ((fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u ^ (uint32_t)fop_op << 8 ^ fop_stg)) * 16777619u;
-    if (save_on()) {                                 /* (0.8.5) SAVE's lens: the level, the library's scan, the being */
+    if (save_on()) {                                 /* (0.8.5) SAVE's lens: the level, the library's scan, the sound */
         lib_poll();
         h = (h ^ (save_level() + 1u) * 2654435761u ^ lib.next * 40503u ^ lib.gen) * 16777619u;
-        if (pg->graph == GR_USER || pg->graph == GR_BROWSE)
-            h ^= bg_energy() > 2 ? ui.frame * 2654435761u : 0u;   /* (the being moves with the sound) */
+        if (pg->graph == GR_USER || pg->graph == GR_BROWSE)   /* (the sound's four knobs: 3b task 5, the being gone) */
+            for (i = 0; i < 4u; i++)
+                h = (h ^ (uint16_t)t->p[trk_engp(t)->knob[i] % P_COUNT]) * 16777619u;
         if (pg->graph == GR_SONG) {                  /* (ARRANGE: as SLOTS', the rows and where the song is) */
             for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (20u + i);
             h += graph_pname_sig + (uint32_t)(live.cur + 1) * 40503u;
@@ -1700,13 +1645,6 @@ static void draw_graph(void)
         case GR_ADSR:
             graph_adsr(t, c);
             break;
-        case GR_DXIMG:                               /* (0.6.58) KIT 3: the colony; STEREO: IMAGE */
-            if (DX_KIT3(pg)) {
-                cv_oy = 0;
-                graph_colony(t, -1);
-            } else
-                graph_dximg(t);
-            break;
         case GR_ROLL:
         case GR_CHANCE:
         case GR_SHAPE:                               /* (0.6.85) STRETCH: the whole sequence, as the roll shows it */
@@ -1720,35 +1658,14 @@ static void draw_graph(void)
             cv_oy = 0;
             graph_pats();
             break;
-        case GR_FMOP:                                /* (0.6.10) FM6's operators: (0.9.6) the colony (ui_engvis.c), the operator */
-        case GR_FMOP2:                               /* picked lit */
-            if (fop_ok()) vx_fm6_page(t, fop_op % 6u, pg->graph == GR_FMOP2);
-            break;
-        case GR_FMENV:                               /* .. its envelope, its bicho riding it */
-            if (fop_ok()) vx_fm6env(t);
-            break;
-        case GR_DXSND:                               /* EDIT > SOUND: the kit's lanes, the sound edited singled out */
-            cv_oy = 0;
-            if (pg->title[0] == 'S')                 /* (0.9.4) SOUND 1..4: the drum kit, the sound edited lit (ui_engvis.c) */
-                vx_kit_page(t, (int32_t)(dx_ui_lane & 7u));
-            else
-                graph_colony(t, dx_ui_lane);
-            break;
         default:
-            if (pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DRUM) {   /* (0.8.5: WHEEL's and FM6's EDIT 1
-                                                      * and 2 their beings, as every synth's: EDIT's lens, SOUND) */
-                cv_oy = 0;
-                if (pg->id[0] == P_E0)               /* (0.9.4) KIT: the kit's beings (ui_engvis.c); KIT 2 the colony */
-                    vx_kit_page(t, -1);
-                else
-                    graph_colony(t, -1);
-            }
 #if FELUCCA_FM4
-            else if ((pg->scope == SC_ENGINE || pg->id[0] == P_FM1_LEVEL) && trk_eng(t) == ENGI_DIGITAL)
+            if ((pg->scope == SC_ENGINE || pg->id[0] == P_FM1_LEVEL) && trk_eng(t) == ENGI_DIGITAL)
                 graph_fm(t, c);                      /* (OP LEVEL too: the levels on the chart) */
+            else
 #endif
-            else if (pg->scope == SC_ENGINE) { cv_oy = 0; graph_sound_lz(t); }   /* (JIANT 0.5: the being, was the scope;
-                                                      * ACID FM 3b: FM6's creature, the synths' are ux_section.c's) */
+            if (pg->scope == SC_ENGINE)              /* (ACID FM 3b task 5: the synths', FM6's and DRUM-X's EDIT are */
+                cv_oy = 0;                           /* ux_section.c's; a page put by code meanwhile: blank, no creature) */
             else {                                   /* the FX, DEST, VOICE, GLOBAL pages: their graphs (else the scope) */
                 cv_oy = 0;
                 if (!graph_tech(t, pg))

@@ -8,15 +8,15 @@
 #ifndef UX_SECTION_H
 #define UX_SECTION_H
 
-/* the sections drawn by ux_section_draw, a bit per SEC_* (ui_lens.c; ux_section.c checks the numbers): EDIT (1) on a synth
- * track (ui_lens.c edit_kind 0: ANALOG PHASE LOFI NOISE VOICE; FM6 and DRUM-X keep JIANT's pages until 3b task 5). Tasks
- * 5..8 of 3b add theirs */
+/* the sections drawn by ux_section_draw, a bit per SEC_* (ui_lens.c; ux_section.c checks the numbers): EDIT (1) on a synth,
+ * FM6 or DRUM-X track (ui_lens.c edit_kind 0..2: 3b tasks 4 and 5; DIGITAL, FELUCCA_FM4's, keeps JIANT's pages). Tasks 6..8 of
+ * 3b add theirs */
 #define UXS_OWN (1u << 1)
 #define UXS_SEC_EDIT 1u
 static uint32_t edit_kind(void);  /* (ui_lens.c) 0 a synth, 1 FM6, 2 DRUM, 3 DIGITAL */
 static int ux_section_owns(uint32_t sec)
 {
-    return sec < 16u && ((UXS_OWN >> sec) & 1u) && (sec != UXS_SEC_EDIT || edit_kind() == 0u);
+    return sec < 16u && ((UXS_OWN >> sec) & 1u) && (sec != UXS_SEC_EDIT || edit_kind() <= 2u);
 }
 
 static void ux_section_draw(void);   /* cur_page(): header, knobs from its PAGES row, its picture, status, footer */

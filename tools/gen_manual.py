@@ -33,10 +33,9 @@ PAGE_SHOT = {
              'GEN 1': 'gen_explore', 'GEN 2': 'gen_parts', 'GEN 3': 'gen_lead'},
     'CE_SYN': {'SOUND': 'edit_analog_1', 'TONE': 'edit_analog_2', 'VOICE': 'edit_analog_3', 'FILTER': 'edit_phase_3',
                'MORE': 'edit_analog_more'},   # (3b task 4: a synth's EDIT on the ux pages)
-    'CE_FM6': {'EDIT 1': 'edit_fm6', 'EDIT 2': 'fm6_alg_22', 'FILTER': 'ed_filter', 'VOICE': 'voice',
-               'VOICE 2': 'ed_voice2', 'OPERATOR': 'ed_operator', 'OP ENV': 'v6_fm6_env', 'OPERATOR 2': 'v6_fm6_op2'},
-    'CE_DRM': {'KIT': 'drumx', 'SOUND': 'dx_sound', 'SOUND 2': 'dx_sound2', 'SOUND 3': 'vx_kit_ghost',
-               'SOUND 4': 'dx_send', 'FILTER': 'ed_filter', 'STEREO': 'dx_image', 'VOICE': 'voice'},
+    'CE_FM6': {'SOUND': 'edit_fm6_1', 'OPERATOR': 'edit_fm6_2', 'OP ENV': 'edit_fm6_3', 'MORE': 'edit_fm6_more'},
+    'CE_DRM': {'KIT': 'edit_drum_1', 'SOUND': 'edit_drum_2', 'SOUND 2': 'edit_drum_3', 'MORE': 'edit_drum_more'},
+    # (3b task 5: FM6's and DRUM-X's EDIT on the ux pages, their creatures gone)
     'SEQ': {'PATTERN': 'lente_pattern', 'STRETCH': 'lente_stretch', 'PLAYHEADS': 'fugue', 'TRACK': 'shift',
             'MUTATE': 'mutate', 'STEP': 'lente_bar', 'NOTE': 'lente_step_note',
             'COMP': 'lente_step_comp', 'COMP 2': 'lente_step_comp2', 'AUTOMATION': 'motion', 'AUTO LIST': 'auto_list'},

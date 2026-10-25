@@ -525,11 +525,11 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACKS page (ui_input.c tracks_edit) */
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
-       GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_DXSND, GR_MSEQ, GR_SLPIT,
-       GR_FMOP, GR_FMOP2, GR_FMENV,
+       GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_MSEQ, GR_SLPIT,
        GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
-       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN };   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER) */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
-                                                         * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
+       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP };   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
+                                                         * (task 5) GR_FM6P FM6's OPERATOR, OP ENV; GR_DXP DRUM-X's SOUND, SOUND 2 */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
+                                                         * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone) */
 
 #include "ux_more.h"
 typedef struct {
@@ -577,6 +577,112 @@ static const ux_row_t UXM_SYN_ROWS[] = {
     {UXM_A_LYRIC, UXR_ACTION, 0},
 };
 static const ux_more_t UXM_SYN = {UXM_SYN_ROWS, (uint8_t)(sizeof UXM_SYN_ROWS / sizeof UXM_SYN_ROWS[0])};
+/* (ACID FM 3b task 5) FM6's operators and DRUM-X's kit as settings the ux pages and MORE rows name: views (as ID_LMODE) of
+ * bytes that are no track setting, FM6's patch (eng_fm6.c fm6_patch: the operator picked, fop_op, and OP ENV's stage,
+ * fop_stg) and the section's kit (drumx_voice.c dx_kit, dx_lay, dx_tone, dx_hands; eng_drum.c dx_snd, dx_mot: the drum
+ * picked, dx_ui_lane, and the side, dx_ui_side). Nothing is stored under these ids: a value is read from its byte
+ * (fld_ref: its descriptor, the value in a scratch) and a turn written to it as JIANT's operator and kit pages wrote it
+ * (fld_turn: an operator's byte makes the patch the track's own, SLOT OWN; no automation, no lock, as there). Ids past
+ * every track setting and below the views of 0xFA.. (ui_fm6op.c, ui_dx.c) */
+enum { ID_FO_OP = 0xC0, ID_FO_CRS, ID_FO_FINE, ID_FO_LVL, ID_FO_STG, ID_FO_RATE, ID_FO_ELVL, ID_FO_MODE, ID_FO_DTUN,
+       ID_FO_VEL, ID_FO_END };
+enum { ID_DX_LANE = 0xD0, ID_DX_PITCH, ID_DX_DECAY, ID_DX_NOISE, ID_DX_COLOR, ID_DX_WAVE, ID_DX_NTYPE, ID_DX_SNAP, ID_DX_SIDE,
+       ID_DX_PMOD, ID_DX_PMT, ID_DX_DRV, ID_DX_CLANG, ID_DX_LFB, ID_DX_SENDTO, ID_DX_SEND, ID_DX_BP, ID_DX_KFB, ID_DX_HANDS,
+       ID_DX_XRATE, ID_DX_XDEP, ID_DX_XSHP, ID_DX_XRND, ID_DX_END };
+typedef char fld_ids_ok[(uint32_t)P_COUNT <= (uint32_t)ID_FO_OP && (uint32_t)ID_DX_END <= 0xFAu ? 1 : -1];
+static int fld_is(uint32_t id) { return (id >= ID_FO_OP && id < ID_FO_END) || (id >= ID_DX_LANE && id < ID_DX_END); }
+static const param_desc_t *fld_ref(uint32_t id, int16_t **valp);   /* (ui_dx.c) its descriptor, its value (a scratch) */
+static void fld_turn(uint32_t id, int32_t steps, uint32_t knob);    /* (ui_dx.c) turned steps detents of KNOB knob (0..3) */
+static uint32_t dx_lane_picked(void);                   /* (ui_dx.c) the drum picked, 0..7 (BD .. CB): DRUM-X's SOUND's LEVEL */
+/* their words (the values as the knob row shows them; each fits 48 px, tests/ui_test.c) */
+static const char *const N_FO_OP[] = {"1", "2", "3", "4", "5", "6"};
+static const char *const N_FO_RAT[] = {"0.50", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
+                                       "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30",
+                                       "31"};
+static const char *const N_FO_HZ[] = {"1HZ", "10HZ", "100HZ", "1KHZ"};
+static const char *const N_FO_STG[] = {"ATK", "DEC", "SUS", "REL"};
+static const char *const N_FO_MODE[] = {"RATIO", "FIXED"};
+static const char *const N_FO_DT[] = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7"};
+static const char *const N_DX_LANE[] = {"BD", "SD", "CP", "CH", "OH", "TM", "RS", "CB"};
+static const char *const N_DX_WAVE[] = {"SINE", "FM", "METAL", "BELL"};
+static const char *const N_DX_NTYPE[] = {"LP", "BP", "HP"};
+static const char *const N_DX_SIDE[] = {"A", "B"};
+static const char *const N_DX_PMT[] = {"DECAY", "LONG", "NOISE", "SINE"};
+static const char *const N_DX_BUS[] = {"OFF", "CHO", "DLY", "REV"};
+static const char *const N_DX_XRATE[] = {"OFF", "4BAR", "2BAR", "1BAR", "1/2", "1/4", "1/8", "1/16", "1/32"};
+static const char *const N_DX_XSHP[] = {"SINE", "TRI", "SAW", "RAMP", "S/H"};
+static const char *const N_DX_OFF[] = {"OFF"};
+static const param_desc_t FLD_DESC[] = {
+    [ID_FO_OP - ID_FO_OP] = PE("OP", N_FO_OP, 0),
+    [ID_FO_CRS - ID_FO_OP] = PE("RATIO", N_FO_RAT, 1),
+    [ID_FO_FINE - ID_FO_OP] = PD("FINE", F_INT, 0, 99, 0),
+    [ID_FO_LVL - ID_FO_OP] = PD("LEVEL", F_INT, 0, 99, 99),
+    [ID_FO_STG - ID_FO_OP] = PE("STAGE", N_FO_STG, 0),
+    [ID_FO_RATE - ID_FO_OP] = PD("RATE", F_INT, 0, 99, 99),
+    [ID_FO_ELVL - ID_FO_OP] = PD("LEVEL", F_INT, 0, 99, 99),
+    [ID_FO_MODE - ID_FO_OP] = PE("FREQ MODE", N_FO_MODE, 0),
+    [ID_FO_DTUN - ID_FO_OP] = PE("OP DETUNE", N_FO_DT, 7),
+    [ID_FO_VEL - ID_FO_OP] = PD("VELOCITY", F_INT, 0, 7, 0),
+};
+static const param_desc_t FLD_DX_DESC[] = {
+    [ID_DX_LANE - ID_DX_LANE] = PE("DRUM", N_DX_LANE, 0),
+    [ID_DX_PITCH - ID_DX_LANE] = PD("PITCH", F_INT, 0, 127, 64),
+    [ID_DX_DECAY - ID_DX_LANE] = PD("DECAY", F_PCT, 0, 127, 64),
+    [ID_DX_NOISE - ID_DX_LANE] = PD("NOISE", F_PCT, 0, 127, 0),
+    [ID_DX_COLOR - ID_DX_LANE] = PD("COLOR", F_PCT, 0, 127, 64),
+    [ID_DX_WAVE - ID_DX_LANE] = PE("WAVE", N_DX_WAVE, 0),
+    [ID_DX_NTYPE - ID_DX_LANE] = PE("NOISE TYPE", N_DX_NTYPE, 0),
+    [ID_DX_SNAP - ID_DX_LANE] = PE("SNAP", N_ONOFF, 0),
+    [ID_DX_SIDE - ID_DX_LANE] = PE("SIDE", N_DX_SIDE, 0),
+    [ID_DX_PMOD - ID_DX_LANE] = PD("PITCH MOD", F_PCT, 0, 127, 0),
+    [ID_DX_PMT - ID_DX_LANE] = PE("MOD TYPE", N_DX_PMT, 0),
+    [ID_DX_DRV - ID_DX_LANE] = PE("DRIVE", N_ONOFF, 0),
+    [ID_DX_CLANG - ID_DX_LANE] = PD("CLANG", F_INT, 0, 15, 0),
+    [ID_DX_LFB - ID_DX_LANE] = PD("FEEDBACK", F_INT, 0, 15, 0),
+    [ID_DX_SENDTO - ID_DX_LANE] = PE("SEND TO", N_DX_BUS, 0),
+    [ID_DX_SEND - ID_DX_LANE] = PD("SEND", F_PCT, 6, 100, 6),
+    [ID_DX_BP - ID_DX_LANE] = PD("METAL", F_CUTOFF, 80, 108, 80),
+    [ID_DX_KFB - ID_DX_LANE] = PD("FEEDBACK", F_INT, 0, 15, 0),
+    [ID_DX_HANDS - ID_DX_LANE] = PD("HANDS", F_INT, 0, 15, 0),
+    [ID_DX_XRATE - ID_DX_LANE] = PE("RATE", N_DX_XRATE, 0),
+    [ID_DX_XDEP - ID_DX_LANE] = PD("DEPTH", F_PCT, 0, 127, 0),
+    [ID_DX_XSHP - ID_DX_LANE] = PE("SHAPE", N_DX_XSHP, 0),
+    [ID_DX_XRND - ID_DX_LANE] = PD("RANDOM", F_PCT, 0, 127, 0),
+};
+static const param_desc_t FLD_DX_BPOFF = PE("METAL", N_DX_OFF, 0);   /* (METAL's band-pass off) */
+static const param_desc_t FLD_FO_FIXED = PE("FREQ", N_FO_HZ, 0);   /* (an operator FIXED: its COARSE a decade) */
+typedef char fld_desc_ok[NELEM(FLD_DESC) == ID_FO_END - ID_FO_OP && NELEM(FLD_DX_DESC) == ID_DX_END - ID_DX_LANE ? 1 : -1];
+/* EDIT's MORE on an FM6 track (spec 2.1): what SOUND, OPERATOR and OP ENV leave, grouped: the filter first (the one most
+ * turned: CUTOFF a detent away), the patch's, the picked operator's (its heading names it: OP 3); ALLOC hidden as on the
+ * synths (tests/ux_cover_test.c UXC_HIDDEN) */
+static const ux_row_t UXM_FM6_ROWS[] = {
+    {UXM_H_FILTER, UXR_HEAD, 0}, {P_FTYPE, UXR_TRACK, 0}, {P_FCUT, UXR_TRACK, 0}, {P_FRES, UXR_TRACK, 0},
+    {P_DIST, UXR_TRACK, 0},
+    {UXM_H_TONE, UXR_HEAD, 0}, {P_E7, UXR_TRACK, 0}, {P_E6, UXR_TRACK, 0}, {P_E4, UXR_TRACK, 0}, {P_E5, UXR_TRACK, 0},
+    {UXM_H_OP, UXR_HEAD, 0}, {ID_FO_MODE, UXR_TRACK, UXR_ON(ENGI_FM6)}, {ID_FO_DTUN, UXR_TRACK, UXR_ON(ENGI_FM6)},
+    {ID_FO_VEL, UXR_TRACK, UXR_ON(ENGI_FM6)},
+    {UXM_H_VOICE, UXR_HEAD, 0}, {P_VOICE, UXR_TRACK, 0}, {P_GLIDE, UXR_TRACK, 0}, {P_GLMODE, UXR_TRACK, 0},
+    {P_PRIO, UXR_TRACK, 0}, {P_DETUNE, UXR_TRACK, 0},
+};
+static const ux_more_t UXM_FM6 = {UXM_FM6_ROWS, (uint8_t)(sizeof UXM_FM6_ROWS / sizeof UXM_FM6_ROWS[0])};
+/* .. on a DRUM-X track: the kit's (KIT 2's E5..E8, KIT 3's, STEREO), the picked drum's (its heading names it: DRUM . SD),
+ * MORPH's LFO (JIANT's X-MOD), the part's filter. Hidden on purpose (tests/ux_cover_test.c UXC_HIDDEN): VOICE's four (a kit
+ * plays its drums as hits: voice.c trk_vmode), the filter's DRIVE (FX > SENDS DRIVE's own setting), a drum's FEEDBACK (the
+ * kit's does it for every drum) */
+static const ux_row_t UXM_DRM_ROWS[] = {
+    {UXM_H_KIT, UXR_HEAD, 0}, {P_E4, UXR_TRACK, 0}, {P_E5, UXR_TRACK, 0}, {P_E6, UXR_TRACK, 0}, {P_E7, UXR_TRACK, 0},
+    {ID_DX_KFB, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_BP, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_HANDS, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {P_DXIMG, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {UXM_H_DRUM, UXR_HEAD, 0}, {ID_DX_SIDE, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_PMOD, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_PMT, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_NTYPE, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_SNAP, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_DRV, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_CLANG, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_SENDTO, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_SEND, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {UXM_H_MLFO, UXR_HEAD, 0}, {ID_DX_XRATE, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_XDEP, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {ID_DX_XSHP, UXR_TRACK, UXR_ON(ENGI_DRUM)}, {ID_DX_XRND, UXR_TRACK, UXR_ON(ENGI_DRUM)},
+    {UXM_H_FILTER, UXR_HEAD, 0}, {P_FTYPE, UXR_TRACK, 0}, {P_FCUT, UXR_TRACK, 0}, {P_FRES, UXR_TRACK, 0},
+};
+static const ux_more_t UXM_DRM = {UXM_DRM_ROWS, (uint8_t)(sizeof UXM_DRM_ROWS / sizeof UXM_DRM_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -616,24 +722,14 @@ static const page_t PAGES[] = {
                                                          * (0.7.8) DRIFT: the voices wander */
     {"ROTOR", FAM_EDIT, SC_TRACK, GR_NONE, {P_WRDEP, P_WDUST, 0xFF, 0xFF}},   /* (0.7.8) WHEEL: the rotor's depth, DUST
                                                          * (ACID FM 0.2: WHEEL retired, never shown: ui.c page_visible) */
-    /* (JIANT 0.6.54) DRUM: the whole kit first (KIT = EDIT 1, KIT 2 = EDIT 2, KIT 3, X-MOD, FILTER), then a sound
-     * (SOUND 1..4, KNOB 1 the sound on each), (0.6.58) then the volumes (LEVELS, LEVELS 2); (0.7.8) STEREO after X-MOD */
-    {"KIT 3", FAM_EDIT, SC_TRACK, GR_DXIMG, {0xFF, 0xFF, 0xFF, 0xFF}},     /* TONE's BP and FEEDBK (the kit's) */
-    {"X-MOD", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},     /* (JIANT 0.5.1) the kit's LFO on MORPH, RAND */
+    /* (JIANT 0.6.54) DRUM's KIT 3, X-MOD and FM6's OPERATOR, OP ENV, OPERATOR 2 (ACID FM 3b task 5): gone, their settings on
+     * the ux pages below and in MORE (fld_*). STEREO kept: IMAGE's rule (a kit's; P_DXIMG is VOICE's LYRIC slot) */
     {"STEREO", FAM_EDIT, SC_TRACK, GR_DXIMG, {P_DXIMG, 0xFF, 0xFF, 0xFF}}, /* (0.6.58) IMAGE: the kit's stereo placings; (0.7.8)
                                                          * with the kit's pages, before the sounds (the volumes last) */
-    {"OPERATOR", FAM_EDIT, SC_TRACK, GR_FMOP, {0xFF, 0xFF, 0xFF, 0xFF}},    /* FM6 only: KNOB 1 the operator, then its */
-    {"OP ENV", FAM_EDIT, SC_TRACK, GR_FMENV, {0xFF, 0xFF, 0xFF, 0xFF}},     /* bytes of the track's patch (ui_fm6op.c): */
-    {"OPERATOR 2", FAM_EDIT, SC_TRACK, GR_FMOP2, {0xFF, 0xFF, 0xFF, 0xFF}}, /* CRS FINE LEVEL / STG RATE LEVEL / MODE DTUN VEL */
     {"FILTER", FAM_EDIT, SC_TRACK, GR_NONE, {P_FTYPE, P_E4, P_E5, P_E6}},   /* (JIANT 0.5) ANALOG: TYPE CUT RES DRV */
     {"FILTER", FAM_EDIT, SC_TRACK, GR_NONE, {P_FTYPE, P_FCUT, P_FRES, P_DIST}},   /* .. every other engine's (on the part;
                                                          * DRV: the part's DIST, after it) */
-    {"SOUND", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},   /* DRUM: a sound of the kit (ui_dx.c) */
-    {"SOUND 2", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},
-    {"SOUND 3", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (JIANT 0.4) MODE, the pitch modulation, DRIVE */
-    {"SOUND 4", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (JIANT 0.6.54) LAYER, FEEDBK, SEND */
-    {"LEVELS", FAM_EDIT, SC_TRACK, GR_NONE, {P_LN0, P_LN1, P_LN2, P_LN3}},   /* DRUM only: the sounds' levels (was LANES) */
-    {"LEVELS 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_LN4, P_LN5, P_LN6, P_LN7}},
+    /* (ACID FM 3b task 5) DRUM's SOUND 1..4, LEVELS, LEVELS 2 gone: a drum's settings on the ux pages and in MORE */
     {"OP1 ENV", FAM_EDIT, SC_TRACK, GR_ADSR, {P_FM1_ATK, P_FM1_DEC, P_FM1_SUS, P_FM1_REL}},
     {"OP2 ENV", FAM_EDIT, SC_TRACK, GR_ADSR, {P_FM2_ATK, P_FM2_DEC, P_FM2_SUS, P_FM2_REL}},
     {"OP3 ENV", FAM_EDIT, SC_TRACK, GR_ADSR, {P_FM3_ATK, P_FM3_DEC, P_FM3_SUS, P_FM3_REL}},
@@ -694,6 +790,16 @@ static const page_t PAGES[] = {
     {"SYN VOICE", FAM_EDIT, SC_TRACK, GR_SYN, {P_VOICE, P_GLIDE, P_PRIO, P_DETUNE}},   /* ANALOG's (ui.c page_jiant) */
     {"SYN FILTER", FAM_EDIT, SC_TRACK, GR_SYN, {P_FTYPE, P_FCUT, P_FRES, P_DIST}},   /* the others' (FILTER's rule) */
     {"SYN MORE", FAM_EDIT, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SYN},
+    /* (ACID FM 3b task 5) EDIT on an FM6 track (ui_lens.c CE_FM6): SOUND (EDIT 1), OPERATOR, OP ENV, MORE; KNOB 1 the operator
+     * on both (one pick, fop_op), its bytes after it (fld_*) */
+    {"FM6 OP", FAM_EDIT, SC_TRACK, GR_FM6P, {ID_FO_OP, ID_FO_CRS, ID_FO_FINE, ID_FO_LVL}},
+    {"FM6 OP ENV", FAM_EDIT, SC_TRACK, GR_FM6P, {ID_FO_OP, ID_FO_STG, ID_FO_RATE, ID_FO_ELVL}},
+    {"FM6 MORE", FAM_EDIT, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_FM6},
+    /* .. on a DRUM-X track (CE_DRM): KIT (EDIT 1), SOUND, SOUND 2, MORE; KNOB 1 the drum on both (one pick, dx_ui_lane: a key
+     * struck picks it too), its LEVEL the track's P_LN0 + the drum (page_id) */
+    {"DRUM SOUND", FAM_EDIT, SC_TRACK, GR_DXP, {ID_DX_LANE, P_LN0, ID_DX_PITCH, ID_DX_DECAY}},
+    {"DRUM SOUND 2", FAM_EDIT, SC_TRACK, GR_DXP, {ID_DX_LANE, ID_DX_NOISE, ID_DX_COLOR, ID_DX_WAVE}},
+    {"DRUM MORE", FAM_EDIT, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_DRM},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */
@@ -737,6 +843,8 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
         *valp = &load_ui;
         return &LOAD_DESC;
     }
+    if (t && fld_is(id))                              /* (3b task 5) FM6's operator, DRUM-X's kit: their bytes */
+        return fld_ref(id, valp);
     if (!t) {
         *valp = &song.g[id];
         if (song.g[G_RTYPE] == 3 && (id == G_RPRE || id == G_RDAMP))   /* (0.6.5) RESO: PITCH, FOLW in their slots */
@@ -766,6 +874,8 @@ static uint32_t page_id(const page_t *pg, uint32_t slot)
         return TSEL->p[P_E1] == RW_WRAM ? P_DRIFT : P_MORPH;   /* (ACID FM 3b task 4 fix) LOFI's TONE KNOB 1, JIANT's empty
                                                          * slot outside BYTE / FLOAT (no knob dead): MORPH, the chip wave on
                                                          * towards the next; WRAM, the last, which MORPH cannot move: DRIFT */
+    if (pg->graph == GR_DXP && id == P_LN0)          /* (3b task 5) DRUM-X's SOUND: the LEVEL of the drum picked */
+        return P_LN0 + dx_lane_picked();
     if (pg->graph == GR_MOD)                          /* SRC DST AMT of the slot shown */
         id += 3u * mod_ui_slot;
     if (pg->graph == GR_MSEQ && id == P_MS0)          /* the level of the step shown */

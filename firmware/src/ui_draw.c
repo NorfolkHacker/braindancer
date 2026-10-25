@@ -1189,14 +1189,6 @@ static void draw_columns(void)
         draw_column(3, "", "", "", T_DIM, -1, ICON_NONE);
         return;
     }
-    if (cur_page()->graph == GR_DXSND) {               /* EDIT > SOUND (ui_dx.c) */
-        dx_cards(cur_page());
-        return;
-    }
-    if (DX_KIT3(cur_page())) {                         /* (0.6.54) EDIT > KIT 3 */
-        dx_kit3_cards();
-        return;
-    }
     if (cur_page()->graph == GR_SONG) {
         uint32_t row = ui.song_row < CHAIN_ROWS ? ui.song_row : CHAIN_ROWS - 1u;
         int used = row < chain_config.count;
@@ -1515,21 +1507,6 @@ static void draw_columns(void)
         draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&TP[P_MSLEN], t->p[P_MSLEN]), ICON_AUTO);
         param_format(&TP[P_MSSLW], t->p[P_MSSLW], val, &unit);
         draw_column(3, "SLEW", val, unit, t->p[P_MSSLW] ? VAL(3u) : T_DIM, RATIO(&TP[P_MSSLW], t->p[P_MSSLW]), ICON_GLIDE);
-        return;
-    }
-    if (fop_page(cur_page()->graph)) {                   /* (0.6.10) FM6: OP, then three of its bytes (ui_fm6op.c) */
-        for (c = 0; c < 4u; c++) {
-            const char *lb, *u;
-            int32_t r;
-            uint32_t ic;
-            int on;
-            if (!fop_ok()) {                             /* (the engine changed before ui_draw left the page) */
-                draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
-                continue;
-            }
-            on = fop_card(c, &lb, val, &u, &r, &ic);
-            draw_column(c, lb, val, u, on ? VAL(c) : T_DIM, r, ic);
-        }
         return;
     }
     if (cur_page()->graph == GR_MOD) {                   /* SLOT, then that slot's SRC DST AMT */
@@ -2131,7 +2108,10 @@ static void ui_draw_body(uint32_t counting)
     }
     if (ux_section_owns(nav_sec())) {                   /* (ACID FM 3b) a section moved to the ux pages (ux_section.c), its
                                                          * own strips as HOME's */
+        uint32_t k;
         ux_section_draw();
+        for (k = 0; k <= ROLL_BPM; k++)                 /* (3b task 5: JIANT's cards' rolling digits, a JIANT page's left */
+            ui.roll[k].from[0] = 0;                     /* pending: none drawn here, none left to roll back) */
         pf_on = 0;                                      /* (the footer names the page at once: no flash over it) */
         if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {   /* the second message (ui_notices) */
             str_cpy(ui.msg, ui.msg2, sizeof ui.msg);

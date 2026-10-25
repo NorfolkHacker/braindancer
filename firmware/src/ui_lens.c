@@ -56,14 +56,16 @@ static const ng_t CG_HOME[] = {{"TRACKS", 0}, {"VISUAL", 0}, {"GEN", 0}};
 static const nv_t CE_SYN[] = {NV("EDIT 1", "SOUND", 0, 0), NV("EDIT 2", "TONE", 1, 0), NV("SYN VOICE", "VOICE", 2, 1),
                               NV("SYN FILTER", "FILTER", 2, 1), NV("SYN MORE", "MORE", 3, 1)};   /* (page 3: one of the two) */
 static const ng_t CG_SYN[] = {{"SOUND", 0}, {"TONE", 0}, {"VOICE/FILTER", "PAGE 3"}, {"MORE", 0}};
-static const nv_t CE_FM6[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("VOICE", 0, 1, 1),
-                              NV("VOICE 2", 0, 1, 1), NV("OPERATOR", 0, 2, 2), NV("OP ENV", 0, 2, 2), NV("OPERATOR 2", 0, 2, 2)};
-static const ng_t CG_FM6[] = {{"SOUND", 0}, {"TONE", 0}, {"OPERATOR", "OPS"}};
-static const nv_t CE_DRM[] = {NV("EDIT 1", "KIT", 0, 0), NV("EDIT 2", "KIT 2", 0, 0), NV("KIT 3", 0, 0, 0),
-                              NV("SOUND", 0, 1, 2), NV("SOUND 2", 0, 1, 2), NV("SOUND 3", 0, 1, 2), NV("SOUND 4", 0, 1, 2),
-                              NV("LEVELS", 0, 2, 1), NV("LEVELS 2", 0, 2, 1), NV("X-MOD", 0, 3, 1), NV("FILTER", 0, 3, 1),
-                              NV("STEREO", 0, 3, 1), NV("VOICE", 0, 3, 1)};
-static const ng_t CG_DRM[] = {{"KIT", 0}, {"SOUND", 0}, {"LEVELS", "LEVEL"}, {"TONE", 0}};
+/* (3b task 5) FM6's EDIT: SOUND (EDIT 1: ALGORITHM FEEDBACK MOD LEVEL MOD RATIO), OPERATOR (OP RATIO FINE LEVEL), OP ENV (OP STAGE
+ * RATE LEVEL), MORE; DRUM-X's: KIT (EDIT 1: MORPH TUNE TONE DECAY), SOUND (DRUM LEVEL PITCH DECAY), SOUND 2 (DRUM NOISE COLOR
+ * WAVE), MORE. JIANT's EDIT 2, FILTER, VOICE, VOICE 2, OPERATOR 2, KIT 2, KIT 3, SOUND 3 / 4, LEVELS, X-MOD, STEREO pages are
+ * MORE's rows (or on these pages: LEVELS on SOUND, the drum picked) */
+static const nv_t CE_FM6[] = {NV("EDIT 1", "SOUND", 0, 0), NV("FM6 OP", "OPERATOR", 1, 0), NV("FM6 OP ENV", "OP ENV", 2, 0),
+                              NV("FM6 MORE", "MORE", 3, 1)};
+static const ng_t CG_FM6[] = {{"SOUND", 0}, {"OPERATOR", "OP"}, {"OP ENV", 0}, {"MORE", 0}};
+static const nv_t CE_DRM[] = {NV("EDIT 1", "KIT", 0, 0), NV("DRUM SOUND", "SOUND", 1, 0), NV("DRUM SOUND 2", "SOUND 2", 2, 0),
+                              NV("DRUM MORE", "MORE", 3, 1)};
+static const ng_t CG_DRM[] = {{"KIT", 0}, {"SOUND", 0}, {"SOUND 2", 0}, {"MORE", 0}};
 static const nv_t CE_DIG[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("VOICE", 0, 1, 1),
                               NV("VOICE 2", 0, 1, 1), NV("OP1 ENV", 0, 2, 2), NV("OP2 ENV", 0, 2, 2), NV("OP3 ENV", 0, 2, 2),
                               NV("OP4 ENV", 0, 2, 2), NV("OP LEVEL", 0, 2, 2)};

@@ -17,8 +17,8 @@
  * values, DIM and RAISE its one grey).
  * A text or icon on a divider (GFX_HOOK_RULE: a rule between the strips; cv_rule's are cells) is a finding too.
  * Rolling digits: every frame of a header BPM roll and a card roll, up and down (lint).
- * FM6 colonies (0.9.6, ui_engvis.c vx_fm6 on OPERATOR, each bicho through VX_FM6_HOOK), every algorithm: no two
- * operators' bichos overlapping or touching (as large as a full envelope makes them), every one inside the panel.
+ * FM6's algorithm charts (0.9.6; 3b task 5: EDIT > OPERATOR's, ux_section.c uxs_fm6_draw, each operator through
+ * UXS_FM6_HOOK), every algorithm: no two operators' dots overlapping or touching, every one inside the panel.
  * Output: OUTDIR/ppm/ACID_<screen>.ppm, OUTDIR/report.txt (findings, ellipsised
  * free text, the draw cost), OUTDIR/text_audit.tsv (per screen: texts, icons and keycaps with their ink-box px,
  * the ellipsised ones, the texts closer than 2 px to their cell's edge, the words).
@@ -226,7 +226,7 @@ static void hk_ink(uint16_t ink, uint16_t bg);
 static void hk_overlay(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
 #define GFX_HOOK_COVER(x0, y0, x1, y1) hk_overlay(x0, y0, x1, y1)
 static void fm6_hook(int32_t k, int32_t x, int32_t y, int32_t r);
-#define VX_FM6_HOOK(k, x, y, r) fm6_hook(k, x, y, r)
+#define UXS_FM6_HOOK(k, x, y, r) fm6_hook(k, x, y, r)
 /* MENU > LARGE: the tall cards' values by the face they got (ui_draw.c LARGE_HOOK), the characters L lacked */
 static uint64_t lg_n[4];
 static char lg_miss[96], lg_wide[16][12], lg_small[16][12];
@@ -297,9 +297,9 @@ static void hk_icon(int32_t x, int32_t y, uint32_t size, uint32_t id)
     al_item(x + x0, y + y0, x + x1, y + y1, 1, "icon");
 }
 
-/* (0.9.6) the FM6 colony lint: each operator's bicho (its centre, its largest radius, Q4 px) as drawn; at the sixth the
- * six checked: apart by a pixel at least, at the largest a full LEVEL and envelope make them (vx_fm6 says), and
- * inside the panel */
+/* (0.9.6; 3b task 5: the algorithm on EDIT's FM6 pages, ux_section.c uxs_fm6_draw) the FM6 chart lint: each operator's
+ * dot (its centre, its radius, Q4 px) as drawn; at the sixth the six checked: apart by a pixel at least, and inside the
+ * panel */
 static int32_t fmp_x[6], fmp_y[6], fmp_r[6];
 static uint32_t fmp_charts;
 static void finding(const char *what, const rbox_t *b, const rbox_t *o);
@@ -315,13 +315,13 @@ static void fm6_hook(int32_t k, int32_t x, int32_t y, int32_t r)
         snprintf(b.s, sizeof b.s, "FM6 OP%d", (int)i + 1);
         if (b.x0 < 4 || b.x1 > 236 || b.y0 < 0 || b.y1 >= (int32_t)cv_h) {
             snprintf(o.s, sizeof o.s, "panel");
-            finding("FM6 bicho off the panel", &b, &o);
+            finding("FM6 operator off the panel", &b, &o);
         }
         for (j = 0; j < i; j++) {
             int64_t dx = fmp_x[i] - fmp_x[j], dy = fmp_y[i] - fmp_y[j], d = fmp_r[i] + fmp_r[j] + 16;
             if (dx * dx + dy * dy < d * d) {
                 snprintf(o.s, sizeof o.s, "FM6 OP%d", (int)j + 1);
-                finding("FM6 bichos overlap", &b, &o);
+                finding("FM6 operators overlap", &b, &o);
             }
         }
     }
@@ -642,10 +642,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE,
        S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK, S_DRUM_X4, S_DRUM_GHOST,
        S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP,
-       S_GEN_EXPLORE, S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_MUTED, S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP,
-       S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST, S_VX_BUG_FLAM, S_VX_BUG_RATCH,
-       S_VX_BUG_QUIET, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL,
-       S_V6_FM6_FULL, S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS, S_MIXER_T4, S_MOCK_HOME,
+       S_GEN_EXPLORE, S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS, S_MIXER_T4, S_MOCK_HOME,
        S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_TOAST_ENV, S_TOAST_MUTATE,
        S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
        S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI,
@@ -654,7 +651,9 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_PHASE_3, S_EDIT_PHASE_MORE, S_EDIT_LOFI_1, S_EDIT_LOFI_2, S_EDIT_LOFI_3, S_EDIT_LOFI_MORE,
        S_EDIT_NOISE_1, S_EDIT_NOISE_2, S_EDIT_NOISE_3, S_EDIT_NOISE_MORE, S_EDIT_VOICE_1, S_EDIT_VOICE_2,
        S_EDIT_VOICE_3, S_EDIT_VOICE_MORE, S_EDIT_LOFI_BYTE_1, S_EDIT_LOFI_BYTE_MORE, S_EDIT_NOISE_LFSR_2,
-       S_EDIT_VOICE_WORDS_1, S_EDIT_VOICE_MORE_END, S_EDIT_PHASE_MORE_K3, S_EDIT_ANALOG_TURN, S_COUNT };
+       S_EDIT_VOICE_WORDS_1, S_EDIT_VOICE_MORE_END, S_EDIT_PHASE_MORE_K3, S_EDIT_ANALOG_TURN, S_EDIT_FM6_1, S_EDIT_FM6_2,
+       S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_FM6_ALG4, S_EDIT_FM6_TURN, S_EDIT_DRUM_1, S_EDIT_DRUM_2, S_EDIT_DRUM_3,
+       S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
@@ -688,10 +687,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs",
     "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "drum_hit_x4",
     "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum",
-    "comp_jump", "gen_explore", "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_muted", "vx_bug_bd", "vx_bug_sd",
-    "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost", "vx_bug_flam",
-    "vx_bug_ratchet", "vx_bug_quiet", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env",
-    "v6_fm6_env_rel", "v6_fm6_full", "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys", "mixer_tracks4",
+    "comp_jump", "gen_explore", "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys", "mixer_tracks4",
     "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu", "toast_env",
     "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
     "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi",
@@ -700,7 +696,9 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_phase_2", "edit_phase_3", "edit_phase_more", "edit_lofi_1", "edit_lofi_2", "edit_lofi_3", "edit_lofi_more",
     "edit_noise_1", "edit_noise_2", "edit_noise_3", "edit_noise_more", "edit_voice_1", "edit_voice_2", "edit_voice_3",
     "edit_voice_more", "edit_lofi_byte_1", "edit_lofi_byte_more", "edit_noise_lfsr_2", "edit_voice_words_1",
-    "edit_voice_more_end", "edit_phase_more_k3", "edit_analog_turn"};
+    "edit_voice_more_end", "edit_phase_more_k3", "edit_analog_turn", "edit_fm6_1", "edit_fm6_2", "edit_fm6_3",
+    "edit_fm6_more", "edit_fm6_alg4", "edit_fm6_turn", "edit_drum_1", "edit_drum_2", "edit_drum_3", "edit_drum_more",
+    "edit_drum_muted", "edit_drum_more_end"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -892,91 +890,8 @@ static void nav_scene(uint32_t sec, const char *nm)
     }
     pf_on = 0;
 }
-/* (0.9.4) the engines' own creatures (ui_engvis.c): a DRUM-X kit struck (the real engines run a few blocks); (3b task 4)
- * VOICE's head and the synths' creatures gone */
-static void vx_run(uint32_t blocks)
-{
-    int32_t o[2 * CTL];
-    uint32_t b, i;
-    for (b = 0; b < blocks; b++) {
-        events_block(CTL);
-        mix_block(o, CTL);
-        for (i = 1; i < CTL; i += 2u)
-            scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)clamp(o[2u * i], -32768, 32767);
-    }
-}
-static void vx_kit_scene(uint32_t lanes, uint32_t dm)
-{
-    static const uint8_t N[8] = {36, 38, 39, 42, 46, 45, 37, 49};
-    uint32_t k;
-    eng(ENGI_DRUM);
-    TSEL->engine = TSEL->eng_req;
-    song.playing = 0;
-    song.master_q12 = 4096;
-    for (k = 0; k < NTRK; k++) if (k != song.sel) trk[k].p[P_MUTE] = 1;
-    vx_run(40);
-    {                                             /* (the kit silent: no hit of an earlier screen ringing on) */
-        drum_lane_t *K = drum_kit_of(TSEL);
-        for (k = 0; K && k < 8u; k++) { K[k].x.live = 0; K[k].age = 255; K[k].fl = 0; }
-        vxs.last = 0;
-    }
-    vx_kit(TSEL, 0, 0, 256, -1);              /* (the lanes' ages seen once: the hits below are new) */
-    for (k = 0; k < 8u; k++)
-        if (lanes >> k & 1u) { dx_in_tch = (uint8_t)dm; trk_note_on(TSEL, N[k], k == 1u ? 127 : 100); }
-    dx_in_tch = 0;
-    vx_run(6);
-    memset(vxs.fr, 0xFF, sizeof vxs.fr);
-}
-/* (0.9.4) EDIT > KIT's beings: lane l struck n times (dm: its TOUCH, 2 GHOST 3 FLAM), each hit seen by a frame drawn
- * before the next (a ratchet's squashes); n 0: the kit silent */
-static void vx_bug_scene(uint32_t l, uint32_t dm, uint32_t n)
-{
-    static const uint8_t N[8] = {36, 38, 39, 42, 46, 45, 37, 56};
-    uint32_t k;
-    vx_kit_scene(0, 0);
-    for (k = 0; k < n; k++) {
-        if (k) { vx_kit(TSEL, 0, 0, 256, -1); fm1_ms += 40u; }
-        dx_in_tch = (uint8_t)dm;
-        trk_note_on(TSEL, N[l & 7u], 110);
-        dx_in_tch = 0;
-        vx_run(dm == 3u ? 2 : 6);                       /* (a FLAM: its grace hit, the hit to come) */
-    }
-    go_title("EDIT 1");
-}
-/* (0.9.6) the six creatures of the mock-up's family (ui_engvis.c): track 1 as engine e (preset pre), the knobs k[0..7]
- * (-99: the preset's), a note (none: silent) played and rung a while, then on page; age: ms since the
- * note when drawn (its squash, its blink), mt: the creature's time (its phases, NOISE's swarm moving) */
+/* (0.9.4 .. 3b task 4) the creatures' scenes (ui_engvis.c's kit and colony, their being): gone with them in 3b task 5 */
 enum { ENGI_PHASE_UI = 2, ENGI_LOFI_UI = 3, ENGI_NOISE_UI = 11 };   /* (engines.c ENGINES[]) */
-static const int16_t *v6_flt;                            /* (0.9.10) FILTER and DIST for the next v6_scene (-99: the preset's) */
-static void v6_scene(uint32_t e, const char *pre, const char *page, const int16_t *k, uint32_t note, uint32_t age, uint32_t c)
-{
-    uint32_t i;
-    eng(e);
-    for (i = 0; i < ENGINES[e]->npresets; i++)
-        if (!strcmp(ENGINES[e]->presets[i].name, pre)) apply_preset_to(TSEL, i);
-    for (i = 0; k && i < 8u; i++)
-        if (k[i] != -99) TSEL->p[P_E0 + i] = k[i];
-    for (i = 0; v6_flt && i < 4u; i++)                  /* (0.9.10) the FILTER page's TYPE CUT RES, DIST */
-        if (v6_flt[i] != -99) TSEL->p[i < 3u ? P_FTYPE + i : P_DIST] = v6_flt[i];
-    v6_flt = 0;
-    TSEL->engine = TSEL->eng_req;
-    song.playing = 0;
-    song.master_q12 = 4096;
-    for (i = 0; i < NTRK; i++) if (i != song.sel) trk[i].p[P_MUTE] = 1;
-    memset(vxs.fr, 0xFF, sizeof vxs.fr);
-
-    vx_run(40);
-    if (note) {
-        trk_note_on(TSEL, note, 110);
-        vx_run(60);
-        TSEL->peak = 7000;
-    } else
-        memset(scope_buf, 0, sizeof scope_buf);
-    vx_age(TSEL, c, 0);                                  /* (the note seen, age ms ago) */
-    vxs.nms[c] = fm1_ms - age;
-    vxs.mt[c] = 30u * 256u * 3u + c * 977u;
-    go_title(page);
-}
 /* (0.9.17) a short line on the selected track for the SEQ pages that drew their own panel before (TRACK, MUTATE, AUTOMATION,
  * AUTO LIST): every page shows the roll now, its marks over these notes */
 static void seq_line(void)
@@ -993,8 +908,8 @@ static void setup(int s)
     if (s >= S_TOAST_ENV && s <= S_TOAST_ANALOG) {   /* (0.9.5) a toast over a page with words to its foot: the pill keeps clear
                                                    * of them (or is not drawn: the header says it), never over one (hk_overlay) */
         static const uint16_t BASE[] = {S_ENV, S_MUTATE, S_MUTATE, S_MOTION, S_MOTION_LOCKS, S_COUNT, S_AUTO_LIST,
-                                       S_AUTO_LIST_DRUM, S_PATTERN, S_V6_FM6_OP, S_EDIT_ANALOG_1};   /* (0.9.6: over the creatures
-                                                   * too; 3b: ANALOG's EDIT the ux page) */
+                                       S_AUTO_LIST_DRUM, S_PATTERN, S_EDIT_FM6_2, S_EDIT_ANALOG_1};   /* (0.9.6: over the creatures
+                                                   * too; 3b: ANALOG's EDIT the ux page, FM6's OPERATOR) */
         int b = BASE[s - S_TOAST_ENV];
         if (b == S_COUNT) { setup(S_HOME); go_page(GR_PUNCH); }
         else setup(b);
@@ -1141,11 +1056,14 @@ static void setup(int s)
     case S_PFLASH:                                      /* (0.6.51) a page changed by hand: its name big, held */
         go_title("LFO"); page_flash(); pf_ms = fm1_ms - 200u;
         break;
-    case S_DXIMG:                                       /* (0.6.48) DRUM IMAGE 40 */
-        set_engine_of(TSEL, ENGI_DRUM); TSEL->p[P_DXIMG] = 40; go_title("STEREO");
+    case S_DXIMG:                                       /* (0.6.48) DRUM IMAGE 40 (3b task 5: MORE's STEREO, picked) */
+        set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req; TSEL->p[P_DXIMG] = 40;
+        memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 7);
         break;
-    case S_DXSEND:                                      /* (0.6.48) SEND: the snare to the REVERB, 70 % */
-        set_engine_of(TSEL, ENGI_DRUM); dx_ui_lane = 1; dx_snd[1] = 3u << 6 | 47u; dx_lay[1] = 0x26; go_title("SOUND 4");
+    case S_DXSEND:                                      /* (0.6.48) SEND: the snare to the REVERB, 75 % (3b task 5: MORE's) */
+        set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 1; dx_ui_seen = last_note;
+        dx_snd[1] = 3u << 6 | 47u; dx_lay[1] = 0x26;
+        memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 15);
         break;
     case S_MORPH:                                       /* (0.6.45) ANALOG SAW, MORPH 50 */
         set_engine_of(TSEL, ENGI_ANALOG); TSEL->p[P_E0] = 0; TSEL->p[P_MORPH] = 50;   /* (3b task 4: EDIT's MORE, MORPH picked) */
@@ -1230,11 +1148,16 @@ static void setup(int s)
         break;
     case S_MIXER_T4:                             /* (0.6.22) TRACKS 4: T5, T6 asleep, grey, OFF */
         go_page(GR_TRK); trk_live = 4; break;
-    case S_ED_FILTER: eng(ENGI_FM6); go_title("FILTER"); TSEL->p[P_FRES] = 90; break;   /* (0.8.5) EDIT's lens: TONE, FILTER (3b
-                                                         * task 4: FM6's; a synth's is EDIT's ux page) */
-    case S_ED_FILTER_BP: eng(ENGI_FM6); go_title("FILTER");   /* (ACID FM 0.2: PHASE, was WHEEL; 3b: FM6) */
-        TSEL->p[P_FTYPE] = 2; TSEL->p[P_DIST] = 60; ui.hot_col = 1; ui.hot_t = 30; break;
-    case S_ED_VOICE2: eng(ENGI_FM6); go_title("VOICE 2"); TSEL->p[P_VOICE] = 3; trk[0].v[0].stage = 2; trk[0].v[0].env = 9u << 20; break;
+    case S_ED_FILTER: case S_ED_FILTER_BP:             /* (0.8.5) EDIT's lens: TONE, FILTER (3b task 5: FM6's MORE, its */
+        eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; TSEL->p[P_FRES] = 90;   /* filter rows; a synth's is EDIT's page 3) */
+        if (s == S_ED_FILTER_BP) TSEL->p[P_FTYPE] = 2, TSEL->p[P_DIST] = 60;
+        memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, s == S_ED_FILTER_BP ? 0 : 1);
+        ux_knob_touch(1);
+        break;
+    case S_ED_VOICE2:                                   /* (3b task 5: FM6's MORE, SPREAD picked; VOICE UNISON) */
+        eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; TSEL->p[P_VOICE] = 3;
+        memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 20);
+        break;
     case S_ENV_TRACKS: case S_ENV_TRACKS_DEST:          /* (0.8.5) ENV's lens: TRACKS (ENV / DEST), T2 sounding */
         song.sel = 1; nav_scene(SEC_ENV, s == S_ENV_TRACKS ? "TRACKS" : "TRACKS DEST");
         trk[1].v[0].stage = 2; trk[1].v[0].env = 10u << 20; trk[2].p[P_ED_FLT] = 60; trk[2].p[P_ED_PIT] = -40;
@@ -1279,7 +1202,7 @@ static void setup(int s)
         TSEL->p[P_AMODE] = 3; TSEL->p[P_AOCT] = 2; TSEL->p[P_ASWING] = 40; TSEL->p[P_APROB] = 100;
         go_title(s == S_KEY_ARP ? "ARP" : "ARP 2");
         break;           /* (0.8.5) LFO . MOD's lens: MSEQ 2 */
-    case S_ED_OPERATOR: eng(ENGI_FM6); go_title("OPERATOR"); break;
+    case S_ED_OPERATOR: eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; nav_scene(SEC_EDIT, "OPERATOR"); break;   /* (3b task 5) */
     case S_GEN_EXPLORE:                                 /* (0.8.6) GEN 1/3 on EXPLORE, where it opens, after a piece */
         ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = GEN_EXPLORE; gp.seed = 421;
         str_cpy(gp.last, "EXPLORE 0421", sizeof gp.last);
@@ -1316,7 +1239,10 @@ static void setup(int s)
     case S_SCL: TSEL->p[P_SCALE] = 2; go_title("SCL"); break;
     case S_SHIFT: seq_line(); TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
     case S_ARP: go_title("ARP"); break;
-    case S_VOICE: eng(ENGI_FM6); go_title("VOICE"); break;   /* (3b task 4: FM6's: a synth's VOICE is EDIT's ux page 3) */
+    case S_VOICE:                                       /* (3b task 4: FM6's: a synth's VOICE is EDIT's ux page 3; task 5: FM6's */
+        eng(ENGI_FM6); TSEL->engine = TSEL->eng_req;    /* MORE, its VOICE rows) */
+        memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 15);
+        break;
     case S_GLOBAL: go_title("GLOBAL"); break;
     case S_SYSTEM: go_title("SYSTEM"); break;
     case S_EDIT_ANALOG: go_title("EDIT 1"); break;
@@ -1333,23 +1259,25 @@ static void setup(int s)
     /* FM6's algorithm charts: 1 as it is; 5 with FB +3 just turned; 22 on EDIT 2, DTUN just turned (the carriers);
      * 32 with operator 6 at output level 0, MLVL just turned (no routes: nothing in ACCENT but nothing either) */
     case S_FM6_ALG1: eng(ENGI_FM6); TSEL->p[P_E0] = 1; go_title("EDIT 1"); break;
-    /* DRUM-X: the specimen at rest; then a kick and a hat just struck (their petals swell and light up) */
-    case S_DRUMX: eng(ENGI_DRUM); TSEL->p[P_E0] = 40; go_title("EDIT 1"); break;
+    /* DRUM-X: KIT, MORPH 40; then MORPH 100 and the hi-hat just struck (a key: its drum picked) (3b task 5: the ux page,
+     * the drum's hit and the eight drums, no specimen) */
+    case S_DRUMX: eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; TSEL->p[P_E0] = 40; go_title("EDIT 1"); break;
     case S_DRUMX_HIT:
-        eng(ENGI_DRUM); TSEL->p[P_E0] = 100; go_title("EDIT 1");
-        trk_note_on(TSEL, 36, 120); trk_note_on(TSEL, 42, 100); events_block(256);
+        eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; TSEL->p[P_E0] = 100; go_title("EDIT 1");
+        dx_ui_seen = last_note; trk_note_on(TSEL, 36, 120); trk_note_on(TSEL, 42, 100); last_note = 42; events_block(256);
         break;
-    /* EDIT > SOUND / SOUND 2: the snare's patch B (its organ singled out, the anatomy at B), PTCH just turned */
+    /* EDIT > SOUND / SOUND 2: the snare's patch B, PITCH just turned; the kick's SOUND 2 */
     case S_DX_SOUND:
-        eng(ENGI_DRUM); dx_ui_lane = 1; dx_ui_side = 1; dx_ui_seen = last_note;
-        go_title("SOUND"); ui.hot_col = 2; ui.hot_t = 30;
+        eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 1; dx_ui_side = 1; dx_ui_seen = last_note;
+        nav_scene(SEC_EDIT, "SOUND"); ux_knob_touch(2);
         break;
     case S_DX_SOUND2:
-        eng(ENGI_DRUM); dx_ui_lane = 0; dx_ui_side = 0; dx_ui_seen = last_note;
-        go_title("SOUND 2");
+        eng(ENGI_DRUM); TSEL->engine = TSEL->eng_req; dx_ui_lane = 0; dx_ui_side = 0; dx_ui_seen = last_note;
+        nav_scene(SEC_EDIT, "SOUND 2");
         break;
     case S_FM6_ALG5: eng(ENGI_FM6); TSEL->p[P_E0] = 5; TSEL->p[P_E1] = 3; go_title("EDIT 1"); ui.hot_col = 1; ui.hot_t = 30; break;
-    case S_FM6_ALG22: eng(ENGI_FM6); TSEL->p[P_E0] = 22; TSEL->p[P_E6] = 40; go_title("EDIT 2"); ui.hot_col = 2; ui.hot_t = 30; break;
+    case S_FM6_ALG22: eng(ENGI_FM6); TSEL->p[P_E0] = 22; TSEL->p[P_E6] = 40; go_title("EDIT 1"); ui.hot_col = 2; ui.hot_t = 30; break;   /* (3b
+                                                         * task 5: EDIT 2 MORE's: on SOUND) */
     case S_FM6_ALG32:
         eng(ENGI_FM6); TSEL->p[P_E0] = 32; fm6_patch[song.sel][FP_OL] = 0; fm6_pgen[song.sel]++;   /* (op 6: the patch's first) */
         go_title("EDIT 1"); ui.hot_col = 2; ui.hot_t = 30;
@@ -1618,10 +1546,11 @@ static void setup(int s)
         uint32_t at, n;
         drum(0); go_page(GR_ROLL); ui.cursor = 4; ui.lane = 2;
         grid_hit(TSEL, 4, 2, 1);
-        motion_set_lock(TSEL, 4, P_E6, 100); motion_set_lock(TSEL, 4, P_E3, 30);
+        dx_ui_lane = 2; dx_ui_seen = last_note;           /* (3b task 5: SOUND, the CP's LEVEL; KIT's DECAY) */
+        motion_set_lock(TSEL, 4, P_LN2, 100); motion_set_lock(TSEL, 4, P_E3, 30);
         fm1_in.notes = 1u << key_at(0, 4);
         n = lock_chain(v, &at);
-        ui.plk_src = n > 1u ? (uint8_t)(nv_page(SEC_EDIT, v[1]) + 1u) : 0u;   /* (KIT, KIT 2: the walk's second) */
+        ui.plk_src = n > 1u ? (uint8_t)(nv_page(SEC_EDIT, v[1]) + 1u) : 0u;   /* (KIT, SOUND: the walk's second) */
         ui.hot_col = 2; ui.hot_t = 30;
         break;
     }
@@ -1720,26 +1649,6 @@ static void setup(int s)
         else nav_scene(SEC_EDIT, "MORE");               /* (3b task 4: WORDS' rows are EDIT's MORE's) */
         break;
     }
-    case S_VX_KIT: vx_kit_scene(0x03u, 0); dx_ui_lane = 1; dx_ui_seen = last_note; go_title("SOUND"); break;
-    case S_VX_KIT_HITS: vx_kit_scene(0xBCu, 0); dx_ui_lane = 4; dx_ui_seen = last_note; go_title("SOUND 2"); break;
-    case S_VX_KIT_GHOST: vx_kit_scene(0x22u, 2); dx_ui_lane = 5; dx_ui_seen = last_note; go_title("SOUND 3"); break;
-    case S_VX_BUG_BD: case S_VX_BUG_SD: case S_VX_BUG_CP: case S_VX_BUG_CH: case S_VX_BUG_OH: case S_VX_BUG_TM:
-    case S_VX_BUG_RS: case S_VX_BUG_CB: vx_bug_scene((uint32_t)(s - S_VX_BUG_BD), 0, 1); break;
-    case S_VX_BUG_GHOST: vx_bug_scene(1, 2, 1); break;
-    case S_VX_BUG_FLAM: vx_bug_scene(1, 3, 1); break;
-    case S_VX_BUG_RATCH: vx_bug_scene(3, 0, 3); break;
-    case S_VX_BUG_QUIET: vx_bug_scene(0, 0, 0); break;
-    case S_V6_FM6: v6_scene(ENGI_FM6, "TINE EP", "EDIT 1", 0, 60, 300, 4); break;
-    case S_V6_FM6_ALG32: { static const int16_t K[8] = {32, 5, -99, -99, -99, -99, -99, -99}; v6_scene(ENGI_FM6, "BELL", "EDIT 2", K, 72, 120, 4); break; }
-    case S_V6_FM6_OP: v6_scene(ENGI_FM6, "TINE EP", "OPERATOR", 0, 60, 300, 4); fop_op = 2; break;
-    case S_V6_FM6_OP2:
-        v6_scene(ENGI_FM6, "BRASS", "OPERATOR 2", 0, 55, 500, 4); fop_op = 1;
-        fm6_patch[song.sel][(5u - 1u) * FP_OP + FP_DET] = 13;   /* (DETUNE +6: OP 2 shimmers) */
-        break;
-    case S_V6_FM6_ENV: v6_scene(ENGI_FM6, "BELL", "OP ENV", 0, 72, 600, 4); fop_op = 0; fop_stg = 1; break;
-    case S_V6_FM6_ENV_REL: v6_scene(ENGI_FM6, "PAD", "OP ENV", 0, 0, 4000, 4); fop_op = 2; fop_stg = 3; break;
-    case S_V6_FM6_FULL: v6_scene(ENGI_FM6, "TINE EP", "EDIT 1", 0, 60, 300, 4); break;   /* (3b: as S_V6_FM6, SCOPE gone) */
-    case S_VX_KIT_MUTED: dx_mute_set(DXG_HAT | DXM_LANE(7)); vx_kit_scene(0x01u, 0); dx_ui_lane = 7; dx_ui_seen = last_note; go_title("SOUND 4"); break;
     case S_WORDS_OFF: eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = 0; nav_scene(SEC_EDIT, "MORE"); break;
     case S_NAME_LYRIC:
         eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = LG_ES; lyr_set(song.sel, "LA NOCHE");
@@ -1830,6 +1739,32 @@ static void setup(int s)
         if (s == S_EDIT_PHASE_MORE_K3) { edit_param(2, 1); ux_knob_touch(2); }  /* (KNOB 3 on MORE: what the knobs do) */
         if (s == S_EDIT_VOICE_MORE_END) { (void)ux_more_knob(UXM_SELECT, 10); (void)ux_more_knob(0, 20); ux_knob_touch(1); }
         if (s == S_EDIT_ANALOG_MORE) { (void)ux_more_knob(0, 1); ux_knob_touch(1); }   /* (FILTER picked, KNOB 2 just turned) */
+        break;
+    }
+    /* (3b task 5) EDIT on FM6 (TINE EP: SOUND, OPERATOR with OP 3 picked, OP ENV with OP 1's DECAY stage, MORE; algorithm 4: its
+     * feedback from OP 4 into OP 6; MOD LEVEL just turned) and DRUM-X (DRUM-X: KIT, SOUND with the snare picked, SOUND 2 with
+     * the hi-hat, MORE; two drums muted by EDIT's black keys; MORE scrolled to its end) */
+    case S_EDIT_FM6_1: case S_EDIT_FM6_2: case S_EDIT_FM6_3: case S_EDIT_FM6_MORE: case S_EDIT_FM6_ALG4: case S_EDIT_FM6_TURN:
+    case S_EDIT_DRUM_1: case S_EDIT_DRUM_2: case S_EDIT_DRUM_3: case S_EDIT_DRUM_MORE: case S_EDIT_DRUM_MUTED:
+    case S_EDIT_DRUM_MORE_END: {
+        static const char *const PF[4] = {"SOUND", "OPERATOR", "OP ENV", "MORE"}, *const PD[4] = {"KIT", "SOUND", "SOUND 2", "MORE"};
+        int fm = s <= S_EDIT_FM6_TURN;
+        uint32_t pg = fm ? (s <= S_EDIT_FM6_MORE ? (uint32_t)(s - S_EDIT_FM6_1) : 0u) :
+                           (s <= S_EDIT_DRUM_MORE ? (uint32_t)(s - S_EDIT_DRUM_1) : s == S_EDIT_DRUM_MUTED ? 1u : 3u);
+        eng(fm ? ENGI_FM6 : ENGI_DRUM);
+        apply_preset_to(TSEL, 0);
+        TSEL->engine = TSEL->eng_req;
+        fop_op = (uint8_t)(pg == 1u || pg == 3u ? 2u : 0u); fop_stg = 1;
+        dx_ui_lane = (uint8_t)(pg == 2u ? 3u : 1u); dx_ui_side = 0; dx_ui_seen = last_note;
+        if (s == S_EDIT_FM6_ALG4) TSEL->p[P_E0] = 4, TSEL->p[P_E1] = 4;
+        if (s == S_EDIT_DRUM_MUTED) dx_mute_set(DXM_LANE(2) | DXM_LANE(6));
+        uxs_seen = pg ? 0x3FFu : 0u;
+        ux_hot_k = -1;
+        memset(uxm_at, 0, sizeof uxm_at);
+        nav_scene(SEC_EDIT, fm ? PF[pg] : PD[pg]);
+        if (s == S_EDIT_FM6_TURN) { edit_param(2, 12); ux_knob_touch(2); }   /* (MOD LEVEL turned: the modulators larger) */
+        if (s == S_EDIT_DRUM_MORE_END) { (void)ux_more_knob(UXM_SELECT, 30); (void)ux_more_knob(0, 40); ux_knob_touch(1); }
+        if (s == S_EDIT_FM6_MORE) { (void)ux_more_knob(0, 9); ux_knob_touch(1); }   /* (OP 3's DETUNE picked: its rows in view) */
         break;
     }
     case S_COMP_SEL_DRUM:
@@ -2468,24 +2403,25 @@ int main(int argc, char **argv)
         for (s = 0; s < lg_nsmall; s++) fprintf(rep, " '%s'", lg_small[s]);
         fprintf(rep, "\n");
     }
-    {   /* every FM6 colony (the lint above, fm6_hook, runs on each) */
+    {   /* every FM6 chart (the lint above, fm6_hook, runs on each) */
         uint32_t a, c0 = fmp_charts;
         for (a = 1; a <= 32u; a++) {
             char name[32];
             snprintf(name, sizeof name, "FM6 ALG %u", a);
             cur_name = name;
-            state(); pal(UI_ACID_INDEX); eng(ENGI_FM6); TSEL->p[P_E0] = (int16_t)a; go_title("OPERATOR");   /* (0.8.5) */
+            state(); pal(UI_ACID_INDEX); eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; TSEL->p[P_E0] = (int16_t)a;
+            nav_scene(SEC_EDIT, "OPERATOR");            /* (0.8.5; 3b task 5: the ux page) */
             draw(-1);
             lint();
         }
-        if (fmp_charts - c0 != 32u) { fprintf(stderr, "ui_render: %u FM6 colonies drawn of 32\n", fmp_charts - c0); return 1; }
+        if (fmp_charts - c0 != 32u) { fprintf(stderr, "ui_render: %u FM6 charts drawn of 32\n", fmp_charts - c0); return 1; }
     }
-    {   /* (0.9.6) FM6's operator pages with their colony keep every number they showed: ALG, the operator and its frequency
-         * (OPERATOR, OPERATOR 2), OP ENV's stage with its R and L, the four cards */
+    {   /* (0.9.6) FM6's operator pages keep every number they showed: the operator and its frequency (OPERATOR), OP ENV's
+         * operator and stage, the four knobs (3b task 5: the ux pages; OPERATOR 2's three MORE's rows) */
         static const struct { int s; const char *w[6]; } FT[] = {
-            {S_V6_FM6_OP, {"ALG 05 PAT", "OP3 x1.00", "RATIO", "FINE", "LEVEL", "/6"}},
-            {S_V6_FM6_OP2, {"ALG ", "OP2 x", "MODE", "DETUNE", "VEL", "+6"}},
-            {S_V6_FM6_ENV, {"OP1", "DEC  R ", "STAGE", "RATE", "LEVEL", "DEC"}}};
+            {S_EDIT_FM6_2, {"OP 3 x", "OP", "RATIO", "FINE", "LEVEL", "OPERATOR"}},
+            {S_EDIT_FM6_3, {"OP 1 \xB7 DEC", "STAGE", "RATE", "LEVEL", "DEC", "OP ENV"}},
+            {S_EDIT_FM6_MORE, {"FREQ MODE", "OP DETUNE", "MOD TIME", "OP 3", "MOD VEL", "MORE"}}};
         uint32_t f, w, i, n0 = nfind;
         for (f = 0; f < NELEM(FT); f++) {
             cur_name = S_NAME[FT[f].s];
@@ -2512,9 +2448,9 @@ int main(int argc, char **argv)
                                    S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
                                    S_HOME_VISUAL, S_EDIT_ANALOG, S_ED_FILTER, S_EDIT_ANALOG_MORE, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
                                    S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_EDIT_VOICE_1,
-                                   S_VX_KIT_HITS, S_VX_BUG_SD,
-                                   S_EDIT_ANALOG_1, S_V6_FM6, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_EDIT_NOISE_1,
-                                   S_EDIT_PHASE_1, S_EDIT_LOFI_1, S_EDIT_LOFI_BYTE_1, S_EDIT_PHASE_3, S_V6_FM6_FULL,
+                                   S_EDIT_DRUM_1, S_EDIT_DRUM_2,
+                                   S_EDIT_ANALOG_1, S_EDIT_FM6_1, S_EDIT_FM6_2, S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_NOISE_1,
+                                   S_EDIT_PHASE_1, S_EDIT_LOFI_1, S_EDIT_LOFI_BYTE_1, S_EDIT_PHASE_3, S_EDIT_DRUM_MORE,
                                    S_EDIT_VOICE_MORE};   /* (3b task 4: the synths' EDIT the ux pages, their creatures gone) */   /* (0.9.6: the six, EDIT, HOME, the whole panel) */   /* (0.9.4: the creatures against a being) */   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
@@ -2545,7 +2481,8 @@ int main(int argc, char **argv)
         {   /* the STEP page's piano roll: its panel alone redrawn, and a frame that changes nothing (the signature only) */
             static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP,
                                     S_SAVE_LIB, S_SAVE_SOUND, S_FXL_BUSES, S_FXL_REVERB, S_FXL_DELAY, S_EDIT_ANALOG,
-                                    S_ENV_TRACKS, S_MOD, S_SYSTEM, S_EDIT_VOICE_1, S_EDIT_NOISE_1, S_VX_KIT_HITS, S_DX_SOUND};   /* (ACID FM 0.2: NOISE, was ANIMAL) */
+                                    S_ENV_TRACKS, S_MOD, S_SYSTEM, S_EDIT_VOICE_1, S_EDIT_NOISE_1, S_EDIT_DRUM_2, S_EDIT_FM6_2};   /* (ACID FM 0.2:
+                                                         * NOISE, was ANIMAL; 3b task 5: DRUM-X's and FM6's ux pages) */
             for (k = 0; k < sizeof G / sizeof G[0]; k++) {
                 clock_t c0;
                 double tg, ti;
@@ -2564,7 +2501,7 @@ int main(int argc, char **argv)
         roll_cost();
         {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole (us, texts, LCD px sent), and HOME frame by frame
              * (HUD's HOME, the one skin's: every strip each frame, on the beings) */
-            static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_EDIT_VOICE_1, S_EDIT_PHASE_1, S_VX_KIT_HITS};   /* (ACID FM 0.2: PHASE, was ANIMAL;
+            static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_EDIT_VOICE_1, S_EDIT_PHASE_1, S_EDIT_DRUM_2};   /* (ACID FM 0.2: PHASE, was ANIMAL;
                                                          * 3a: the kit on EDIT, HOME's BEING gone) */
             uint32_t sk;
             fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");

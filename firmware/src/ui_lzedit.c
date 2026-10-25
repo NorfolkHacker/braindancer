@@ -4,9 +4,10 @@
  * Portions Copyright (C) 2026 NorfolkHacker */
 /* (0.8.5) EDIT's lens panels (ui_lens.c), as the approved mock-up's; included by ui_graph.c. The canvas is the
  * lens's panel (240 x 140, x 4..236).
- *   SOUND   (EDIT 1 / EDIT 2 of FM6) its creature on the whole panel (ui_engvis.c), the engine's page name and the sound's
- *           in its corners. DRUM's KIT keeps its colony (graph_colony). (ACID FM 3b: a synth's EDIT is ux_section.c's)
- *   FILTER  the response of TYPE at CUT with RES (LP HP BP COMB), CUT a line, DRIVE a row of cells
+ *   SOUND   (ACID FM 3b: a synth's, FM6's and DRUM-X's EDIT are ux_section.c's, their creatures gone; DIGITAL's, FELUCCA_FM4's,
+ *           its algorithm chart, ui_graph.c graph_fm)
+ *   FILTER  the response of TYPE at CUT with RES (LP HP BP COMB), CUT a line, DRIVE a row of cells (DIGITAL's now; ed_resp
+ *           also ux_section.c's FILTER picture)
  *   VOICE   the track's voices one a row, each as full as its envelope now; VOICE and PRIO (VOICE 2: ALLOC); GLIDE's
  *           curve
  * The others (MORPH, RETRIG, ROTOR, the kit's, the operators') keep their panels. */
@@ -31,22 +32,6 @@ static void lz_arc(int32_t cx, int32_t cy, int32_t r, int32_t w, int32_t f, uint
 static void ed_cap(int32_t x, int32_t y, const char *s, uint16_t c)   /* a caption, its capitals from y */
 {
     cv_text(x, y - AF_X_CAP_Y, &AF_X, s, c);
-}
-static void graph_sound_lz(const track_t *t)
-{
-    const engine_t *e = trk_engp(t);
-    uint32_t two = cur_page()->id[0] != P_E0;
-    char b[40];
-    /* (0.9.7) the creature on the whole panel, centred, the page's name and the sound's small in its corners. (ACID FM 3b)
-     * FM6's only (the synths' EDIT is ux_section.c's; MENU > DISPLAY > SCOPE gone with the creatures; FM6's own pages are
-     * 3b task 5's) */
-    if (!vx_draw(t, 4, 2, 232, (int32_t)cv_h - 4))
-        return;
-    cv_halo = 1;
-    ed_cap(10, 6, e->page_title[two] && e->page_title[two][0] != '-' ? e->page_title[two] : e->name, T_THEME);
-    sound_name(t, b);
-    cv_clip_text(10, (int32_t)cv_h - 12 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, T_TEXT, T_SURF, 104);
-    cv_halo = 0;
 }
 /* FILTER: y of the response at x (px, 10..226), the cut at xc, res 0..1000; the unity line at y 62 */
 static int32_t ed_resp(uint32_t ty, int32_t x, int32_t xc, int32_t res)
@@ -140,9 +125,10 @@ static void graph_voice_lz(const track_t *t, const page_t *pg)
 static int graph_edit_lz(const track_t *t, const page_t *pg)
 {
     uint32_t e = trk_eng(t);
-    if (pg->scope == SC_ENGINE && e != ENGI_DRUM && !(FELUCCA_FM4 && e == ENGI_DIGITAL))
-        graph_sound_lz(t);
-    else if (pg->id[0] == P_FTYPE)
+    (void)e;
+    if (pg->scope == SC_ENGINE)                         /* (3b task 5: no creature; DIGITAL its chart, ui_graph.c) */
+        return 0;
+    if (pg->id[0] == P_FTYPE)
         graph_filter_lz(t, pg);
     else if (pg->id[0] == P_VOICE || pg->id[0] == P_ALLOC)
         graph_voice_lz(t, pg);

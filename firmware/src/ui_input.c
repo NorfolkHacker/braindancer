@@ -1033,7 +1033,12 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
 {
     int16_t *vp;
     int32_t v;
-    const param_desc_t *d = param_ref(t, id, &vp);
+    const param_desc_t *d;
+    if (t && fld_is(id)) {                              /* (3b task 5) FM6's operator, DRUM-X's kit: as JIANT's pages wrote */
+        fld_turn(id, steps, knob);
+        return;
+    }
+    d = param_ref(t, id, &vp);
     if (!d || !vp || d->max == d->min)
         return;
     v = param_turn(d, *vp, accel(EN_K1 + (knob & 3u), steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
@@ -1102,10 +1107,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         }
         return;
     }
-    if (pg->graph == GR_DXSND) {                          /* EDIT > SOUND: the DRUM-X kit (ui_dx.c) */
-        dx_knob(pg, slot, steps);
-        return;
-    }
     if (pg->graph == GR_STAGE && slot < 2u) {             /* (0.8.5) ENV > STAGE: the stage, its value */
         if (slot == 0u)
             ui.stage = (uint8_t)clamp((int32_t)(ui.stage & 3u) + (steps > 0 ? 1 : -1), 0, 3);
@@ -1114,10 +1115,6 @@ static void edit_param(uint32_t slot, int32_t steps)
             TSEL->p[id] = (int16_t)param_turn(&TP[id], TSEL->p[id], accel(EN_K1 + 1u, steps, 127));
             knob_cap(TSEL, id);
         }
-        return;
-    }
-    if (DX_KIT3(pg)) {                                    /* (0.6.54) KIT 3: BP, FEEDBK (0.6.58: IMAGE on STEREO) */
-        dx_kit3_knob(slot, steps);
         return;
     }
     if (pg->graph == GR_EVENTS) {                         /* AUTO LIST (ui_events.c) */
@@ -1240,10 +1237,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         ms_ui_step = (uint8_t)clamp((int32_t)ms_ui_step + steps, 0, 15);
         return;
     }
-    if (fop_page(pg->graph)) {                           /* (0.6.10) FM6's operators: KNOB 1 OP, 2..4 its bytes (ui_fm6op.c) */
-        fop_knob(slot, steps);
-        return;
-    }
     if (pg->graph == GR_MOD && slot == 0u) {             /* MOD: KNOB 1 the slot, 2..4 its SRC DST AMT */
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;
@@ -1261,10 +1254,6 @@ static void act_do(void)
     if (cur_page()->graph == GR_MOTION) {
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         confirm_open(CF_CLEAR_MOTION, song.sel);
-        return;
-    }
-    if (cur_page()->graph == GR_LYRIC) {                /* (0.8.5) WORDS: the lyric, typed (the NAME screen) */
-        name_open(NK_LYRIC, song.sel);
         return;
     }
     if (cur_page()->graph == GR_PUNCH) {                /* (0.6.99) the punch-in lane cleared (a dialog) */
@@ -1663,39 +1652,33 @@ static int32_t dk_frac(const param_desc_t *d, int32_t a, int32_t b)   /* a value
     int32_t span = d->max - d->min;
     return dk_rr(d->min + span * a / 100, d->min + span * b / 100);
 }
-/* (0.8.5) the DICE dialog's BEFORE: the sound's being as it was (its HOME knobs' features; the steps, LFO and FX before
- * are dk's) */
-static struct { const genome_t *g; bfeat_t f; uint8_t roll; } dkv;
-static const genome_t *dk_genome(const track_t *t)
-{
-    uint32_t e = trk_eng(t);
-    return e == ENGI_DRUM ? &LANE_G_HOME : &GENOME[EGEN[e]];
-}
-static void dk_feat(const track_t *t, bfeat_t *f)
-{
-    uint8_t ids[4];
-    uint32_t v;
-    for (v = 0; v < 4u; v++) ids[v] = (uint8_t)trk_engp(t)->knob[v];
-    bg_feat(t, dk_genome(t), ids, f);
-}
+/* (0.8.5) the DICE dialog's BEFORE: the sound's four HOME knobs as they were (ACID FM 3b task 5: as bars, the being gone;
+ * the steps, LFO and FX before are dk's) */
+static struct { int16_t v[4]; uint8_t ok; } dkv;
 static void dk_vis_take(void)
 {
-    dkv.g = dk_genome(TSEL);
-    dk_feat(TSEL, &dkv.f);
-    dkv.roll = 0;
+    uint32_t i;
+    for (i = 0; i < 4u; i++)
+        dkv.v[i] = TSEL->p[trk_engp(TSEL)->knob[i] % P_COUNT];
+    dkv.ok = 1;
 }
 static void dice_side(uint32_t now, int32_t x0)          /* one half of the panel: BEFORE (0) or NOW */
 {
     const track_t *t = TSEL;
     uint32_t i, kind = ui.confirm;
     cv_text_in(x0, 6 - AF_X_CAP_Y, 112, &AF_X, now ? "NOW" : "BEFORE", T_DIM, T_SURF);
-    if (kind == CF_DICE_SOUND) {
-        bfeat_t f;
-        if (!dkv.g)                                     /* (opened without a dice: as it is) */
+    if (kind == CF_DICE_SOUND) {                        /* the sound's four HOME knobs as bars, named as EDIT names them */
+        if (!dkv.ok)                                    /* (opened without a dice: as it is) */
             dk_vis_take();
-        if (now)
-            dk_feat(t, &f);
-        being_lines(now ? dk_genome(t) : dkv.g, now ? &f : &dkv.f, (x0 + 56) * 16, 66 * 16, 14 * 16, 0, 0);
+        for (i = 0; i < 4u; i++) {
+            uint32_t id = trk_engp(t)->knob[i] % P_COUNT;
+            int16_t v = now ? t->p[id] : dkv.v[i];
+            const param_desc_t *d = track_desc(t, id);
+            int32_t w = d ? clamp(RATIO(d, enum_rank(d, v)), 0, 1000) * 96 / 1000 : 0;
+            cv_text(x0 + 8, 20 + (int32_t)i * 20 - AF_X_CAP_Y, &AF_X, d ? uxs_label(SEC_EDIT, 0, id, d->label) : "", T_DIM);
+            cv_rect(x0 + 8, 29 + (int32_t)i * 20, 96, 3, T_LINE);
+            cv_rect(x0 + 8, 29 + (int32_t)i * 20, w ? w : 1, 3, now ? T_ACCENT : T_MID);
+        }
     } else if (kind == CF_DICE_SEQ) {                   /* the first 16 steps' notes as dots */
         const step_t *st = now ? t->step : dk.step;
         for (i = 0; i < 16u; i++)
@@ -2523,7 +2506,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_STAGE ||
+            || pg->graph == GR_SONG || pg->graph == GR_STAGE ||
             pg->graph == GR_LIVE || pg->graph == GR_MORE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;

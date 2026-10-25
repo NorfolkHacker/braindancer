@@ -18,7 +18,8 @@ typedef struct ux_more_s { const ux_row_t *rows; uint8_t n; } ux_more_t;
 
 /* the headings (UXR_HEAD rows' ids; ux_more.c UXM_HEAD their words) and the actions (UXR_ACTION rows' ids; UXM_ACT) */
 enum { UXM_H_ARP, UXM_H_VOICE, UXM_H_FILTER, UXM_H_TONE, UXM_H_MOD, UXM_H_MSEQ, UXM_H_DELAY, UXM_H_REVERB, UXM_H_CHORUS,
-       UXM_H_SLICER, UXM_H_WORDS, UXM_H_N };
+       UXM_H_SLICER, UXM_H_WORDS, UXM_H_KIT, UXM_H_OP, UXM_H_DRUM, UXM_H_MLFO, UXM_H_N };   /* (3b task 5: OP and DRUM name the
+                                                         * operator and the drum picked, "OP 3", "DRUM \xB7 SD": ux_more.c) */
 enum { UXM_A_LYRIC, UXM_A_N };
 
 #define UXM_ROWS 8u              /* rows on the panel at once */

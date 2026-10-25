@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* DRUM: JIANT's drum engine, DRUM-X (drumx_voice.c, after Sonic Charge's Microtonic): a kit of 8 lanes, KICK, SNARE,
  * CLAP, HAT CL, HAT OP, TOM, RIM, BELL, each a synthesized sound with two patches A and B and a MORPH between them.
  * The kit is the section's (drumx_voice.c dx_kit), edited on EDIT > SOUND. Felucca's DRUM kits (STD and the model
@@ -335,7 +336,8 @@ static int8_t dx_pcur[NTRK][DV_NLANE];                   /* (0.6.81) each part's
 /* IMAGE img 1..127 -> lane l's pan, -64..64: each sound on a sine of its own rate over the knob (1 to 9 turns), so a
  * sweep goes through the kit's placings one after another, every one coming back at the same value; the first 16 open
  * it from the middle; the kick a quarter as far (the low end stays centred) */
-static int32_t dx_img_pan(uint32_t l, int32_t img)
+static __attribute__((noinline)) int32_t dx_img_pan(uint32_t l, int32_t img)   /* (ACID FM 3b task 5: noinline, as before:
+                                                         * its UI caller, EDIT > STEREO's picture, gone) */
 {
     static const uint8_t F[DV_NLANE] = {1, 3, 5, 2, 7, 4, 6, 9};
     int32_t w = img >= 16 ? 64 : img * 4, s;
@@ -345,7 +347,7 @@ static int32_t dx_img_pan(uint32_t l, int32_t img)
     return l == DV_KICK ? s / 4 : s;
 }
 /* how wide the image plays, Q8: all of it, less with DRV, DIST and the COMB (they shape the mono sum only) */
-static int32_t dx_img_k(const track_t *t)
+static __attribute__((noinline)) int32_t dx_img_k(const track_t *t)   /* (the same) */
 {
     int32_t k = 256 - clamp(t->p[P_E7], 0, 127) * 160 / 127, d = clamp(t->p[P_DIST], 0, 64);
     if (d)

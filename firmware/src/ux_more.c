@@ -13,7 +13,19 @@
 
 /* the headings' words (ux_more.h UXM_H_*) */
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "MSEQ", "DELAY", "REVERB", "CHORUS",
-                                              "SLICER", "WORDS"};
+                                              "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO"};
+/* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
+static const char *uxm_head(uint32_t h)
+{
+    static char b[16];
+    if (h >= UXM_H_N)
+        return "";
+    if (h != UXM_H_OP && h != UXM_H_DRUM)
+        return UXM_HEAD[h];
+    str_cpy(b, UXM_HEAD[h], sizeof b);
+    str_cpy(b + str_len(b), h == UXM_H_OP ? N_FO_OP[fop_op % 6u] : N_DX_LANE[dx_ui_lane & 7u], sizeof b - str_len(b));
+    return b;
+}
 /* the actions (UXR_ACTION rows' ids): KNOB 2 turned up does it; ask: JIANT's dialog first (a CF_* kind, OCT+ yes / OCT- no:
  * its own handler does the work), 0 at once */
 typedef struct { const char *name; uint8_t ask; } uxm_act_t;
@@ -41,7 +53,7 @@ static int uxm_row_ok(const ux_row_t *r)
 {
     uint32_t id = r->id;
     int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP;
-    return r->kind == UXR_TRACK ? id < P_COUNT || view : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
+    return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
            r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
 }
 /* a setting or action row shown on this track now (above) */
@@ -263,7 +275,7 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
     val[0] = 0;
     *bar = 0;
     if (r->kind == UXR_HEAD)
-        return r->id < UXM_H_N ? UXM_HEAD[r->id] : "";
+        return uxm_head(r->id);
     if (r->kind == UXR_ACTION) {
         str_cpy(val, UXM_GO, nv);
         return r->id < UXM_A_N ? UXM_ACT[r->id].name : "";

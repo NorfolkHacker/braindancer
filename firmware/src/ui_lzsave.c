@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* (0.8.5) SAVE's lens (ui.c save_*): the panels of its three levels, drawn as the approved HTML mock-up (SAVE, the
  * proposal "LENTE"), in the lens's panel (240 x 140 at y 84; the mock-up's coordinates less 84). Included by
  * ui_graph.c.
@@ -145,43 +146,21 @@ static void graph_proj(int ar)
     cv_text_r(236, 128, &AF_X, n ? b : "NO ROWS: OCT+ ADDS ONE", ar && ui.song_row >= song_end_row() ? T_THEME : T_DIM,
               T_SURF);
 }
-/* a being small at (cx, cy) radius r (px): engine e's species, its outline in heat c; 24 vertices (bg_outline's form,
- * its spikes and lobes, at a slot's size: a quarter of the lines) */
-static void lz_mini_being(uint32_t e, int32_t cx, int32_t cy, int32_t r, uint16_t c)
+/* SOUND: the track's sound (ACID FM 3b task 5: its four HOME knobs as bars, named as EDIT names them; the being gone),
+ * the track and its sound's name */
+static void lz_track_card(void)
 {
-    const genome_t *g = &GENOME[EGEN[e % NENGINES]];
-    int32_t i, px = 0, py = 0, R = r * 16, k = g->k0 + g->kk / 2;
-    for (i = 0; i <= 24; i++) {
-        uint32_t th = (uint32_t)(i % 24) * 65536u / 24u;
-        int32_t rr = R + ((R * 90 >> 8) * (9175 * bg_sin((uint32_t)g->lob * th) >> 15) >> 15), x, y, c2, p, n;
-        c2 = bg_sin(((uint32_t)k * th >> 1) + (uint32_t)g->tw * 3000u + 0x4000u);
-        p = c2 > 0 ? c2 : 0;
-        for (n = 1; n < g->sh; n++)
-            p = (p * c2) >> 15;
-        if (p < 0) p = 0;
-        rr += ((R * 110 >> 8) * p >> 15) * 26 >> 4;
-        x = cx * 16 + ((rr * bg_sin(th + 0x4000u) >> 15) * g->ax >> 4);
-        y = cy * 16 + (rr * bg_sin(th) >> 15);
-        if (i)
-            og_line(px, py, x, y, c);
-        px = x;
-        py = y;
-    }
-}
-/* SOUND: the track's being (as an engine page's: its HOME knobs, alive with its sound), the track and its sound */
-static void lz_track_being(void)
-{
-    static uint32_t tm, f0;
     const track_t *t = TSEL;
-    const genome_t *g = &GENOME[EGEN[trk_eng(t)]];
-    int32_t en = bg_energy();
-    bfeat_t f;
+    uint32_t i;
     char b[20];
-    bg_feat(t, g, trk_engp(t)->knob, &f);
-    bg_excite(&f, en, 2);
-    if (en > 2) tm += (ui.frame - f0) * (uint32_t)(160 + en * 3);
-    f0 = ui.frame;
-    being_lines(g, &f, 42 * 16, 40 * 16, (8 * 16) * (256 + en / 3) / 256, en, tm);   /* (its spikes inside 4 .. 82) */
+    for (i = 0; i < 4u; i++) {
+        uint32_t id = trk_engp(t)->knob[i] % P_COUNT;
+        const param_desc_t *d = track_desc(t, id);
+        int32_t w = d ? clamp(RATIO(d, enum_rank(d, t->p[id])), 0, 1000) * 70 / 1000 : 0;
+        cv_clip_text(8, 6 + (int32_t)i * 18 - AF_X_CAP_Y, &AF_X, d ? uxs_label(SEC_EDIT, 0, id, d->label) : "", T_DIM, T_SURF, 72);
+        cv_rect(8, 15 + (int32_t)i * 18, 70, 3, T_LINE);
+        cv_rect(8, 15 + (int32_t)i * 18, w ? w : 1, 3, ux_knob_col(i));
+    }
     b[0] = 'T'; b[1] = (char)('1' + song.sel % NTRK); b[2] = 0;
     GFX_HOOK_ALIGN(4, 0, 82, 0, AL_H | AL_PASS, "sound track centred");
     cv_text_in(4, 85, 78, &AF_X, b, T_THEME, T_SURF);
@@ -191,7 +170,7 @@ static void lz_track_being(void)
 static void graph_sound(void)
 {
     uint32_t k;
-    lz_track_being();
+    lz_track_card();
     for (k = 0; k < UP_SLOTS; k++) {
         int32_t x = 88 + (int32_t)(k % 4u) * 37, y = 2 + (int32_t)(k / 4u) * 17;
         int sel = k == ui.uslot, used = up_used(k);
@@ -199,7 +178,7 @@ static void graph_sound(void)
         char b[13];
         cv_rect(x, y, 35, 15, bg);
         if (used) {
-            lz_mini_being(up_engine(k), x + 5, y + 7, 3, bg_col(150));
+            cv_rect(x + 3, y + 6, 4, 4, T_THEME);          /* (a slot used: a dot; 3b task 5, its being gone) */
             up_name(k, b);
             cv_clip_text(x + 10, y + CAP_IN(X, 15), &AF_X, b, T_TEXT, bg, 24);
         } else {
@@ -214,7 +193,7 @@ static void graph_sound(void)
 static void graph_lz_presets(void)
 {
     uint32_t total, cur = preset_pos(&total), e, k, i, first;
-    lz_track_being();
+    lz_track_card();
     if (!total) {
         cv_text_in(88, 63, 148, &AF_X, "NO FAVORITES", T_MID, T_SURF);
         return;
