@@ -105,6 +105,12 @@ still starts empty. RESTORE LAST behaviour unchanged.
 
 ## 5. Other 3b items
 
+- **Tempo on HOME** (user, 2026-10-25): HOME TRACKS knobs become LEVEL · LEVEL · LEVEL · **BPM** (knob 4, ACCENT).
+  The three levels are the window of three tracks holding the selected track (T1–T3 for T1–T3 selected … T4–T6 for
+  T4–T6); BPM edits `G_BPM` exactly as GLO › GLOBAL does (same range 40–240, accel, BPM LOCK and external-clock
+  behaviour: when CLOCK is USB/TRS the knob shows the followed tempo and a turn says "CLOCK: USB" in the status line).
+  The ridgelines mark the three controlled tracks in K1–K3 colours; the status readout on a BPM turn: "TEMPO 128 BPM".
+
 - TRACKS under load: while `load_tight`, the ridge panel paces at 100 ms → 200 ms (half rate); re-measured on the
   device with the CPU TEST song (MENU / TRACKS / VISUAL as in 0.3's device log).
 - `ux_knob_touch` from every 3b page's knob handler (600 ms highlight).
