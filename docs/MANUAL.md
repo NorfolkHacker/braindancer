@@ -55,17 +55,17 @@ files.
 2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4** it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
-4. Turn **KNOB 1–4**: on HOME they are the four most useful controls of the track's engine.
+4. Turn **KNOB 1–4**: on HOME › TRACKS they are the LEVELs of the four tracks around the selected one; on **EDIT** the engine's controls.
 5. Don't like it? Hold **EDIT** and turn **SELECT**: the sound is rolled into a new variation and you hear it at once.
    **OCT+ OK** keeps it, **OCT− CANCEL** brings the sound back.
 
 ### Your first song (5 minutes)
 
-1. Hold **HOME** and turn **SELECT** (or on HOME tap **HOME** twice: ECO → BEING → **GEN**). The **GENERATOR** opens on
+1. Hold **HOME** and turn **SELECT** (or on HOME tap **HOME** twice: TRACKS → VISUAL → **GEN**). The **GENERATOR** opens on
    **EXPLORE** (no genre, every rule broken): press **OCT+** as it is, or pick RANDOM or one of the 43 genres with KNOB 1
    or PRESETS first. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
 2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** one detent right for GEN 2 and lower
-   **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **OCT−** goes back to ECO. To go back to what was there before: hold **GLO** and press **G4** (UNDO).
+   **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **OCT−** goes back to TRACKS. To go back to what was there before: hold **GLO** and press **G4** (UNDO).
 3. Like it? **Stop** (PLAY), then press **SAVE** (it opens USER, the user sounds) and press **SAVE** again: the
    **PROJECT** group's **SECTIONS**, the project's four sections. Turn **KNOB 4** to the right so its card says **OCT+**, then press
    **OCT+**. Type a name with the keys (or keep the one offered) and press **OCT+** again. The screen says **SAVED**.
@@ -97,7 +97,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 
 | Button | Tap | Hold |
 | --- | --- | --- |
-| **HOME** | HOME (0.9.2, as every section's button): from another section the HOME page last shown; on HOME the first page of the next group, round: **ECO → BEING → GEN → ECO**. | About 0.7 s: opens the **MENU**. |
+| **HOME** | From another section the HOME page last shown; on HOME the next page, round: **TRACKS → VISUAL → GEN → TRACKS** (the status line says what the next tap does). | About 0.7 s: opens the **MENU**. HOME held + **SELECT**: straight to GEN. |
 | **ENV** | The ENV section: from elsewhere the page last shown (at power-on ENV); inside, the next group: **TRACKS → ENV → STAGE**, round. | (no layer) |
 | **LFO** | The LFO section: from elsewhere the page last shown (at power-on LFO); inside **MOD → LFO → MSEQ**, round. | **MACRO** layer: KNOB 1–4 are M1–M4. |
 | **FX** | The FX section: from elsewhere the page last shown; inside, the next module: **TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → MASTER → PUNCH**, round. | **Punch-in FX** layer. |
@@ -140,34 +140,14 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ## 2. The screen
 
-### Skins: AIR, COLORS, HUD (0.8.9, AIR 0.9.7)
+### One look: ACID (0.3)
 
-**MENU › SCREEN › SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4;
-0.9.7: AIR, the approved option); every page, every palette, FLAT and LINE. The menu steps them AIR, COLORS, HUD
-(0.9.17: BOTTOM, the knob row at the foot on every page, is retired; a BOTTOM saved in the settings, or set by the
-editor or a restore, opens as AIR):
-
-- **AIR** (0.9.7; the default of new settings: a new FM-1, or its settings erased; settings saved before keep the
-  skin they had): HUD's look on **every** page, with the **knob row on top**, right under the tabs: no cards and no
-  panel box, the words light with a 2 px dark outline, the middle of the screen free for the picture and the footer
-  the breadcrumb alone. On HOME
-  the beings swim over the whole screen under the header, the tabs, the knob row and the breadcrumb, as on HUD (the knob
-  row fading there a few seconds after the last turn); every layer, dialog and menu in the same dress. The group's word
-  is underlined by a dash.
-- **COLORS** (settings saved before 0.9.7 with no other skin chosen load as it): the LENTE layout in the **0.6 colours**. Black, near-black
-  rounded cards with a small mark and the knob's name, **each knob its colour** on its value and its bar (JIANT,
-  0.9.5 as the 0.6: each parameter's own colour **moves with its amount** as heat, violet when low to yellow and cream
-  when high, a centred one such as PAN or DETUNE cold in the middle and hot at either end; the other palettes their
-  four knob colours), the knob you turn framed in its colour; the
-  group's tab filled violet; the selected track's number in an orange box, a violet ▶ and a big violet BPM in the header;
-  a near-black rounded panel; the beings in the 0.6 heat (violet spikes, red and orange rings, cream nuclei).
-- **HUD**: the tabs are the groups' words (a dot a page under each), no cards and no panel box: the middle of the
-  screen is the picture, the screen's width, and the four knobs are a slim row over the breadcrumb (mark and name, the
-  value in its colour, a hairline bar); on the SEQ pages the row is on top under the tabs, as AIR's (0.9.17: the values
-  over the roll). On HOME the beings swim **under everything, over the whole screen**: the header, the tabs,
-  the knobs and the breadcrumb float over them as light words with a 2 px dark outline (0.9.0). There the knob row
-  fades to a fifth a few seconds after you last turned a knob, and comes back at the next turn or when you change page;
-  on every other page it stays lit. The group's word is underlined by a dash.
+ACID FM 0.3 has **one look, ACID**: MENU's COLOR, SKIN and STYLE are gone (kept as inert ids, so the editor and old
+settings still load). **HOME** is ACID FM's own screen: the header (ACID FM; at the right where the music is, the
+octave when shifted, the REC dot, the transport and BPM, BPM LOCK's lock and the battery), the knob row, the page's
+picture, a **status line** that says what the knobs and the next HOME do (and why something was refused), and the
+footer **HOME · page** with its place, **n / 3**. The other pages keep JIANT's layout described below. A fuller
+description comes with the next pieces of the 0.3 series.
 
 Values (cards, the header's BPM) are set in a rounded sans again (Inter Tight SemiBold), as in 0.6; names, tabs and the
 breadcrumb stay in the 5 x 7 pixel letters. **MENU > LARGE** keeps its big cards on top in every skin (the skin keeps
@@ -274,12 +254,12 @@ knobs, their pictures and every function are the same, only the way between them
 - **SCL and ARP are two sections** (until 0.9.1 one lens): SCL is KEY · CHORD, ARP is ARP · ARP 2 (one group: an ARP
   tap inside goes back to ARP).
 - **GEN is three HOME pages** (GEN 1–3, HOME's last group), no longer a screen of its own: the section buttons work
-  there, OCT+ makes the piece, OCT− goes back to ECO. HOME + SELECT still opens it from anywhere.
+  there, OCT+ makes the piece, OCT− goes back to TRACKS. HOME + SELECT still opens it from anywhere.
 - **SAVE from outside** comes back to the SAVE page you left; **USER** and **SECTIONS** come with their SAVE already
   picked, so SAVE, OCT+, OCT+ still stores the sound (or the section).
 - **EDIT is always EDIT**: clearing a step went to the SEQ layer (**SEQ + G5**, CLR STEP; on AUTO LIST it deletes the
   record; TIME turned to REST clears a note too) and renaming to the SAVE layer (**SAVE + C5**, NAME).
-- **The MENU** (hold HOME, 0.9.18): the same rules: SELECT walks its nine pages (SCREEN → AUDIO → MIDI → USB →
+- **The MENU** (hold HOME, 0.9.18): the same rules: SELECT walks its eight pages (SCREEN → AUDIO → MIDI → USB →
   SYSTEM), ALGORITHM jumps tabs, KNOB 1–4 the settings on the cards, HOME closes it.
 - Some pages only appear when they apply: FM6's operator pages on an FM6 track, DRUM-X's pages on a DRUM track,
   RETRIG on LOFI BYTE/FLOAT, and with **LOAD ECO** the SLICER and CHORUS pages are hidden; the chain skips them.
@@ -291,7 +271,7 @@ it was in 0.9.1, with its knobs and its picture (the ones 0.8.5's lenses drew).
 
 | Section | Groups (the button) · pages (SELECT) | Pages |
 | --- | --- | --- |
-| **HOME** | **ECO**: ECO · MACROS — **BEING**: BEING · ROUTES — **GEN**: GEN 1 · GEN 2 · GEN 3 | 7 |
+| **HOME** | **TRACKS**: TRACKS — **VISUAL**: VISUAL — **GEN**: GEN 1 · GEN 2 · GEN 3 | 5 |
 | **EDIT** (a synth) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (those the engine has) — **FOCUS**: FOCUS | up to 10 |
 | **EDIT** (FM6) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · VOICE · VOICE 2 — **OPERATOR**: OPERATOR · OP ENV · OPERATOR 2 | 8 |
 | **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER · STEREO · VOICE | 13 |
@@ -310,20 +290,11 @@ COMP's); FX's **SENDS** is the FX page; SAVE's PROJECT page is **SECTIONS** (the
 LIBRARY level); the DRUM kit's EDIT 1 / EDIT 2 are **KIT** / **KIT 2**. The new **BAR** page is PATTERN's picture of
 the bars with KNOB 1 the bar and KNOB 2 LEN.
 
-- **ECO**: the six tracks' beings swimming free over the whole panel by themselves (0.8.8: as before 0.8.5), each
-  swelling with its sound (a hit kicks it on), its number under it; the selected one larger, its number violet.
-  (0.9.7, "today's being with a face") Each being is its species' spiky outline (the spikes as it sounds) in **three
-  isotherms**, coloured by **its own level** like a thermal camera (quiet: cyan and blue; loud: red, orange and
-  yellow; the inner lines warmer), and where its nuclei were a **face**: two eyes that **shut on a hit**, a mouth that
-  **opens with the level**. A muted track's being sleeps (a dim outline, its eyes shut). When **MUTATE** changes a
-  track, its being **looks up**, its number lights **white** and one ring in the accent opens round it. The cytoplasm's
-  granules drift behind them (drawn by the screen alone: nothing of the sound's time). **MACROS**:
-  KNOB 1–4 are **M1–M4** (the macros, as LFO held), the routes counted at the top left, LATCH at the right.
-- **BEING**: the track's being large, its four HOME knobs as organs at the corners (a gauge each, its value, a vein to
-  the body), the sound's name under it. (0.9.4) A VOICE track shows its **head**, an ANIMAL track its **creature**, a DRUM-X track
-  its **kit of little beings** there (see [their pictures](#three-engines-draw-their-own-creature-094)); (0.9.6) the other six
-  engines theirs ([a cell, a colony, worms, a swarm, a snail, a caterpillar](#six-more-engines-draw-their-own-creature-096)). **ROUTES**: M1–M4 down the left with their routes drawn to where they go
-  (**T2 CUT+62**).
+- **HOME › TRACKS**: six ridgelines, T1 at the top to T6 at the bottom, each its track's level over the last ~2 s; the
+  four tracks the knobs control in their knobs' colours, the name at the left and the level at the right; under them the
+  selected track's 16 steps, the playing one outlined and spelled out. **KNOB 1–4**: the LEVELs of those four tracks.
+- **HOME › VISUAL**: six rings (T1 outside, T6 at the centre) of the blend, turning with the bar, each as bright as its
+  track sounds; the song's name and where it is over them. **KNOB 1–4**: **MACRO 1–4** (as LFO held).
 - **ENV** › **TRACKS** / **TRACKS DEST**: the six tracks' envelopes as tiles (the selected one tinted with its level now a dot; DEST:
   FILTER, PITCH and SHAPE as bars under each), the knobs the selected track's — **ALGORITHM** picks the
   track. **ENV**: the envelope large / ENV DEST's columns, as before. **STAGE**: KNOB 1 picks the stage (ATK DEC
@@ -353,7 +324,7 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
   KNOB 2 sets it, KNOB 3 the **source** of the MOD slot aimed at it (turned up from OFF a free slot takes it, its DEST
   that parameter; back to OFF frees it), KNOB 4 that slot's **AMT**; E1–E8 as tabs under it.
 - **GEN 1–3** are the generator (as HOME held + SELECT, from any page): **SELECT** turns its page (left of GEN 1:
-  ROUTES), **PRESETS** the GENRE, **OCT+** makes the piece, **OCT−** back to ECO, a **HOME** tap on to ECO.
+  VISUAL), **PRESETS** the GENRE, **OCT+** makes the piece, **OCT−** back to TRACKS, a **HOME** tap on to TRACKS.
 
 ### Every page and its four knobs
 
@@ -1350,11 +1321,11 @@ Hold **SAVE**:
 
 ### GEN — the song generator (HOME + SELECT)
 
-Hold **HOME** and turn **SELECT**, from any page, or on HOME walk the chain with **SELECT** (ECO · MACROS · BEING ·
-ROUTES · **GEN 1 · GEN 2 · GEN 3**) or tap HOME to its next group (ECO → BEING → GEN). (0.9.2) The **GENERATOR** is
+Hold **HOME** and turn **SELECT**, from any page, or on HOME walk the chain with **SELECT** (TRACKS · VISUAL ·
+**GEN 1 · GEN 2 · GEN 3**) or tap HOME to its next page (TRACKS → VISUAL → GEN). (0.9.2) The **GENERATOR** is
 HOME's last group, three ordinary pages, no longer a screen of its own: **SELECT** turns the page, **KNOB 1–4** set the
 four values shown (**PRESETS**: the GENRE, the generator's preset), **OCT+** makes the piece and **OCT−** goes back to
-ECO (the piece stays; **UNDO**, GLO + G4, brings back what was there before); every section button works from there. The panel shows the five parts as rows (the ones the page's knobs weigh lit) with a preview of
+TRACKS (the piece stays; **UNDO**, GLO + G4, brings back what was there before); every section button works from there. The panel shows the five parts as rows (the ones the page's knobs weigh lit) with a preview of
 their density and heat, the FORM's sections as coloured chips, the last piece and **OCT+ MAKE**. **PLAY** runs and stops
 the transport without leaving the screen (0.6.97).
 
@@ -2107,13 +2078,11 @@ every setting, its values and its meaning: nothing changes in the saved settings
 
 | Tab › page | KNOB | Setting | Values |
 | --- | --- | --- | --- |
-| SCREEN › SCREEN | 1 | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
-| | 2 | SKIN | **AIR** (default of new settings), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM retired in 0.9.17: opens as AIR) see [Skins](#skins-air-colors-hud-089-air-097) |
-| | 3 | STYLE | FLAT, LINE |
-| | 4 | LARGE | OFF, ON (big labels and values) |
-| SCREEN › SCREEN 2 | 1 | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
-| | 2 | ANIMATION | ON, OFF (values snap; the power-on signature appears whole) — was ANIM |
-| | 3 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
+| SCREEN › SCREEN | 1 | LARGE | OFF, ON (big labels and values) |
+| | 2 | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
+| | 3 | ANIMATION | ON, OFF (values snap) — was ANIM |
+| | 4 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
+| | | (COLOR, SKIN, STYLE) | gone in ACID FM 0.3: one look, ACID; kept as inert ids for the editor |
 | SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow (was LEDS: OFF, DIM LO, DIM HI, INV); (0.7.3) the glow's LEDs take turns frame to frame, so it no longer hums through the speaker once the music stops |
 | | 2 | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
