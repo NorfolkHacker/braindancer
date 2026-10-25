@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Chip voice: pulse/triangle/saw/noise/wave RAM, quantised amplitude and a held
  * (downsampled) output; SWEEP bends the pitch down after note-on.
  *
@@ -223,8 +224,9 @@ static __attribute__((noinline)) int32_t lofi_float(uint32_t f, uint32_t t, uint
 }
 #undef S
 #undef PM
-/* (0.9.10) read-only, for the creature (ui_engvis.c vx_lofi; nothing here runs in the audio path): ALGO's formula at t
- * (BYTE's byte, a = VAR's; FLOAT's sample, Q15, its own state from 0), a WRAM table's nibble k (0..31) */
+/* (0.9.10) read-only, for the UI (ACID FM 3b: EDIT's wave, ux_section.c uxs_wave_lofi; was the creature's; nothing here runs
+ * in the audio path): ALGO's formula at t (BYTE's byte, a = VAR's; FLOAT's sample, Q15, its own state from 0), a WRAM table's
+ * nibble k (0..31) */
 static int32_t lofi_algo_at(int fl, uint32_t f, uint32_t t, uint32_t a)
 {
     int32_t aux = 0;
@@ -453,8 +455,10 @@ static int32_t lofi_amp(track_t *t, voice_t *v, int32_t adsr)
     return vol * Q4;
 }
 
-/* (0.6.45) MORPH: the wave it morphs towards (PLS TRI SAW NOIS WRAM), its sample with no state moved */
-static int32_t lofi_mto(uint32_t w, uint32_t ph0, uint32_t duty, const uint8_t *wr, int32_t wdc, uint32_t lfsr)
+/* (0.6.45) MORPH: the wave it morphs towards (PLS TRI SAW NOIS WRAM), its sample with no state moved. (ACID FM 3b) noinline:
+ * the render's code as it was (its other caller, EDIT > MORPH's picture, gone, the compiler would put it inside the render's
+ * loop: tests/target_budget.py) */
+static __attribute__((noinline)) int32_t lofi_mto(uint32_t w, uint32_t ph0, uint32_t duty, const uint8_t *wr, int32_t wdc, uint32_t lfsr)
 {
     switch (w) {
     case RW_TRI: return osc_tri(ph0);

@@ -74,7 +74,10 @@ const noShot = shots.filter((n) => !pngOk(n));
 ok(!noShot.length, `manual: ${shots.length} screens linked, each a 240 x 240 PNG in shots/` + (noShot.length ? " (" + noShot + ")" : ""));
 const extra = readdirSync(join(DIR, "shots")).filter((f) => !shots.includes(f.replace(/\.png$/, "")));
 ok(!extra.length, "manual: no screen in shots/ the page does not use" + (extra.length ? " (" + extra + ")" : ""));
-ok(N.chains.flatMap((c) => c.pages).filter((p) => p.shot).length >= 80, "manual: the map's pages open their screen (80 or more)");
+{ /* (ACID FM 3b task 4: a synth's EDIT chain is 5 pages, was 10: a share, not a count) */
+  const ps = N.chains.flatMap((c) => c.pages);
+  ok(ps.filter((p) => p.shot).length >= 0.9 * ps.length, "manual: the map's pages open their screen (90 % or more)");
+}
 
 /* the page: its scripts and anchors */
 const html = readFileSync(join(DIR, "index.html"), "utf8");

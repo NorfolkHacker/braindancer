@@ -86,6 +86,8 @@ typedef struct { uint8_t key, glo, id; const char *why; } uxc_hid_t;
 static const uxc_hid_t UXC_HIDDEN[] = {
     {UXC_SYN, TRK, P_WRDEP, "ROTOR's DEPTH: WHEEL retired in ACID FM 0.2 (ui.c page_visible never shows ROTOR)"},
     {UXC_SYN, TRK, P_WDUST, "ROTOR's DUST: as DEPTH"},
+    {UXC_SYN, TRK, P_ALLOC, "VOICE 2's ALLOC (ROT / REUSE, how a new note picks a voice): an expert's choice, its default suits "
+                            "every sound (3b task 4, the user's 'simplify')"},
 };
 
 static const uint8_t UXC_SECS[] = {UXC_SYN, UXC_FM6, UXC_DRM, UXC_DIG, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL};
@@ -219,10 +221,10 @@ int main(int argc, char **argv)
     ok = 1;                                             /* the check sees what is missing: SCL never reached the filter */
     uxc_reach(SEC_SCL, 1, got);
     ok &= !got[TRK][P_FCUT] && got[TRK][P_ROOT] && !uxc_hidden(SEC_SCL, TRK, P_FCUT);
-    uxc_reach(SEC_ARP, 1, got);                         /* (.. and a MORE row counts: the demo's FILTER CUT, host only) */
-    ok &= got[TRK][P_FCUT] && got[GLO][G_CRATE] && got[TRK][P_AMODE];
-    uxc_reach(SEC_ARP, 0, got);
-    ok &= !got[TRK][P_FCUT];
+    uxc_reach(UXC_SYN, 1, got);                         /* (.. and a MORE row counts: a synth's MORPH, on EDIT's MORE only) */
+    ok &= got[TRK][P_MORPH] && got[TRK][P_VLYR] && got[TRK][P_E0];
+    uxc_reach(UXC_SYN, 0, got);
+    ok &= !got[TRK][P_MORPH] && got[TRK][P_FCUT];
     uxc_reach(SEC_LFO, 0, got);                         /* (MSEQ's sixteen steps, MOD's four slots) */
     ok &= got[TRK][P_MS0] && got[TRK][P_MS15] && got[TRK][P_M1SRC] && got[TRK][P_M4AMT];
     uxc_reach(SEC_FX, 0, got);

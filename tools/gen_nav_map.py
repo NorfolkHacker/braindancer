@@ -90,7 +90,7 @@ L = {
          'SAVE': ('sections live · NAME', 'walk this chain')},
   notes={'HOME': 'TRACKS → VISUAL → GEN: HOME again (round) or SELECT; HOME + SELECT straight to GEN. GEN 1–3: PRESETS the genre, OCT+ makes the piece, OCT− back to TRACKS.',
          'SEQ': 'PRESETS: the patterns (PHRASES). KNOB 1: all 64 steps on STEP (a fast turn several).',
-         'EDIT': 'TONE pages only where the engine has them: MORPH (ANALOG PHASE LOFI), RETRIG (LOFI), ROTOR (WHEEL), WORDS (VOICE). DRUM-X: KNOB 1 picks the kit\'s sound on SOUND.',
+         'EDIT': 'Synths: page 3 is VOICE on ANALOG, FILTER on the others; MORE lists the rest (KNOB 1 picks, KNOB 2 sets). DRUM-X: KNOB 1 picks the kit\'s sound on SOUND.',
          'FX': 'CHORUS and SLICER are hidden with LOAD ECO; the chain skips them.',
          'SAVE': 'From outside, USER and SECTIONS come with SAVE armed: SAVE · OCT+ · OCT+.',
          'ARP': 'One group: ARP inside goes back to ARP.', 'SCL': 'KNOB 1 sets ROOT.',
@@ -135,7 +135,7 @@ L = {
          'ARP': (None, 'recorre esta cadena'), 'SAVE': ('secciones en vivo · NAME', 'recorre esta cadena')},
   notes={'HOME': 'TRACKS → VISUAL → GEN: HOME otra vez (en ronda) o SELECT; HOME + SELECT directo a GEN. GEN 1–3: PRESETS el género, OCT+ arma la pieza, OCT− vuelve a TRACKS.',
          'SEQ': 'PRESETS: los patrones (PHRASES). KNOB 1: los 64 pasos en STEP (girado rápido, varios).',
-         'EDIT': 'Las páginas de TONE solo donde el motor las tiene: MORPH (ANALOG PHASE LOFI), RETRIG (LOFI), ROTOR (WHEEL), WORDS (VOICE). DRUM-X: KNOB 1 elige el sonido del kit en SOUND.',
+         'EDIT': 'Sintes: la página 3 es VOICE en ANALOG, FILTER en los demás; MORE lista el resto (KNOB 1 elige, KNOB 2 cambia). DRUM-X: KNOB 1 elige el sonido del kit en SOUND.',
          'FX': 'CHORUS y SLICER se ocultan con LOAD ECO; la cadena los saltea.',
          'SAVE': 'Desde afuera, USER y SECTIONS llegan con SAVE elegido: SAVE · OCT+ · OCT+.',
          'ARP': 'Un grupo: ARP adentro vuelve a ARP.', 'SCL': 'KNOB 1 fija ROOT.',
@@ -163,8 +163,13 @@ L = {
 }
 
 # pages shown only where they apply (the manual's "Some pages only appear when they apply"); drawn dashed
-COND = {('EDIT', 'MORPH'), ('EDIT', 'RETRIG'), ('EDIT', 'ROTOR'), ('EDIT', 'WORDS'), ('FX', 'CHORUS'), ('FX', 'SLICER'),
-        ('FX', 'SL BUS'), ('FX', 'SL BUS 2'), ('FX', 'SL PITCH')}
+COND = {('CE_SYN', 'VOICE'), ('CE_SYN', 'FILTER'), ('FX', 'CHORUS'), ('FX', 'SLICER'),   # (3b: a synth's page 3, ANALOG's
+        ('FX', 'SL BUS'), ('FX', 'SL BUS 2'), ('FX', 'SL PITCH')}                         # VOICE or the others' FILTER)
+
+
+def is_cond(sec, ce, name):
+    """a page shown only where it applies: by its section's name, or (EDIT's) its chain's"""
+    return (sec, name) in COND or (ce, name) in COND
 
 # the map's rows: the sections in each (EDIT: its three chains side by side) and their accent (KNOB 1..4 colours)
 ROWS = [['HOME', 'SEQ', 'SCL'], ['EDIT'], ['FX', 'GLO'], ['ENV', 'LFO', 'ARP', 'SAVE']]
@@ -362,7 +367,7 @@ def draw_block(sv, ch, sec, x, y, colw, accent, drawn, label=None):
     for p in ch['pages']:
         gx, cy = pos[p['i']]
         on = p['i'] == ch['default']
-        cond = (sec, p['name']) in COND
+        cond = is_cond(sec, ch['ce'], p['name'])
         sv.rrect(gx, cy - PILL_H / 2, colw, PILL_H, 10, fill=RAISE, stroke=ORANGE if on else mix(accent, BG, .62),
                  sw=2 if on else 1.4, dash='5 4' if cond else None)
         nx = gx + 16

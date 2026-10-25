@@ -53,7 +53,7 @@ for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
 strips = [[('lente_step_note', 'NOTE · MICRO in 64ths'), ('lente_bar', 'SEQ › STEP · THE ROLL'), ('key_chord', 'CHORD'),
            ('fx_buses', 'FX › BUSES'), ('mixer', 'MIXER · DJ FILTER'), ('layer_glo_active', 'GLO held · MAP')],
-          [('v6_analog_full', 'ACID ANALOG'), ('drumx', 'DRUM-X'), ('words', 'VOICE · WORDS'), ('ed_operator', 'FM6 OPERATOR'),
+          [('edit_analog_1', 'ACID ANALOG'), ('drumx', 'DRUM-X'), ('words', 'VOICE · WORDS'), ('ed_operator', 'FM6 OPERATOR'),
            ('reverb_reso', 'RESO REVERB'), (('home', 'JIANT'), 'COLORS skin')]]
 y1 = y0 + 545
 for r, row in enumerate(strips):

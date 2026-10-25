@@ -150,145 +150,8 @@ static void graph_dximg(const track_t *t)
     }
 }
 
-/* (0.8.5) VOICE's words (sing.c sing_view): what the track sings. The lyric's source (the language, TEXT / W n / S n,
- * the theme) and the syllables sung; the word sounding, large; its syllable's phonemes, the one sounding lit; the
- * lyric's text from the word on (TEXT); at the right the vowel chart (F2 across, high to low; F1 down: the tongue's
- * place, as a sagittal head would show it) with the formants' dot, filled while voiced, ringed in noise; under it the
- * voicing and the noise */
-static void sing_up(char *d, const char *s, uint32_t n)
-{
-    uint32_t i;
-    for (i = 0; s[i] && i + 1u < n; i++)
-        d[i] = (char)(s[i] >= 'a' && s[i] <= 'z' ? s[i] - 32 : s[i]);
-    d[i] = 0;
-}
-static void graph_sing(const track_t *t)
-{
-    /* (0.8.7) in EDIT's lens (TONE . WORDS): no frame, the captions and chips in the 5 x 7 face as the lens panels'
-     * (ui_lzedit.c), the word in M; the vowel chart a square well at the right, the voicing and noise under it */
-    static const uint8_t VREF[5] = {PH_A, PH_E, PH_I, PH_O, PH_U};
-    const sing_t *s = sing_view(t);
-    uint32_t lang = (uint32_t)clamp(t->p[P_VLANG], 0, LG_N - 1), lyr = (uint32_t)clamp(t->p[P_VLYR], 0, LYR_N - 1), k;
-    int32_t x, cx0 = 152, cy0 = 4, cw = 80, ch = 84, nv, nn, lw = cx0 - 10 - PANEL_X0;
-    uint16_t bg = cv_bg;
-    char b[64];
-    if (!lang) {
-        cv_text_in(PANEL_X0, 44, PANEL_W, &AF_X, "LANG OFF: VOWELS", T_MID, bg);
-        cv_text_in(PANEL_X0, 58, PANEL_W, &AF_X, "LANG ES EN JA: WORDS", T_DIM, bg);
-        return;
-    }
-    str_cpy(b, N_LANG[lang], sizeof b);
-    str_cpy(b + str_len(b), " \xB7 ", 4);
-    str_cpy(b + str_len(b), lyr == 0u && !lyr_get((uint32_t)(t - trk))[0] ? "W1" : N_LYRIC[lyr], 8);
-    if (lyr <= LYR_NW && (lyr || !lyr_get((uint32_t)(t - trk))[0])) {
-        str_cpy(b + str_len(b), " \xB7 ", 4);
-        str_cpy(b + str_len(b), N_THEME[(uint32_t)clamp(t->p[P_E1], 0, 127) >> 4], 8);
-    }
-    cv_clip_text(PANEL_X0, 6 - AF_X_CAP_Y, &AF_X, b, T_TEXT, bg, lw - 30);   /* the source */
-    fmt_int(b, s->nsy);
-    str_cpy(b + str_len(b), " SYL", 5);
-    cv_text_r(cx0 - 10, 6 - AF_X_CAP_Y, &AF_X, b, T_DIM, bg);
-    sing_up(b, s->w[0] ? s->w : "-", sizeof b);          /* the word */
-    cv_free_text(PANEL_X0, 20, &AF_M, b, T_TEXT, bg, lw);
-    for (k = 0, x = PANEL_X0; k < s->np && k < SY_N; k++) {   /* its syllable's phonemes: chips */
-        int32_t w;
-        uint16_t f = k == s->i ? T_THEME : T_RAISE;
-        sing_up(b, PH_NAME[s->ph[k] % PH_COUNT], 4);
-        w = text_w(&AF_X, b) + 8;
-        if (x + w > cx0 - 10)
-            break;
-        cv_rect(x, 46, w, 13, f);
-        cv_text_in(x, 49 - AF_X_CAP_Y, w, &AF_X, b, k == s->i ? T_INK : k < s->i ? T_DIM : T_TEXT, f);
-        x += w + 2;
-    }
-    if (!lyr && lyr_get((uint32_t)(t - trk))[0]) {       /* the text from the word on */
-        sing_up(b, lyr_get((uint32_t)(t - trk)) + (s->to < LYR_LEN ? s->to : 0u), sizeof b);
-        cv_free_text(PANEL_X0, 68 - AF_X_CAP_Y, &AF_X, b, T_DIM, bg, lw);
-    }
-    /* the vowel chart: F2 2500 .. 600 Hz across, F1 250 .. 850 Hz down */
-    cv_rect(cx0, cy0, cw, ch, T_RAISE);
-    cv_rect(cx0 + 1, cy0 + 1, cw - 2, ch - 2, bg);
-    for (k = 0; k < 5u; k++) {
-        const phon_t *P = &PHON[VREF[k]];
-        int32_t vx = cx0 + 4 + clamp((2500 - P->f2) * (cw - 14) / 1900, 0, cw - 14);
-        int32_t vy = cy0 + 4 + clamp(((int32_t)P->f1 - 250) * (ch - 16) / 600, 0, ch - 16);
-        sing_up(b, PH_NAME[VREF[k]], 4);
-        cv_text(vx, vy - AF_X_CAP_Y, &AF_X, b, T_DIM);
-    }
-    nv = s->gv * 100 / 32767;
-    nn = (s->ga > s->gf ? s->ga : s->gf) * 100 / 32767;
-    {
-        int32_t dx = cx0 + 6 + clamp((2500 - s->f[1]) * (cw - 14) / 1900, 0, cw - 14);
-        int32_t dy = cy0 + 8 + clamp((s->f[0] - 250) * (ch - 16) / 600, 0, ch - 16);
-        uint16_t dc = nv > 8 ? T_THEME : nn > 8 ? T_ACCENT : T_DIM;   /* (plain squares: no cell for the lint) */
-        cv_rect(dx - 3, dy - 2, 7, 5, dc);
-        cv_rect(dx - 2, dy - 3, 5, 7, dc);
-    }
-    cv_text(cx0, 96 - AF_X_CAP_Y, &AF_X, "V", T_DIM);    /* the voicing, the noise */
-    cv_rect(cx0 + 10, 98, cw - 10, 3, T_RAISE);
-    cv_rect(cx0 + 10, 98, (cw - 10) * clamp(nv, 0, 100) / 100, 3, T_THEME);
-    cv_text(cx0, 108 - AF_X_CAP_Y, &AF_X, "N", T_DIM);
-    cv_rect(cx0 + 10, 110, cw - 10, 3, T_RAISE);
-    cv_rect(cx0 + 10, 110, (cw - 10) * clamp(nn, 0, 100) / 100, 3, T_ACCENT);
-}
-
-static void graph_morph(const track_t *t)
-{
-    const int16_t *p = t->p;
-    uint32_t e = trk_eng(t), i, a0 = 0, a1 = 0;
-    int32_t px = 0, py = 0, pos, f;
-    const char *n0 = "", *n1 = "";
-    char b[24];
-    pd_t pa, pb;
-    if (ENGINES[e] == &ENG_PHASE) {
-        uint32_t dcw = (uint32_t)(p[P_E2] << 8) * 65535u / (127u << 8);
-        pos = (int32_t)(p[P_E0] & 7) * 256 + p[P_MORPH] * 768 / 127;
-        dcw = (dcw * 56000u) >> 16;
-        a0 = ((uint32_t)pos >> 8) & 7u; a1 = (a0 + 1u) & 7u;
-        pd_setup(&pa, a0, dcw); pd_setup(&pb, a1, dcw);
-        n0 = N_PD_WAVE[a0]; n1 = N_PD_WAVE[a1];
-    } else if (ENGINES[e] == &ENG_LOFI) {
-        pos = clamp(p[P_E1] * 256 + p[P_MORPH] * 768 / 127, 0, RW_WRAM * 256);
-        a0 = (uint32_t)pos >> 8; a1 = a0 + 1u < RW_BYTE ? a0 + 1u : a0;
-        n0 = N_RWAVE[a0]; n1 = N_RWAVE[a1];
-    } else {
-        if (p[P_E0] >= 4) {                             /* (0.6.81) PWM SYNC RING SAW3: the WAVE, what MORPH moves */
-            static const char *const WHAT[4] = {"PWM  WIDTH", "SYNC  RATIO", "RING  RATIO", "SAW3  SPREAD"};
-            str_cpy(b, WHAT[(p[P_E0] - 4) & 3], sizeof b);
-            cv_rect(PANEL_X0, 46, PANEL_W, 1, T_RAISE);
-            for (i = 0; i <= 110u; i++) {
-                int32_t x = PANEL_X0 + (int32_t)i * 2, y = 46 - (int32_t)((i * 34u * (uint32_t)p[P_MORPH]) / (110u * 127u)) + 17;
-                if (i) cv_line_t(px, py, x, y, heat_col(80 + (uint32_t)(46 - y + 34) * 2u), 2);
-                px = x; py = y;
-            }
-            cv_text(PANEL_X0 + 2, 90, &AF_S, b, T_MID);
-            return;
-        }
-        pos = clamp(p[P_E0] * 256 + p[P_MORPH] * 768 / 127, 0, 1536);
-        a0 = ((uint32_t)pos >> 8) & 3u; a1 = (a0 + 1u) & 3u;
-        n0 = N_ANALOG_WAVE[a0]; n1 = N_ANALOG_WAVE[a1];
-    }
-    f = pos & 255;
-    cv_rect(PANEL_X0, 46, PANEL_W, 1, T_RAISE);
-    for (i = 0; i <= 110u; i++) {
-        uint32_t ph = (uint32_t)(i % 110u) * (0xFFFFFFFFu / 110u), inc = 0xFFFFFFFFu / 220u;
-        int32_t s, x = PANEL_X0 + (int32_t)i * 2, y;
-        if (ENGINES[e] == &ENG_PHASE) {
-            s = pd_wave(&pa, ph >> 16);
-            if (f) s += ((pd_wave(&pb, ph >> 16) - s) * f) >> 8;
-        } else if (ENGINES[e] == &ENG_LOFI) {
-            s = lofi_mto(a0, ph, 0x80000000u, WRAM[((uint32_t)p[P_E2] >> 3) & 15u], 0, 1u);
-            if (f) s += ((lofi_mto(a1, ph, 0x80000000u, WRAM[((uint32_t)p[P_E2] >> 3) & 15u], 0, 1u) - s) * f) >> 8;
-        } else
-            s = an_morph(pos, ph, inc);
-        y = 46 - s * 34 / 32768;
-        if (i) cv_line_t(px, py, x, y, heat_col(80 + (uint32_t)(46 - y + 34) * 2u), 2);
-        px = x; py = y;
-    }
-    str_cpy(b, n0, sizeof b);
-    if (f && a1 != a0) { str_cpy(b + str_len(b), " > ", 4); str_cpy(b + str_len(b), n1, 8); }
-    cv_text(PANEL_X0 + 2, 90, &AF_S, b, T_MID);
-}
+/* (ACID FM 3b task 4) graph_sing (EDIT > WORDS: what VOICE sings) and graph_morph (EDIT > MORPH: the wave and where MORPH takes
+ * it) gone: those pages are a synth's EDIT MORE rows now (ux_section.c draws the synth's wave, MORPH in it) */
 
 /* (0.8.5) the piano roll of the cursor's bar, as the approved mock-up (LENTE's BAR, under the bars' strip): its 16
  * steps as columns over the panel's width (x 4 .. 236, 14 or 15 px), PR_ROWS semitone rows of PR_RH px (4), the
@@ -1128,8 +991,6 @@ static uint32_t graph_signature(void)
     }
     if (pg->graph == GR_MOD)
         h ^= (mod_ui_slot + 1u) * 40503u;
-    if (pg->graph == GR_FOCUS)                       /* (0.8.5) EDIT > FOCUS: the parameter */
-        h ^= (ui.focus + 1u) * 2246822519u;
     if (pg->graph == GR_STAGE)                       /* .. ENV > STAGE: the stage */
         h ^= (ui.stage + 1u) * 3266489917u;
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
@@ -1173,23 +1034,12 @@ static uint32_t graph_signature(void)
             h = (h ^ ((uint32_t)fg_set[ti][k].rate | (uint32_t)fg_set[ti][k].dir << 4 | (uint32_t)(uint8_t)fg_set[ti][k].ivl << 8 |
                       (song.playing ? (uint32_t)fg_head[ti][k].idx << 16 : 0u))) * 16777619u;
     }
-    if (pg->graph == GR_LYRIC || (pg->scope == SC_ENGINE && trk_engp(t) == &ENG_FORMANT &&
-                                  t->p[P_VLANG])) {   /* (0.8.5) the syllable, the phoneme, the formants, the gains */
-        const sing_t *s = sing_view(t);
-        h = (h ^ ((uint32_t)s->nsy << 16 | (uint32_t)s->i << 8 | (uint32_t)s->np)) * 16777619u;
-        h = (h ^ ((uint32_t)(s->f[0] >> 4) << 20 | (uint32_t)(s->f[1] >> 5) << 8 | (uint32_t)(s->gv >> 11) << 4 |
-                  (uint32_t)((s->ga | s->gf) >> 12))) * 16777619u;
-        h = (h ^ str_hash(lyr_gen[(t - trk) % NTRK], s->w)) * 16777619u;
-    }
     if (pg->graph == GR_DXIMG)                       /* (0.6.48) IMAGE and how wide it plays */
         h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
     if (DX_KIT3(pg))                                 /* (0.8.8) KIT 3's colony lives every frame, as KIT's (was still) */
         h ^= ui.frame * 2654435761u;
     if (pg->graph >= GR_FMOP && pg->graph <= GR_FMENV)   /* (0.9.6) FM6's operators: the colony lives, as the beings */
         h ^= ui.frame / 2u * 2246822519u;
-    if (pg->graph == GR_MORPH)                       /* (0.6.45) the wave, MORPH */
-        h = (h ^ ((uint32_t)t->p[P_MORPH] << 16 | (uint32_t)t->p[P_E0] << 8 | (uint32_t)t->p[P_E1] |
-                  (uint32_t)t->p[P_E2] << 24)) * 16777619u;
     if (pg->graph == GR_MUTATE) {                    /* (0.6.43) the bar, the settings, FREEZE */
         h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u ^ (uint32_t)mut_back_ok() * 131u) * 16777619u;
         for (i = 0; i < NTRK; i++)
@@ -1850,9 +1700,6 @@ static void draw_graph(void)
         case GR_ADSR:
             graph_adsr(t, c);
             break;
-        case GR_MORPH:
-            graph_morph(t);
-            break;
         case GR_DXIMG:                               /* (0.6.58) KIT 3: the colony; STEREO: IMAGE */
             if (DX_KIT3(pg)) {
                 cv_oy = 0;
@@ -1887,14 +1734,7 @@ static void draw_graph(void)
             else
                 graph_colony(t, dx_ui_lane);
             break;
-        case GR_LYRIC:                               /* (0.8.5) EDIT > WORDS: what VOICE sings */
-            graph_sing(t);
-            break;
         default:
-            if (pg->scope == SC_ENGINE && trk_engp(t) == &ENG_FORMANT && t->p[P_VLANG]) {
-                graph_sing(t);                       /* (0.8.5) VOICE singing: its words on its pages */
-                break;
-            }
             if (pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DRUM) {   /* (0.8.5: WHEEL's and FM6's EDIT 1
                                                       * and 2 their beings, as every synth's: EDIT's lens, SOUND) */
                 cv_oy = 0;
@@ -1907,7 +1747,8 @@ static void draw_graph(void)
             else if ((pg->scope == SC_ENGINE || pg->id[0] == P_FM1_LEVEL) && trk_eng(t) == ENGI_DIGITAL)
                 graph_fm(t, c);                      /* (OP LEVEL too: the levels on the chart) */
 #endif
-            else if (pg->scope == SC_ENGINE) { cv_oy = 0; graph_being(t); }   /* (JIANT 0.5: the being, was the scope) */
+            else if (pg->scope == SC_ENGINE) { cv_oy = 0; graph_sound_lz(t); }   /* (JIANT 0.5: the being, was the scope;
+                                                      * ACID FM 3b: FM6's creature, the synths' are ux_section.c's) */
             else {                                   /* the FX, DEST, VOICE, GLOBAL pages: their graphs (else the scope) */
                 cv_oy = 0;
                 if (!graph_tech(t, pg))

@@ -1039,3 +1039,7 @@ and its styles (FLAT LINE). The protocol keeps its shape; only the values change
 - Saved settings and backups: every stored palette id (an older firmware's 0..19, JIANT's tagged 64..74) is accepted and
   loads as ACID (saved back as 64); the SKIN and STYLE bytes are kept as stored (still in JIANT's range: an unknown SKIN 0,
   the retired BOTTOM 1 as AIR 3, an unknown STYLE 0, PIXEL 2 as LINE 1) and read by nothing. New settings store SKIN AIR (3).
+- (ACID FM 3b) SCOPE (id 22) is inert the same way: one value (`max` 0), named `OFF`, value 0; a `MENU_SET` of any value
+  answers as any other set and changes nothing. It chose the EDIT pages' creature or a scope; the synths' EDIT pages
+  draw their waveform now and the creatures are gone. It is on no page of the device's MENU (SCREEN's first page: LARGE,
+  ANIMATION, SCREEN SLEEP). Its settings byte (`favorites.factory[15][19]`) is kept as stored and read by nothing.

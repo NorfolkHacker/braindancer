@@ -1026,52 +1026,6 @@ static void shape_knob(uint32_t slot, int32_t steps)
         knob_cap(TSEL, P_SOFS);
     }
 }
-/* (0.8.5) EDIT > FOCUS: KNOB 1 the parameter (E1..E8 with a name, no wrap), 2 its value, 3 the SRC of the MOD slot aimed
- * at it (from OFF: a free slot takes it, its DEST E1..E8; back to OFF: the slot free again), 4 that slot's AMT */
-static void focus_knob(uint32_t slot, int32_t steps)
-{
-    uint32_t k = focus_k(), f = k, n;
-    int32_t j = focus_slot(k);
-    int16_t *p;
-    const param_desc_t *d;
-    if (slot == 0u) {                                   /* (a named one a detent) */
-        int32_t m = steps < 0 ? -steps : steps;
-        for (n = 0; n < 8u && m > 0; n++) {
-            if ((steps > 0 && f == 7u) || (steps < 0 && f == 0u))
-                break;
-            f = steps > 0 ? f + 1u : f - 1u;
-            if (focus_named(f)) {
-                ui.focus = (uint8_t)f;
-                m--;
-            }
-        }
-        return;
-    }
-    if (slot == 1u) {
-        d = track_desc(TSEL, P_E0 + k);
-        TSEL->p[P_E0 + k] = (int16_t)param_turn(d, TSEL->p[P_E0 + k], accel(EN_K1 + 1u, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
-        knob_cap(TSEL, P_E0 + k);
-        return;
-    }
-    if (slot == 2u && j < 0) {                          /* (no slot aims at it: a free one, turned up) */
-        uint32_t m;
-        if (steps <= 0)
-            return;
-        for (m = 0; m < 4u && TSEL->p[P_M1SRC + 3u * m]; m++)
-            ;
-        if (m == 4u) {
-            ui_message("MOD: 4 SLOTS USED");
-            return;
-        }
-        j = (int32_t)m;
-        TSEL->p[P_M1DST + 3u * m] = (int16_t)(MD_E1 + k);
-    }
-    if (j < 0)
-        return;
-    p = &TSEL->p[P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u)];
-    d = track_desc(TSEL, P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u));
-    *p = (int16_t)param_turn(d, *p, slot == 2u ? (steps > 0 ? 1 : -1) : accel(EN_K1 + 3u, steps, d->max - d->min));
-}
 /* (ACID FM 3b, factored out of edit_param) setting id of track t (0: a global) turned steps detents of KNOB knob (0..3, its
  * acceleration): the write every page's knob does (params.c param_ref), a MORE row's too (ux_more.c): the value, the views
  * written back (TRACKS, LOAD, the LFO's MODE / PHASE), the turn recorded (AUTOMATION) and heard by MIDI LEARN (knob_cap) */
@@ -1108,8 +1062,11 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
 static void edit_param(uint32_t slot, int32_t steps)
 {
     const page_t *pg = cur_page();
-    if (pg->graph == GR_MORE) {                         /* (ACID FM 3b) MORE: KNOB 1 the row, KNOB 2 its value (ux_more.c) */
-        (void)ux_more_knob(slot, steps);
+    if (pg->graph == GR_MORE) {                         /* (ACID FM 3b) MORE: KNOB 1 the row, KNOB 2 its value (ux_more.c); */
+        if (slot >= 2u)                                 /* 3 and 4 say so (spec 0 rule 6: never nothing silently) */
+            ui_message(UXM_K34);
+        else
+            (void)ux_more_knob(slot, steps);
         return;
     }
     if (pg->graph == GR_LIVE) {                         /* (0.9.11) GLO > LIVE (ui_live.c) */
@@ -1147,10 +1104,6 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->graph == GR_DXSND) {                          /* EDIT > SOUND: the DRUM-X kit (ui_dx.c) */
         dx_knob(pg, slot, steps);
-        return;
-    }
-    if (pg->graph == GR_FOCUS) {                          /* (0.8.5) EDIT > FOCUS */
-        focus_knob(slot, steps);
         return;
     }
     if (pg->graph == GR_STAGE && slot < 2u) {             /* (0.8.5) ENV > STAGE: the stage, its value */
@@ -2570,7 +2523,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE ||
+            || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_STAGE ||
             pg->graph == GR_LIVE || pg->graph == GR_MORE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;

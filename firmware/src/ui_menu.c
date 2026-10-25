@@ -349,7 +349,6 @@ static const char *menu_short(uint32_t row)          /* a card's label: a whole 
 /* the panel's line under a row: what it does, in plain words; a value's own (v) where the values differ in kind */
 static const struct { uint8_t row, v; const char *s; } MI_HELP[] = {
     {MI_LARGE, 255, "BIG LABELS AND VALUES"},
-    {MI_SCOPE, 255, "EDIT PAGES: A SCOPE BY THE BEING"},
     {MI_ANIM, 255, "OFF: VALUES SNAP, NOTHING ROLLS"},
     {MI_LEDS, 255, "HOW IDLE KEYS AND BUTTONS GLOW"},
     {MI_SCROFF, 255, "SCREEN DARK AFTER THIS LONG IDLE"},

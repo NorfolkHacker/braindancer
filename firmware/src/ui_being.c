@@ -130,15 +130,6 @@ static void being_lines(const genome_t *g, const bfeat_t *f, int32_t cx, int32_t
         bg_ring(x, y, r * 6 / 100, bg_col(240));
     }
 }
-/* the page's knob c as 0..256 (none: -1) and its label */
-static int32_t bg_knob(uint32_t c, const char **lab)
-{
-    int16_t *vp;
-    const param_desc_t *d = page_desc(cur_page(), c, &vp);
-    int32_t r = d && d->label && d->label[0] != '-' ? RATIO(d, enum_rank(d, *vp)) : -1;
-    *lab = d && d->label ? d->label : "";
-    return r < 0 ? -1 : r * 256 / 1000;
-}
 /* a being's features from four of its track's parameters (ids), each by what it is (its label), else by its place */
 static void bg_feat(const track_t *t, const genome_t *g, const uint8_t *ids, bfeat_t *f)
 {
@@ -175,24 +166,8 @@ static void bg_excite(bfeat_t *f, int32_t en, int32_t k)
     f->ripple = clamp(f->ripple + en * k / 3, 0, 256);
     f->fray = clamp(f->fray + en * k / 6, 0, 256);
 }
-/* the page's being: its engine's genome, its four knobs by what they are */
-static void graph_being_at(const track_t *t, int32_t cx, int32_t cy, int32_t r);
-static void graph_being(const track_t *t) { graph_being_at(t, 120 * 16, 61 * 16, 36 * 16); }
-/* .. at (cx, cy), radius r (Q4: the EDIT lens's SOUND draws it on the left) */
-static void graph_being_at(const track_t *t, int32_t cx, int32_t cy, int32_t r)
-{
-    static uint32_t tm, f0;                              /* its time runs with the sound: in silence it rests */
-    const genome_t *g = &GENOME[EGEN[trk_eng(t)]];
-    const page_t *pg = cur_page();
-    int32_t en = bg_energy();
-    bfeat_t f;
-    bg_feat(t, g, pg->id, &f);
-    f.lob += (int32_t)(ui.page & 1u);                    /* (the engine's second page: a lobe more, the same species) */
-    bg_excite(&f, en, 2);
-    if (en > 2) tm += (ui.frame - f0) * (uint32_t)(160 + en * 3);
-    f0 = ui.frame;
-    being_lines(g, &f, cx, cy, r * (256 + en / 3) / 256, en, tm);
-}
+/* (ACID FM 3b task 4) graph_being, the synths' EDIT pages' being, gone with them (their EDIT draws its wave, ux_section.c);
+ * the genomes stay for SAVE's sound card and the DICE dialog (ui_lzsave.c, ui_input.c dk_genome) until 3b task 5 */
 
 /* (JIANT 0.5) HOME, the system as an ecosystem: ui_lzhome.c (graph_eco, eco_step; gone in ACID FM 3a) */
 

@@ -31,8 +31,8 @@ SHOTS = OUT / 'shots'
 PAGE_SHOT = {
     'HOME': {'TRACKS': 'home', 'VISUAL': 'home_visual',   # (ACID FM 3a: was ECO MACROS BEING ROUTES)
              'GEN 1': 'gen_explore', 'GEN 2': 'gen_parts', 'GEN 3': 'gen_lead'},
-    'CE_SYN': {'EDIT 1': 'edit_analog', 'EDIT 2': 'v6_analog_sqr', 'FILTER': 'ed_filter', 'MORPH': 'morph',
-               'VOICE': 'voice', 'VOICE 2': 'ed_voice2', 'WORDS': 'words', 'FOCUS': 'ed_focus'},
+    'CE_SYN': {'SOUND': 'edit_analog_1', 'TONE': 'edit_analog_2', 'VOICE': 'edit_analog_3', 'FILTER': 'edit_phase_3',
+               'MORE': 'edit_analog_more'},   # (3b task 4: a synth's EDIT on the ux pages)
     'CE_FM6': {'EDIT 1': 'edit_fm6', 'EDIT 2': 'fm6_alg_22', 'FILTER': 'ed_filter', 'VOICE': 'voice',
                'VOICE 2': 'ed_voice2', 'OPERATOR': 'ed_operator', 'OP ENV': 'v6_fm6_env', 'OPERATOR 2': 'v6_fm6_op2'},
     'CE_DRM': {'KIT': 'drumx', 'SOUND': 'dx_sound', 'SOUND 2': 'dx_sound2', 'SOUND 3': 'vx_kit_ghost',
@@ -67,7 +67,7 @@ def build():
             sec=k['sec'], ce=k['ce'], label=dict(es=lab[0], en=lab[1]) if lab else None,
             groups=[g['nm'] for g in k['groups']],
             pages=[dict(name=p['name'], g=p['g'], on=p['i'] == k['default'],
-                        cond=(k['sec'], p['name']) in nav.COND, shot=shots.get(p['name'])) for p in k['pages']]))
+                        cond=nav.is_cond(k['sec'], k['ce'], p['name']), shot=shots.get(p['name'])) for p in k['pages']]))
     lang = {}
     for code in ('es', 'en'):
         L = nav.L[code]

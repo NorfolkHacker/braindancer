@@ -10,11 +10,20 @@
 
 enum { UXR_TRACK, UXR_GLOBAL, UXR_ACTION, UXR_HEAD };   /* a row: a track setting (P_*), a global (G_*), an action (an
                                                          * index of ux_more.c UXM_ACT), a heading (an index of UXM_HEAD) */
-typedef struct { uint16_t id; uint8_t kind; } ux_row_t;
+/* eng: shown only on that engine's tracks (its ENGINES index + 1; 0: any), where one stored slot means two things (P_LRTRG is
+ * LOFI's RETRIG and VOICE's WORDS): each row says only one of them */
+typedef struct { uint16_t id; uint8_t kind, eng; } ux_row_t;
 typedef struct ux_more_s { const ux_row_t *rows; uint8_t n; } ux_more_t;
+#define UXR_ON(e) ((uint8_t)((e) + 1u))   /* (a row's eng: on engine e only) */
+
+/* the headings (UXR_HEAD rows' ids; ux_more.c UXM_HEAD their words) and the actions (UXR_ACTION rows' ids; UXM_ACT) */
+enum { UXM_H_ARP, UXM_H_VOICE, UXM_H_FILTER, UXM_H_TONE, UXM_H_MOD, UXM_H_MSEQ, UXM_H_DELAY, UXM_H_REVERB, UXM_H_CHORUS,
+       UXM_H_SLICER, UXM_H_WORDS, UXM_H_N };
+enum { UXM_A_LYRIC, UXM_A_N };
 
 #define UXM_ROWS 8u              /* rows on the panel at once */
 #define UXM_PITCH 18             /* .. a row's height (8 x 18 = 144 of the panel's 150) */
 #define UXM_SELECT 4u            /* ux_more_turn's knob for SELECT (0..3: KNOB 1..4) */
+#define UXM_K34 "KNOB 1 PICKS \xB7 KNOB 2 SETS"   /* KNOB 3 or 4 turned on MORE: what the knobs do (ui_input.c) */
 
 #endif

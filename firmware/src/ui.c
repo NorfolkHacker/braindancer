@@ -174,9 +174,9 @@ static void rp_put(uint32_t f, uint32_t v)
  * (gfx.c): their values are not read; the editor's ids for them answer 0 (menu_items.c menu_hidden) */
 #define ui_style (favorites.factory[15][29])
 #define ui_skin (favorites.factory[15][20])
-/* (0.9.7) MENU > DISPLAY > SCOPE (ui_lzedit.c graph_sound_lz): 1 ON, an engine's EDIT pages as before (the creature on the left,
- * the SCOPE card, the chips); 0 OFF (the default: new settings and older ones, which never held it), the creature on the
- * whole panel, centred, the page's and the sound's names in its corners. A byte no engine uses (engine 15) */
+/* (0.9.7) MENU > DISPLAY > SCOPE: 1 ON, the EDIT pages' creature on the left with a SCOPE card; 0 OFF, the creature on the
+ * whole panel. A byte no engine uses (engine 15). (ACID FM 3b) gone from the MENU with the creatures (menu_items.c
+ * menu_hidden): the byte stays in the settings as it was, read by nothing */
 #define ui_scope (favorites.factory[15][19])
 
 static uint8_t sync_reload;                  /* engine / preset / project / user preset loaded: editor RELOAD push */
@@ -257,7 +257,6 @@ static struct {
     uint8_t nmem[13];            /* (0.9.2) each section's page last shown, its chain's entry ^ its default (ui_lens.c
                                   * nav_mem: EDIT one per kind of track) */
     uint8_t fxmod;               /* (0.8.5) FX: the effect last shown (BUSES' tile lit) */
-    uint8_t focus;               /* .. EDIT > FOCUS: the parameter (E1..E8: 0..7) */
     uint8_t stage;               /* .. ENV > STAGE: the stage (ATK DEC SUS REL: 0..3) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
@@ -541,10 +540,14 @@ static uint32_t layer_btn(void);
  * LANES 2 a DRUM track's (its lane levels); SOUND / SOUND 2 a DRUM track's (DRUM-X: ui_dx.c) */
 #include "ux_section.h"                                  /* (ACID FM 3b) the sections drawn by ux_section.c */
 static uint32_t sec_of_fam(uint32_t f);                 /* (ui_lens.c) */
-static int page_visible(uint32_t i)
+/* JIANT's rules: the pages a track shows by its engine, LOAD, .. (ux_more.c: the rows a MORE lists follow them); page_visible
+ * below: what the sections show now */
+static int page_jiant(uint32_t i)
 {
     if (PAGES[i].graph == GR_MORE)                      /* (ACID FM 3b) MORE: its section's, once on the ux pages */
         return ux_section_owns(sec_of_fam(PAGES[i].fam));
+    if (PAGES[i].graph == GR_SYN)                       /* (3b task 4) a synth's EDIT page 3: ANALOG's VOICE, the others' FILTER */
+        return edit_kind() == 0u && (trk_eng(TSEL) == ENGI_ANALOG) == (PAGES[i].id[0] == P_VOICE);
     if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
         return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
                                                          * was the same page twice; kept in the table: its index) */
@@ -564,9 +567,6 @@ static int page_visible(uint32_t i)
         return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
         return trk_eng(TSEL) == ENGI_DRUM;
-    if (PAGES[i].graph == GR_FOCUS)                     /* (0.8.5) FOCUS: a synth's (FM6: OPERATOR, DRUM: SOUND) */
-        return trk_eng(TSEL) != ENGI_DRUM && trk_eng(TSEL) != ENGI_FM6 &&
-               !(FELUCCA_FM4 && trk_eng(TSEL) == ENGI_DIGITAL);
     if (PAGES[i].id[0] == P_ALLOC)                      /* (0.8.5) VOICE 2: not a kit's */
         return trk_eng(TSEL) != ENGI_DRUM;
     if (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV)   /* (0.6.10) OPERATOR, OP ENV, OPERATOR 2: FM6's */
@@ -579,6 +579,15 @@ static int page_visible(uint32_t i)
         return (trk_eng(TSEL) == ENGI_ANALOG) == (PAGES[i].id[1] == P_E4);
     return !(PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] >= P_FM1_ATK &&
              PAGES[i].id[0] <= P_FM4_LEVEL) || (FELUCCA_FM4 && trk_eng(TSEL) == ENGI_DIGITAL);
+}
+/* (3b task 4) EDIT on a synth track is its ux chain's (ui_lens.c CE_SYN: EDIT 1, EDIT 2, a GR_SYN page, MORE): JIANT's other
+ * EDIT pages (FILTER, MORPH, RETRIG, VOICE, VOICE 2, WORDS ..) are not shown there; their settings are MORE's rows */
+static int page_visible(uint32_t i)
+{
+    if (PAGES[i].fam == FAM_EDIT && PAGES[i].scope != SC_ENGINE && PAGES[i].graph != GR_SYN && PAGES[i].graph != GR_MORE &&
+        ux_section_owns(UXS_SEC_EDIT))
+        return 0;
+    return page_jiant(i);
 }
 
 static uint32_t page_first(uint32_t fam)

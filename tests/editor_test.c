@@ -867,9 +867,10 @@ static int menu_protocol(void)
     ok &= !strcmp(it.name, "SKIN") && it.id == 21 && it.tab == 0 && it.value == 0 && it.max == 0 &&   /* (0.8.9) DISPLAY; (ACID FM
                                                          * 0.3) inert: one value, ACID */
           it.nnames == 1u && !strcmp(it.names[0], "ACID");
-    menu_desc(22, &it);                                   /* (0.9.7) SCOPE, a row of DISPLAY: OFF (the default) ON */
-    ok &= !strcmp(it.name, "SCOPE") && it.id == 22 && it.tab == 0 && it.value == 0 && it.max == 1 && !strcmp(it.names[0], "OFF") &&
-          !strcmp(it.names[1], "ON");
+    menu_desc(22, &it);                                   /* (0.9.7) SCOPE, a row of DISPLAY: OFF (the default) ON; (ACID FM 3b)
+                                                         * inert as SKIN: one value, OFF (the creatures it chose are gone) */
+    ok &= !strcmp(it.name, "SCOPE") && it.id == 22 && it.tab == 0 && it.value == 0 && it.max == 0 && it.nnames == 1u &&
+          !strcmp(it.names[0], "OFF");
     menu_desc(23, &it);                                   /* (0.9.12) CPU, CPU CLOCK, rows of SYSTEM (tab 4 since MIDI) */
     ok &= !strcmp(it.name, "CPU CORES") && it.id == 23 && it.tab == 4 && it.max == 1 && !strcmp(it.names[0], "1 CORE") &&
           !strcmp(it.names[1], "2 CORES");

@@ -49,10 +49,13 @@ static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV(0, "VISUAL", 1, 0),   /
                                NV(0, "GEN 1", 2, 2), NV(0, "GEN 2", 2, 2), NV(0, "GEN 3", 2, 2)};   /* ECO MACROS BEING ROUTES
                                                          * then GEN) */
 static const ng_t CG_HOME[] = {{"TRACKS", 0}, {"VISUAL", 0}, {"GEN", 0}};
-static const nv_t CE_SYN[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("MORPH", 0, 1, 1),
-                              NV("RETRIG", 0, 1, 1), NV("ROTOR", 0, 1, 1), NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1),
-                              NV("WORDS", 0, 1, 1), NV("FOCUS", 0, 2, 2)};
-static const ng_t CG_SYN[] = {{"SOUND", 0}, {"TONE", 0}, {"FOCUS", 0}};
+/* (ACID FM 3b) a synth's EDIT (ANALOG PHASE LOFI NOISE VOICE), on the ux pages (ux_section.c): SOUND (E1..E4), TONE (E5..E8),
+ * ANALOG's VOICE or the others' FILTER (one group: a track shows one of them), MORE; a page a group, so EDIT steps them
+ * round (spec 2.1). JIANT's MORPH, RETRIG,
+ * ROTOR, VOICE, VOICE 2, WORDS pages are MORE's rows now, FOCUS gone */
+static const nv_t CE_SYN[] = {NV("EDIT 1", "SOUND", 0, 0), NV("EDIT 2", "TONE", 1, 0), NV("SYN VOICE", "VOICE", 2, 1),
+                              NV("SYN FILTER", "FILTER", 2, 1), NV("SYN MORE", "MORE", 3, 1)};   /* (page 3: one of the two) */
+static const ng_t CG_SYN[] = {{"SOUND", 0}, {"TONE", 0}, {"VOICE/FILTER", "PAGE 3"}, {"MORE", 0}};
 static const nv_t CE_FM6[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("VOICE", 0, 1, 1),
                               NV("VOICE 2", 0, 1, 1), NV("OPERATOR", 0, 2, 2), NV("OP ENV", 0, 2, 2), NV("OPERATOR 2", 0, 2, 2)};
 static const ng_t CG_FM6[] = {{"SOUND", 0}, {"TONE", 0}, {"OPERATOR", "OPS"}};
@@ -93,12 +96,6 @@ static const nv_t CE_SCL[] = {NV("SCL", 0, 0, 0), NV("CHORD", 0, 1, 1)};
 static const ng_t CG_SCL[] = {{"KEY", 0}, {"CHORD", 0}};
 static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2)};
 static const ng_t CG_ARP[] = {{"ARP", 0}};
-#ifdef UXS_TEST                                         /* (ACID FM 3b, host tests: ARP with the demo MORE page, shown while */
-static const nv_t CE_ARP_UXT[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2), NV("MORE", 0, 1, 2)};   /* ARP is owned: */
-static const ng_t CG_ARP_UXT[] = {{"ARP", 0}, {"MORE", 0}};                                         /* ux_section.h) */
-#define CE_ARP CE_ARP_UXT
-#define CG_ARP CG_ARP_UXT
-#endif
 enum { SV_LIB, SV_PROJ, SV_SOUND };
 static const nv_t CE_SAVE[] = {NV("USER", 0, 0, SV_SOUND), NV("PRESETS", 0, 0, SV_SOUND), NV("PROJECT", "SECTIONS", 1, SV_PROJ),
                                NV("ARRANGE", 0, 1, SV_PROJ), NV("PROJECT", "PROJECTS", 2, SV_LIB), NV("TOOLS", 0, 2, SV_LIB)};
@@ -358,27 +355,4 @@ static int nav_put(uint32_t sec, const char *nm)
             return 1;
         }
     return 0;
-}
-
-/* EDIT > FOCUS (a synth's detail): the parameter shown (E1..E8 that has a name: 0..7), the MOD slot aimed at it (its
- * source set; -1 none) */
-static int focus_named(uint32_t k)
-{
-    const param_desc_t *d = track_desc(TSEL, P_E0 + (k & 7u));
-    return d && d->label && d->label[0] != '-' && d->max > d->min;
-}
-static uint32_t focus_k(void)
-{
-    uint32_t k = ui.focus & 7u, n;
-    for (n = 0; n < 8u && !focus_named(k); n++)
-        k = (k + 1u) & 7u;
-    return k;
-}
-static int32_t focus_slot(uint32_t k)
-{
-    uint32_t j;
-    for (j = 0; j < 4u; j++)
-        if (TSEL->p[P_M1SRC + 3u * j] && TSEL->p[P_M1DST + 3u * j] == (int16_t)(MD_E1 + k))
-            return (int32_t)j;
-    return -1;
 }

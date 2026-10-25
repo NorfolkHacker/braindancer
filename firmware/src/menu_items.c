@@ -24,8 +24,10 @@ enum { MI_COLOR, MI_SKIN, MI_SCOPE, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCR
 #define MI_NONE 0xFFu
 static int menu_valued(uint32_t row) { return row < MI_VALUES && row != MI_LCLEAR; }   /* (a row with a value) */
 /* (ACID FM 0.3) COLOR, SKIN, STYLE: one palette, one skin, one style. Their rows are on no page of the MENU; the editor's
- * ids (editor_menu.c ED_MENU 0, 1, 21) answer: one value, "ACID", 0; a set is taken and changes nothing */
-static int menu_hidden(uint32_t row) { return row == MI_COLOR || row == MI_SKIN || row == MI_STYLE; }
+ * ids (editor_menu.c ED_MENU 0, 1, 21) answer: one value, "ACID", 0; a set is taken and changes nothing. (ACID FM 3b) SCOPE
+ * the same (id 22: one value, OFF): it chose between the synths' creatures and the scope on EDIT, both gone (the synths'
+ * EDIT draws its wave, ux_section.c); its settings byte stays where it was (ui.c ui_scope), unread */
+static int menu_hidden(uint32_t row) { return row == MI_COLOR || row == MI_SKIN || row == MI_STYLE || row == MI_SCOPE; }
 /* (0.9.18) the full names (the panel's rows, the editor's MENU_DESC; plain words, at most 12 characters) */
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE", "LARGE", "ANIMATION", "LED GLOW", "SCREEN SLEEP",
                                               "HOLD TIME", "KNOB SPEEDUP", "FX LATCH", "BPM LOCK", "SCALE LEDS",
@@ -42,8 +44,8 @@ static const char *const MTAB_NAME[MTAB_COUNT] = {"SCREEN", "AUDIO", "MIDI", "US
 #define MP_COUNT 8u
 typedef struct { char name[9]; uint8_t tab, row[4]; } menu_page_t;
 static const menu_page_t MPAGE[MP_COUNT] = {   /* (a page opens on its first setting: a value, never an action) */
-    {"SCREEN", MTAB_SCREEN, {MI_LARGE, MI_SCOPE, MI_ANIM, MI_SCROFF}},   /* (ACID FM 0.3: COLOR SKIN STYLE gone, SCREEN 2's
-                                                                          * three here) */
+    {"SCREEN", MTAB_SCREEN, {MI_LARGE, MI_ANIM, MI_SCROFF, MI_NONE}},   /* (ACID FM 0.3: COLOR SKIN STYLE gone, SCREEN 2's
+                                                                          * three here; 3b: SCOPE gone) */
     {"LEDS", MTAB_SCREEN, {MI_LEDS, MI_SCLLED, MI_NONE, MI_NONE}},
     {"AUDIO", MTAB_AUDIO, {MI_LOWCUT, MI_TRACKS, MI_LOAD, MI_BPMLOCK}},
     {"CLICK", MTAB_AUDIO, {MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_NONE}},
@@ -76,7 +78,7 @@ static uint32_t mtab_pages(uint32_t t)                 /* .. and how many it has
         n += MPAGE[p].tab == t;
     return n;
 }
-static const char *const SCOPEOPT_N[2] = {"OFF", "ON"};   /* (0.9.7) ui.c ui_scope */
+static const char *const SCOPEOPT_N[2] = {"OFF", "ON"};   /* (LEARN; SCOPE's one value, OFF) */
 /* the two-valued rows: a bit of ui_prefs (PREF_REC: of ui_rec_prefs, ui.c PREF_SCALE_LEDS) and its names (bit clear =
  * the default, bit set). A step up (a knob right,
  * OCT+) = ON on the ON / OFF rows (the switch's knob to the right; ANIM, USB SERIAL: their bit clears), else the
@@ -165,7 +167,6 @@ static uint32_t menu_get(uint32_t row)
     if (f)
         return ((ui_prefs | (uint32_t)ui_rec_prefs << 8) & f->bit) != 0;
     switch (row) {
-    case MI_SCOPE: return ui_scope != 0u;
     case MI_LOWCUT: return settings.lowcut % 3u;
     case MI_USB: return (ui_prefs & PREF_USB_FIXED) ? 1u + usb_lvl % 5u : 0u;
     case MI_SERIAL: return usb_out == 3u ? 4u : usb_out == 2u ? 3u : usb_out ? 2u : (ui_prefs & PREF_SERIAL_OFF) ? 1u : 0u;
@@ -221,7 +222,6 @@ static void menu_put(uint32_t row, uint32_t v)
         return;
     }
     switch (row) {
-    case MI_SCOPE: ui_scope = (uint8_t)(v & 1u); ui.force = 1; break;   /* (0.9.7) the EDIT pages so from the next frame */
     case MI_LOWCUT: settings.lowcut = v; fx_lowcut = (uint8_t)v; break;
     case MI_USB:                                   /* (at once; every frame too: ui_input) */
         ui_prefs = (uint8_t)(v ? ui_prefs | PREF_USB_FIXED : ui_prefs & ~PREF_USB_FIXED);

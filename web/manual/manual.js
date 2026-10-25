@@ -332,7 +332,8 @@ function renderMap() {
 }
 function showPage(secName, ce, i) {
   const c = NAV.chains.find((x) => x.ce === ce), p = c.pages[i];
-  const knobs = M.pages[secName + "/" + p.name] || [];
+  const knobs = M.pages[ce + "/" + p.name] || M.pages[secName + "/" + p.name] || [];   /* (a chain's own first: a synth's SOUND
+                                                                                           * is not DRUM-X's) */
   const grp = c.groups[p.g];
   let h = `<button type="button" class="x" data-close aria-label="${u("close")}">×</button>
     <p class="crumb">${esc(secName)} · ${esc(grp)} · ${esc(p.name)} <span>${i + 1}/${c.pages.length}</span></p>`;

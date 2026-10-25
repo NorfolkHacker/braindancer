@@ -39,7 +39,6 @@
 #endif
 #include <stddef.h>
 #include <stdint.h>
-#define UXS_TEST 1                                       /* (ACID FM 3b) ARP's demo MORE page (params.c, ui_lens.c, ux_section.h) */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -147,18 +146,6 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/upreset.c"
 #include "../firmware/src/project.c"
 
-/* (ACID FM 3b task 3) ARP's demo MORE page (host only, UXS_TEST: params.c's row "MORE", ui_lens.c's chain entry; shown while
- * ARP is owned, uxs_test_own): 20 rows, four headings, the track's settings and two globals, rows a JIANT rule hides (the
- * other engines' FILTER on ANALOG, MORPH on FM6, ALLOC on a kit, LOAD ECO's chorus rate) */
-static const ux_row_t UXS_DEMO_ROWS[20] = {
-    {UXM_H_ARP, UXR_HEAD}, {P_ASWING, UXR_TRACK}, {P_APROB, UXR_TRACK}, {P_AHOLD, UXR_TRACK}, {P_AORDER, UXR_TRACK},
-    {UXM_H_VOICE, UXR_HEAD}, {P_VOICE, UXR_TRACK}, {P_GLIDE, UXR_TRACK}, {P_GLMODE, UXR_TRACK}, {P_PRIO, UXR_TRACK},
-    {P_ALLOC, UXR_TRACK}, {P_DETUNE, UXR_TRACK},
-    {UXM_H_FILTER, UXR_HEAD}, {P_FTYPE, UXR_TRACK}, {P_FCUT, UXR_TRACK}, {P_FRES, UXR_TRACK}, {P_MORPH, UXR_TRACK},
-    {UXM_H_CHORUS, UXR_HEAD}, {G_CRATE, UXR_GLOBAL}, {G_CDEPTH, UXR_GLOBAL},
-};
-static const ux_more_t UXS_DEMO_MORE = {UXS_DEMO_ROWS, 20};
-
 static int check(const char *what, int ok)
 {
     printf("ui: %-74s %s\n", what, ok ? "ok" : "FAIL");
@@ -254,7 +241,7 @@ static void ui_power_on(void)
     kb_asleep = 0;
     panel_moved = 0;
     memset(&lv, 0, sizeof lv);                          /* (0.9.11) no LIVE modifier, no key on MANO (seq_live.c) */
-    uxs_test_own = 0;                                   /* (ACID FM 3b) no demo section; the hints unsaid, MORE at its top */
+    /* (ACID FM 3b) the sections' hints unsaid, each MORE at its top, its panel count from 0 */
     uxs_seen = 0;
     memset(uxm_at, 0, sizeof uxm_at);
     ux_hot_k = -1;                                      /* (no knob column lit from the test before) */
@@ -718,6 +705,18 @@ static int test_mutate(void)
     mutate_poll();
     return bad;
 }
+/* (3b task 4) the name of the synths' MORE row of setting id when it is listed now ("" when not) */
+static const char *uxm_row_name(uint32_t id)
+{
+    uint64_t m = uxm_mask(&UXM_SYN);
+    uint32_t r;
+    char v[24];
+    uint8_t bar;
+    for (r = 0; r < UXM_SYN.n; r++)
+        if (uxm_on(m, r) && UXM_SYN.rows[r].kind == UXR_TRACK && UXM_SYN.rows[r].id == id)
+            return uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, 0, &bar);
+    return "";
+}
 /* (0.6.45) MORPH: ANALOG, PHASE, LOFI: 0 keeps the WAVE's own render (an_mpos -1), more slides it toward the next
  * waves, the three play with it; its page shows on them, not on FM6 */
 static int32_t morph_peak(uint32_t eng, int16_t mo)
@@ -760,10 +759,11 @@ static int test_morph(void)
     bad += check("MORPH 90 on ANALOG PHASE LOFI plays", ok);
     ui_power_on();
     set_engine_of(TSEL, ENGI_ANALOG);
-    for (k = 0, ok = 0; k < NPAGES; k++) if (PAGES[k].graph == GR_MORPH) ok = page_visible(k);
+    for (k = 0, ok = 0; k < NPAGES; k++) if (PAGES[k].graph == GR_MORPH) ok = page_jiant(k);
+    ok &= str_eq(uxm_row_name(P_MORPH), "MORPH");       /* (3b task 4: ANALOG's MORE lists it) */
     set_engine_of(TSEL, ENGI_FM6);
-    for (k = 0; k < NPAGES; k++) if (PAGES[k].graph == GR_MORPH) ok &= !page_visible(k);
-    bad += check("EDIT > MORPH on ANALOG, not on FM6", ok);
+    for (k = 0; k < NPAGES; k++) if (PAGES[k].graph == GR_MORPH) ok &= !page_jiant(k);
+    bad += check("EDIT > MORPH on ANALOG (EDIT's MORE), not on FM6", ok);
     return bad;
 }
 /* (0.6.46) INIT SOUND dry (no effect sends), FM6 the init voice (OP1 alone at 99, SLOT OWN); NOISE DUST at DENS 0
@@ -3534,10 +3534,12 @@ static int test_product_ux(void)
     motion_full = 1; frame();
     bad += check("#93 the events used up: AUTOMATION FULL", msg_is("AUTOMATION FULL") && !motion_full);
     {   /* #63: a card shows MOTION's icon while the track's motion changes its parameter */
-        uint32_t id = ENGINES[TSEL->eng_req]->knob[0];   /* (ACID FM 3a: on EDIT 1, HOME has its own knob row) */
-        ui_power_on(); go_title("EDIT 1"); frame();
+        uint32_t id;                                     /* (ACID FM 3a: on EDIT 1, HOME has its own knob row; 3b task 4: on
+                                                          * FM6's, T2: a synth's EDIT is the ux pages') */
+        ui_power_on(); track_select(1); go_title("EDIT 1"); frame();
+        id = ENGINES[TSEL->eng_req]->knob[0];
         ok = !card_motion(0) && !card_motion(1);
-        song.rec = 1; seq_start(); go_title("EDIT 1"); turn(EN_K1, 1); frame();
+        song.rec = 2; seq_start(); go_title("EDIT 1"); turn(EN_K1, 1); frame();
         ok &= card_motion(0) && !card_motion(1) && !card_motion(2) && !card_motion(3);
         bad += check("MOTION: a recorded knob marks its card, EDIT 1 (and no other; ACID FM 3a: HOME's were JIANT's)", ok && motion_count(TSEL) == 1);
         song.rec = 0; press(B_PLAY); events_block(32); frame();
@@ -3547,9 +3549,9 @@ static int test_product_ux(void)
         bad += check("MOTION: PLAY OFF takes the icon off the card, the events stay", ok);
         go_page(GR_MOTION); turn(EN_K1, 1); go_title("EDIT 1"); frame();
         ok = card_motion(0);
-        track_select(1); frame();
+        track_select(3); frame();
         ok &= !card_motion(0);                           /* (another track: its own motion, none) */
-        track_select(0); frame();
+        track_select(1); frame();
         ok &= card_motion(0);
         bad += check("MOTION: PLAY ON again shows it; only on the track that has the motion", ok);
         go_page(GR_TRK); frame();
@@ -4206,9 +4208,9 @@ static int test_edit_cycle(void)
 {
     /* (0.9.2: one chain, SELECT a page a detent; an EDIT tap the next group's first. Was 0.8.5's lens: SELECT a level, the
      * tap the level's next set) */
-    static const char *const CH_A[] = {"EDIT 1", "EDIT 2", "FILTER", "MORPH", "VOICE", "VOICE 2", "FOCUS"};   /* (JIANT 0.5:
-                                                         * ANALOG's FILTER; 0.6.45: MORPH) */
-    static const char *const TP_A[] = {"FILTER", "FOCUS"};
+    static const char *const CH_A[] = {"SOUND", "TONE", "VOICE", "MORE"};   /* (JIANT 0.5: ANALOG's FILTER; 0.6.45: MORPH;
+                                                         * 3b task 4: the ux pages, a page a group: test_edit_syn_pages) */
+    static const char *const TP_A[] = {"TONE", "VOICE", "MORE"};
     static const char *const CH_F[] = {"EDIT 1", "EDIT 2", "FILTER", "VOICE", "VOICE 2", "OPERATOR", "OP ENV", "OPERATOR 2"};
     static const char *const TP_F[] = {"FILTER", "OPERATOR"};
     static const char *const CH_D[] = {"EDIT 1", "EDIT 2", "FILTER", "VOICE", "VOICE 2", "OP1 ENV", "OP2 ENV", "OP3 ENV",
@@ -4225,7 +4227,7 @@ static int test_edit_cycle(void)
         ok &= !str_eq(PAGES[i].title, "ENGINE");
     bad += check("no ENGINE page (engines are the EDIT layer's)", ok);
     set_engine_of(TSEL, 0);
-    bad += check("0.9.2 EDIT chain (ANALOG): SOUND (EDIT 1 EDIT 2) . TONE (FILTER MORPH VOICE VOICE 2) . FOCUS; taps: groups",
+    bad += check("0.9.2 EDIT chain (ANALOG, 3b): SOUND . TONE . VOICE . MORE; taps: the next, round",
                  chain_walk(B_EDIT, CH_A, NELEM(CH_A), TP_A, NELEM(TP_A)));
 #if FELUCCA_FM4
     set_engine_of(TSEL, 1);
@@ -6399,16 +6401,16 @@ static int test_screen_off(void)
 
     ui_power_on();                                    /* in the MENU: OCT+ / a knob step it */
     menu_put(MI_SCROFF, 3u);
-    hold(B_HOME);                                     /* (ACID FM 0.3: SCREEN, KNOB 4; 0.9.18: SCREEN 2, KNOB 3) */
+    hold(B_HOME);                                     /* (ACID FM 0.3: SCREEN, KNOB 4; 0.9.18: SCREEN 2, KNOB 3; 3b: KNOB 3, SCOPE gone) */
     ok = ui.menu == 1 && ui.menu_sel == MI_LARGE && menu_page_of(MI_SCROFF) == 0u;
-    turn(EN_K4, 1); ok &= scr_get() == 4u && ui.menu_sel == MI_SCROFF;
+    turn(EN_K3, 1); ok &= scr_get() == 4u && ui.menu_sel == MI_SCROFF;
     press(B_OCTUP); ok &= scr_get() == 4u;           /* (stops at the end) */
-    for (i = 0; i < 4u; i++) turn(EN_K4, -1);
+    for (i = 0; i < 4u; i++) turn(EN_K3, -1);
     ok &= scr_get() == 0u;
     press(B_OCTDN); ok &= scr_get() == 0u && ui.menu == 1;
     press(B_OCTUP); press(B_OCTUP); press(B_OCTUP); ok &= scr_get() == 3u;
     press(B_HOME); ok &= ui.menu == 0;
-    bad += check("SCREEN SLEEP: SCREEN KNOB 4 / OCT-+ step NEVER .. 60 MIN, stops at the ends", ok);
+    bad += check("SCREEN SLEEP: SCREEN KNOB 3 / OCT-+ step NEVER .. 60 MIN, stops at the ends", ok);
 
     {
         uint32_t f0 = 0, f1 = 0;
@@ -9705,7 +9707,7 @@ static int test_bpm_lock(void)
     ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: GEN */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); turn(EN_SELECT, 2);
-    ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.9.2: EDIT 1 EDIT 2 FILTER ..) */
+    ok &= str_eq(cur_page()->title, "SYN VOICE") && pd_level() == 1u;   /* (0.9.2: EDIT 1 EDIT 2 ..; 3b: T1 ANALOG's VOICE) */
     turn(EN_SELECT, -5);
     ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
@@ -10170,69 +10172,43 @@ static uint32_t sc_rows(int32_t y0, int32_t y1, uint16_t c)   /* rows of x 122..
         n += sc_count(122, y, 228, y + 1, c, 1) >= 90u;
     return n;
 }
+/* (0.9.7) MENU > SCOPE chose the EDIT pages' creature or the scope; (ACID FM 3b task 4) both gone: SCOPE is on no MENU page
+ * (as COLOR SKIN STYLE: the editor's id 22 one value, OFF, a set changes nothing), its settings byte kept as it was (saved and
+ * read back, the layout unchanged); no synth draws a creature */
 static int test_scope(void)
 {
     int bad = 0, ok;
-    uint32_t e, sk, nseen = 0;
+    uint32_t e, p, c;
     ui_power_on(); frame();
-    ok = ui_scope == 0u && MI_SCOPE == MI_SKIN + 1u && str_eq(MI_NAME[MI_SCOPE], "SCOPE") && mi_tab(MI_SCOPE) == MTAB_SCREEN &&
-         menu_n(MI_SCOPE) == 2u && str_eq(menu_vname(MI_SCOPE, 0), "OFF") && str_eq(menu_vname(MI_SCOPE, 1), "ON") &&
-         menu_get(MI_SCOPE) == 0u;
-    hold(B_HOME); ui.menu_sel = MI_SCOPE;
-    turn(EN_K2, 1); ok &= ui_scope == 1u && menu_get(MI_SCOPE) == 1u;
-    turn(EN_K2, 1); ok &= ui_scope == 1u;                         /* (stops at the end) */
-    press(B_OCTDN); ok &= ui_scope == 0u;
-    press(B_OCTUP); ok &= ui_scope == 1u;
-    press(B_HOME); ok &= !ui.menu;
-    bad += check("SCOPE: OFF by default, a row of SCREEN (KNOB 2, ACID FM 0.3); KNOB / OCT+- OFF ON, stopping at the ends", ok);
-    {   /* saved with the settings (byte 19 of engine 15); older settings (0) and unknown values: OFF; new settings: OFF */
-        persist_t p, q;
+    ok = menu_hidden(MI_SCOPE) && menu_n(MI_SCOPE) == 1u && str_eq(menu_vname(MI_SCOPE, 0), "OFF") && menu_get(MI_SCOPE) == 0u;
+    for (p = 0; p < MP_COUNT; p++)
+        for (c = 0; c < 4u; c++)
+            ok &= MPAGE[p].row[c] != MI_SCOPE;
+    ui_scope = 1u;
+    menu_put(MI_SCOPE, 0);
+    ok &= ui_scope == 1u && menu_get(MI_SCOPE) == 0u;   /* (a set: nothing) */
+    bad += check("SCOPE gone from the MENU (on no page; the editor's id: one value, OFF; a set changes nothing)", ok);
+    {   /* the byte (19 of engine 15) still saved and read back as it was; unknown values: 0 */
+        persist_t q;
+        static persist_t pp;
         ui_scope = 1u;
-        settings_export(&p);
+        settings_export(&pp);
         ui_scope = 0u;
-        ok = settings_import(&p, (int)sizeof p) == 1 && ui_scope == 1u && p.favorites.factory[15][19] == 1u;
-        p.favorites.factory[15][19] = 0;
-        ok &= settings_import(&p, (int)sizeof p) == 1 && ui_scope == 0u;
-        p.favorites.factory[15][19] = 9;
-        ok &= settings_import(&p, (int)sizeof p) == 1 && ui_scope == 0u && !p.favorites.factory[15][19];
-        q = p;
-        ok &= settings_import(&q, (int)sizeof q) == 1 && !memcmp(&p, &q, sizeof p);
-        settings_export(&p);
-        memset(&p.favorites, 0, sizeof p.favorites);
-        p.magic = 0x50455233u;                                    /* (PER3: settings from before) */
-        ui_scope = 1u;
-        ok &= settings_import(&p, (int)(sizeof p - sizeof p.favorites)) == 2 && ui_scope == 0u;
-        ui_scope = 1u;
-        settings_fresh();
-        ok &= ui_scope == 1u;                                     /* (settings_fresh leaves it: a new FM-1's byte is 0, OFF) */
-        bad += check("SCOPE saved with the settings and read back; older settings, unknown values: OFF (idempotent)", ok);
+        ok = settings_import(&pp, (int)sizeof pp) == 1 && ui_scope == 1u && pp.favorites.factory[15][19] == 1u;
+        pp.favorites.factory[15][19] = 9;
+        ok &= settings_import(&pp, (int)sizeof pp) == 1 && ui_scope == 0u;
+        q = pp;
+        ok &= settings_import(&q, (int)sizeof q) == 1 && !memcmp(&pp, &q, sizeof pp);
+        bad += check("SCOPE's settings byte kept where it was (saved, read back; the layout unchanged)", ok);
     }
-    for (sk = 0; sk < 1u; sk++)                                   /* the EDIT pages of every engine with a creature (the one skin) */
-        for (e = 0; e < NENGINES; e++) {
-            uint32_t on_tile, on_mid, off_tile, off_mid, gy, chips;
-            if (!eng_ok(e) || e == ENGI_DRUM || e == ENGI_FM6 || eng_gone(e) || str_eq(ENGINES[e]->name, "DIGITAL"))
-                continue;                                         /* (DIGITAL, FELUCCA_FM4=1: its OP pages, no creature) */
-            ui_power_on(); set_engine_of(TSEL, e); TSEL->engine = TSEL->eng_req;
-            go_title("EDIT 1"); ui.force = 1; frame(); frame();
-            if (trk_engp(TSEL) == &ENG_FORMANT && TSEL->p[P_VLANG])
-                continue;
-            gy = graph_y();
-            ui_scope = 1u; ui.force = 1; frame();
-            on_tile = sc_rows((int32_t)gy + 2, (int32_t)gy + 60, T_RAISE);   /* (COLORS: the SCOPE card) */
-            chips = sc_rows((int32_t)gy + 63, (int32_t)gy + 115, T_RAISE);   /* (.. the chips) */
-            on_mid = sc_count(117, (int32_t)gy + 20, 121, (int32_t)gy + 120, T_SURF, 0);   /* (the gap left of the card: clear) */
-            ui_scope = 0u; ui.force = 1; frame();
-            off_tile = sc_rows((int32_t)gy + 2, (int32_t)gy + 115, T_RAISE);   /* (no card, no chips) */
-            off_mid = sc_count(117, (int32_t)gy + 20, 121, (int32_t)gy + 120, T_SURF, 0);   /* (the creature across the middle) */
-            ok = on_mid == 0u && off_mid > 0u && off_tile == 0u;   /* (no SCOPE card, no chip boxes: until ACID FM 0.3 COLORS's) */
-            (void)on_tile; (void)chips;
-            if (!ok) printf("  %s skin %u: on card %u chips %u mid %u, off card %u mid %u\n", ENGINES[e]->name, sk, on_tile, chips, on_mid,
-                            off_tile, off_mid);
-            nseen += ok;
-            bad += ok ? 0 : 1;
-        }
-    bad += check("SCOPE: ON the creature left of the SCOPE words and the chips; OFF on the whole panel, no card, no chips (every engine)",
-                 nseen >= 5u);                               /* (ACID FM 0.2: five, WHEEL and ANIMAL retired) */
+    ok = 1;
+    for (e = 0; e < NENGINES; e++) {                    /* (every synth: no creature; FM6 and DRUM-X keep theirs until task 5) */
+        if (!eng_ok(e) || eng_gone(e)) continue;
+        ui_power_on(); set_engine_of(TSEL, e); TSEL->engine = TSEL->eng_req;
+        cv_begin(240, 140, T_BG);
+        ok &= vx_draw(TSEL, 4, 2, 232, 136) == (e == ENGI_DRUM || e == ENGI_FM6);
+    }
+    bad += check("no synth draws a creature (ANALOG PHASE LOFI NOISE VOICE); FM6 and DRUM-X still do (3b task 5)", ok);
     ui_power_on(); frame();
     return bad;
 }
@@ -10260,15 +10236,15 @@ static int test_menu_prefs(void)
     turn(EN_SELECT, -40);
     ok &= ui.menu_sel == MPAGE[0].row[0];
     bad += check("0.9.18 MENU: SELECT reaches every page (every tab), each a screen of its own", ok);
-    /* ANIM (SCREEN, KNOB 3; ACID FM 0.3: SCREEN 2's KNOB 2 until then) */
-    ok = str_eq(MI_NAME[MI_ANIM], "ANIMATION") && !(ui_prefs & PREF_ANIM_OFF) && MPAGE[menu_page()].row[2] == MI_ANIM;
-    turn(EN_K3, 1); ok &= !(ui_prefs & PREF_ANIM_OFF) && ui.menu_sel == MI_ANIM;   /* right: ON (stays: the default) */
-    turn(EN_K3, -1); ok &= (ui_prefs & PREF_ANIM_OFF) != 0;       /* left: OFF */
-    turn(EN_K3, 1); ok &= !(ui_prefs & PREF_ANIM_OFF);            /* right: ON (the switch's knob right) */
+    /* ANIM (SCREEN, KNOB 2; ACID FM 0.3: SCREEN 2's KNOB 2 until then, then KNOB 3; 3b: KNOB 2, SCOPE gone) */
+    ok = str_eq(MI_NAME[MI_ANIM], "ANIMATION") && !(ui_prefs & PREF_ANIM_OFF) && MPAGE[menu_page()].row[1] == MI_ANIM;
+    turn(EN_K2, 1); ok &= !(ui_prefs & PREF_ANIM_OFF) && ui.menu_sel == MI_ANIM;   /* right: ON (stays: the default) */
+    turn(EN_K2, -1); ok &= (ui_prefs & PREF_ANIM_OFF) != 0;       /* left: OFF */
+    turn(EN_K2, 1); ok &= !(ui_prefs & PREF_ANIM_OFF);            /* right: ON (the switch's knob right) */
     press(B_OCTDN); ok &= (ui_prefs & PREF_ANIM_OFF) && ui.menu;  /* OCT-: OFF */
     ok &= !(ui_prefs & ~(uint32_t)PREF_ANIM_OFF);                 /* (no other setting moved) */
     press(B_HOME);
-    bad += check("#46 MENU > ANIMATION: ON by default, KNOB 3 right / OCT+ ON, left / OCT- OFF", ok && !ui.menu);
+    bad += check("#46 MENU > ANIMATION: ON by default, KNOB 2 right / OCT+ ON, left / OCT- OFF", ok && !ui.menu);
     ui_prefs = 0;
     ui_power_on(); roll_settle();
     turn(EN_K4, 1);
@@ -10709,7 +10685,8 @@ static int lz_count_is(const char *s)
 /* (ACID FM 3a, ux_nav) every section's button but HOME lands where it did before HOME became TRACKS / VISUAL: for each
  * power-on track (a synth, FM6, LOFI, DRUM-X, PHASE: EDIT's chains differ) and each section, from HOME its button and
  * again five times, SELECT +1 +1 -1, HOME then the button again (its memory), the button held + SELECT (+1); each landing
- * "section/entry/title" (* HOME). UXN_WANT is what the JIANT 0.9.18 HOME (ECO MACROS BEING ROUTES GEN) build gave */
+ * "section/entry/title" (* HOME). UXN_WANT is what the JIANT 0.9.18 HOME (ECO MACROS BEING ROUTES GEN) build gave; (3b task
+ * 4) a synth's EDIT its own: SOUND TONE VOICE / FILTER MORE, a page a group */
 static const uint8_t UXN_BTN[SEC_N] = {B_HOME, B_EDIT, B_SEQ, B_FX, B_GLO, B_ENV, B_LFO, B_SCL, B_ARP, B_SAVE};
 static void uxn_at(char *b, uint32_t n)
 {
@@ -10733,7 +10710,7 @@ static void uxn_walk(uint32_t t, uint32_t sec, char *b, uint32_t n)
     held_turn(UXN_BTN[sec], 1); frames(32); frames(500); uxn_at(b, n);
 }
 static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE, T2 EDIT .. SAVE, .. */
-    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
@@ -10751,7 +10728,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
     "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
-    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
@@ -10769,7 +10746,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
     "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
-    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
@@ -10778,7 +10755,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
     "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
-    "EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/0/EDIT 1|EDIT/2/FILTER|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/9/FOCUS|EDIT/7/VOICE 2|EDIT/7/VOICE 2|HOME/0/*",
+    "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
@@ -11440,9 +11417,9 @@ static int test_ux_visual(void)
     return bad;
 }
 
-/* EDIT (0.9.2, ui_lzedit.c): SOUND . TONE . the detail (FOCUS / OPERATOR / SOUND) one chain; SELECT a page a detent (no
- * wrap), an EDIT tap the next group's first, EDIT from elsewhere the page left; PRESETS the sounds on every page (rule 3:
- * was KNOB 1's on the detail); FOCUS's knobs (PARAM, its value, SRC and AMT of the MOD slot aimed at it); VOICE 2 */
+/* EDIT (0.9.2, ui_lzedit.c; ACID FM 3b task 4: a synth's on the ux pages, test_edit_syn_pages walks them): EDIT from elsewhere
+ * the page left; PRESETS the sounds on every page (rule 3); FM6 keeps JIANT's pages until 3b task 5 (VOICE 2, not a kit's;
+ * OPERATOR), FOCUS gone */
 static int test_lz_edit(void)
 {
     int bad = 0, ok;
@@ -11450,53 +11427,16 @@ static int test_lz_edit(void)
     uint32_t pr;
     ui_power_on(); set_engine_of(TSEL, 0); frame();
     press(B_EDIT); frame();
-    ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("EDIT \xB7 SOUND \xB7 EDIT 1 \xB7 OSC") &&
-         lz_count_is("1/7");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "EDIT 2") && lz_count_is("2/7");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "FILTER") && lz_crumb_is("EDIT \xB7 TONE \xB7 FILTER") &&
-          lz_count_is("3/7");
-    frames(320); press(B_EDIT); frame();                            /* EDIT: the next group, FOCUS */
-    ok &= pd_level() == 2u && lz_tab_lit(2) && str_eq(cur_page()->title, "FOCUS") && lz_crumb_is("EDIT \xB7 FOCUS \xB7 FOCUS") &&
-          lz_count_is("7/7");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "FOCUS");                       /* (no wrap) */
-    turn(EN_SELECT, -3); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "MORPH");    /* (MORPH VOICE VOICE 2 FOCUS: three back) */
-    frames(320); press(B_EDIT); frame();
-    ok &= str_eq(cur_page()->title, "FOCUS");
-    frames(320); press(B_EDIT); frame();
-    ok &= str_eq(cur_page()->title, "EDIT 1");                      /* (round) */
-    bad += check("0.9.2 EDIT: one chain by SELECT (no wrap), an EDIT tap the next group's first (round); tabs, crumb, n/N", ok);
+    ok = ux_section_owns(nav_sec()) && str_eq(cur_page()->title, "EDIT 1");
     turn(EN_SELECT, 1); frame();
     open_family(FAM_ENV); frame();
     press(B_EDIT); frame();
-    ok = str_eq(cur_page()->title, "EDIT 2") && pd_level() == 0u;
+    ok &= str_eq(cur_page()->title, "EDIT 2");
     pr = TSEL->preset;
     turn(EN_PRESET, 1); frame();
     ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && str_eq(cur_page()->title, "EDIT 2");   /* (the next sound) */
     bad += check("0.9.2 EDIT: EDIT from elsewhere the page left; PRESETS the next sound, the page stays", ok);
-    ui_power_on(); set_engine_of(TSEL, 0); go_title("FOCUS"); frame();
-    ui.focus = 0;
-    turn(EN_K1, 4); frame();                                        /* PARAM: E5 (ANALOG's CUT) */
-    ok = focus_k() == 4u && str_eq(ui.col[1], "CUT|") == 0;
-    v = TSEL->p[P_E4];
-    turn(EN_K2, 5); frame();
-    ok &= TSEL->p[P_E4] > v;
-    turn(EN_K3, 1); frame();                                        /* SRC: a free slot takes CUT */
-    ok &= focus_slot(4) == 0 && TSEL->p[P_M1SRC] == 1 && TSEL->p[P_M1DST] == MD_E1 + 4;
-    turn(EN_K4, 3); frame();
-    ok &= TSEL->p[P_M1AMT] > 0;
-    turn(EN_K1, -1); frame();                                       /* KNOB 1 the parameter */
-    ok &= focus_k() == 3u && TSEL->p[P_M1SRC] == 1;
-    turn(EN_K1, 1); turn(EN_K3, -1); frame();                       /* SRC back to OFF: the slot free */
-    ok &= focus_slot(4) < 0 && TSEL->p[P_M1SRC] == 0;
-    pr = TSEL->preset;
-    turn(EN_PRESET, 1); frame();
-    ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && focus_k() == 4u;   /* (rule 3: PRESETS a sound, not the parameter) */
-    bad += check("0.9.2 EDIT > FOCUS: KNOB 1 the parameter, 2 its value, 3 the MOD source (a free slot), 4 its AMT; PRESETS a sound", ok);
-    ui_power_on(); set_engine_of(TSEL, 0); go_title("VOICE"); frame();
+    ui_power_on(); set_engine_of(TSEL, ENGI_FM6); TSEL->engine = TSEL->eng_req; go_title("VOICE"); frame();
     turn(EN_SELECT, 1); frame();
     ok = str_eq(cur_page()->title, "VOICE 2");
     v = TSEL->p[P_DETUNE];
@@ -11506,7 +11446,7 @@ static int test_lz_edit(void)
     ok &= !nav_put(SEC_EDIT, "VOICE 2") && !nav_put(SEC_EDIT, "FOCUS");
     set_engine_of(TSEL, ENGI_FM6); frame();
     ok &= !nav_put(SEC_EDIT, "FOCUS") && nav_put(SEC_EDIT, "OPERATOR");
-    bad += check("0.9.2 EDIT > TONE: VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM; FOCUS on the synths only", ok);
+    bad += check("0.9.2 EDIT > TONE (FM6): VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM; no FOCUS", ok);
     ui_power_on();
     return bad;
 }
@@ -12018,16 +11958,11 @@ static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, 
 static int test_engvis(void)
 {
     static const struct { uint32_t e; const char *pre, *page; uint8_t k; const char *what; } C[] = {
-        {5, "CANTOR ES", "EDIT 1", 0, "VOICE WORDS, EDIT"}, {5, "TALK BOX", "EDIT 2", 0, "VOICE vowels, EDIT"},
         {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"}, {ENGI_DRUM, "DRUM-X", "EDIT 1", 2, "DRUM-X kit, EDIT KIT"},
-        {ENGI_ANALOG, "ACID", "EDIT 1", 3, "ANALOG cell, EDIT"},
         {ENGI_FM6, "TINE EP", "EDIT 1", 4, "FM6 colony, EDIT"}, {ENGI_FM6, "TINE EP", "OPERATOR", 4, "FM6 colony, OPERATOR"},
-        {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"},
-        {11, "RAIN", "EDIT 1", 6, "NOISE swarm, EDIT"},
-        {2, "BRASS", "EDIT 1", 7, "PHASE snail, EDIT"},
-        {3, "BYTEBEAT", "EDIT 1", 8, "LOFI caterpillar BYTE, EDIT"}, {3, "FLOAT PAD", "EDIT 2", 8, "LOFI caterpillar FLOAT, EDIT"},
-        {3, "PULSE LD", "EDIT 1", 8, "LOFI caterpillar PLS, EDIT"}};   /* (ACID FM 3a: HOME's BEING
-                                                         * cases gone with BEING) */
+        {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"}};
+        /* (ACID FM 3a: HOME's BEING cases gone with BEING; 3b task 4: the synths' (VOICE ANALOG NOISE PHASE LOFI) gone with
+         * their creatures: their EDIT draws its wave, test_edit_syn_picture) */
     int bad = 0, ok = 1, mv, st;
     uint32_t c;
     for (c = 0; c < NELEM(C); c++) {
@@ -12035,97 +11970,8 @@ static int test_engvis(void)
         if (!mv || !st) printf("  %s: %s\n", C[c].what, !mv ? "still while it plays" : "moving in silence");
         ok &= mv && st;
     }
-    bad += check("0.9.4 / 0.9.6 the engines' creatures (VOICE DRUM-X ANALOG FM6 NOISE PHASE LOFI; EDIT, FM6's OPERATOR "
-                 "pages): move with the sound, still in silence", ok);
-    {   /* (0.9.9) VOICE's tract (SCOPE OFF, the whole panel; WORDS on): an open vowel opens the jaw down (the chin
-         * drops; the condyle glides forward), the lips apart; a nasal drops the velum and the branch to the nose opens (its ink over the
-         * palate, where an open vowel leaves none); the pulses travel and the waves leave while it sings */
-        static const uint8_t PH3[3] = {PH_I, PH_A, PH_M};
-        uint32_t ink[3], x, y, f, k;
-        int32_t chin[3][2], cond[2], lips[3] = {0, 0, 0}, pul = 0, wav = 0;
-        sing_t *g = &sing[0];
-        ui_power_on();
-        ui_scope = 0;
-        for (x = 1; x < NTRK; x++) trk[x].p[P_MUTE] = 1;
-        song.sel = 0;
-        set_engine_of(TSEL, 5);
-        TSEL->p[P_VLANG] = LG_ES;
-        go_title("EDIT 1");
-        for (k = 0; k < 3u; k++) {
-            const phon_t *P = &PHON[PH3[k]];
-            vxs.init = 0;
-            for (f = 0; f < 24u; f++) {
-                memset(g, 0, sizeof *g);
-                g->lang = LG_ES; g->live = 1; g->np = 1; g->cd = 1; g->ph[0] = PH3[k]; g->st = 1;
-                g->f[0] = (int16_t)P->f1; g->f[1] = (int16_t)P->f2; g->gv = (int16_t)(P->av << 7);
-                TSEL->peak = 6500;
-                frame();
-                for (x = 0; x < 4u; x++) { pul |= vxs.pw[0][x] != 0; wav |= vxs.pw[1][x] != 0; }
-            }
-            vh_jaw(chin[k], -31 * 16, 54 * 16);         /* (the chin, turned with the jaw as it now is) */
-            lips[k] = vxs.art[5];
-            if (k == 1u) vh_jaw(cond, 14 * 16, 6 * 16);  /* (the condyle: gliding forward as it opens) */
-            for (ink[k] = 0, y = LZ_GRAPH_Y + 8; y < LZ_GRAPH_Y + 22; y++)   /* (over the palate, behind the nose: the
-                                                         * branch's middle, units -36 .. -12 x 10 .. 14) */
-                for (x = 88; x < 136u; x++)
-                    ink[k] += host_screen[y * 240 + x] != host_screen[(LZ_GRAPH_Y + 15) * 240 + 200];
-        }
-        ok = chin[1][1] > chin[0][1] + 24 && chin[0][1] >= 54 * 16 && cond[0] < 14 * 16 - 16 && lips[1] < 40 &&
-             vxs.art[6] > 200 && ink[2] > 20u && ink[1] < 4u && pul && wav;
-        if (!ok) printf("  chin I %d,%d A %d,%d; ink A %u M %u; pulses %d waves %d\n", chin[0][0], chin[0][1], chin[1][0],
-                        chin[1][1], ink[1], ink[2], pul, wav);
-        bad += check("0.9.9 VOICE's tract: an open vowel opens the jaw down (its condyle gliding forward); a nasal drops the velum and opens "
-                     "the branch to the nose; glottal pulses up the tube and waves out while it sings", ok);
-    }
-    {   /* (0.9.10) LOFI's V1 "DIP": CHIP turned in silence glides the caterpillar (8BIT) into the chip (1BIT), then it
-         * holds; 4BIT / STEP half way, 4B/2 nearly; the other knobs change the drawing (in silence too), which stays still */
-        static const struct { uint8_t chip; int16_t m; } CH[] = {{3, 256}, {0, 102}, {1, 179}, {4, 115}, {2, 0}};
-        static const struct { const char *pre; uint8_t p; int16_t v; } KN[] = {
-            {"BYTEBEAT", P_FTYPE, 1}, {"BYTEBEAT", P_FRES, 127}, {"BYTEBEAT", P_DIST, 127}, {"BYTEBEAT", P_E6, 127},
-            {"BYTEBEAT", P_FCUT, 20}, {"BYTEBEAT", P_E3, 120}, {"BYTEBEAT", P_E7, 127}, {"BYTEBEAT", P_E2, 90},
-            {"BYTEBEAT", P_FTYPE, 3}, {"PULSE LD", P_E2, 127}, {"PULSE LD", P_E5, 127}, {"PULSE LD", P_E7, 127},
-            {"PULSE LD", P_MORPH, 127}};
-        int32_t m0, mid;
-        int changed, held, glide = 1, knobs = 1;
-        uint32_t k;
-        vxt_case(3, "BYTEBEAT", "EDIT 1", 8, &mv, &st);
-        m0 = vxs.lm;
-        vxt_snap();
-        TSEL->p[P_E0] = 3;                               /* (1BIT) */
-        vxt_run(64, 0);
-        changed = !vxt_same();
-        mid = vxs.lm;
-        vxt_run(1500, 0);
-        glide = vxs.lm == 256;
-        vxt_snap();
-        vxt_run(400, 0);
-        held = vxt_same();
-        bad += check("0.9.10 LOFI: at 8BIT the organism (morph 0); CHIP 1BIT glides it into the DIP (morph 0 .. 1 over frames), "
-                     "then it holds still in silence", m0 == 0 && changed && mid > 0 && mid < 200 && glide && held);
-        for (k = 0; k < NELEM(CH); k++) {
-            TSEL->p[P_E0] = CH[k].chip;
-            vxt_run(1500, 0);
-            if (vxs.lm != CH[k].m) { printf("  CHIP %u: morph %d (want %d)\n", CH[k].chip, vxs.lm, CH[k].m); glide = 0; }
-        }
-        bad += check("0.9.10 LOFI: the morph glides to CHIP's target (4BIT .40, 4B/2 .70, 1BIT 1, STEP .45, 8BIT 0)", glide);
-        for (k = 0; k < NELEM(KN); k++) {
-            int16_t v0;
-            if (k == 0u || strcmp(KN[k].pre, KN[k - 1u].pre))
-                vxt_case(3, KN[k].pre, "EDIT 1", 8, &mv, &st);
-            vxt_snap();
-            v0 = TSEL->p[KN[k].p];
-            TSEL->p[KN[k].p] = KN[k].v;
-            vxt_run(64, 0);
-            changed = !vxt_same();
-            vxt_snap();
-            vxt_run(200, 0);
-            held = vxt_same();
-            TSEL->p[KN[k].p] = v0;
-            vxt_run(64, 0);
-            if (!changed || !held) { printf("  %s p%u = %d: %s\n", KN[k].pre, KN[k].p, KN[k].v, !changed ? "the drawing unchanged" : "moving in silence"); knobs = 0; }
-        }
-        bad += check("0.9.10 LOFI: TYPE RES DIST BEND CUT VAR LOOP ALGO COMB DUTY VIB MASK MORPH each change the drawing, still in silence", knobs);
-    }
+    bad += check("0.9.4 / 0.9.6 the engines' creatures (DRUM-X FM6, until 3b task 5; EDIT, FM6's OPERATOR pages): move with "
+                 "the sound, still in silence", ok);
     {   /* DRUM-X: KIT's beings (EDIT 1) and SOUND 1..4; KIT 2, KIT 3, X-MOD keep the colony; a hit squashes its being, a
          * ratchet's hits each */
         static const char *const PG[] = {"EDIT 1", "SOUND", "SOUND 4", "EDIT 2", "KIT 3", "X-MOD"};
@@ -12202,9 +12048,9 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
  * (0.9.1's numbering, the level the page is drawn as), its pages; each must be reached at that level */
 typedef struct { uint8_t fam, lv, kind; const char *t[13]; } old_lv_t;   /* kind: EDIT's (0 synth 1 FM6 2 DRUM), 9 any */
 static const old_lv_t OLD_LV[] = {
-    {FAM_EDIT, 0, 0, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 0, {"FILTER", "MORPH", "RETRIG", "VOICE", "VOICE 2", "WORDS"}},   /* (ACID FM 0.2: ROTOR
-                                                         * gone with WHEEL) */
-    {FAM_EDIT, 2, 0, {"FOCUS"}},
+    {FAM_EDIT, 0, 0, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 0, {"SYN VOICE", "SYN FILTER", "SYN MORE"}},   /* (ACID FM 0.2: ROTOR
+                                                         * gone with WHEEL; 3b task 4: a synth's EDIT its own, FOCUS gone, JIANT's
+                                                         * TONE pages MORE's rows) */
     {FAM_EDIT, 0, 1, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 1, {"FILTER", "VOICE", "VOICE 2"}},
     {FAM_EDIT, 2, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
     {FAM_EDIT, 0, 2, {"EDIT 1", "EDIT 2", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "STEREO", "LEVELS", "LEVELS 2", "VOICE"}},
@@ -12990,53 +12836,77 @@ static int test_param_knob_same(void)
     return bad;
 }
 
-/* ARP shown on the ux pages with its demo MORE page */
+/* (3b task 4) EDIT on a synth track: the ux pages (ux_section.c), MORE the chain's last (params.c UXM_SYN) */
+static const uint8_t UXS_SYN[5] = {ENGI_ANALOG, ENGI_PHASE, ENGI_LOFI, ENGI_NOISE, ENGI_VOICE};
+static const char *const UXS_SYN_NM[5] = {"ANALOG", "PHASE", "LOFI", "NOISE", "VOICE"};
 static uint32_t uxs_more_page(void)
 {
     uint32_t i;
-    for (i = 0; i < NPAGES && PAGES[i].graph != GR_MORE; i++)
+    for (i = 0; i < NPAGES && !(PAGES[i].graph == GR_MORE && PAGES[i].more == &UXM_SYN); i++)
         ;
     return i;
 }
-static void uxs_demo_on(void)
+static void uxs_syn_on(uint32_t e)                      /* T1 on engine e (its first sound), EDIT open: SOUND */
 {
     ui_power_on(); frame();
-    uxs_test_own = 1u << SEC_ARP;
-    press(B_ARP); frame();
+    uxk_engine(e);
+    apply_preset_to(TSEL, 0);
+    TSEL->engine = TSEL->eng_req;
+    frame();
+    press(B_EDIT); frame();
 }
-static void uxs_cur(uint32_t *s, uint32_t *t)           /* the demo's pick and scroll as drawn */
+static void uxs_cur(uint32_t *s, uint32_t *t)           /* MORE's pick and scroll as drawn */
 {
-    *s = uxm_at[SEC_ARP].sel; *t = uxm_at[SEC_ARP].top;
-    uxm_fix(&UXS_DEMO_MORE, uxm_mask(&UXS_DEMO_MORE), s, t);
+    *s = uxm_at[SEC_EDIT].sel; *t = uxm_at[SEC_EDIT].top;
+    uxm_fix(&UXM_SYN, uxm_mask(&UXM_SYN), s, t);
 }
 static int uxs_in_view(void)
 {
     uint32_t s, t;
-    uint64_t m = uxm_mask(&UXS_DEMO_MORE);
+    uint64_t m = uxm_mask(&UXM_SYN);
     uxs_cur(&s, &t);
     return uxm_vis(m, s) >= uxm_vis(m, t) && uxm_vis(m, s) < uxm_vis(m, t) + UXM_ROWS;
 }
-/* SELECT walks ARP's chain with MORE last (the footer's n / N counting it), only while ARP is the ux pages'; on MORE: KNOB 1
- * picks a setting (over the headings and the hidden rows, stopping at the ends), SELECT scrolls a row a detent (the pick
- * dragged along, stopping at the end; before the first row: the page before), the rows JIANT's rules hide (the other
- * engines' FILTER on ANALOG, MORPH on FM6, ALLOC on a kit, LOAD ECO's chorus rate) skipped */
+/* MORE's rows shown now, their names, "|" between, a heading in brackets */
+static const char *uxs_more_list(void)
+{
+    static char b[200];
+    uint64_t m = uxm_mask(&UXM_SYN);
+    uint32_t r;
+    b[0] = 0;
+    for (r = 0; r < UXM_SYN.n; r++) {
+        char v[24];
+        uint8_t bar;
+        const char *nm;
+        if (!uxm_on(m, r)) continue;
+        nm = uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, 0, &bar);
+        if (b[0]) str_cpy(b + str_len(b), "|", sizeof b - str_len(b));
+        if (UXM_SYN.rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "[", sizeof b - str_len(b));
+        str_cpy(b + str_len(b), nm, sizeof b - str_len(b));
+        if (UXM_SYN.rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "]", sizeof b - str_len(b));
+    }
+    return b;
+}
+/* SELECT walks EDIT's chain with MORE last (the footer's n / N counting it); on MORE: KNOB 1 picks a setting (over the
+ * headings and the hidden rows, stopping at the ends), SELECT scrolls a row a detent (the pick dragged along, stopping at the
+ * end; before the first row: the page before); the rows JIANT's rules hide, and the ones on a page of the chain, not listed */
 static int test_ux_more_nav(void)
 {
-    static const uint8_t WANT[] = {1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 19};
+    static const uint8_t WANT[] = {1, 2, 3, 4, 5, 12, 13, 14};   /* (VOICE: VOICE GLIDE GLIDE MODE PRIORITY SPREAD, WORDS'
+                                                                  * WORDS LYRIC TYPE LYRIC) */
     uint8_t v[16], got[32];
     uint32_t s, t, k, ng = 0, mp = uxs_more_page();
     uint64_t m;
     int bad = 0, ok;
     ui_power_on(); frame();
-    ok = mp < NPAGES && !page_visible(mp) && nav_list(SEC_ARP, v) == 2u;   /* (not owned: no MORE) */
-    uxs_demo_on();
-    ok &= nav_sec() == SEC_ARP && str_eq(cur_page()->title, "ARP") && nav_list(SEC_ARP, v) == 3u && page_visible(mp);
-    ok &= str_eq(uxs_count(), "1 / 3") && str_eq(uxs_where(), "ARP \xB7 ARP");
-    turn(EN_SELECT, 1);
-    ok &= str_eq(cur_page()->title, "ARP 2") && str_eq(uxs_count(), "2 / 3");
-    turn(EN_SELECT, 1);
-    ok &= cur_page()->graph == GR_MORE && str_eq(uxs_count(), "3 / 3") && str_eq(uxs_where(), "ARP \xB7 MORE");
-    bad += check("ACID FM 3b: MORE is the section's last page while it is on the ux pages; the footer counts it", ok);
+    uxk_engine(ENGI_FM6);
+    ok = mp < NPAGES && !page_visible(mp) && !ux_section_owns(SEC_EDIT);   /* (FM6: JIANT's pages, no MORE yet) */
+    uxs_syn_on(ENGI_VOICE);
+    ok &= nav_sec() == SEC_EDIT && str_eq(cur_page()->title, "EDIT 1") && nav_list(SEC_EDIT, v) == 4u && page_visible(mp);
+    ok &= str_eq(uxs_count(), "1 / 4") && str_eq(uxs_where(), "EDIT \xB7 SOUND");
+    turn(EN_SELECT, 3);
+    ok &= cur_page()->graph == GR_MORE && str_eq(uxs_count(), "4 / 4") && str_eq(uxs_where(), "EDIT \xB7 MORE");
+    bad += check("ACID FM 3b: MORE is EDIT's last page on a synth track; the footer counts it", ok);
     uxs_cur(&s, &t);
     ok = s == 1u && t == 0u;                            /* (the first setting picked, its heading on top) */
     got[ng++] = (uint8_t)s;
@@ -13047,52 +12917,62 @@ static int test_ux_more_nav(void)
         if (s != got[ng - 1u] && ng < sizeof got) got[ng++] = (uint8_t)s;
     }
     ok &= ng == sizeof WANT && !memcmp(got, WANT, sizeof WANT);
+    if (!ok) { printf("  picked:"); for (k = 0; k < ng; k++) printf(" %u", got[k]); printf("\n"); }
     turn(EN_K1, -100);
     uxs_cur(&s, &t);
     ok &= s == 1u && t == 0u;
     bad += check("ACID FM 3b: MORE's KNOB 1 picks the settings in order, over headings and hidden rows, to the ends", ok);
-    turn(EN_SELECT, 1);
+    turn(EN_SELECT, 1);                                 /* (VOICE: 10 rows shown, 8 at once: two to scroll) */
     uxs_cur(&s, &t);
     ok = t == 1u && s == 1u;
-    turn(EN_SELECT, 3);
-    uxs_cur(&s, &t);
-    ok &= t == 4u && s == 4u;                           /* (the pick dragged to the panel's first setting) */
     turn(EN_SELECT, 100);
     uxs_cur(&s, &t);
-    ok &= t == 10u && s == 10u && cur_page()->graph == GR_MORE;   /* (the last page of rows; MORE stays) */
+    ok &= t == 2u && s == 2u && cur_page()->graph == GR_MORE;   /* (the last page of rows; MORE stays; the pick dragged) */
     turn(EN_SELECT, -100);
     uxs_cur(&s, &t);
-    ok &= t == 0u && s == 7u && uxs_in_view() && cur_page()->graph == GR_MORE;   /* (the pick: the panel's last setting) */
+    ok &= t == 0u && s == 2u && uxs_in_view() && cur_page()->graph == GR_MORE;
     turn(EN_SELECT, -1);
-    ok &= str_eq(cur_page()->title, "ARP 2");           /* (before the first row: the page before) */
+    ok &= str_eq(cur_page()->title, "SYN FILTER");      /* (before the first row: the page before) */
     bad += check("ACID FM 3b: MORE's SELECT scrolls a row a detent, the pick in sight; before its top the page before", ok);
-    m = uxm_mask(&UXS_DEMO_MORE);                       /* T1 ANALOG: the other engines' FILTER CUT / RES hidden */
-    ok = !uxm_on(m, 14) && !uxm_on(m, 15) && uxm_on(m, 13) && uxm_on(m, 16) && uxm_on(m, 18) && uxm_on(m, 10) &&
-         uxm_on(m, 0) && uxm_on(m, 12) && uxm_nvis(m) == 18u;
-    uxk_engine(ENGI_FM6);
-    m = uxm_mask(&UXS_DEMO_MORE);
-    ok &= uxm_on(m, 14) && uxm_on(m, 15) && !uxm_on(m, 16);   /* (FM6: CUT RES, no MORPH) */
-    uxk_engine(ENGI_DRUM);
-    m = uxm_mask(&UXS_DEMO_MORE);
-    ok &= !uxm_on(m, 10);                               /* (a kit: no ALLOC) */
-    uxk_engine(ENGI_ANALOG);
-    sys_load = LOAD_ECO;
-    m = uxm_mask(&UXS_DEMO_MORE);
-    ok &= !uxm_on(m, 18) && uxm_on(m, 19) && uxm_on(m, 17);   /* (LOAD ECO: no chorus RATE; DEPTH stays: BUSES') */
-    sys_load = 0;
+    {   /* what each synth's MORE lists: what its pages leave, by JIANT's rules (MORPH, RETRIG, WORDS) */
+        static const char *const W[5] = {"[VOICE]|GLIDE MODE|[TONE]|FILTER|MORPH|DRIFT",
+                                          "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|[TONE]|MORPH|DRIFT",
+                                          "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|[TONE]|MORPH|DRIFT",
+                                          "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD",
+                                          "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|[WORDS]|WORDS|LYRIC|TYPE LYRIC"};
+        uint32_t e;
+        ok = 1;
+        for (e = 0; e < 5u; e++) {
+            uxs_syn_on(UXS_SYN[e]);
+            if (UXS_SYN[e] == ENGI_LOFI) TSEL->p[P_E1] = RW_PLS;
+            if (!str_eq(uxs_more_list(), W[e])) { printf("  %s MORE: %s\n", UXS_SYN_NM[e], uxs_more_list()); ok = 0; }
+        }
+        uxs_syn_on(ENGI_LOFI);
+        TSEL->p[P_E1] = RW_BYTE;                        /* (BYTE: RETRIG, no MORPH) */
+        ok &= str_eq(uxs_more_list(), "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|RETRIG");
+        if (!ok) printf("  LOFI BYTE MORE: %s\n", uxs_more_list());
+        uxs_syn_on(ENGI_ANALOG);
+        sys_load = LOAD_ECO;                            /* (LOAD ECO changes none of EDIT's) */
+        ok &= str_eq(uxs_more_list(), W[0]);
+        sys_load = 0;
+    }
+    bad += check("ACID FM 3b: each synth's MORE lists what its pages leave (ANALOG: no VOICE row twice; LOFI BYTE RETRIG; "
+                 "VOICE its WORDS)", ok);
+    m = 0;
     {   /* a heading whose rows are all hidden goes with them */
         static const ux_row_t R[4] = {{UXM_H_FILTER, UXR_HEAD}, {P_FCUT, UXR_TRACK}, {UXM_H_VOICE, UXR_HEAD}, {P_GLIDE, UXR_TRACK}};
         static const ux_more_t M = {R, 4};
+        uxk_engine(ENGI_ANALOG);
         m = uxm_mask(&M);
-        ok &= m == 0xCu;
+        ok = m == 0xCu;
     }
-    bad += check("ACID FM 3b: MORE skips the rows JIANT's rules hide (engine, kit, LOAD ECO), their headings too", ok);
+    bad += check("ACID FM 3b: MORE skips the rows JIANT's rules hide, their headings too", ok);
     {   /* an action row: VOICE's TYPE LYRIC (WORDS' OCT+ TYPE in JIANT, no dialog there): shown on VOICE only, KNOB 2 up does it */
         static const ux_row_t R[2] = {{UXM_H_VOICE, UXR_HEAD}, {UXM_A_LYRIC, UXR_ACTION}};
         static const ux_more_t M = {R, 2};
         uint32_t s2 = 0, t2 = 0;
         ok = uxm_mask(&M) == 0u;                        /* (ANALOG: none) */
-        uxk_engine(5u);                                 /* (VOICE) */
+        uxk_engine(ENGI_VOICE);
         ok &= uxm_mask(&M) == 3u;
         (void)ux_more_turn(&M, &s2, &t2, 1u, -1);
         ok &= !name_on();
@@ -13103,13 +12983,13 @@ static int test_ux_more_nav(void)
     ui_power_on();
     return bad;
 }
-/* the first JIANT page (not MORE) holding setting id (global: G_*) on this track now, its slot */
+/* the first JIANT page (not MORE, not EDIT's new ones) holding setting id (global: G_*) on this track now, its slot */
 static uint32_t uxs_page_of(uint32_t id, int glo, uint32_t *slot)
 {
     uint32_t i, k;
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].graph != GR_MORE && (PAGES[i].scope == SC_GLOBAL) == glo && PAGES[i].scope != SC_STEP &&
-            PAGES[i].scope != SC_TRK && page_visible(i))
+            PAGES[i].scope != SC_TRK && page_jiant(i) && PAGES[i].title[0] != 'S')
             for (k = 0; k < 4u; k++)
                 if (PAGES[i].id[k] == id) {
                     *slot = k;
@@ -13121,15 +13001,18 @@ static uint32_t uxs_page_of(uint32_t id, int glo, uint32_t *slot)
  * recorded), through the real input; UNDO (an undo mark before) takes it back */
 static int test_ux_more_set(void)
 {
-    static const struct { uint8_t row; int8_t s; uint8_t rec; } C[] = {
-        {4, 1, 0}, {7, 5, 0}, {7, -2, 1}, {13, 1, 0}, {11, -3, 1}, {19, 4, 0}, {3, 1, 0}, {1, 7, 1}, {9, 1, 0}, {16, 9, 1}};
+    static const struct { uint8_t eng, row; int8_t s; uint8_t rec; } C[] = {
+        {ENGI_PHASE, 1, 1, 0}, {ENGI_PHASE, 2, 5, 0}, {ENGI_PHASE, 2, -2, 1}, {ENGI_PHASE, 3, 1, 0}, {ENGI_PHASE, 4, 1, 1},
+        {ENGI_PHASE, 5, -3, 1}, {ENGI_PHASE, 9, 9, 1}, {ENGI_PHASE, 10, 4, 0}, {ENGI_ANALOG, 8, 1, 0}, {ENGI_LOFI, 6, 1, 0},
+        {ENGI_VOICE, 12, 1, 1}, {ENGI_VOICE, 13, 3, 0}};
     static uxk_snap_t base, a, b;
     uint32_t c, mp, sl, pg;
     int bad = 0, ok = 1;
-    uxs_demo_on();
-    mp = uxs_more_page();
     for (c = 0; c < NELEM(C); c++) {
-        const ux_row_t *r = &UXS_DEMO_ROWS[C[c].row];
+        const ux_row_t *r = &UXM_SYN.rows[C[c].row];
+        uxs_syn_on(C[c].eng);
+        if (C[c].eng == ENGI_LOFI) TSEL->p[P_E1] = RW_BYTE;
+        mp = uxs_more_page();
         pg = uxs_page_of(r->id, r->kind == UXR_GLOBAL, &sl);
         if (pg >= NPAGES) { printf("  row %u: on no page\n", (unsigned)C[c].row); ok = 0; continue; }
         song.rec = (uint8_t)(C[c].rec ? 1u << song.sel : 0u);
@@ -13141,7 +13024,7 @@ static int test_ux_more_set(void)
         uxk_take(&a);
         uxk_put(&base);
         ui.page = (uint8_t)mp; page_entered();
-        uxm_at[SEC_ARP].sel = C[c].row; uxm_at[SEC_ARP].top = 0;
+        uxm_at[SEC_EDIT].sel = C[c].row; uxm_at[SEC_EDIT].top = 0;
         (void)ux_more_knob(1u, C[c].s);                 /* MORE's KNOB 2 */
         uxk_take(&b);
         uxk_put(&base);
@@ -13151,14 +13034,14 @@ static int test_ux_more_set(void)
     }
     song.rec = 0; song.playing = 0;
     bad += check("ACID FM 3b: MORE's KNOB 2 writes as JIANT's page knob (settings, song, AUTOMATION)", ok);
-    uxs_demo_on();                                      /* the real input: SELECT to MORE, KNOB 1 to GLIDE, KNOB 2 */
-    turn(EN_SELECT, 2);
+    uxs_syn_on(ENGI_PHASE);                             /* the real input: SELECT to MORE, KNOB 1 to GLIDE, KNOB 2 */
+    turn(EN_SELECT, 3);
     {
         int16_t g0 = TSEL->p[P_GLIDE];
         ok = cur_page()->graph == GR_MORE;
         undo_mark();
-        turn(EN_K1, 5);                                 /* (SWING PROB HOLD ORDER, then VOICE MODE, GLIDE) */
-        ok &= uxm_at[SEC_ARP].sel == 7u;
+        turn(EN_K1, 1);                                 /* (VOICE, then GLIDE) */
+        ok &= uxm_at[SEC_EDIT].sel == 2u;
         turn(EN_K2, 6);
         ok &= TSEL->p[P_GLIDE] == clamp(g0 + 6, 0, 127) && TSEL->p[P_GLIDE] != g0;
         ok &= !undo_do() && TSEL->p[P_GLIDE] == g0;
@@ -13167,8 +13050,8 @@ static int test_ux_more_set(void)
     ui_power_on();
     return bad;
 }
-/* the renderer: ARP's page drawn with the ux strips (header, the PAGES row's knobs in plain words, the panel, the status
- * line, the footer ARP . page and n / 3 with JIANT's short names), its cells within DC_MAX; the status line's order (the
+/* the renderer: EDIT's SOUND page drawn with the ux strips (header, the PAGES row's knobs in plain words, the panel, the
+ * status line, the footer EDIT . SOUND and n / 4 with the knobs' names), its cells within DC_MAX; the status line's order (the
  * section's first-time hint once, a turned knob's full name and value, a refusal in ACCENT, MORE's hint); MORE's knob row */
 static int test_ux_section_draw(void)
 {
@@ -13179,17 +13062,18 @@ static int test_ux_section_draw(void)
     const char *u;
     uint32_t i, cells;
     int bad = 0, ok;
-    uxs_demo_on();
+    uxs_syn_on(ENGI_ANALOG);
     ui.force = 1; frame();
     uxs_knobs(cur_page(), k);
-    ok = str_eq(k[0].label, "MODE") && str_eq(k[1].label, "RATE") && str_eq(k[2].label, "OCT") && str_eq(k[3].label, "GATE");
-    param_format(&TP[P_ARATE], TSEL->p[P_ARATE], v, &u);
+    ok = str_eq(k[0].label, "WAVE") && str_eq(k[1].label, "DETUNE") && str_eq(k[2].label, "MIX") && str_eq(k[3].label, "NOISE");
+    param_format(track_desc(TSEL, P_E1), TSEL->p[P_E1], v, &u);
     ok &= str_eq(k[1].value, v);
     ok &= ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 200u &&
           ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 2000u && ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 50u &&
           ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 2000u;
     for (i = cells = 0; i < dc_n; i++) cells += dc_st[i].n;
     ok &= !dc_stale && cells <= DC_MAX && cells >= 1800u;
+    if (!ok) printf("  cells %u stale %u\n", (unsigned)cells, (unsigned)dc_stale);
     bad += check("ACID FM 3b: the section page: header, the PAGES row's knobs, panel, status, footer; cells within DC_MAX", ok);
     ok = str_eq(uxs_label(SEC_ENV, 0, P_ATK, "ATK"), "ATTACK") && str_eq(uxs_label(SEC_EDIT, 0, P_FRES, "RES"), "RESO") &&
          str_eq(uxs_label(SEC_ARP, 0, P_AGATE, "GATE"), "GATE");
@@ -13230,15 +13114,16 @@ static int test_ux_section_draw(void)
     }
     bad += check("ACID FM 3b: a setting's plain name by section / engine / id (MODE: GLIDE MODE only for the glide's)", ok);
     st = uxs_status(cur_page(), &col);
-    ok = st && str_eq(st, "ARP AGAIN: NEXT PAGE") && col == UX_MID;
+    ok = st && str_eq(st, "EDIT AGAIN: NEXT PAGE") && col == UX_MID;
     if (!ok) printf("  status: \"%s\"\n", st ? st : "(none)");
     turn(EN_K2, 1);
     st = uxs_status(cur_page(), &col);
-    param_format(&TP[P_ARATE], TSEL->p[P_ARATE], v, &u);
+    param_format(track_desc(TSEL, P_E1), TSEL->p[P_E1], v, &u);
     {
         char w[40];
-        str_cpy(w, "RATE \xB7 ", sizeof w);
+        str_cpy(w, "DETUNE \xB7 ", sizeof w);
         str_cpy(w + str_len(w), v, sizeof w - str_len(w));
+        if (u && u[0]) { str_cpy(w + str_len(w), " ", sizeof w - str_len(w)); str_cpy(w + str_len(w), u, sizeof w - str_len(w)); }
         ok &= st && str_eq(st, w) && col == UX_TEXT;
         if (!ok) printf("  status: \"%s\" wanted \"%s\"\n", st ? st : "(none)", w);
     }
@@ -13248,29 +13133,22 @@ static int test_ux_section_draw(void)
     st = uxs_status(cur_page(), &col);
     ok &= st && str_eq(st, "STOP TO EDIT") && col == UX_ACCENT;
     ui.msg_t = 0;
-    turn(EN_SELECT, 2);
+    turn(EN_SELECT, 3);
     frames(UX_HOT_MS + 100u);
     st = uxs_status(cur_page(), &col);
     ok &= st && str_eq(st, UXM_HINT);
     bad += check("ACID FM 3b: the status line: the hint once, a knob's full name and value, a refusal, MORE's hint", ok);
-    uxs_knobs(cur_page(), k);
-    ok = str_eq(k[0].label, "SETTING") && str_eq(k[0].value, "1/14") && str_eq(k[1].label, "SWING") && !k[2].label[0];
-    turn(EN_K1, 5);                                     /* (GLIDE: the sixth) */
-    uxs_knobs(cur_page(), k);
-    ok &= str_eq(k[0].value, "6/14") && str_eq(k[1].label, "GLIDE");
+    uxs_knobs(cur_page(), k);                           /* (ANALOG's MORE: GLIDE MODE, FILTER, MORPH, DRIFT) */
+    ok = str_eq(k[0].label, "SETTING") && str_eq(k[0].value, "1/4") && str_eq(k[1].label, "GLIDE MODE") && !k[2].label[0];
     st = uxs_status(cur_page(), &col);
-    ok &= st && !memcmp(st, "GLIDE \xB7 ", 8);
-    turn(EN_K1, 1);                                     /* (P_GLMODE: JIANT's MODE, here GLIDE MODE on the knob row, the
-                                                         * status line and the list alike) */
+    turn(EN_K1, 1);
     uxs_knobs(cur_page(), k);
-    ok &= str_eq(k[0].value, "7/14") && str_eq(k[1].label, "GLIDE MODE");
+    ok &= str_eq(k[0].value, "2/4") && str_eq(k[1].label, "FILTER");
+    st = uxs_status(cur_page(), &col);
+    ok &= st && !memcmp(st, "FILTER \xB7 ", 9);
+    turn(EN_K1, -1);
     st = uxs_status(cur_page(), &col);
     ok &= st && !memcmp(st, "GLIDE MODE \xB7 ", 13);
-    {
-        char val[24];
-        uint8_t bar;
-        ok &= str_eq(uxm_row_text(&UXS_DEMO_ROWS[8], val, sizeof val, 1, &bar), "GLIDE MODE");
-    }
     ui.force = 1; frame();
     ok &= ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 2000u;
     bad += check("ACID FM 3b: MORE's knob row (SETTING n/N, the pick's value), its readout and list drawn", ok);
@@ -13376,14 +13254,325 @@ static int test_ux_section_foot(void)
     }
     bad += check("ACID FM 3b: the footer's names are the knob row's, on every page and engine (FX DIST: DRIVE, not DIST)",
                  ok && n > 100u && named > 50u);
-    uxs_demo_on();                                      /* MORE: SETTING and the pick's name, as its knob row */
-    turn(EN_SELECT, 2);
-    turn(EN_K1, 6);
+    uxs_syn_on(ENGI_ANALOG);                            /* MORE: SETTING and the pick's name, as its knob row */
+    turn(EN_SELECT, 3);
     uxs_knobs(cur_page(), k);
-    uxs_foot("ARP \xB7 MORE", k, "3 / 3", b, sizeof b);
-    ok = str_eq(k[1].label, "GLIDE MODE") && str_eq(b, "3 / 3 \xB7 SETTING \xB7 GLIDE MODE");
+    uxs_foot(uxs_where(), k, uxs_count(), b, sizeof b);
+    ok = str_eq(k[1].label, "GLIDE MODE") && str_eq(b, "4 / 4 \xB7 SETTING \xB7 GLIDE MODE");
     if (!ok) printf("  MORE footer \"%s\"\n", b);
     bad += check("ACID FM 3b: MORE's footer names its knobs as its knob row does (SETTING, the pick's name)", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3b task 4: EDIT for the synth engines (ANALOG PHASE LOFI NOISE VOICE) on the ux pages.
+ * ------------------------------------------------------------------------------------------------------------------------- */
+/* each synth's pages: SOUND (E1..E4), TONE (E5..E8), ANALOG's VOICE or the others' FILTER, MORE; their knobs' names (spec 2.1,
+ * the plain words of ux_section.c) and the setting each turns */
+typedef struct { const char *title, *where; const char *lab[4]; uint8_t id[4]; } uxs_pg_t;
+static const uxs_pg_t UXS_PG[5][3] = {
+    {{"EDIT 1", "EDIT \xB7 SOUND", {"WAVE", "DETUNE", "MIX", "NOISE"}, {P_E0, P_E1, P_E2, P_E3}},
+     {"EDIT 2", "EDIT \xB7 TONE", {"CUTOFF", "RESO", "DRIVE", "INTERVAL"}, {P_E4, P_E5, P_E6, P_E7}},
+     {"SYN VOICE", "EDIT \xB7 VOICE", {"VOICE", "GLIDE", "PRIORITY", "SPREAD"}, {P_VOICE, P_GLIDE, P_PRIO, P_DETUNE}}},
+    {{"EDIT 1", "EDIT \xB7 SOUND", {"WAVE", "WAVE 2", "BRIGHT", "SWEEP"}, {P_E0, P_E1, P_E2, P_E3}},
+     {"EDIT 2", "EDIT \xB7 TONE", {"DETUNE", "LINE 2", "SUB", "FEEDBACK"}, {P_E4, P_E5, P_E6, P_E7}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+    {{"EDIT 1", "EDIT \xB7 SOUND", {"CHIP", "WAVE", "DUTY", "CRUSH"}, {P_E0, P_E1, P_E2, P_E3}},
+     {"EDIT 2", "EDIT \xB7 TONE", {"", "VIBRATO", "BEND", "MASK"}, {P_E4, P_E5, P_E6, P_E7}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+    {{"EDIT 1", "EDIT \xB7 SOUND", {"SOURCE", "COLOR", "FREQ", "PEAK"}, {P_E0, P_E1, P_E2, P_E3}},
+     {"EDIT 2", "EDIT \xB7 TONE", {"KEY TRACK", "DENSITY", "DRIFT", "CRUSH"}, {P_E4, P_E5, P_E6, P_E7}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+    {{"EDIT 1", "EDIT \xB7 SOUND", {"VOWEL", "VOWEL 2", "TALK", "SHIFT"}, {P_E0, P_E1, P_E2, P_E3}},
+     {"EDIT 2", "EDIT \xB7 TONE", {"BUZZ", "BREATH", "RESO", "RANDOM"}, {P_E4, P_E5, P_E6, P_E7}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+};
+/* EDIT walks SOUND -> TONE -> page 3 -> MORE -> SOUND (the EDIT button, round), SELECT stops at both ends; each page's
+ * knobs are named as spec 2.1 says and each turns its setting (through edit_param: PAGES' knob path); FOCUS gone */
+static int test_edit_syn_pages(void)
+{
+    uint32_t e, pgi, c;
+    int bad = 0, ok_nav = 1, ok_lab = 1, ok_turn = 1, ok;
+    for (e = 0; e < 5u; e++) {
+        uxs_syn_on(UXS_SYN[e]);
+        if (UXS_SYN[e] == ENGI_LOFI) TSEL->p[P_E1] = RW_PLS, TSEL->p[P_E0] = 0;
+        if (UXS_SYN[e] == ENGI_NOISE) TSEL->p[P_E0] = 0;
+        if (UXS_SYN[e] == ENGI_VOICE) TSEL->p[P_VLANG] = 0;
+        frame();
+        ok = ux_section_owns(SEC_EDIT) && nav_sec() == SEC_EDIT;
+        for (pgi = 0; pgi < 4u; pgi++) {               /* (EDIT: the next page, round) */
+            ux_knob_t k[4];
+            char want[8];
+            fmt_int(want, (int32_t)pgi + 1);
+            str_cpy(want + str_len(want), " / 4", sizeof want - str_len(want));
+            ok &= str_eq(uxs_count(), want);
+            if (pgi < 3u) {
+                const uxs_pg_t *P = &UXS_PG[e][pgi];
+                ok &= str_eq(cur_page()->title, P->title) && str_eq(uxs_where(), P->where);
+                uxs_knobs(cur_page(), k);
+                for (c = 0; c < 4u; c++) {
+                    if (!str_eq(k[c].label, P->lab[c])) {
+                        printf("  %s %s knob %u: \"%s\" wanted \"%s\"\n", UXS_SYN_NM[e], P->where, (unsigned)c + 1u, k[c].label,
+                               P->lab[c]);
+                        ok_lab = 0;
+                    }
+                    if (P->lab[c][0]) {                 /* (a named knob turns its setting, once) */
+                        int16_t v0 = TSEL->p[P->id[c]];
+                        frames(UX_HOT_MS);
+                        turn(EN_K1 + c, 1);
+                        if (TSEL->p[P->id[c]] == v0) turn(EN_K1 + c, -1);
+                        if (TSEL->p[P->id[c]] == v0 || ux_knob_hot() != (int32_t)c) {
+                            printf("  %s %s knob %u: setting %u not turned\n", UXS_SYN_NM[e], P->where, (unsigned)c + 1u,
+                                   (unsigned)P->id[c]);
+                            ok_turn = 0;
+                        }
+                        TSEL->p[P->id[c]] = v0;
+                    }
+                }
+            } else
+                ok &= cur_page()->graph == GR_MORE && str_eq(uxs_where(), "EDIT \xB7 MORE");
+            frames(320); press(B_EDIT); frame();
+        }
+        ok &= str_eq(cur_page()->title, "EDIT 1");      /* (round) */
+        turn(EN_SELECT, -1);
+        ok &= str_eq(cur_page()->title, "EDIT 1");      /* (no wrap) */
+        turn(EN_SELECT, 1);
+        ok &= str_eq(cur_page()->title, "EDIT 2");
+        turn(EN_SELECT, 1);
+        ok &= str_eq(cur_page()->title, UXS_PG[e][2].title);
+        turn(EN_SELECT, 1);
+        ok &= cur_page()->graph == GR_MORE;
+        turn(EN_SELECT, 5);
+        ok &= cur_page()->graph == GR_MORE && nav_sec() == SEC_EDIT;   /* (the end: MORE stays) */
+        if (!ok) printf("  %s: the walk went wrong (page %s)\n", UXS_SYN_NM[e], cur_page()->title);
+        ok_nav &= ok;
+    }
+    bad += check("ACID FM 3b: EDIT on each synth walks SOUND, TONE, VOICE / FILTER, MORE and round; SELECT stops at the ends", ok_nav);
+    bad += check("ACID FM 3b: each synth page's knobs in plain words (spec 2.1)", ok_lab);
+    bad += check("ACID FM 3b: each named knob turns its setting through EDIT's page (its column lit)", ok_turn);
+    {   /* the modes' own names: LOFI BYTE / WRAM / STEP, NOISE LFSR / META, VOICE's WORDS */
+        static const struct { uint8_t e, id; int16_t v; uint8_t pg; const char *lab[4]; } M[] = {
+            {ENGI_LOFI, P_E1, RW_BYTE, 0, {"CHIP", "WAVE", "FORMULA", "VARIANT"}},
+            {ENGI_LOFI, P_E1, RW_BYTE, 1, {"MOTION", "GRIT", "BEND", "LOOP"}},
+            {ENGI_LOFI, P_E1, RW_FLOAT, 1, {"MOTION", "FEEDBACK", "BEND", "LOOP"}},
+            {ENGI_LOFI, P_E1, RW_WRAM, 0, {"CHIP", "WAVE", "TABLE", "CRUSH"}},
+            {ENGI_LOFI, P_E0, CHIP_STEP, 0, {"CHIP", "WAVE", "DUTY", "DECAY"}},
+            {ENGI_NOISE, P_E0, 2, 1, {"KEY TRACK", "LENGTH", "DRIFT", "CLOCK"}},
+            {ENGI_NOISE, P_E0, 3, 1, {"KEY TRACK", "LENGTH", "DRIFT", "CLOCK"}},
+            {ENGI_VOICE, P_VLANG, 2, 0, {"POSITION", "THEME", "CRISP", "SHIFT"}},
+            {ENGI_VOICE, P_VLANG, 2, 1, {"BUZZ", "BREATH", "RESO", "LOOP"}},
+        };
+        ok = 1;
+        for (c = 0; c < NELEM(M); c++) {
+            ux_knob_t k[4];
+            uint32_t q;
+            uxs_syn_on(M[c].e);
+            if (M[c].e == ENGI_LOFI) TSEL->p[P_E1] = RW_PLS, TSEL->p[P_E0] = 0;
+            TSEL->p[M[c].id] = M[c].v;
+            turn(EN_SELECT, (int32_t)M[c].pg);
+            uxs_knobs(cur_page(), k);
+            for (q = 0; q < 4u; q++)
+                if (!str_eq(k[q].label, M[c].lab[q])) {
+                    printf("  mode %u: knob %u \"%s\" wanted \"%s\"\n", (unsigned)c, (unsigned)q + 1u, k[q].label, M[c].lab[q]);
+                    ok = 0;
+                }
+        }
+        bad += check("ACID FM 3b: the modes' own knob names (LOFI BYTE FLOAT WRAM STEP, NOISE LFSR META, VOICE WORDS)", ok);
+    }
+    {   /* FOCUS is gone (spec 2.1: the MOD matrix keeps it all), nowhere in EDIT */
+        uint32_t i;
+        ok = 1;
+        for (i = 0; i < NPAGES; i++)
+            ok &= !str_eq(PAGES[i].title, "FOCUS");
+        for (e = 0; e < 5u; e++) {
+            uxs_syn_on(UXS_SYN[e]);
+            ok &= !nav_put(SEC_EDIT, "FOCUS") && !nav_put(SEC_EDIT, "MORPH") && !nav_put(SEC_EDIT, "WORDS");
+        }
+        bad += check("ACID FM 3b: EDIT's FOCUS gone; JIANT's MORPH, WORDS pages are MORE's rows now", ok);
+    }
+    ui_power_on();
+    return bad;
+}
+/* KNOB 3 and 4 on MORE say what the knobs do (spec 0 rule 6: nothing silently); the pick of the synths' MORE is EDIT's
+ * synth chain's (nav_key), not FM6's or DRUM-X's, and stays while another kind of track is shown */
+static int test_edit_syn_more_knobs(void)
+{
+    uint32_t c;
+    int bad = 0, ok = 1;
+    uxs_syn_on(ENGI_PHASE);
+    turn(EN_SELECT, 3);
+    for (c = 2; c < 4u; c++) {
+        int16_t keep[P_COUNT];
+        memcpy(keep, TSEL->p, sizeof keep);
+        ui.msg_t = 0; ui.msg[0] = 0;
+        turn(EN_K1 + c, 1);
+        ok &= str_eq(ui.msg, UXM_K34) && ui.msg_t && !memcmp(keep, TSEL->p, sizeof keep);
+        ok &= str_eq(uxs_status(cur_page(), &(uint16_t){0}), UXM_K34);
+    }
+    bad += check("ACID FM 3b: KNOB 3 / 4 on MORE say \"KNOB 1 PICKS . KNOB 2 SETS\" and change nothing", ok);
+    turn(EN_K1, 3);
+    ok = uxm_key() == SEC_EDIT && uxm_at[SEC_EDIT].sel == 4u;
+    song.sel = 1; uxk_engine(ENGI_FM6); frame();        /* (an FM6 track: its own chain, key) */
+    ok &= nav_key(SEC_EDIT) == SEC_N && !ux_section_owns(SEC_EDIT) && uxm_at[SEC_N].sel == 0u;
+    song.sel = 0; frame();
+    ok &= nav_key(SEC_EDIT) == SEC_EDIT && uxm_at[SEC_EDIT].sel == 4u;
+    bad += check("ACID FM 3b: MORE's pick is kept per kind of EDIT track (nav_key), the synths' apart from FM6's", ok);
+    ui_power_on();
+    return bad;
+}
+/* the picture: the synth's wave from its settings: a knob turn redraws the panel once, idle (stopped or playing) nothing;
+ * each synth's wave drawn (ink), a knob that shapes it changes it */
+static uint32_t uxs_panel_crc(void)
+{
+    uint32_t h = 2166136261u, i;
+    for (i = UX_Y_PANEL * 240u; i < (UX_Y_PANEL + UX_H_PANEL) * 240u; i++) h = (h ^ host_screen[i]) * 16777619u;
+    return h;
+}
+static int test_edit_syn_picture(void)
+{
+    static const uint8_t SHAPE[5] = {P_E4, P_E2, P_E2, P_E1, P_E0};   /* (CUTOFF, BRIGHT, DUTY, COLOR, VOWEL) */
+    uint32_t e, n0, n1, h0;
+    int bad = 0, ok_once = 1, ok_ink = 1, ok_shape = 1;
+    for (e = 0; e < 5u; e++) {
+        uint32_t pg;
+        uxs_syn_on(UXS_SYN[e]);
+        if (UXS_SYN[e] == ENGI_LOFI) TSEL->p[P_E1] = RW_PLS, TSEL->p[P_E0] = 0, TSEL->p[P_E2] = 30;
+        if (UXS_SYN[e] == ENGI_NOISE) TSEL->p[P_E0] = 0, TSEL->p[P_E1] = 20;
+        for (pg = 0; pg < 3u; pg++) {
+            frames(UX_HOT_MS + 100u);
+            n0 = uxs_panels;
+            frames(400);                                /* (idle, stopped) */
+            song.playing = 1;
+            frames(400);                                /* (idle, playing) */
+            song.playing = 0;
+            n1 = uxs_panels;
+            if (n1 != n0) { printf("  %s page %u: %u panels idle\n", UXS_SYN_NM[e], (unsigned)pg, (unsigned)(n1 - n0)); ok_once = 0; }
+            if (ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) < 1500u) { printf("  %s page %u: no picture\n", UXS_SYN_NM[e], (unsigned)pg); ok_ink = 0; }
+            h0 = uxs_panel_crc();
+            {                                           /* (a knob: the panel once; up, or down from the top) */
+                int16_t *vp;
+                const param_desc_t *d = page_desc(cur_page(), 1u, &vp);
+                turn(EN_K2, d && vp && *vp >= d->max ? -4 : 4);
+            }
+            frames(400);
+            if (uxs_panels - n1 != 1u) { printf("  %s page %u: %u panels for a turn\n", UXS_SYN_NM[e], (unsigned)pg,
+                                                (unsigned)(uxs_panels - n1)); ok_once = 0; }
+            if (pg == 0u || pg == 2u) {
+                if (uxs_panel_crc() == h0 && !(UXS_SYN[e] == ENGI_ANALOG && pg == 2u)) {
+                    printf("  %s page %u: KNOB 2 left the picture as it was\n", UXS_SYN_NM[e], (unsigned)pg); ok_shape = 0;
+                }
+            }
+            turn(EN_SELECT, 1);
+        }
+        {   /* the knob that shapes the wave most, on its page: the wave changes */
+            uint32_t sp = SHAPE[e] >= P_E4 ? 1u : 0u;
+            uxs_syn_on(UXS_SYN[e]);
+            if (UXS_SYN[e] == ENGI_LOFI) TSEL->p[P_E1] = RW_PLS, TSEL->p[P_E0] = 0, TSEL->p[P_E2] = 30;
+            if (UXS_SYN[e] == ENGI_NOISE) TSEL->p[P_E0] = 0, TSEL->p[P_E1] = 20;
+            turn(EN_SELECT, (int32_t)sp);
+            frames(200);
+            h0 = uxs_panel_crc();
+            TSEL->p[SHAPE[e]] = (int16_t)(TSEL->p[SHAPE[e]] > 60 ? 10 : 110);
+            frames(100);
+            if (uxs_panel_crc() == h0) { printf("  %s: its wave did not move with setting %u\n", UXS_SYN_NM[e], (unsigned)SHAPE[e]); ok_shape = 0; }
+        }
+    }
+    bad += check("ACID FM 3b: EDIT's picture: one panel a knob turn, none while idle (stopped or playing)", ok_once);
+    bad += check("ACID FM 3b: EDIT's picture: each synth's wave drawn on SOUND, TONE and VOICE / FILTER", ok_ink);
+    bad += check("ACID FM 3b: EDIT's picture follows the settings that shape the wave and the filter", ok_shape);
+    ui_power_on();
+    return bad;
+}
+static int nv_ok_page(uint32_t pgi)                     /* page pgi is one of EDIT's chain's shown now */
+{
+    uint8_t v[16];
+    uint32_t n = nav_list(SEC_EDIT, v), k;
+    for (k = 0; k < n; k++)
+        if (nv_page(SEC_EDIT, v[k]) == pgi) return 1;
+    return 0;
+}
+/* (3b task 4, the [3b] backlog's width test) every label and value an owned page's knob row can show fits its column
+ * (UX_COL_W - 4 px: UF_LBL labels, UF_VAL values; ux_knobs does not clip) and its value its ux_knob_t.value (no silent
+ * cut): every synth, every mode (LOFI's waves and chips, NOISE's modes, VOICE's WORDS), every value of every knob; MORE's
+ * KNOB 1 (n/N) and KNOB 2 (every row's name and every value) too */
+static int test_ux_knob_widths(void)
+{
+    uint32_t e, m, pgi, c, n = 0;
+    int bad = 0, ok = 1;
+    for (e = 0; e < 5u; e++)
+        for (m = 0; m < 35u; m++) {
+            uint32_t mp;
+            uxs_syn_on(UXS_SYN[e]);
+            if (UXS_SYN[e] == ENGI_LOFI) { TSEL->p[P_E1] = (int16_t)(m % 7u); TSEL->p[P_E0] = (int16_t)(m / 7u); }
+            else if (UXS_SYN[e] == ENGI_NOISE) { if (m > 3u) break; TSEL->p[P_E0] = (int16_t)m; }
+            else if (UXS_SYN[e] == ENGI_VOICE) { if (m > 3u) break; TSEL->p[P_VLANG] = (int16_t)m; }
+            else if (m) break;
+            for (pgi = 0; pgi < NPAGES; pgi++) {
+                const page_t *pg = &PAGES[pgi];
+                ux_knob_t k[4];
+                if (pg->fam != FAM_EDIT || !nv_ok_page(pgi)) continue;
+                if (pg->graph == GR_MORE) continue;
+                for (c = 0; c < 4u; c++) {
+                    int16_t *vp, keep;
+                    const param_desc_t *d = page_desc(pg, c, &vp);
+                    int32_t x;
+                    if (!d || !vp || !d->label || d->label[0] == '-') continue;
+                    keep = *vp;
+                    for (x = d->min; x <= d->max; x++) {
+                        char v[24];
+                        const char *u;
+                        *vp = (int16_t)x;
+                        if (pg->id[0] == P_E0 && c == 0u && UXS_SYN[e] != ENGI_ANALOG) { /* (a mode: the others' names change) */ }
+                        uxs_knobs(pg, k);
+                        param_format(page_desc(pg, c, &vp), *vp, v, &u);
+                        n++;
+                        if (text_w(&UF_LBL, k[c].label) > UX_COL_W - 4 || text_w(&UF_VAL, k[c].value) > UX_COL_W - 4 ||
+                            !str_eq(k[c].value, v)) {
+                            printf("  %s %s knob %u: \"%s\" %d px, \"%s\" %d px (\"%s\")\n", UXS_SYN_NM[e], pg->title, (unsigned)c + 1u,
+                                   k[c].label, text_w(&UF_LBL, k[c].label), k[c].value, text_w(&UF_VAL, k[c].value), v);
+                            ok = 0;
+                        }
+                    }
+                    *vp = keep;
+                }
+            }
+            mp = uxs_more_page();                       /* MORE: KNOB 1 n/N, KNOB 2 each row's name and its every value */
+            {
+                uint64_t sh;
+                uint32_t r;
+                ui.page = (uint8_t)mp; page_entered();
+                sh = uxm_mask(&UXM_SYN);
+                for (r = 0; r < UXM_SYN.n; r++) {
+                    const ux_row_t *rw = &UXM_SYN.rows[r];
+                    ux_knob_t k[4];
+                    int16_t *vp, keep;
+                    const param_desc_t *d;
+                    int32_t x;
+                    if (!uxm_pick_ok(&UXM_SYN, sh, r)) continue;
+                    uxm_at[SEC_EDIT].sel = (uint8_t)r; uxm_at[SEC_EDIT].top = 0;
+                    d = rw->kind == UXR_TRACK ? param_ref(TSEL, rw->id, &vp) : 0;
+                    keep = d && vp ? *vp : 0;
+                    for (x = d && vp ? d->min : 0; x <= (d && vp ? d->max : 0); x++) {
+                        char v[24];
+                        const char *u;
+                        if (d && vp) *vp = (int16_t)x;
+                        uxs_knobs(cur_page(), k);
+                        n++;
+                        if (d && vp) param_format(d, *vp, v, &u); else str_cpy(v, "GO", sizeof v);
+                        if (text_w(&UF_VAL, k[0].value) > UX_COL_W - 4 || text_w(&UF_LBL, k[1].label) > UX_COL_W - 4 ||
+                            text_w(&UF_VAL, k[1].value) > UX_COL_W - 4 || !str_eq(k[1].value, v)) {
+                            printf("  %s MORE row %u: \"%s\" \"%s\" %d px (\"%s\")\n", UXS_SYN_NM[e], (unsigned)r, k[1].label,
+                                   k[1].value, text_w(&UF_VAL, k[1].value), v);
+                            ok = 0;
+                        }
+                    }
+                    if (d && vp) *vp = keep;
+                }
+            }
+        }
+    bad += check("ACID FM 3b: every label and value a synth's EDIT knob row can show fits its column and its field",
+                 ok && n > 5000u);
     ui_power_on();
     return bad;
 }
@@ -13432,7 +13621,7 @@ static int test_ux_more_rows_ok(void)
     (void)ux_more_turn(&M, &s, &t, 0u, -3);
     ok &= s == 4u;
     bad += check("ACID FM 3b: every MORE row is a real setting, view, action or heading; a bad one is never shown",
-                 ok && nl >= 1u && nr >= 20u);
+                 ok && nl >= 1u && nr >= 10u);
     return bad;
 }
 
@@ -13569,6 +13758,10 @@ int main(void)
     bad += test_ux_section_draw();
     bad += test_ux_section_foot();
     bad += test_ux_more_rows_ok();
+    bad += test_edit_syn_pages();                       /* (ACID FM 3b task 4) */
+    bad += test_edit_syn_more_knobs();
+    bad += test_edit_syn_picture();
+    bad += test_ux_knob_widths();
     bad += test_engine_order_099();
 
     if (getenv("UI_SCREEN_DIR")) chain_screens(getenv("UI_SCREEN_DIR"));

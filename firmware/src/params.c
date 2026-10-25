@@ -527,8 +527,8 @@ enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACK
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
-       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_FOCUS, GR_STAGE,
-       GR_LYRIC, GR_LIVE, GR_MORE };   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
+       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
+       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN };   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER) */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
                                                          * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
 
 #include "ux_more.h"
@@ -566,9 +566,17 @@ static const param_desc_t LFO_PHASE_DESC = PD("PHASE", F_INT, 0, 127, 0);
 static int16_t lmode_ui, lphase_ui;
 static uint8_t lfo_ph_mem[NTRK];
 static int lfo_mode_of(const track_t *t) { return t->p[P_LPHASE] < 0; }   /* 1 FREE */
-#ifdef UXS_TEST
-static const ux_more_t UXS_DEMO_MORE;                 /* (host tests: ARP's demo MORE list, tests/ui_test.c) */
-#endif
+/* (ACID FM 3b) EDIT's MORE on a synth track (ANALOG PHASE LOFI NOISE VOICE): what its three pages leave, grouped. A row on a
+ * page shown in the chain (ANALOG's VOICE page, the others' FILTER: its TYPE) is not listed again (ux_more.c); a row JIANT showed only
+ * on some engines follows its rule (MORPH, RETRIG, WORDS). ALLOC is on no page or list (tests/ux_cover_test.c UXC_HIDDEN) */
+static const ux_row_t UXM_SYN_ROWS[] = {
+    {UXM_H_VOICE, UXR_HEAD, 0}, {P_VOICE, UXR_TRACK, 0}, {P_GLIDE, UXR_TRACK, 0}, {P_GLMODE, UXR_TRACK, 0},
+    {P_PRIO, UXR_TRACK, 0}, {P_DETUNE, UXR_TRACK, 0}, {P_LRTRG, UXR_TRACK, UXR_ON(ENGI_LOFI)},   /* (LOFI BYTE / FLOAT: RETRIG) */
+    {UXM_H_TONE, UXR_HEAD, 0}, {P_FTYPE, UXR_TRACK, 0}, {P_MORPH, UXR_TRACK, 0}, {P_DRIFT, UXR_TRACK, 0},
+    {UXM_H_WORDS, UXR_HEAD, 0}, {P_VLANG, UXR_TRACK, UXR_ON(ENGI_VOICE)}, {P_VLYR, UXR_TRACK, UXR_ON(ENGI_VOICE)},
+    {UXM_A_LYRIC, UXR_ACTION, 0},
+};
+static const ux_more_t UXM_SYN = {UXM_SYN_ROWS, (uint8_t)(sizeof UXM_SYN_ROWS / sizeof UXM_SYN_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -670,8 +678,7 @@ static const page_t PAGES[] = {
     /* (0.8.5) LENTE everywhere (ui_lens.c): pages the mock-up added, appended (the table's order is no one's index) */
     {"VOICE 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_ALLOC, P_DETUNE, 0xFF, 0xFF}},   /* EDIT > TONE: ALLOC, UNISON's DETUNE (in
                                                          * TP since Felucca, on no page until now) */
-    {"FOCUS", FAM_EDIT, SC_TRACK, GR_FOCUS, {0xFF, 0xFF, 0xFF, 0xFF}},   /* EDIT's detail on a synth: PARAM (E1..E8), its
-                                                         * VALUE, the MOD slot aimed at it: SRC AMT (ui_input.c focus_knob) */
+    /* (ACID FM 3b) EDIT > FOCUS gone (a view into the LFO's MOD matrix for one setting: the matrix keeps it all) */
     {"STAGE", FAM_ENV, SC_TRACK, GR_STAGE, {0xFF, 0xFF, P_ELOOP, 0xFF}},   /* ENV's detail: STAGE (ATK DEC SUS REL), its
                                                          * value, LOOP (ui_input.c stage_knob) */
     {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),
@@ -682,10 +689,11 @@ static const page_t PAGES[] = {
                                                          * modifiers (ui_live.c, seq_live.c) */
     {"RIELES", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* .. the six sequences as rails, four knobs */
     {"LFO 2", FAM_LFO, SC_TRACK, GR_LFO, {ID_LPHS, 0xFF, 0xFF, 0xFF}},   /* (0.9.18) PHASE: where TRIG starts (FREE: dimmed) */
-#ifdef UXS_TEST
-    {"MORE", FAM_ARP, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXS_DEMO_MORE},   /* (host tests: ux_section's demo
-                                                         * page, ARP's MORE; on the device no MORE page yet) */
-#endif
+    /* (ACID FM 3b) EDIT on a synth track (ui_lens.c CE_SYN): SOUND (EDIT 1), TONE (EDIT 2), then ANALOG's VOICE or the
+     * others' FILTER, then MORE. Titles of their own: nav_page takes the first page shown with its chain entry's title */
+    {"SYN VOICE", FAM_EDIT, SC_TRACK, GR_SYN, {P_VOICE, P_GLIDE, P_PRIO, P_DETUNE}},   /* ANALOG's (ui.c page_jiant) */
+    {"SYN FILTER", FAM_EDIT, SC_TRACK, GR_SYN, {P_FTYPE, P_FCUT, P_FRES, P_DIST}},   /* the others' (FILTER's rule) */
+    {"SYN MORE", FAM_EDIT, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SYN},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */

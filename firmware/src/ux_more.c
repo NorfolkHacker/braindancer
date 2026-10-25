@@ -2,21 +2,21 @@
 /* Copyright (C) 2026 NorfolkHacker */
 /* ACID FM's MORE list (ux_more.h): the rows a section's MORE page lists, which are shown, the pick and the scroll, the
  * panel's list. A row is shown when JIANT would show its setting: a track setting whose descriptor names it on this track's
- * engine (a "-" label or no range: not this engine's) and, held by a JIANT page, by one that page_visible shows (LOAD ECO's
- * chorus / slicer, a kit's lanes, MORPH, RETRIG, VOICE's WORDS .. gone as there; a setting on no page is shown); a heading
- * when a row under it is. sel and top are row indices: sel a shown setting / action (KNOB 1 steps over the headings and the
- * hidden rows), top the first row on the panel (UXM_ROWS rows a page). KNOB 2 writes through ui_input.c param_knob, as a
- * page's knob. Included after ux_home.c (ux_under), before ux_section.c (uxs_label: ux_section.h). */
+ * engine (a "-" label or no range: not this engine's) and, held by a JIANT page, by one JIANT's rules show (ui.c page_jiant:
+ * LOAD ECO's chorus / slicer, a kit's lanes, MORPH, RETRIG, VOICE's WORDS .. gone as there; a setting on no page is shown);
+ * a row for one engine (eng) on that engine's tracks only; not a setting a page of the chain shows now (3b task 4: ANALOG's
+ * VOICE page holds VOICE GLIDE PRIORITY SPREAD, so its MORE does not list them again); a heading when a row under it is.
+ * sel and top are row indices: sel a shown setting / action (KNOB 1 steps over the headings and the hidden rows), top the
+ * first row on the panel (UXM_ROWS rows a page), kept a chain each (uxm_at: EDIT's per kind of track). KNOB 2 writes through
+ * ui_input.c param_knob, as a page's knob; KNOB 3 and 4 say what the knobs do (ui_input.c, UXM_K34). Included after
+ * ux_home.c (ux_under), before ux_section.c (uxs_label: ux_section.h). */
 
-/* the headings (UXR_HEAD rows' ids) */
-enum { UXM_H_ARP, UXM_H_VOICE, UXM_H_FILTER, UXM_H_TONE, UXM_H_MOD, UXM_H_MSEQ, UXM_H_DELAY, UXM_H_REVERB, UXM_H_CHORUS,
-       UXM_H_SLICER, UXM_H_N };
+/* the headings' words (ux_more.h UXM_H_*) */
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "MSEQ", "DELAY", "REVERB", "CHORUS",
-                                              "SLICER"};
+                                              "SLICER", "WORDS"};
 /* the actions (UXR_ACTION rows' ids): KNOB 2 turned up does it; ask: JIANT's dialog first (a CF_* kind, OCT+ yes / OCT- no:
  * its own handler does the work), 0 at once */
 typedef struct { const char *name; uint8_t ask; } uxm_act_t;
-enum { UXM_A_LYRIC, UXM_A_N };
 static const uxm_act_t UXM_ACT[UXM_A_N] = {
     {"TYPE LYRIC", 0},                                  /* VOICE: the lyric typed on the NAME screen (was WORDS' OCT+ TYPE) */
 };
@@ -50,6 +50,8 @@ static int ux_row_shown(const ux_row_t *r)
     uint32_t i, k, held = 0, glo = r->kind == UXR_GLOBAL;
     if (!uxm_row_ok(r))
         return 0;
+    if (r->eng && trk_eng(TSEL) != r->eng - 1u)       /* (one engine's meaning of a shared slot) */
+        return 0;
     if (r->kind == UXR_ACTION)
         return uxm_act_ok(r->id);
     if (r->kind != UXR_TRACK && !glo)
@@ -66,24 +68,54 @@ static int ux_row_shown(const ux_row_t *r)
         for (k = 0; k < 4u && pg->id[k] != r->id; k++)
             ;
         if (k < 4u) {
-            if (page_visible(i))
+            if (page_jiant(i))                          /* (JIANT's rule for it: ui.c) */
                 return 1;
             held = 1;
         }
     }
     return !held;
 }
+/* the settings on the pages shown now of the chain whose MORE list m is (a bit each, [global][id]): MORE does not list them
+ * again (ANALOG's VOICE page holds VOICE GLIDE PRIORITY SPREAD, the others' FILTER the filter's TYPE). A list on no page: none */
+static void uxm_paged(const ux_more_t *m, uint32_t got[2][8])
+{
+    uint8_t v[16];
+    uint32_t i, k, n, sl, sec;
+    for (i = 0; i < 16u; i++)
+        got[i >> 3][i & 7u] = 0;
+    for (i = 0; i < NPAGES && PAGES[i].more != m; i++)
+        ;
+    if (i >= NPAGES)
+        return;
+    sec = sec_of_fam(PAGES[i].fam);
+    n = nav_list(sec, v);
+    for (k = 0; k < n; k++) {
+        uint32_t pg = nv_page(sec, v[k]);
+        if (pg >= NPAGES || PAGES[pg].graph == GR_MORE)
+            continue;
+        for (sl = 0; sl < 4u; sl++) {
+            uint32_t id = page_id(&PAGES[pg], sl);
+            if (id < 256u)
+                got[PAGES[pg].scope == SC_GLOBAL][id >> 5] |= 1u << (id & 31u);
+        }
+    }
+}
 /* the rows of m shown now, a bit each (a list holds 64 at most) */
 static uint64_t uxm_mask(const ux_more_t *m)
 {
     uint64_t sh = 0;
-    uint32_t i, n = m->n < 64u ? m->n : 64u, h = 64u;
+    uint32_t i, n = m->n < 64u ? m->n : 64u, h = 64u, pd[2][8];
+    uxm_paged(m, pd);
     for (i = 0; i < n; i++) {
-        if (m->rows[i].kind == UXR_HEAD) {
-            h = uxm_row_ok(&m->rows[i]) ? i : 64u;
+        const ux_row_t *r = &m->rows[i];
+        if (r->kind == UXR_HEAD) {
+            h = uxm_row_ok(r) ? i : 64u;
             continue;
         }
-        if (ux_row_shown(&m->rows[i])) {
+        if ((r->kind == UXR_TRACK || r->kind == UXR_GLOBAL) && r->id < 256u &&
+            ((pd[r->kind == UXR_GLOBAL][r->id >> 5] >> (r->id & 31u)) & 1u))
+            continue;                                   /* (on a page of the chain shown now) */
+        if (ux_row_shown(r)) {
             sh |= 1ull << i;
             if (h < 64u)                                /* (its heading with it) */
                 sh |= 1ull << h, h = 64u;
@@ -204,19 +236,21 @@ static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32
     return 0;
 }
 
-static struct { uint8_t sel, top; } uxm_at[SEC_N];     /* each section's MORE: its pick and scroll */
+static struct { uint8_t sel, top; } uxm_at[NAV_KEYS];  /* each chain's MORE (ui_lens.c nav_key: EDIT's a kind of track each,
+                                                         * the synths' FM6's DRUM's): its pick and scroll */
+static uint32_t uxm_key(void) { return nav_key(nav_sec()) % NAV_KEYS; }
 static int ux_more_knob(uint32_t knob, int32_t steps)
 {
     const page_t *pg = cur_page();
-    uint32_t sec = nav_sec(), s, t;
+    uint32_t key = uxm_key(), s, t;
     int r;
-    if (ui.home || pg->graph != GR_MORE || !pg->more || sec >= SEC_N)
+    if (ui.home || pg->graph != GR_MORE || !pg->more)
         return 0;
-    s = uxm_at[sec].sel;
-    t = uxm_at[sec].top;
+    s = uxm_at[key].sel;
+    t = uxm_at[key].top;
     r = ux_more_turn(pg->more, &s, &t, knob, steps);
-    uxm_at[sec].sel = (uint8_t)s;
-    uxm_at[sec].top = (uint8_t)t;
+    uxm_at[key].sel = (uint8_t)s;
+    uxm_at[key].top = (uint8_t)t;
     return r;
 }
 
