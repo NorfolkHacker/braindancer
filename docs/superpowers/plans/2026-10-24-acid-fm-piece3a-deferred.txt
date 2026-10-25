@@ -33,3 +33,6 @@ Read this when writing the plan for that piece. [3b] EDIT screens, [3c] the rema
 [any]     VISUAL legend clock starts before the legend is first shown (a knob held in the first 4 s hides it).
 [any]     VISUAL silent-ring test tolerance is loose; "full panel <= 1 write per pixel incl. glyphs" is not tested.
 [any]     SCOPE ON is not positively checked in ui_test (pre-existing).
+[piece 6 / 3c, priority] Power-on starts with EMPTY patterns (JIANT TRK_DEF patterns 0): PLAY on a fresh FM-1 is silent with no hint (user hit this 2026-10-25). §0: start with something playable (a short factory acid line + beat) or at least a status line "EMPTY: HOME → GENERATE, OR PLAY THE KEYS" while the project is empty.
+[3b] HOME TRACKS adds ~2 late audio blocks/s over a static page under the CPU TEST worst case (MENU 6.2/s, TRACKS 8.2/s, VISUAL 7.0/s; 0 with a normal generated song): slow the ridge scroll further while load_tight.
+[3b, user 2026-10-25] Interim: hide JIANT's non-IDM GEN genres (techno, house, …), keep the closest (acid / IDM / ambient / electro-like), renamed where needed, until piece 6 replaces GEN with ACID / BRAINDANCE / DRILL'N'BASS / BOC / AMBIENT / GLITCH / EXPLORE.
