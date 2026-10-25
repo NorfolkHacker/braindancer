@@ -70,7 +70,7 @@ a stored sound that names one loads as ANALOG's first preset.
 
 On the master, after JIANT's master chain, before the output: **WOW** (slow pitch drift, 0.3–2 Hz), **FLUTTER**
 (fast, 6–15 Hz), **SAT** (soft saturation), **HISS** (filtered noise, gated by the master level), and **AGE**, one
-macro that sets all four together. Off by default except in the generator's BOC style. A short modulated delay line
+macro that sets all four together. Off by default except in the generator's RETROBOC style. A short modulated delay line
 (about 20 ms) does the pitch effects. Saved with the project, automatable like JIANT's DJ FILTER.
 
 ## 5. Voices
@@ -158,7 +158,7 @@ keeps working as JIANT's). Pure C, deterministic.
   | ACID | 120–135 | ANALOG 303 lines with slide / accent, 808/909 DRUM-X |
   | BRAINDANCE | 125–150 | rhythm switches, squelchy bass, playful leads, breaks |
   | DRILL'N'BASS | 160–180 | heavy BREAK chops, ratchets, reverses |
-  | BOC | 85–100 | detuned pads (ANALOG / FM6), VOICE choirs, TAPE on, sparse dusty breaks |
+  | RETROBOC | 85–100 | detuned pads (ANALOG / FM6), VOICE choirs, TAPE on, sparse dusty breaks |
   | AMBIENT | 85–92 | slow FM6 / ANALOG pads, soft beats |
   | GLITCH | 90–170 | odd metres, polyrhythm, LOFI bytebeat |
   | EXPLORE | any | JIANT's rule-breaking mode, kept |
