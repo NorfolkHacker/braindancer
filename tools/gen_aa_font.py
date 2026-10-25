@@ -66,7 +66,7 @@ RISE = {"IBMPlexMono-SemiBold.ttf": 1}
 UI_PRESET = "jiant-lab"            # the firmware's faces (tools/build.py; tests/text_spacing_test.py)
 PFX = "AF"                         # the faces' C prefix: AF_<N> (jiant-lab), UF_<N> (acid)
 UF_LBL = " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00b7\u2192"   # (ACID FM) upper-case labels; arrow = code 0x86
-UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7"   # VAL (HDR: more below): ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
+UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7\u00b0"   # (3b task 7 fix: the degree sign, LFO's PHASE, +44 B) VAL (HDR: more below): ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
 UF_HDR = UF_TEXT + "\u25b6\u25a0" + "'(),=>[]\u2192\u2026"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop
                                    # (code 0x88); the status line's messages: ' ( ) , = > [ ], the arrow (0x86), the ellipsis
                                    # (0x85, ui_say's cut) (tests/ux_msg_scan.py: every message literal drawn there has its glyphs)

@@ -1935,11 +1935,15 @@ static void lz_frame_end(void)
     ui.force = 0;
 }
 static void ui_draw_page(uint32_t counting);
+static uint32_t ux_since_shed(void);                    /* (ux_home.c) */
 static void ui_draw(void)
 {
     static uint8_t counting;
     ui.frame++;
     ux_levels_tick();                                   /* (ACID FM 3a) the tracks' peaks into HOME's history, every frame */
+    (void)ux_since_shed();                              /* (3b task 7 fix) the guard's sheds seen every frame, whatever is
+                                                         * shown: one seconds ago does not freeze LFO's wave or HOME's panels
+                                                         * on entry (a compare and a store) */
     if (counting != (uint8_t)seq_counting()) {          /* a count-in began or ended: the page drawn again after it */
         counting = (uint8_t)seq_counting();
         ui.force = 1;

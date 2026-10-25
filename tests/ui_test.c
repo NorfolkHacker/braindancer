@@ -15144,7 +15144,7 @@ static void uxt7_open(uint32_t i)                        /* T1 (ANALOG, its firs
     nav_put(SEC_LFO, i < NELEM(UXT7_PG) ? UXT7_PG[i].nm : "MORE"); frame();
 }
 static const char *const UXT7_MORE =
-    "[LFO]|PHASE|[STEPS]|LENGTH|RATE|SMOOTH|STEP 1|STEP 2|STEP 3|STEP 4|STEP 5|STEP 6|STEP 7|STEP 8|STEP 9|STEP 10|STEP 11|"
+    "[LFO]|PHASE|[STEPS]|LENGTH|STEP RATE|SMOOTH|STEP 1|STEP 2|STEP 3|STEP 4|STEP 5|STEP 6|STEP 7|STEP 8|STEP 9|STEP 10|STEP 11|"
     "STEP 12|STEP 13|STEP 14|STEP 15|STEP 16";
 /* the chain (LFO's button round, SELECT to the ends, n / 4), opening on LFO, no JIANT LFO 2 / MSEQ / MSEQ 2; the footers; the
  * page left kept, PRESETS a sound and ALGORITHM the track there; MOD MATRIX's KNOB 1 the slot (a slot a detent), a track each;
@@ -15305,8 +15305,13 @@ static int test_t7_knobs(void)
             {1, 0, P_LD_PIT, 63, "+12ST", "PITCH \xB7 +12 SEMITONES"}, {1, 0, P_LD_PIT, 32, "+5.9ST", "PITCH \xB7 +5.9 SEMITONES"},
             {1, 0, P_LD_PIT, 1, "+13CT", "PITCH \xB7 +13 CENTS"}, {1, 0, P_LD_PIT, -64, "-12ST", "PITCH \xB7 -12 SEMITONES"},
             {1, 1, P_LD_FLT, 0, "OFF", "FILTER \xB7 OFF"},
-            {2, 1, P_M1SRC, 6, "WHEEL", "SOURCE \xB7 MOD WHEEL"}, {2, 1, P_M1SRC, 13, "STEPS", "SOURCE \xB7 STEPS: IN MORE"},
-            {2, 2, P_M1DST, 22, "D.TIM", "DEST \xB7 DELAY TIME"}, {2, 2, P_M1DST, 2, "FILTER", "DEST \xB7 FILTER"},
+            {2, 1, P_M1SRC, 6, "WHEEL", "SOURCE \xB7 WHEEL: MOD WHEEL CC1"}, {2, 1, P_M1SRC, 13, "STEPS", "SOURCE \xB7 STEPS: SET IN MORE"},
+            {2, 1, P_M1SRC, 5, "NOTE RAND", "SOURCE \xB7 NOTE RAND: NEW PER NOTE"}, {2, 1, P_M1SRC, 3, "VELOCITY", "SOURCE \xB7 VELOCITY: HOW HARD"},
+            {2, 2, P_M1DST, 22, "DLY TIME", "DEST \xB7 DLY TIME: DELAY TIME"}, {2, 2, P_M1DST, 2, "FILTER", "DEST \xB7 FILTER"},
+            {2, 2, P_M1DST, 23, "DLY FDBK", "DEST \xB7 DLY FDBK: DELAY FEEDBACK"}, {2, 2, P_M1DST, 26, "REV SIZE", "DEST \xB7 REV SIZE: REVERB SIZE"},
+            {2, 2, P_M1DST, 29, "CHO DEPTH", "DEST \xB7 CHO DEPTH: CHORUS DEPTH"}, {2, 2, P_M1DST, 8, "DELAY", "DEST \xB7 DELAY: SEND LEVEL"},
+            {2, 2, P_M1DST, MD_E1 + 4, "CUTOFF", "DEST \xB7 CUTOFF (ANALOG)"}, {2, 2, P_M1DST, MD_E1 + 1, "DETUNE", "DEST \xB7 DETUNE (ANALOG)"},
+            {0, 2, P_LPHASE, 0, "TRIG", "MODE \xB7 TRIG: NEW PHRASE RESTARTS IT"},
             {2, 3, P_M1AMT, 0, "OFF", "AMOUNT \xB7 OFF"},
         };
         ok = 1;
@@ -15327,12 +15332,12 @@ static int test_t7_knobs(void)
         uxt7_open(3);                                   /* PHASE in degrees (FREE: for TRIG) */
         TSEL->p[P_LPHASE] = 64; frame();
         uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_LFO, ID_LPHS);
-        ok &= str_eq(uxe_value(1), "180");
+        ok &= str_eq(uxe_value(1), "180\xB0");
         ux_knob_touch(1); frame();
-        ok &= str_eq(uxt6_status(), "PHASE \xB7 180 DEGREES");
+        ok &= str_eq(uxt6_status(), "PHASE \xB7 180\xB0");
         if (!ok) printf("  PHASE: \"%s\" \"%s\"\n", uxe_value(1), uxt6_status());
         bad += check("ACID FM 3b task 7: LFO's values in plain words (RATE 1/8D, 20S, 1.2HZ, 40HZ; WAVE RAND; PITCH in cents and "
-                     "semitones; OFF at 0; SOURCE WHEEL; DEST D.TIM; PHASE 180), the status line in full", ok);
+                     "semitones; OFF at 0; SOURCE WHEEL; DEST DLY TIME, CUTOFF; PHASE 180\xB0), the status line in full", ok);
     }
     ui_power_on();
     return bad;
@@ -15391,10 +15396,14 @@ static int test_t7_widths(void)
                     if (UXT7_PG[i].id[c] == ID_NONE) mod_ui_slot = (uint8_t)(v & 3);
                     uxs_knobs(cur_page(), k);
                     n++;
-                    if ((w = (uint32_t)text_w(&UF_VAL, k[c].value)) > UX_COL_W - 4u || str_len(k[c].value) + 1u >= sizeof k[c].value ||
-                        !uxe_glyphs(&UF_VAL, k[c].value) || !uxe_glyphs(&UF_HDR, k[c].value)) {
-                        printf("  LFO %s %s = \"%s\": %u px\n", UXT7_PG[i].nm, k[c].label, k[c].value, (unsigned)w);
-                        ok = 0;
+                    {   /* (3b task 7 fix: a name wider than UF_VAL drawn in a smaller face, ux_val_face) */
+                        int32_t dy;
+                        const aafont_t *vf = ux_val_face(k[c].value, &dy);
+                        if ((w = (uint32_t)text_w(vf, k[c].value)) > UX_COL_W - 4u || str_len(k[c].value) + 1u >= sizeof k[c].value ||
+                            !uxe_glyphs(vf, k[c].value) || !uxe_glyphs(&UF_HDR, k[c].value) || !uxe_glyphs(&UF_LBL, k[c].value) && c && i == 2u) {
+                            printf("  LFO %s %s = \"%s\": %u px\n", UXT7_PG[i].nm, k[c].label, k[c].value, (unsigned)w);
+                            ok = 0;
+                        }
                     }
                     if (text_w(&UF_LBL, k[c].label) > UX_COL_W - 4 || !uxe_glyphs(&UF_LBL, k[c].label)) {
                         printf("  LFO %s label %s\n", UXT7_PG[i].nm, k[c].label);
@@ -15405,7 +15414,14 @@ static int test_t7_widths(void)
                         uint32_t pid = page_id(cur_page(), c);
                         f = param_ref(TSEL, pid, &vp) && vp ? uxs_vfull(0, pid, *vp) : 0;
                     }
-                    if (f && (!uxe_glyphs(&UF_HDR, f) || str_len(f) > 23u)) { printf("  LFO %s full \"%s\"\n", UXT7_PG[i].nm, f); ok = 0; }
+                    if (f) {                            /* (the status line: the name, " . ", the value in full, within 224 px) */
+                        char st[48];
+                        snprintf(st, sizeof st, "%s \xB7 %s", k[c].label, f);
+                        if (!uxe_glyphs(&UF_HDR, f) || str_len(f) > 31u || text_w(&UF_HDR, st) > 224) {
+                            printf("  LFO %s full \"%s\" (%d px)\n", UXT7_PG[i].nm, st, (int)text_w(&UF_HDR, st));
+                            ok = 0;
+                        }
+                    }
                 }
                 TSEL->p[id] = keep;
             }
@@ -15415,11 +15431,11 @@ static int test_t7_widths(void)
         uxk_engine(UXK_ENG[e]); frame();
         for (v = 0; v < MD_N; v++) {
             char b[24];
-            uxs_mtx_name(TSEL, P_M1DST, v, b, sizeof b);
+            uxs_mtx_say(TSEL, 1, v, b, sizeof b, 0);
             n++;
             if (text_w(&UF_LBL, b) > 60 || !uxe_glyphs(&UF_LBL, b)) { printf("  MOD box DEST %d: \"%s\"\n", (int)v, b); ok = 0; }
             if (v < MS_N) {
-                uxs_mtx_name(TSEL, P_M1SRC, v, b, sizeof b);
+                uxs_mtx_say(TSEL, 0, v, b, sizeof b, 0);
                 if (text_w(&UF_LBL, b) > 60 || !uxe_glyphs(&UF_LBL, b)) { printf("  MOD box SOURCE %d: \"%s\"\n", (int)v, b); ok = 0; }
             }
         }
@@ -15489,6 +15505,43 @@ static int uxt7_pix_near(int32_t x, int32_t y, uint16_t col, int32_t r)   /* a p
         if (y + k >= 0 && y + k < 240 && swap16(host_screen[(uint32_t)(y + k) * 240u + (uint32_t)x]) == col)
             return 1;
     return 0;
+}
+/* the pitch (1/16 semitones above 0) track_render plays T1's note C4 at (ANALOG SAW, no drift, no tune, no matrix), the envelope
+ * at its top (stage 1 a step from it: env_tick's 32768), the LFO lfo, LFO > PITCH ld, ENV > PITCH ed: read from the oscillator's
+ * phase step over a block (pitch_inc inverted); -1 none */
+static int32_t uxt7_voice_p16(int32_t lfo, int32_t ld, int32_t ed)
+{
+    static int32_t out[CTL];
+    static track_t keep;
+    track_t *t = &trk[0];
+    voice_t *v = &t->v[0];
+    uint32_t i, ph, inc;
+    int32_t p, r = -1;
+    int16_t tune = song.g[G_TUNE];
+    memcpy(&keep, t, sizeof keep);
+    memset(t->v, 0, sizeof t->v);
+    t->eng_req = 0; t->engine = eng_idx(0); t->xf_on = 0; t->xf = 0; t->xin = 0; t->pfx_pit = 0;
+    t->p[P_E0] = 0; t->p[P_E1] = 0; t->p[P_E7] = 0; t->p[P_MORPH] = 0; t->p[P_DRIFT] = 127;
+    t->p[P_LD_PIT] = (int16_t)ld; t->p[P_ED_PIT] = (int16_t)ed; t->p[P_ATK] = 0; t->p[P_LRATE] = 0;
+    for (i = P_M1SRC; i <= P_M4AMT; i++) t->p[i] = 0;
+    t->lfo_val = lfo; t->lfo_fade = 32767;
+    song.g[G_TUNE] = 0;
+    v->active = v->gate = 1; v->stage = 1; v->env = (1 << 24) - 1; v->pitch16 = v->pitch_cur = 60 * 16; v->vel = 127;
+    ph = v->ph[0];
+    track_render(t, out, CTL);
+    inc = (v->ph[0] - ph) / CTL;
+    for (p = 0; p < 2048 && r < 0; p++)
+        if (pitch_inc((uint32_t)p) == inc) r = p;
+    memcpy(t, &keep, sizeof keep);
+    song.g[G_TUNE] = tune;
+    return r;
+}
+static int uxt7_semis_is(int32_t v, const char *want)   /* ENV TO's PITCH v on its knob */
+{
+    char b[16];
+    (void)uxs_lfo_val(P_ED_PIT, v, b, sizeof b, 0);
+    if (!str_eq(b, want)) printf("  ENV TO PITCH %d: \"%s\", want \"%s\"\n", (int)v, b, want);
+    return str_eq(b, want);
 }
 static int test_t7_engine(void)
 {
@@ -15605,24 +15658,34 @@ static int test_t7_engine(void)
         }
         bad += check("ACID FM 3b task 7: the LFO picture draws its wave where the engine's level is (SINE SQUARE SAW)", ok);
     }
-    {   /* DEST's PITCH: what voice.c moves a note by at the LFO's top, (lfo x PIT x 3) >> 15 sixteenths of a semitone */
-        int32_t v;
-        char b[16];
-        ok = 1;
+    {   /* (3b task 7 fix: was circular, uxs_semis' own formula) DEST's PITCH and ENV TO's: what the voice really plays. A note
+         * rendered by track_render (voice.c's pitch path; the envelope at its top by env_tick, the LFO at its), its pitch read
+         * back from the oscillator's phase step; the knob's text (cents / semitones) within its rounding of it */
+        int32_t v, p0, okl = 1, oke = 1;
+        p0 = uxt7_voice_p16(0, 0, 0);
         for (v = -64; v <= 63; v++) {
-            int32_t sx = (32767 * v * 3) >> 15, cents = sx * 100 / 16, got, tol;
-            const char *u;
+            int32_t k;
             if (!v) continue;
-            uxs_semis(v, b, sizeof b, 0);
-            u = strstr(b, "CT") ? "CT" : "ST";
-            got = (int32_t)(strtod(b, 0) * (u[0] == 'C' ? 1.0 : 100.0) + (v < 0 ? -0.5 : 0.5));
-            tol = u[0] == 'C' ? 1 : cents > 999 || cents < -999 ? 50 : 5;   /* (cents whole, semitones a tenth, from 10 whole) */
-            if (got - cents > tol || cents - got > tol || (u[0] == 'C') != (cents < 100 && cents > -100)) {
-                printf("  PITCH %d: \"%s\", the engine %d cents\n", v, b, cents);
-                ok = 0;
+            for (k = 0; k < 2; k++) {
+                int32_t p = k ? uxt7_voice_p16(0, 0, v) : uxt7_voice_p16(32767, v, 0), c100 = (p - p0) * 100, got;
+                char b[16];
+                (void)uxs_lfo_val(k ? P_ED_PIT : P_LD_PIT, v, b, sizeof b, 0);
+                if (p < 0 || p0 < 0) { printf("  PITCH %d: no pitch read\n", v); okl = oke = 0; continue; }
+                if (strstr(b, "CT"))                    /* (cents: whole; c100 / 16 the exact cents) */
+                    got = (int32_t)strtol(b, 0, 10) * 16;
+                else
+                    got = (int32_t)(strtod(b, 0) * 1600.0 + (v < 0 ? -0.5 : 0.5));
+                if (got - c100 > (strstr(b, "CT") ? 8 : strchr(b, '.') ? 80 : 800) ||
+                    c100 - got > (strstr(b, "CT") ? 8 : strchr(b, '.') ? 80 : 800) ||
+                    (strstr(b, "CT") != 0) != (c100 < 1600 && c100 > -1600)) {
+                    printf("  %s PITCH %d: \"%s\", the voice moves %d/16 semitone\n", k ? "ENV TO" : "DEST", v, b, (p - p0));
+                    if (k) oke = 0; else okl = 0;
+                }
             }
         }
-        bad += check("ACID FM 3b task 7: DEST's PITCH (and ENV TO's) in cents / semitones: what voice.c moves the note by", ok);
+        bad += check("ACID FM 3b task 7 fix: DEST's PITCH is what the voice plays at the LFO's top (track_render, 127 amounts)", okl);
+        bad += check("ACID FM 3b task 7 fix: ENV TO's PITCH is what the voice plays at the envelope's top (env_tick 32768: +32 is "
+                     "+6.0ST)", oke && uxt7_semis_is(32, "+6.0ST") && uxt7_semis_is(1, "+19CT") && uxt7_semis_is(-64, "-12ST"));
     }
     {   /* MOD MATRIX: a route's line (AMOUNT's colour) between its boxes, none for an OFF slot */
         uxt7_open(2);
@@ -15707,6 +15770,268 @@ static int test_t7_pace(void)
     n = uxt7_run(400, &gmin, &gmax, &px);
     ok &= n == 0u;
     bad += check("ACID FM 3b task 7: no scrolling with MENU > ANIM OFF; DEST and MOD MATRIX still while the LFO runs", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3b task 7 fix (review 0b8af33): one name per matrix source and destination (the EDIT knob's for an engine's E1..E8,
+ * never "E5" for one used), RANDOM's cycles kept as seen, the tempo off the static pictures, the guard's sheds seen every
+ * frame, MODE's words, RATE / RAND each one thing, the STEPS' picture in MORE
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static int32_t uxt7_cyc(int32_t d)                      /* RANDOM's level the LFO page draws d cycles from the one playing */
+{
+    uxs_lw_t w;
+    int64_t dc;
+    uxs_lfo_win(TSEL, &w);
+    dc = ((((int64_t)d) << 32) + 0x80000000ll - (int64_t)TSEL->lfo_ph) / (int64_t)w.inc;
+    return uxs_lfo_at(TSEL, &w, TSEL->lfo_ph, (int32_t)dc);
+}
+static int test_t7_fix(void)
+{
+    int bad = 0, ok, okn = 1, oku = 1, oke = 1;
+    uint32_t e, i, j, n;
+    for (e = 0; e < NELEM(UXK_ENG); e++) {             /* the matrix's names: one each, the EDIT knob's for E1..E8 */
+        const char *lab[8] = {0};
+        char nm[MD_N][24];
+        uxs_syn_on(UXK_ENG[e]);
+        for (i = 0; i < 4u; i++) {                      /* (EDIT's chain: its pages' knobs, MORE's rows) */
+            const page_t *pg = cur_page();
+            ux_knob_t k[4];
+            uint32_t c;
+            uxs_knobs(pg, k);
+            for (c = 0; pg->graph != GR_MORE && c < 4u; c++)
+                if (page_id(pg, c) >= P_E0 && page_id(pg, c) <= P_E7 && k[c].label[0])
+                    lab[page_id(pg, c) - P_E0] = k[c].label;
+            if (pg->graph == GR_MORE && pg->more) {
+                uint64_t sh = uxm_mask(pg->more);
+                for (j = 0; j < pg->more->n; j++) {
+                    const ux_row_t *r = &pg->more->rows[j];
+                    char v[24];
+                    uint8_t bar;
+                    if (uxm_on(sh, j) && r->kind == UXR_TRACK && r->id >= P_E0 && r->id <= P_E7)
+                        lab[r->id - P_E0] = uxm_row_text(r, v, sizeof v, &bar);
+                }
+            }
+            press(B_EDIT); frame();
+        }
+        press(B_LFO); frame(); nav_put(SEC_LFO, "MOD MATRIX"); frame();
+        mod_ui_slot = 0;
+        for (i = 0; i < MD_N; i++) {
+            char st[48], bx[24];
+            const char *f;
+            TSEL->p[P_M1DST] = (int16_t)i;
+            frames(UX_HOT_MS + 20u); ux_knob_touch(2); frame();
+            str_cpy(nm[i], uxe_value(2), sizeof nm[i]);
+            uxs_mtx_say(TSEL, 1, (int32_t)i, bx, sizeof bx, 0);
+            str_cpy(st, uxt6_status(), sizeof st);
+            f = strncmp(st, "DEST \xB7 ", 7) ? "" : st + 7;
+            if (!str_eq(bx, nm[i]) || strncmp(f, nm[i], str_len(nm[i])) ||
+                (f[str_len(nm[i])] && f[str_len(nm[i])] != ':' && f[str_len(nm[i])] != ' ')) {
+                printf("  %s DEST %u: knob \"%s\", box \"%s\", status \"%s\"\n", N_ENGNAME[UXK_ENG[e]], (unsigned)i, nm[i], bx, st);
+                okn = 0;
+            }
+            if (nm[i][0] == 'E' && nm[i][1] >= '1' && nm[i][1] <= '8' && !nm[i][2]) {
+                printf("  %s DEST %u: \"%s\"\n", N_ENGNAME[UXK_ENG[e]], (unsigned)i, nm[i]);
+                oke = 0;
+            }
+            if (i >= MD_E1 && i < MD_CLIP) {
+                const char *l = mod_dst_name(TSEL, (int32_t)i);
+                int used = !str_eq(l, N_MDST[i]);
+                if (used ? lab[i - MD_E1] && !str_eq(nm[i], lab[i - MD_E1]) : !str_eq(nm[i], "UNUSED")) {
+                    printf("  %s E%u: DEST \"%s\", its EDIT knob \"%s\"\n", N_ENGNAME[UXK_ENG[e]], (unsigned)(i - MD_E1 + 1u), nm[i],
+                           lab[i - MD_E1] ? lab[i - MD_E1] : "(none)");
+                    oke = 0;
+                }
+            }
+        }
+        for (i = 0; i < MD_N; i++)                      /* (no two destinations the same name; an E1..E8 named as another by
+                                                         * its EDIT knob, ANALOG's DRIVE and the track's: the status line tells
+                                                         * them apart, "DRIVE (ANALOG)") */
+            for (j = i + 1u; j < MD_N; j++)
+                if (str_eq(nm[i], nm[j]) && !str_eq(nm[i], "UNUSED")) {
+                    char fi[32], fj[32];
+                    uxs_mtx_say(TSEL, 1, (int32_t)i, fi, sizeof fi, 1);
+                    uxs_mtx_say(TSEL, 1, (int32_t)j, fj, sizeof fj, 1);
+                    if (!(j >= MD_E1 && j < MD_CLIP) || str_eq(fi, fj)) {
+                        printf("  %s: DEST %u and %u both \"%s\"\n", N_ENGNAME[UXK_ENG[e]], (unsigned)i, (unsigned)j, nm[i]);
+                        oku = 0;
+                    } else
+                        printf("ui:   (%s: DEST %u and %u both \"%s\" as their EDIT knobs: \"%s\", \"%s\")\n", N_ENGNAME[UXK_ENG[e]],
+                               (unsigned)i, (unsigned)j, nm[i], fi, fj);
+                }
+    }
+    {   /* the sources: one name each, the knob's the box's and the status line's, none the same, none a WAVE's */
+        char nm[MS_N][24];
+        uxt7_open(2);
+        for (i = 0; i < MS_N; i++) {
+            char st[48], bx[24];
+            const char *f;
+            TSEL->p[P_M1SRC] = (int16_t)i;
+            frames(UX_HOT_MS + 20u); ux_knob_touch(1); frame();
+            str_cpy(nm[i], uxe_value(1), sizeof nm[i]);
+            uxs_mtx_say(TSEL, 0, (int32_t)i, bx, sizeof bx, 0);
+            str_cpy(st, uxt6_status(), sizeof st);
+            f = strncmp(st, "SOURCE \xB7 ", 9) ? "" : st + 9;
+            if (!str_eq(bx, nm[i]) || strncmp(f, nm[i], str_len(nm[i])) || (f[str_len(nm[i])] && f[str_len(nm[i])] != ':')) {
+                printf("  SOURCE %u: knob \"%s\", box \"%s\", status \"%s\"\n", (unsigned)i, nm[i], bx, st);
+                okn = 0;
+            }
+            for (j = 0; j < 5u; j++)
+                if (str_eq(nm[i], UXS_LWAVE_K[j])) { printf("  SOURCE \"%s\" is a WAVE too\n", nm[i]); oku = 0; }
+            for (j = 0; j < i; j++)
+                if (str_eq(nm[i], nm[j])) { printf("  SOURCE %u and %u both \"%s\"\n", (unsigned)j, (unsigned)i, nm[i]); oku = 0; }
+        }
+    }
+    bad += check("ACID FM 3b task 7 fix: MOD MATRIX's SOURCE and DEST one name each, the same on the knob, the box and the status "
+                 "line (which may say more after it)", okn);
+    bad += check("ACID FM 3b task 7 fix: an engine's E1..E8 as a DEST is its EDIT knob's name (7 engines), never \"E5\" for one it "
+                 "uses, UNUSED else", oke);
+    {   /* LFO's knob and MORE names: none twice (RATE the LFO's only: STEP RATE; RAND the WAVE's only: NOTE RAND) */
+        const char *lb[64];
+        uint32_t nl = 0;
+        for (i = 0; i < 3u; i++) {
+            ux_knob_t k[4];
+            uint32_t c;
+            uxt7_open(i);
+            uxs_knobs(cur_page(), k);
+            for (c = 0; c < 4u; c++) lb[nl++] = k[c].label;
+        }
+        uxt7_open(3);
+        for (i = 0; i < UXM_LFO.n; i++)
+            if (UXM_LFO.rows[i].kind != UXR_HEAD) {
+                char v[24];
+                uint8_t bar;
+                lb[nl++] = uxm_row_text(&UXM_LFO.rows[i], v, sizeof v, &bar);
+            }
+        for (i = 0; i < nl; i++)
+            for (j = 0; j < i; j++)
+                if (str_eq(lb[i], lb[j])) { printf("  LFO: \"%s\" twice\n", lb[i]); oku = 0; }
+        oku &= nl == 12u + 20u;
+    }
+    bad += check("ACID FM 3b task 7 fix: no two sources, destinations or LFO settings share a name (STEP RATE, NOTE RAND)", oku);
+    {   /* RANDOM: across a wrap the cycle just played keeps its level, a cycle to come keeps its own as it scrolls in */
+        uint32_t wraps = 0, t;
+        ok = 1;
+        uxt7_open(0);
+        TSEL->p[P_LWAVE] = 4; TSEL->p[P_LRATE] = -8;   /* (1/8: a cycle ~16 frames) */
+        frame();
+        { uint32_t g0, g1, px; (void)uxt7_run(100, &g0, &g1, &px); }
+        for (t = 0; t < 400u && wraps < 4u; t++) {
+            int32_t cur = uxt7_cyc(0), f2 = uxt7_cyc(2), f3 = uxt7_cyc(3), p1 = uxt7_cyc(-1);
+            uint32_t r0 = TSEL->lfo_rnd, g0, g1, px;
+            (void)uxt7_run(16, &g0, &g1, &px);
+            if (TSEL->lfo_rnd != r0) {                  /* (a wrap: one cycle on) */
+                wraps++;
+                if (uxt7_cyc(-1) != cur || uxt7_cyc(1) != f2 || uxt7_cyc(2) != f3 || (wraps > 1u && uxt7_cyc(-2) != p1)) {
+                    printf("  RAND wrap %u: played %d -> %d, to come %d -> %d, %d -> %d, before %d -> %d\n", (unsigned)wraps, cur,
+                           uxt7_cyc(-1), f2, uxt7_cyc(1), f3, uxt7_cyc(2), p1, uxt7_cyc(-2));
+                    ok = 0;
+                }
+            } else if (uxt7_cyc(0) != cur || uxt7_cyc(2) != f2 || uxt7_cyc(-1) != p1) {
+                printf("  RAND: a cycle's level moved within it\n");
+                ok = 0;
+            }
+        }
+        bad += check("ACID FM 3b task 7 fix: RAND's cycles scroll steadily: the one played keeps its drawn level, one to come its "
+                     "own (4 wraps)", ok && wraps == 4u);
+    }
+    {   /* the tempo jittering (an outside clock, 4 times a beat): with gov_lite nothing redrawn; MOD MATRIX never; DEST paced */
+        static const char *const PG[3] = {"LFO", "DEST", "MOD MATRIX"};
+        uint32_t extra[3], k, n0;
+        ok = 1;
+        for (i = 0; i < 3u; i++) {
+            uxt7_open(i);
+            TSEL->p[P_LRATE] = 60;                      /* (free: the window, beats, moves against the cycle; in time both move) */
+            song.g[G_CLOCK] = 1; midi_beat_samples = 22050u;
+            gov_lite = LOAD_LITE;
+            frames(200);
+            n0 = uxs_panels;
+            for (k = 0; k < 20u; k++) {
+                midi_beat_samples = 22050u + (k & 1u ? 37u : 0u) - (k & 2u ? 41u : 0u);
+                frame();
+            }
+            extra[i] = uxs_panels - n0;
+            gov_lite = 0;
+            frames(200);
+            n0 = uxs_panels;
+            for (k = 0; k < 20u; k++) {
+                midi_beat_samples = 22050u + (k & 1u ? 37u : 0u) - (k & 2u ? 41u : 0u);
+                frame();
+            }
+            n = uxs_panels - n0;
+            if (extra[i] || (i == 2u && n) || (i < 2u && (n < 2u || n > 20u * 16u / UX_TRK_MS + 1u))) {
+                printf("  %s: %u panels for 20 tempo jitters with gov_lite, %u without\n", PG[i], (unsigned)extra[i], (unsigned)n);
+                ok = 0;
+            }
+            song.g[G_CLOCK] = 0; midi_beat_samples = 0;
+        }
+        bad += check("ACID FM 3b task 7 fix: 20 tempo jitters redraw nothing with gov_lite, MOD MATRIX never; LFO and DEST paced", ok);
+    }
+    {   /* a shed seconds ago, seen while on ENV: LFO's wave not frozen on entry */
+        uint32_t g0, g1, px;
+        uxt7_open(0);
+        TSEL->p[P_LRATE] = 60; TSEL->p[P_LWAVE] = 0;
+        press(B_ENV); frame();
+        load_diag.shed++;
+        frames(1000);
+        press(B_LFO); frame();
+        ok = str_eq(cur_page()->title, "LFO");
+        n = uxt7_run(320, &g0, &g1, &px);
+        ok &= n >= 5u;
+        if (!ok) printf("  LFO after a shed 1 s ago: %u panels in 320 ms\n", (unsigned)n);
+        bad += check("ACID FM 3b task 7 fix: the guard's sheds seen every frame: one a second ago does not freeze LFO's wave on "
+                     "entry", ok);
+    }
+    {   /* MODE's words: TRIG, a fresh phrase restarts it (voice.c trk_note_on: none held), a note over a held one does not */
+        track_t *t;
+        ui_power_on(); frame();
+        t = TSEL;
+        t->p[P_LPHASE] = 0;
+        t->lfo_ph = 0x40000000u;
+        trk_note_on(t, 60, 100);
+        ok = t->lfo_ph == 0u;
+        t->lfo_ph = 0x40000000u;
+        trk_note_on(t, 64, 100);
+        ok &= t->lfo_ph == 0x40000000u;
+        ok &= str_eq(UXS_LMODE_SAY[0], "EACH NEW PHRASE RESTARTS IT") && strstr(UXS_LMODE_F[0], "NEW PHRASE RESTARTS IT") != 0;
+        bad += check("ACID FM 3b task 7 fix: MODE TRIG's words: each new phrase restarts it (as voice.c does; a note over a held "
+                     "one does not)", ok);
+    }
+    {   /* STEPS' picture in MORE: a STEPS row picked, the sixteen bars (the picked one KNOB 2's colour, past LENGTH dim, LENGTH a
+         * line); PHASE picked, none; redrawn on a change only */
+        uint32_t k3 = UX_Y_PANEL + 3u + 5u * 18u + 4u + 43u, n0;
+        ok = 1;
+        uxt7_open(3);
+        TSEL->p[P_MSLEN] = 8;
+        for (i = 0; i < 16u; i++) TSEL->p[P_MS0 + i] = (int16_t)(i * 8u);
+        uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_LFO, P_MS0 + 2u); uxm_at[uxm_key()].top = 0;
+        ui.force = 1; frame();
+        ok &= uxt7_pix_near(16 + 2 * 13 + 5, (int32_t)k3, UX_SLIDE, 0) && uxt7_pix_near(16 + 5 * 13 + 5, (int32_t)k3, ux_mix(UX_BG, UX_ACID, 70), 0) &&
+              uxt7_pix_near(16 + 10 * 13 + 5, (int32_t)k3, ux_mix(UX_BG, UX_LINE, 70), 0) &&
+              uxt7_pix_near(16 + 8 * 13 - 2, (int32_t)k3 - 20, UX_ACCENT, 0);
+        {
+            uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
+            uint64_t m = uxm_mask(&UXM_LFO);
+            uxm_fix(&UXM_LFO, m, &s, &t);
+            ok &= uxm_vis(m, s) >= uxm_vis(m, t) && uxm_vis(m, s) < uxm_vis(m, t) + 5u;   /* (the pick in the list's 5 rows) */
+        }
+        if (!ok) printf("  STEPS: no bars\n");
+        ok &= uxe_cells_ok();
+        frames(UX_HOT_MS + 100u);
+        n0 = uxs_panels;
+        frames(400);
+        ok &= uxs_panels == n0;
+        turn(EN_K2, 3); frames(100);
+        ok &= uxs_panels == n0 + 1u && TSEL->p[P_MS0 + 2u] == 19;
+        uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_LFO, ID_LPHS); uxm_at[uxm_key()].top = 0;
+        ui.force = 1; frame();
+        ok &= !uxt7_pix_near(16 + 2 * 13 + 5, (int32_t)k3, UX_SLIDE, 0) && !uxt7_pix_near(16 + 8 * 13 - 2, (int32_t)k3 - 20, UX_ACCENT, 0);
+        turn(EN_K1, 1); frame();                         /* (KNOB 1 to LENGTH: the bars back) */
+        ok &= uxt7_pix_near(16 + 8 * 13 - 2, (int32_t)k3 - 20, UX_ACCENT, 0);
+        bad += check("ACID FM 3b task 7 fix: a STEPS row picked in MORE shows the 16 steps as bars (the pick lit, LENGTH marked, "
+                     "past it dim), redrawn on a change only; PHASE picked: the list alone", ok);
+    }
     ui_power_on();
     return bad;
 }
@@ -15862,6 +16187,7 @@ int main(void)
     bad += test_t7_pictures();
     bad += test_t7_engine();
     bad += test_t7_pace();
+    bad += test_t7_fix();                               /* (ACID FM 3b task 7 fix) */
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

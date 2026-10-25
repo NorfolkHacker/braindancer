@@ -28,7 +28,7 @@
 #define UX_STRIP_W  13
 #define UX_STRIP_H  18
 
-typedef struct { const char *label; char value[8]; uint8_t bar; /* 0..255 */ } ux_knob_t;
+typedef struct { const char *label; char value[12]; uint8_t bar; /* 0..255 */ } ux_knob_t;   /* (3b task 7 fix: value 12, a name: "CHO DEPTH") */
 
 /* top line + header, LCD y 0..15: "T<trk> · sound" (trk 0: the sound alone), right in MID */
 static void ux_header(uint32_t trk, const char *sound, const char *right);

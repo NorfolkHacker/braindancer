@@ -1268,11 +1268,13 @@ static void setup(int s)
         TSEL->lfo_ph = 0x30000000u; TSEL->lfo_fade = 32767; TSEL->lfo_val = lfo_wave(TSEL, TSEL->lfo_ph);
         nav_scene(SEC_LFO, "LFO");
         break;
-    case S_MOD:                                         /* (3b task 7) MOD MATRIX: the LFO to the FILTER, the mod wheel down on
-                                                         * E3 (slot 2 picked), slot 3 the velocity to AMP; slot 4 off */
+    case S_MOD:                                         /* (3b task 7) MOD MATRIX: the LFO to the FILTER, the velocity down on
+                                                         * E5, ANALOG's CUTOFF (slot 2 picked: its names wider than UF_VAL, in
+                                                         * UF_HDR: 3b task 7 fix), slot 3 the mod wheel to the delay's feedback;
+                                                         * slot 4 off */
         uxs_seen = 0x3FFu; ux_hot_k = -1;
-        TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40; TSEL->p[P_M2SRC] = 6;
-        TSEL->p[P_M2DST] = 14; TSEL->p[P_M2AMT] = -64; TSEL->p[P_M3SRC] = 3; TSEL->p[P_M3DST] = 4; TSEL->p[P_M3AMT] = 20;
+        TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40; TSEL->p[P_M2SRC] = 3;
+        TSEL->p[P_M2DST] = 16; TSEL->p[P_M2AMT] = -64; TSEL->p[P_M3SRC] = 6; TSEL->p[P_M3DST] = 23; TSEL->p[P_M3AMT] = 20;
         mod_ui_slot = 1;
         nav_scene(SEC_LFO, "MOD MATRIX");
         break;

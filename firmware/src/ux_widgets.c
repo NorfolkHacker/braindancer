@@ -44,6 +44,22 @@ static int32_t ux_knob_hot(void)
     return ux_hot_k >= 0 && UX_NOW() - ux_hot_t < UX_HOT_MS ? ux_hot_k : -1;
 }
 
+/* (3b task 7 fix) the face a knob's value is drawn in: UF_VAL, else (a name wider than its column, a MOD MATRIX destination's
+ * "CUTOFF": the same name as the EDIT knob's) UF_HDR, else UF_LBL (every knob label fits it), its capitals centred where
+ * UF_VAL's are (*dy: rows down from UF_VAL's line) */
+static const aafont_t *ux_val_face(const char *v, int32_t *dy)
+{
+    if (text_w(&UF_VAL, v) <= UX_COL_W - 4) {
+        *dy = 0;
+        return &UF_VAL;
+    }
+    if (text_w(&UF_HDR, v) <= UX_COL_W - 4) {
+        *dy = UF_VAL_CAP_Y + UF_VAL_CAP_H / 2 - UF_HDR_CAP_Y - UF_HDR_CAP_H / 2;
+        return &UF_HDR;
+    }
+    *dy = UF_VAL_CAP_Y + UF_VAL_CAP_H / 2 - UF_LBL_CAP_Y - UF_LBL_CAP_H / 2;
+    return &UF_LBL;
+}
 static void ux_knobs(const ux_knob_t k[4], int32_t hot)
 {
     int32_t i;
@@ -58,7 +74,11 @@ static void ux_knobs(const ux_knob_t k[4], int32_t hot)
         GFX_HOOK_CELL(x, 0, x + UX_COL_W, 38);
         cv_rect(x, 0, UX_COL_W, 2, on ? col : UX_LINE);                    /* the column's rule: its knob's colour while hot */
         cv_text_on(x + 2, 4, &UF_LBL, k[i].label, on ? UX_TEXT : UX_MID, bg);
-        cv_text_on(x + 2, 14, &UF_VAL, k[i].value, on ? UX_TEXT : ux_mix(UX_BG, UX_TEXT, 78), bg);
+        {
+            int32_t dy;
+            const aafont_t *vf = ux_val_face(k[i].value, &dy);
+            cv_text_on(x + 2, 14 + dy, vf, k[i].value, on ? UX_TEXT : ux_mix(UX_BG, UX_TEXT, 78), bg);
+        }
         fw = (int32_t)k[i].bar * (UX_COL_W - 4) / 255;
         cv_rect(x + 2, 32, UX_COL_W - 4, 3, UX_LINE);
         if (fw > 0)

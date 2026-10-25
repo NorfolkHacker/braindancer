@@ -155,11 +155,26 @@ static uint32_t uxm_row_of(const ux_more_t *m, uint64_t sh, uint32_t v)   /* the
             return i;
     return uxm_n(m);
 }
+/* (3b task 7 fix) row s is under the STEPS heading (LFO's MORE: JIANT's MSEQ): the panel shows the sixteen steps' levels as
+ * bars under the list (ux_more_draw), the list UXM_STEPS_ROWS rows */
+#define UXM_STEPS_ROWS (UXM_ROWS - 3u)
+static int uxm_steps_pic(const ux_more_t *m, uint32_t s)
+{
+    uint32_t n = uxm_n(m);
+    if (s >= n || m->rows[s].kind == UXR_HEAD)
+        return 0;
+    while (s-- > 0u)
+        if (m->rows[s].kind == UXR_HEAD)
+            return m->rows[s].id == UXM_H_MSEQ;
+    return 0;
+}
+static uint32_t uxm_rows(const ux_more_t *m, uint32_t s) { return uxm_steps_pic(m, s) ? UXM_STEPS_ROWS : UXM_ROWS; }   /* the
+                                                         * rows on the panel with s picked */
 /* sel a shown setting (the nearest after it, else before; none: n), top a shown row with sel in sight (sel on the top
  * row: its heading above it when it has one), not past the last page */
 static void uxm_fix(const ux_more_t *m, uint64_t sh, uint32_t *sel, uint32_t *top)
 {
-    uint32_t n = uxm_n(m), s = *sel, t = *top, nv = uxm_nvis(sh), mt = nv > UXM_ROWS ? nv - UXM_ROWS : 0u, vs, vt;
+    uint32_t n = uxm_n(m), s = *sel, t = *top, nv = uxm_nvis(sh), mt, vs, vt, rows;
     if (s >= n || !uxm_pick_ok(m, sh, s)) {
         uint32_t k;
         for (k = s < n ? s : 0u; k < n && !uxm_pick_ok(m, sh, k); k++)
@@ -169,6 +184,8 @@ static void uxm_fix(const ux_more_t *m, uint64_t sh, uint32_t *sel, uint32_t *to
                 ;
         s = k < n ? k : n;
     }
+    rows = uxm_rows(m, s);
+    mt = nv > rows ? nv - rows : 0u;
     vt = t < n ? uxm_vis(sh, t) : 0u;
     if (vt > mt)
         vt = mt;
@@ -176,8 +193,8 @@ static void uxm_fix(const ux_more_t *m, uint64_t sh, uint32_t *sel, uint32_t *to
         vs = uxm_vis(sh, s);
         if (vs < vt)
             vt = vs && m->rows[uxm_row_of(m, sh, vs - 1u)].kind == UXR_HEAD ? vs - 1u : vs;
-        else if (vs >= vt + UXM_ROWS)
-            vt = vs + 1u - UXM_ROWS;
+        else if (vs >= vt + rows)
+            vt = vs + 1u - rows;
     }
     *sel = s;
     *top = uxm_row_of(m, sh, vt);
@@ -225,7 +242,7 @@ static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32
         return 1;
     }
     if (knob == UXM_SELECT) {                           /* SELECT: a row a detent; the pick dragged along to stay in sight */
-        uint32_t nv = uxm_nvis(sh), mt = nv > UXM_ROWS ? nv - UXM_ROWS : 0u, vt = uxm_vis(sh, *top), vs, k;
+        uint32_t nv = uxm_nvis(sh), rows = uxm_rows(m, *sel), mt = nv > rows ? nv - rows : 0u, vt = uxm_vis(sh, *top), vs, k;
         int32_t to;
         if (steps < 0 && vt == 0u)
             return 0;                                   /* (before the first row: the page before) */
@@ -236,8 +253,8 @@ static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32
             if (vs < (uint32_t)to)                      /* (above the panel: the first setting on it) */
                 for (k = *top; k < n && !uxm_pick_ok(m, sh, k); k++)
                     ;
-            else if (vs >= (uint32_t)to + UXM_ROWS)     /* (below it: the last one on it) */
-                for (k = uxm_row_of(m, sh, (uint32_t)to + UXM_ROWS); k-- > 0u && !uxm_pick_ok(m, sh, k);)
+            else if (vs >= (uint32_t)to + rows)         /* (below it: the last one on it) */
+                for (k = uxm_row_of(m, sh, (uint32_t)to + rows); k-- > 0u && !uxm_pick_ok(m, sh, k);)
                     ;
             else
                 k = *sel;
@@ -323,16 +340,37 @@ static int uxm_bar(const ux_row_t *r, int on, int32_t y, int draw)   /* 1: the r
         cv_rect(x0, y - 1, b, 3, c);
     return 1;
 }
+/* (3b task 7 fix) the STEPS' picture under the list: the sixteen levels as bars (KNOB 2's colour the step picked, those past
+ * LENGTH dim), LENGTH's end a line in ACCENT */
+static void uxm_steps_draw(const ux_more_t *m, uint32_t sel)
+{
+    int32_t y0 = 3 + (int32_t)(UXM_STEPS_ROWS * UXM_PITCH) + 4, h = 44, len = clamp(TSEL->p[P_MSLEN], 1, 16), i, x;
+    uint32_t id = m->rows[sel].id;
+    cv_rect(16, y0 + h, 208, 1, UX_LINE);
+    for (i = 0; i < 16; i++) {
+        int32_t lv = clamp(TSEL->p[P_MS0 + (uint32_t)i], 0, 127), bh = 1 + lv * (h - 1) / 127, lit = id == P_MS0 + (uint32_t)i;
+        uint16_t c = lit ? UX_SLIDE : i < len ? ux_mix(UX_BG, UX_ACID, 70) : ux_mix(UX_BG, UX_LINE, 70);
+        x = 16 + i * 13;
+        cv_rect(x, y0 + h - bh, 11, bh, c);
+        if (lit)
+            cv_rect(x, y0 + h + 2, 11, 2, UX_SLIDE);
+    }
+    x = 16 + len * 13 - 2;                              /* (LENGTH: where the steps go round) */
+    cv_rect(x > 222 ? 222 : x, y0 - 2, 1, h + 6, UX_ACCENT);
+}
 static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
 {
     uint64_t sh;
-    uint32_t n, i, r = 0, nv;
+    uint32_t n, i, r = 0, nv, rows;
     if (!m)
         return;
     sh = uxm_mask(m);
     n = uxm_n(m);
     uxm_fix(m, sh, &sel, &top);
-    for (i = top; i < n && r < UXM_ROWS; i++) {
+    rows = uxm_rows(m, sel);
+    if (rows != UXM_ROWS)
+        uxm_steps_draw(m, sel);
+    for (i = top; i < n && r < rows; i++) {
         const ux_row_t *rw = &m->rows[i];
         int32_t y = 3 + (int32_t)r * UXM_PITCH, ty = y + 4, vx;
         char val[24], nm[24];
@@ -372,9 +410,9 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
         (void)uxm_bar(rw, on, ty + UF_HDR_CAP_Y + UF_HDR_CAP_H / 2, 1);   /* (its place: a meter beside the value) */
     }
     nv = uxm_nvis(sh);
-    if (nv > UXM_ROWS) {                                /* the scroll: where the panel is in the list */
-        int32_t h = (int32_t)(UXM_ROWS * UXM_PITCH) - 4, th = h * (int32_t)UXM_ROWS / (int32_t)nv,
-                ty = 3 + (h - th) * (int32_t)uxm_vis(sh, top) / (int32_t)(nv - UXM_ROWS);
+    if (nv > rows) {                                    /* the scroll: where the panel is in the list */
+        int32_t h = (int32_t)(rows * UXM_PITCH) - 4, th = h * (int32_t)rows / (int32_t)nv,
+                ty = 3 + (h - th) * (int32_t)uxm_vis(sh, top) / (int32_t)(nv - rows);
         cv_rect(233, 3, 2, h, UX_LINE);
         cv_rect(233, ty, 2, th < 6 ? 6 : th, UX_MID);
     }
