@@ -13173,7 +13173,6 @@ static int test_ux_more_set(void)
 static int test_ux_section_draw(void)
 {
     ux_knob_t k[4];
-    const char *sh[4];
     uint16_t col;
     const char *st;
     char v[16];
@@ -13182,20 +13181,54 @@ static int test_ux_section_draw(void)
     int bad = 0, ok;
     uxs_demo_on();
     ui.force = 1; frame();
-    uxs_knobs(cur_page(), k, sh);
+    uxs_knobs(cur_page(), k);
     ok = str_eq(k[0].label, "MODE") && str_eq(k[1].label, "RATE") && str_eq(k[2].label, "OCT") && str_eq(k[3].label, "GATE");
     param_format(&TP[P_ARATE], TSEL->p[P_ARATE], v, &u);
-    ok &= str_eq(k[1].value, v) && str_eq(sh[3], "GATE");
+    ok &= str_eq(k[1].value, v);
     ok &= ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 200u &&
           ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 2000u && ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 50u &&
           ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 2000u;
     for (i = cells = 0; i < dc_n; i++) cells += dc_st[i].n;
     ok &= !dc_stale && cells <= DC_MAX && cells >= 1800u;
     bad += check("ACID FM 3b: the section page: header, the PAGES row's knobs, panel, status, footer; cells within DC_MAX", ok);
-    ok = str_eq(uxs_label("ATK"), "ATTACK") && str_eq(uxs_label("RES"), "RESO") && str_eq(uxs_label("GATE"), "GATE");
+    ok = str_eq(uxs_label(SEC_ENV, 0, P_ATK, "ATK"), "ATTACK") && str_eq(uxs_label(SEC_EDIT, 0, P_FRES, "RES"), "RESO") &&
+         str_eq(uxs_label(SEC_ARP, 0, P_AGATE, "GATE"), "GATE");
     for (i = 0; i < NELEM(UXS_LABEL); i++)
         ok &= text_w(&UF_LBL, UXS_LABEL[i].p) <= UX_COL_W - 4;
     bad += check("ACID FM 3b: the plain-word labels (ATK: ATTACK, RES: RESO), each fitting a knob's column", ok);
+    /* (3b task 3 fix) a setting's own plain name, by section, engine and id (UXS_NAME), before UXS_LABEL's by JIANT's text:
+     * JIANT's MODE is the arp's, the glide's, the slicer's and the LFO's; only the glide's is GLIDE MODE */
+    ok = str_eq(uxs_label(SEC_EDIT, 0, P_GLMODE, TP[P_GLMODE].label), "GLIDE MODE") &&
+         str_eq(uxs_label(SEC_ARP, 0, P_GLMODE, TP[P_GLMODE].label), "GLIDE MODE") &&
+         str_eq(uxs_label(SEC_ARP, 0, P_AMODE, TP[P_AMODE].label), TP[P_AMODE].label) &&
+         str_eq(uxs_label(SEC_FX, 1, G_SLMODE, GP[G_SLMODE].label), GP[G_SLMODE].label) &&
+         str_eq(uxs_label(SEC_LFO, 0, ID_LMODE, "MODE"), "MODE") &&
+         str_eq(uxs_label(SEC_FX, 1, P_GLMODE, GP[P_GLMODE].label), uxs_label(SEC_FX, 1, 0xFFFFu, GP[P_GLMODE].label)) &&
+         str_eq(uxs_label(SEC_FX, 0, ID_NONE, "DIST"), "DRIVE") && str_eq(uxs_label(SEC_FX, 0, ID_NONE, 0), "");
+    for (i = 0; i < NELEM(UXS_NAME); i++) {             /* (each a knob's column wide; its glyphs in the faces it is drawn in) */
+        const char *q;
+        ok &= UXS_NAME[i].p && text_w(&UF_LBL, UXS_NAME[i].p) <= UX_COL_W - 4 &&
+              (UXS_NAME[i].sec == UXS_ALL || UXS_NAME[i].sec < SEC_N) && UXS_NAME[i].glo <= 1u &&
+              UXS_NAME[i].id < (UXS_NAME[i].glo ? G_COUNT : P_COUNT);
+        if (!ok) { printf("  UXS_NAME[%u] \"%s\": too wide or not a setting\n", (unsigned)i, UXS_NAME[i].p); break; }
+        for (q = UXS_NAME[i].p; *q; q++)
+            ok &= glyph_at(&UF_LBL, (uint8_t)*q) >= 0 && glyph_at(&UF_HDR, (uint8_t)*q) >= 0;
+    }
+    {   /* the most specific entry wins: the section's own over every section's, the engine's own over every engine's */
+        static const uxs_name_t N[] = {
+            {UXS_ALL, UXS_ALL, 0, P_GLIDE, "A"}, {SEC_EDIT, UXS_ALL, 0, P_GLIDE, "B"}, {SEC_EDIT, ENGI_FM6, 0, P_GLIDE, "C"},
+            {UXS_ALL, ENGI_DRUM, 0, P_GLIDE, "D"}, {SEC_FX, UXS_ALL, 1, P_GLIDE, "E"},
+        };
+        ok &= str_eq(uxs_name_in(N, NELEM(N), SEC_ARP, ENGI_ANALOG, 0, P_GLIDE), "A") &&
+              str_eq(uxs_name_in(N, NELEM(N), SEC_EDIT, ENGI_ANALOG, 0, P_GLIDE), "B") &&
+              str_eq(uxs_name_in(N, NELEM(N), SEC_EDIT, ENGI_FM6, 0, P_GLIDE), "C") &&
+              str_eq(uxs_name_in(N, NELEM(N), SEC_ARP, ENGI_DRUM, 0, P_GLIDE), "D") &&
+              str_eq(uxs_name_in(N, NELEM(N), SEC_EDIT, ENGI_DRUM, 0, P_GLIDE), "B") &&
+              str_eq(uxs_name_in(N, NELEM(N), SEC_FX, ENGI_ANALOG, 1, P_GLIDE), "E") &&
+              uxs_name_in(N, NELEM(N), SEC_ARP, ENGI_ANALOG, 1, P_GLIDE) == 0 &&
+              uxs_name_in(N, NELEM(N), SEC_ARP, ENGI_ANALOG, 0, P_VOICE) == 0;
+    }
+    bad += check("ACID FM 3b: a setting's plain name by section / engine / id (MODE: GLIDE MODE only for the glide's)", ok);
     st = uxs_status(cur_page(), &col);
     ok = st && str_eq(st, "ARP AGAIN: NEXT PAGE") && col == UX_MID;
     if (!ok) printf("  status: \"%s\"\n", st ? st : "(none)");
@@ -13220,13 +13253,24 @@ static int test_ux_section_draw(void)
     st = uxs_status(cur_page(), &col);
     ok &= st && str_eq(st, UXM_HINT);
     bad += check("ACID FM 3b: the status line: the hint once, a knob's full name and value, a refusal, MORE's hint", ok);
-    uxs_knobs(cur_page(), k, sh);
+    uxs_knobs(cur_page(), k);
     ok = str_eq(k[0].label, "SETTING") && str_eq(k[0].value, "1/14") && str_eq(k[1].label, "SWING") && !k[2].label[0];
     turn(EN_K1, 5);                                     /* (GLIDE: the sixth) */
-    uxs_knobs(cur_page(), k, sh);
+    uxs_knobs(cur_page(), k);
     ok &= str_eq(k[0].value, "6/14") && str_eq(k[1].label, "GLIDE");
     st = uxs_status(cur_page(), &col);
     ok &= st && !memcmp(st, "GLIDE \xB7 ", 8);
+    turn(EN_K1, 1);                                     /* (P_GLMODE: JIANT's MODE, here GLIDE MODE on the knob row, the
+                                                         * status line and the list alike) */
+    uxs_knobs(cur_page(), k);
+    ok &= str_eq(k[0].value, "7/14") && str_eq(k[1].label, "GLIDE MODE");
+    st = uxs_status(cur_page(), &col);
+    ok &= st && !memcmp(st, "GLIDE MODE \xB7 ", 13);
+    {
+        char val[24];
+        uint8_t bar;
+        ok &= str_eq(uxm_row_text(&UXS_DEMO_ROWS[8], val, sizeof val, 1, &bar), "GLIDE MODE");
+    }
     ui.force = 1; frame();
     ok &= ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 2000u;
     bad += check("ACID FM 3b: MORE's knob row (SETTING n/N, the pick's value), its readout and list drawn", ok);
@@ -13275,6 +13319,120 @@ static int test_ux_section_draw(void)
         bad += check("ACID FM 3b: every MORE row's name and every value it can take have their glyphs", ok && nchk > 500u);
     }
     ui_power_on();
+    return bad;
+}
+
+/* (3b task 3 fix) the footer's names are the knob row's (spec 0 rule 4: one name everywhere; JIANT's DIST was the footer's
+ * where the knob said DRIVE): every page of the six sections on every engine, MORE's too, gives the footer the count and,
+ * when they fit, exactly the knob row's labels in order */
+static int uxs_foot_agrees(const char *w, const ux_knob_t k[4], const char *cnt, const char *b)
+{
+    char want[64];
+    uint32_t c, n = 0;
+    str_cpy(want, cnt, sizeof want);
+    for (c = 0; c < 4u; c++)
+        if (k[c].label[0]) {
+            str_cpy(want + str_len(want), " \xB7 ", sizeof want - str_len(want));
+            str_cpy(want + str_len(want), k[c].label, sizeof want - str_len(want));
+            n++;
+        }
+    (void)w;
+    return str_eq(b, want) || str_eq(b, cnt);
+}
+static int test_ux_section_foot(void)
+{
+    static const uint8_t FAMS[] = {FAM_EDIT, FAM_ENV, FAM_LFO, FAM_FX, FAM_ARP, FAM_SCL};
+    ux_knob_t k[4];
+    char b[48];
+    uint32_t e, p, f, n = 0, named = 0;
+    int bad = 0, ok = 1;
+    ui_power_on();
+    for (e = 0; e < NELEM(UXK_ENG); e++) {
+        uxk_engine(UXK_ENG[e]);
+        for (p = 0; p < NPAGES; p++) {
+            for (f = 0; f < NELEM(FAMS) && PAGES[p].fam != FAMS[f]; f++)
+                ;
+            if (f >= NELEM(FAMS) || PAGES[p].graph == GR_MORE)
+                continue;
+            uxs_knobs(&PAGES[p], k);
+            uxs_foot("ARP \xB7 ARP", k, "1 / 3", b, sizeof b);
+            n++;
+            named += !str_eq(b, "1 / 3");
+            if (!uxs_foot_agrees("ARP \xB7 ARP", k, "1 / 3", b)) {
+                printf("  page %s: footer \"%s\" against knobs %s %s %s %s\n", PAGES[p].title, b, k[0].label, k[1].label,
+                       k[2].label, k[3].label);
+                ok = 0;
+            }
+        }
+    }
+    {   /* FX > DIST: the knob says DRIVE, so does the footer (it said DIST) */
+        for (p = 0; p < NPAGES && !(PAGES[p].fam == FAM_FX && str_eq(PAGES[p].title, "DIST")); p++)
+            ;
+        uxk_engine(ENGI_ANALOG);
+        uxs_knobs(&PAGES[p], k);
+        uxs_foot("FX \xB7 DIST", k, "2 / 16", b, sizeof b);
+        ok &= p < NPAGES && str_eq(k[0].label, "DRIVE") && str_eq(b, "2 / 16 \xB7 DRIVE \xB7 TYPE \xB7 TONE");
+        if (!ok) printf("  FX DIST footer \"%s\"\n", b);
+    }
+    bad += check("ACID FM 3b: the footer's names are the knob row's, on every page and engine (FX DIST: DRIVE, not DIST)",
+                 ok && n > 100u && named > 50u);
+    uxs_demo_on();                                      /* MORE: SETTING and the pick's name, as its knob row */
+    turn(EN_SELECT, 2);
+    turn(EN_K1, 6);
+    uxs_knobs(cur_page(), k);
+    uxs_foot("ARP \xB7 MORE", k, "3 / 3", b, sizeof b);
+    ok = str_eq(k[1].label, "GLIDE MODE") && str_eq(b, "3 / 3 \xB7 SETTING \xB7 GLIDE MODE");
+    if (!ok) printf("  MORE footer \"%s\"\n", b);
+    bad += check("ACID FM 3b: MORE's footer names its knobs as its knob row does (SETTING, the pick's name)", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* (3b task 3 fix) every GR_MORE row names something real (else params.c param_ref would read &t->p[id] past the track, or
+ * song.g past its end): a track setting (< P_COUNT) or a view, a global (< G_COUNT) or a view, an action, a heading; a
+ * list holds 64 at most (the visibility mask). A row that does not is never shown, never picked, never written */
+static int test_ux_more_rows_ok(void)
+{
+    static const ux_row_t BAD[] = {{P_COUNT, UXR_TRACK}, {G_COUNT, UXR_GLOBAL}, {UXM_A_N, UXR_ACTION},
+                                   {UXM_H_N, UXR_HEAD}, {P_GLIDE, 7}, {0xF0, UXR_GLOBAL}};
+    static const ux_row_t GOOD[] = {{P_GLIDE, UXR_TRACK}, {G_CRATE, UXR_GLOBAL}, {ID_LMODE, UXR_TRACK}, {G_TRKS, UXR_GLOBAL},
+                                    {ID_ALLTR, UXR_TRACK}, {UXM_A_LYRIC, UXR_ACTION}, {UXM_H_ARP, UXR_HEAD}};
+    static const ux_row_t MIX[] = {{UXM_H_N, UXR_HEAD}, {P_COUNT + 3u, UXR_TRACK}, {G_COUNT + 1u, UXR_GLOBAL},
+                                   {UXM_H_VOICE, UXR_HEAD}, {P_GLIDE, UXR_TRACK}};
+    static const ux_more_t M = {MIX, NELEM(MIX)};
+    uint32_t p, r, nl = 0, nr = 0, s = 0, t = 0;
+    int bad = 0, ok = 1;
+    ui_power_on();
+    for (p = 0; p < NPAGES; p++) {
+        const ux_more_t *m = PAGES[p].more;
+        if (PAGES[p].graph != GR_MORE)
+            continue;
+        nl++;
+        if (!m || !m->rows || m->n == 0u || m->n > 64u) {
+            printf("  page %s: no list, or over 64 rows\n", PAGES[p].title); ok = 0; continue;
+        }
+        for (r = 0; r < m->n; r++, nr++) {
+            const ux_row_t *rw = &m->rows[r];
+            int16_t *vp;
+            if (!uxm_row_ok(rw)) {
+                printf("  page %s row %u: id %u kind %u is no setting, action or heading\n", PAGES[p].title, (unsigned)r,
+                       (unsigned)rw->id, (unsigned)rw->kind); ok = 0; continue;
+            }
+            if ((rw->kind == UXR_TRACK || rw->kind == UXR_GLOBAL) &&
+                !param_ref(rw->kind == UXR_GLOBAL ? 0 : TSEL, rw->id, &vp)) {
+                printf("  page %s row %u: id %u has no descriptor\n", PAGES[p].title, (unsigned)r, (unsigned)rw->id); ok = 0;
+            }
+        }
+    }
+    for (r = 0; r < NELEM(BAD); r++)
+        ok &= !uxm_row_ok(&BAD[r]) && (BAD[r].kind == UXR_HEAD || !ux_row_shown(&BAD[r]));
+    for (r = 0; r < NELEM(GOOD); r++)
+        ok &= uxm_row_ok(&GOOD[r]);
+    ok &= uxm_mask(&M) == (1ull << 3 | 1ull << 4);      /* (the bad heading and the bad rows gone; VOICE and GLIDE shown) */
+    (void)ux_more_turn(&M, &s, &t, 0u, -3);
+    ok &= s == 4u;
+    bad += check("ACID FM 3b: every MORE row is a real setting, view, action or heading; a bad one is never shown",
+                 ok && nl >= 1u && nr >= 20u);
     return bad;
 }
 
@@ -13409,6 +13567,8 @@ int main(void)
     bad += test_ux_more_nav();
     bad += test_ux_more_set();
     bad += test_ux_section_draw();
+    bad += test_ux_section_foot();
+    bad += test_ux_more_rows_ok();
     bad += test_engine_order_099();
 
     if (getenv("UI_SCREEN_DIR")) chain_screens(getenv("UI_SCREEN_DIR"));

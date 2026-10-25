@@ -34,10 +34,22 @@ static void uxm_act_do(uint32_t a)
         name_open(NK_LYRIC, song.sel);
 }
 
+/* row r names something real: a track setting (< P_COUNT) or a global (< G_COUNT) or a view (params.c param_ref: else
+ * &t->p[id] / song.g[id] past their ends), an action, a heading. A row that does not is never shown (tests/ui_test.c checks
+ * every list's) */
+static int uxm_row_ok(const ux_row_t *r)
+{
+    uint32_t id = r->id;
+    int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP;
+    return r->kind == UXR_TRACK ? id < P_COUNT || view : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
+           r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
+}
 /* a setting or action row shown on this track now (above) */
 static int ux_row_shown(const ux_row_t *r)
 {
     uint32_t i, k, held = 0, glo = r->kind == UXR_GLOBAL;
+    if (!uxm_row_ok(r))
+        return 0;
     if (r->kind == UXR_ACTION)
         return uxm_act_ok(r->id);
     if (r->kind != UXR_TRACK && !glo)
@@ -68,7 +80,7 @@ static uint64_t uxm_mask(const ux_more_t *m)
     uint32_t i, n = m->n < 64u ? m->n : 64u, h = 64u;
     for (i = 0; i < n; i++) {
         if (m->rows[i].kind == UXR_HEAD) {
-            h = i;
+            h = uxm_row_ok(&m->rows[i]) ? i : 64u;
             continue;
         }
         if (ux_row_shown(&m->rows[i])) {
@@ -208,8 +220,8 @@ static int ux_more_knob(uint32_t knob, int32_t steps)
     return r;
 }
 
-/* row r's words: its name (plain, ux_section.c uxs_label), its value into val (unit: with its unit, "420 ms"), its place
- * 0..255 into *bar (0: none) */
+/* row r's words: its name (plain, as its section names it: ux_section.c uxs_label), its value into val (unit: with its
+ * unit, "420 ms"), its place 0..255 into *bar (0: none) */
 static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, int unit, uint8_t *bar)
 {
     int16_t *vp;
@@ -240,7 +252,7 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, int u
         b = clamp(b, 0, 255);
         *bar = (uint8_t)(d->fmt == F_PCTINV ? 255 - b : b);
     }
-    return uxs_label(d->label);
+    return uxs_label(nav_sec(), r->kind == UXR_GLOBAL, r->id, d->label);
 }
 
 static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)

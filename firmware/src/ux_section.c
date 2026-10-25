@@ -2,7 +2,7 @@
 /* Copyright (C) 2026 NorfolkHacker */
 /* ACID FM's section pages on the screen (ux_section.h; 3b spec 2, parent spec 3.3): any PAGES row drawn with the 3a widgets.
  *   header   T3 . the sound, the transport at the right (ux_header)
- *   knobs    the PAGES row's four: the label in plain words (UXS_LABEL), the value as params.c param_format shows it, the
+ *   knobs    the PAGES row's four: the label in plain words (UXS_NAME, UXS_LABEL), the value as params.c param_format shows it, the
  *            bar its place in the range, KNOB 1..4 ACID SLIDE VIOLET ACCENT; MORE: KNOB 1 the setting picked (n/N), KNOB 2
  *            its value
  *   panel    the page's picture over the glow (Tasks 4..8 draw each page's; until then its title and the four values as
@@ -10,21 +10,48 @@
  *   status   a message (STOP TO EDIT in ACCENT), else the knob just turned: its full name and value ("RELEASE . 420 ms"),
  *            else the section's first-time hint ("ARP AGAIN: NEXT PAGE", once a power-on, spec 0 rule 7), else on MORE
  *            what its controls do
- *   footer   SECTION . PAGE at the left; n / N of the section's chain (N counts MORE) and the knobs' short names (JIANT's
- *            labels) at the right
+ *   footer   SECTION . PAGE at the left; n / N of the section's chain (N counts MORE) and the knobs' names (the knob row's,
+ *            when they fit) at the right
  * Strips as HOME's (dc_frame / cv_blit_cells): only the changed cells go out. Included after ux_more.c (and ux_home.c:
  * ux_under, ux_trk_name). */
 
-/* plain words for JIANT's short labels (spec 0 rule 4), the same everywhere: a knob's column, the status line, MORE. Each
- * fits a knob's column in UF_LBL (tests/ui_test.c) */
+/* a setting's plain name (spec 0 rule 4: one name everywhere it shows, the knob row, the status line, MORE's rows, the footer),
+ * by the section showing it, the track's engine, global or the track's, and its id: where JIANT's label is cryptic or names
+ * more than one thing (MODE: the arp's, the glide's, the slicer's, the LFO's). UXS_ALL: every section / engine; the most
+ * specific row wins (its section over every section's, then its engine over every engine's). JIANT's labels themselves
+ * (TP / GP: the web editor reads them, editor.c) stay as they are. Each fits a knob's column in UF_LBL (tests/ui_test.c) */
+#define UXS_ALL 0xFFu
+typedef struct { uint8_t sec, eng, glo, id; const char *p; } uxs_name_t;   /* id: a P_* (glo 0) or G_* (glo 1), or a view */
+static const uxs_name_t UXS_NAME[] = {
+    {UXS_ALL, UXS_ALL, 0, P_GLMODE, "GLIDE MODE"},      /* (JIANT's MODE: RATE / TIME, the glide's) */
+};
+static const char *uxs_name_in(const uxs_name_t *t, uint32_t n, uint32_t sec, uint32_t eng, uint32_t glo, uint32_t id)
+{
+    const char *p = 0;
+    uint32_t i, best = 0;
+    for (i = 0; i < n; i++) {
+        uint32_t sc;
+        if (t[i].id != id || (t[i].glo != glo && id < ID_LPHS) ||          /* (a view: either) */
+            (t[i].sec != UXS_ALL && t[i].sec != sec) || (t[i].eng != UXS_ALL && t[i].eng != eng))
+            continue;
+        sc = 1u + (t[i].sec != UXS_ALL ? 2u : 0u) + (t[i].eng != UXS_ALL ? 1u : 0u);
+        if (sc > best)
+            best = sc, p = t[i].p;
+    }
+    return p;
+}
+/* .. else plain words for JIANT's short labels, by their text: the same everywhere */
 typedef struct { const char *j, *p; } uxs_lbl_t;
 static const uxs_lbl_t UXS_LABEL[] = {
     {"ATK", "ATTACK"}, {"DEC", "DECAY"}, {"SUS", "SUSTAIN"}, {"REL", "RELEASE"}, {"RES", "RESO"}, {"CUT", "CUTOFF"},
     {"DLY", "DELAY"}, {"REV", "REVERB"}, {"FEEDBK", "FEEDBACK"}, {"PRIO", "PRIORITY"}, {"DIST", "DRIVE"},
 };
-static const char *uxs_label(const char *l)
+static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char *l)
 {
     uint32_t i;
+    const char *p = id < 256u ? uxs_name_in(UXS_NAME, NELEM(UXS_NAME), sec, trk_eng(TSEL), glo ? 1u : 0u, id) : 0;
+    if (p)
+        return p;
     if (!l)
         return "";
     for (i = 0; i < NELEM(UXS_LABEL); i++)
@@ -62,15 +89,14 @@ static const char *uxs_count(void)
     return b;
 }
 
-/* the knob row of page pg (MORE: its pick and value); sh: each column's short name (JIANT's label), "" none */
-static void uxs_knobs(const page_t *pg, ux_knob_t k[4], const char *sh[4])
+/* the knob row of page pg (MORE: its pick and value), each label its plain name (uxs_label) */
+static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
 {
     uint32_t c;
     for (c = 0; c < 4u; c++) {
         k[c].label = "";
         k[c].value[0] = 0;
         k[c].bar = 0;
-        sh[c] = "";
     }
     if (pg->graph == GR_MORE) {
         uint32_t sec = nav_sec(), s = uxm_at[sec % SEC_N].sel, t = uxm_at[sec % SEC_N].top, n;
@@ -82,7 +108,6 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4], const char *sh[4])
         n = uxm_n(pg->more);
         uxm_fix(pg->more, m, &s, &t);
         k[0].label = UXS_PICK;
-        sh[0] = "PICK";
         if (s < n) {
             uint32_t a = 0, b = 0, i;
             for (i = 0; i < n; i++)
@@ -99,7 +124,6 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4], const char *sh[4])
             if (pg->more->rows[s].kind == UXR_ACTION)
                 str_cpy(v, "GO", sizeof v);
             str_cpy(k[1].value, v, sizeof k[1].value);
-            sh[1] = "SET";
         }
         return;
     }
@@ -112,13 +136,30 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4], const char *sh[4])
             continue;
         param_format(d, *vp, v, &u);
         str_cpy(k[c].value, v, sizeof k[c].value);
-        k[c].label = uxs_label(d->label);
-        sh[c] = d->label;
+        k[c].label = uxs_label(nav_sec(), pg->scope == SC_GLOBAL, page_id(pg, c), d->label);
         if (d->max > d->min) {
             int32_t b = clamp(((int32_t)*vp - d->min) * 255 / (d->max - d->min), 0, 255);
             k[c].bar = (uint8_t)(d->fmt == F_PCTINV ? 255 - b : b);
         }
     }
+}
+
+/* the footer's right: cnt ("3 / 3"), then the knob row's names as it shows them (spec 0 rule 4: the same names; JIANT's short
+ * labels were not: DIST under DRIVE) when they fit beside w, the footer's left */
+static void uxs_foot(const char *w, const ux_knob_t k[4], const char *cnt, char *b, uint32_t nb)
+{
+    char t[48];
+    uint32_t c, n = 0;
+    str_cpy(b, cnt, nb);
+    str_cpy(t, cnt, sizeof t);
+    for (c = 0; c < 4u; c++)
+        if (k[c].label[0]) {
+            str_cpy(t + str_len(t), " \xB7 ", sizeof t - str_len(t));
+            str_cpy(t + str_len(t), k[c].label, sizeof t - str_len(t));
+            n++;
+        }
+    if (n && 8 + text_w(&UF_LBL, w) + 16 + text_w(&UF_LBL, t) <= 232)
+        str_cpy(b, t, nb);
 }
 
 /* the status line (above); a knob's readout: "NAME . VALUE unit" */
@@ -150,7 +191,7 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
                     str_cpy(v + str_len(v), " ", sizeof v - str_len(v));
                     str_cpy(v + str_len(v), u, sizeof v - str_len(v));
                 }
-                nm = uxs_label(d->label);
+                nm = uxs_label(sec, pg->scope == SC_GLOBAL, page_id(pg, (uint32_t)h), d->label);
             }
         }
         if (nm && nm[0]) {
@@ -202,7 +243,6 @@ static void ux_section_draw(void)
     const page_t *pg = cur_page();
     uint32_t sec = nav_sec(), sig, all, c;
     ux_knob_t k[4];
-    const char *sh[4];
     const char *st;
     uint16_t sc;
     char b[48];
@@ -228,7 +268,7 @@ static void ux_section_draw(void)
             ux_header(song.sel % NTRK + 1u, nm + 3, tr);   /* (ux_trk_name's "T3 " left out: the header adds it) */
         }
     }
-    uxs_knobs(pg, k, sh);
+    uxs_knobs(pg, k);
     ux_knobs(k, -1);
     sig = (uint32_t)(pg - PAGES) * 2654435761u ^ ux_glow_eff(1) * 977u;   /* (the panel: drawn when what it shows changed) */
     for (c = 0; c < 4u; c++)
@@ -250,24 +290,10 @@ static void ux_section_draw(void)
         uxs_picture(pg, k);
         ux_panel_end();
     }
-    {   /* the footer: where, n / N and the short names (when they fit) */
+    {   /* the footer: where, n / N and the knobs' names (when they fit) */
         const char *w = uxs_where();
-        str_cpy(b, uxs_count(), sizeof b);
+        uxs_foot(w, k, uxs_count(), b, sizeof b);
         sig = str_hash(str_hash(1u, w), b);
-        {
-            char t[48];
-            uint32_t n = 0;
-            str_cpy(t, b, sizeof t);
-            for (c = 0; c < 4u; c++)
-                if (sh[c][0]) {
-                    str_cpy(t + str_len(t), " \xB7 ", sizeof t - str_len(t));
-                    str_cpy(t + str_len(t), sh[c], sizeof t - str_len(t));
-                    n++;
-                }
-            if (n && 8 + text_w(&UF_LBL, w) + 16 + text_w(&UF_LBL, t) <= 232)
-                str_cpy(b, t, sizeof b);
-        }
-        sig = str_hash(sig, b);
         if (all || sig != foot_sig) {
             foot_sig = sig;
             ux_footer(w, b);

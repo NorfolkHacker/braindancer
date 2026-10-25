@@ -26,6 +26,8 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top);
  * pick kept in sight). 1: taken; 0: not (SELECT before the first row: the page before, ui_input.c nav_select) */
 static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32_t knob, int32_t steps);
 static int ux_more_knob(uint32_t knob, int32_t steps);   /* .. on the MORE page shown (its section's sel / top) */
-static const char *uxs_label(const char *l);           /* a JIANT label in plain words ("RES": "RESO"), else itself */
+/* setting id (a G_* when glo, else a P_* or a view) as section sec shows it: its plain name (ux_section.c UXS_NAME by section,
+ * engine and id, else UXS_LABEL by JIANT's label l: "RES": "RESO"), else l */
+static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char *l);
 
 #endif

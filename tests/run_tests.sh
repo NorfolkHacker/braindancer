@@ -271,6 +271,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "CPU safety (0.9.12): crash code, the crash record, 1 CORE after a crash, MENU > SYSTEM > CPU / CPU CLOCK" "$OUT/cpu_safe_test"
     $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/ui_test" tests/ui_test.c -lm
     run "UI: sounds keep steps, undo, recording, MIDI overflow, pending saves, panel recovery, drum grid, song chain, ACID's one palette and skin" "$OUT/ui_test"
+    $CC -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/ux_cover_test" tests/ux_cover_test.c -lm
+    run "ux cover (ACID FM 3b): every setting JIANT's EDIT ENV LFO FX ARP SCL reached is on a page or MORE row, or hidden on purpose" "$OUT/ux_cover_test"
     FV=$(sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' firmware/src/felucca.c)   # (the splash, ABOUT: the real version)
     $CC -O1 -w "-DFELUCCA_VERSION=\"$FV\"" -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/ui_render" tests/ui_render.c -lm
     mkdir -p build/ui_new/ppm build/ui_slot
