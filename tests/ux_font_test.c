@@ -17,6 +17,23 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 static int bad;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); bad++; } } while (0)
 
+#ifdef UX_MSG_LITS
+#include "ux_msg_lits.h"                       /* (tests/ux_msg_scan.py, at test-build time: the message literals of firmware/src) */
+/* every byte of every text in list has a glyph in f (fix wave, I1: a byte without one is drawn as a space) */
+static void has_all(const aafont_t *f, const char *name, const char *const *list)
+{
+    uint32_t n = 0;
+    for (; *list; list++, n++) {
+        const char *s;
+        for (s = *list; *s; s++)
+            if ((uint8_t)*s >= 0x20u && glyph_at(f, (uint8_t)*s) < 0) {   /* (below 0x20: an icon code, MSG_NOFILE) */
+                printf("FAIL %s lacks 0x%02X of \"%s\"\n", name, (uint8_t)*s, *list); bad++;
+            }
+    }
+    printf("%s: %u texts checked\n", name, (unsigned)n);
+}
+#endif
+
 static void has(const aafont_t *f, const char *name, const char *chars)
 {
     for (; *chars; chars++)
@@ -32,6 +49,11 @@ int main(void)
     has(&UF_MARK, "MARK", "ACID FM");
     has(&UF_LBL, "LBL", " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\xB7\x86");
     has(&UF_HDR, "HDR", all);
+    has(&UF_HDR, "HDR", "'(),=>[]\x85\x86\x87\x88");   /* (the status line's messages, the transport) */
+#ifdef UX_MSG_LITS
+    has_all(&UF_HDR, "HDR (status-line texts)", UX_MSG_HDR);
+    has_all(&UF_LBL, "LBL (footer texts)", UX_MSG_LBL);
+#endif
     has(&UF_VAL, "VAL", all);
     has(&UF_TTL, "TTL", " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     CHECK(UF_LBL_CAP_H < UF_HDR_CAP_H);

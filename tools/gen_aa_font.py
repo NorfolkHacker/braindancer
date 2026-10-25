@@ -9,7 +9,8 @@ tools/build.py generate() with --preset inter-tight).
   gen_aa_font.py OUT.h --preset standin|inter-tight|chakra-petch [--tracking EM] [--gamma G] [--kern-min N]
   gen_aa_font.py ux_fonts.h --preset acid   (ACID FM: UF_LBL 8 px @600, UF_HDR 10 @500, UF_VAL 14 @500, UF_TTL 32 @700,
                 UF_MARK 52 @700 of Inter Tight; code 0x86 = the arrow U+2192, 0x87 / 0x88 = play U+25B6 / stop U+25A0
-                (UF_HDR); the ASCII range of LBL / TTL / MARK is the space only, their characters are extras)
+                (UF_HDR, with ' ( ) , = > [ ] and the ellipsis 0x85 of the status line's messages); the ASCII range
+                of LBL / TTL / MARK is the space only, their characters are extras)
   gen_aa_font.py OUT.h --face NAME=FONT[#index]:PX:FIRST-LAST[+0xNN,...] ...   (explicit faces)
 
 Faces of the presets (S labels, M values/headers, L big numerals / titles):
@@ -65,8 +66,10 @@ RISE = {"IBMPlexMono-SemiBold.ttf": 1}
 UI_PRESET = "jiant-lab"            # the firmware's faces (tools/build.py; tests/text_spacing_test.py)
 PFX = "AF"                         # the faces' C prefix: AF_<N> (jiant-lab), UF_<N> (acid)
 UF_LBL = " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00b7\u2192"   # (ACID FM) upper-case labels; arrow = code 0x86
-UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7"   # HDR / VAL: ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
-UF_HDR = UF_TEXT + "\u25b6\u25a0"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop (code 0x88)
+UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7"   # VAL (HDR: more below): ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
+UF_HDR = UF_TEXT + "\u25b6\u25a0" + "'(),=>[]\u2192\u2026"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop
+                                   # (code 0x88); the status line's messages: ' ( ) , = > [ ], the arrow (0x86), the ellipsis
+                                   # (0x85, ui_say's cut) (tests/ux_msg_scan.py: every message literal drawn there has its glyphs)
 UF_TTL = " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 UF_MARK = " ACDFIM"                # the wordmark's letters only
 L_CHARS = " #+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXY"

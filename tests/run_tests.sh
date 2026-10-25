@@ -258,8 +258,9 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "ux_widgets: the rows sum to 240, header / knobs / panel / footer land on theirs, meters, step strip colours" "$OUT/ux_widgets_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/text_ref_test" tests/text_ref_test.c -lm
     run "text: pens, kerning and pixels equal the reference renderer" "$OUT/text_ref_test"
-    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ux_font_test" tests/ux_font_test.c -lm
-    run "ux fonts: the Inter Tight faces of the ACID FM screens (ux_fonts.h)" "$OUT/ux_font_test"
+    run "ux fonts: the message literals of firmware/src gathered (tests/ux_msg_scan.py)" python3 tests/ux_msg_scan.py "$OUT/ux_msg_lits.h"
+    $CC -O1 -w -DUX_MSG_LITS -I"$OUT" -Ibuild/gen -Ifirmware/src -o "$OUT/ux_font_test" tests/ux_font_test.c -lm
+    run "ux fonts: the Inter Tight faces of the ACID FM screens (ux_fonts.h); every message HOME's status line can show has its glyphs" "$OUT/ux_font_test"
     if python3 -c "import PIL" 2>/dev/null; then
         run "text spacing: glyph gaps against the font's own (16x supersampled), a phase step (S M L <= 0.5 px)" \
             python3 tests/text_spacing_test.py build/gen/ui_fonts.h
