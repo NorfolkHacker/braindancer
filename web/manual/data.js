@@ -482,7 +482,7 @@ commands: [
   {s: "save", k: "SAVE", shot: 'save_presets', t: ["Presets por tipo y favoritos", "Presets by type and favourites"],
    d: ["SAVE › PRESETS: No., ENG, FAV (marca favorito), LIST: ALL, FAV o un tipo (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS recorre ese tipo en todos los motores.", "SAVE › PRESETS: No., ENG, FAV (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine."]},
   {s: "save", k: "HOME", t: ["Autoguardado y RESTORE LAST", "Autosave and RESTORE LAST"],
-   d: ["El autoguardado copia la música 10 s después del último cambio, parado, como mucho una vez por minuto; nunca al apagar. Al encender empieza de cero salvo MENU › SYSTEM › RESTORE LAST ON. Guardá en una sección.", "The autosave copies the music 10 s after the last change, stopped, at most once a minute; never at power-off. Power-on starts at zero unless MENU › SYSTEM › RESTORE LAST ON. Save into a section."]},
+   d: ["El autoguardado copia la música 10 s después del último cambio, parado, como mucho una vez por minuto; nunca al apagar. Al encender, sin nada que restaurar, carga la demo (ritmo, línea ácida, pad a 124 BPM; NUEVO PROYECTO empieza vacío), salvo MENU › SYSTEM › RESTORE LAST ON. Guardá en una sección.", "The autosave copies the music 10 s after the last change, stopped, at most once a minute; never at power-off. With nothing to restore, power-on loads the demo (beat, acid line, pad at 124 BPM; NEW PROJECT starts empty), unless MENU › SYSTEM › RESTORE LAST ON. Save into a section."]},
 
   // SONG
   {s: "song", k: "SAVE", shot: 'save_arrange', t: ["Armar la canción (ARRANGE)", "Build the song (ARRANGE)"],

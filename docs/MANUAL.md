@@ -1893,9 +1893,11 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
   button is held and nothing is sounding, and **at most once a minute**.
 - It does **not** save when you switch off. If you change something and power off within those seconds, that last
   change is lost. To be safe: **stop, wait ~10 s**, or better, save into a section.
-- At power-on the device starts at zero, as **NEW PROJECT** leaves it (0.9.9: T1 DRUM-X, T2 VOICE, T3 PHASE (ACID FM 0.2, was ANIMAL), T4 LOFI,
-  T5 ANALOG, T6 FM6, each its preset's sound, dry; no
-  steps). With **MENU › SYSTEM › RESTORE LAST ON** the autosave becomes the music instead (the screen says
+- With nothing to restore, power-on loads the demo (ACID FM 3b): T1 DRUM-X with the BEAT pattern, T5 ANALOG ACID with the ACID
+  line, T6 FM6's first PAD with the PAD pattern, 124 BPM; T2 VOICE, T3 PHASE and T4 LOFI keep their sounds with no steps (each
+  its preset's sound, dry). **NEW PROJECT** starts empty (no steps, 120 BPM). The status line says DEMO until your first edit
+  or a PLAY→STOP. Settings new to the device start at TRACKS 6.
+  With **MENU › SYSTEM › RESTORE LAST ON** the autosave becomes the music instead (the screen says
   **RESTORED**). RESTORE LAST is **OFF** by default since 0.6.40: no autosave at all.
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
   crashed).

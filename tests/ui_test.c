@@ -12662,6 +12662,12 @@ static int test_power_on_demo(void)
     ok &= demo_voices(&m, 1) > 0u && (m & 1u) && (m & 16u) && (m & 32u) && song.playing == 1;
     ok &= !(m & (2u | 4u | 8u));                                            /* T2..T4: no voice in that bar */
     ok &= demo_peak[0] > 0 && demo_peak[4] > 0 && demo_peak[5] > 0 && !demo_peak[1] && !demo_peak[2] && !demo_peak[3];   /* levels too */
+    for (i = 0; i < 4u; i++) {                                              /* 4 more bars, one at a time (T4's BYTEBEAT included): the same */
+        uint32_t m2 = 0;
+        demo_voices(&m2, 1);
+        ok &= !(m2 & (2u | 4u | 8u)) && demo_peak[0] > 0 && demo_peak[4] > 0 && demo_peak[5] > 0 &&
+              !demo_peak[1] && !demo_peak[2] && !demo_peak[3];
+    }
     bad += check("  new settings: TRACKS 6; PLAY: voices on T1, T5 and T6 within a bar", ok);
     song.playing = 0;
     transport_req = 2;
