@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Keyboard, scale, arpeggiator, sequencer and transport.
  * Everything here runs in the audio ISR, once per CTL-sample block, and
  * ends in trk_note_on / trk_note_off: engines never see where a note came from.
@@ -534,8 +535,10 @@ static void arp_step(track_t *t, uint32_t n, uint32_t gate_n)
     }
     period = div_samples((uint32_t)t->p[P_ARATE]);
     sw = t->p[P_ASWING] * (int32_t)period / 250;
-    t->arp_pos += n;
-    if (t->arp_pos < period + (uint32_t)((t->arp_idx & 1u) ? sw : -sw) && t->arp_pos != 0xFFFFFFF + n)
+    t->arp_pos += n;                                /* (ACID FM 3b task 6 fix: SWING as SEQ's, swing_step_len: after an even
+                                                     * note period + sw, after an odd one period - sw, so the odd notes land
+                                                     * late; JIANT's had them early) */
+    if (t->arp_pos < period + (uint32_t)((t->arp_idx & 1u) ? -sw : sw) && t->arp_pos != 0xFFFFFFF + n)
         return;
     t->arp_pos = 0;
     /* build the note list: held notes (sorted or as played) over OCT octaves */

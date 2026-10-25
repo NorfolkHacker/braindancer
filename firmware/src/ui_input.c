@@ -1048,9 +1048,13 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
     d = param_ref(t, id, &vp);
     if (!d || !vp || d->max == d->min)
         return;
-    v = param_turn(d, *vp, accel(EN_K1 + (knob & 3u), steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
-    if (t && id == P_AMODE && v == AM_ORD && *vp != AM_ORD)   /* (ACID FM 3b task 6) the ARP's ORD plays as UP (seq.c): a turn */
-        v += v > *vp ? 1 : -1;                          /* steps over it (a stored ORD still plays, shown as UP) */
+    {
+        int32_t from = t && id == P_AMODE && *vp == AM_ORD ? AM_UP : *vp;   /* (ACID FM 3b task 6) the ARP's ORD plays as UP
+                                                         * (seq.c), shown UP: a turn from a stored ORD is UP's (fix) */
+        v = param_turn(d, from, accel(EN_K1 + (knob & 3u), steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
+        if (t && id == P_AMODE && v == AM_ORD)          /* .. and steps over it (a stored ORD still plays) */
+            v += v > from ? 1 : -1;
+    }
     *vp = (int16_t)v;
     if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
         trks_put(v);
@@ -1519,6 +1523,20 @@ static void ent_note(track_t *t, step_t *st, uint32_t note)   /* one note into t
             st->note[st->n++] = (uint8_t)note;
     }
 }
+/* (ACID FM 3b task 6 fix) the chord key root plays on track t into out (seq.c chord_build), LEAD's memory left as it was:
+ * a look, not a note. The audio block's key_on writes that memory too (seq.c), so the save, the build and the restore run
+ * with the audio interrupt held off (motion.c motion_guard: the same guard) */
+static uint32_t chord_peek(const track_t *t, uint32_t root, uint8_t *out)
+{
+    uint32_t ti = trk_index(t) % NTRK, n, f = motion_guard();
+    uint8_t last[KB_CH], nl = chord_nlast[ti];
+    memcpy(last, chord_last[ti], KB_CH);
+    n = chord_build(t, root, out);
+    memcpy(chord_last[ti], last, KB_CH);
+    chord_nlast[ti] = nl;
+    motion_unguard(f);
+    return n;
+}
 static void seq_entry(uint32_t pressed)
 {
     track_t *t = TSEL;
@@ -1535,13 +1553,8 @@ static void seq_entry(uint32_t pressed)
         if (kb_sn[k] && kb_trk[k] == ti) {             /* (0.6.83) SCL > CHORD: the chord the key sounds (seq.c key_on), */
             nc = kb_sn[k];                              /* all of it into the step, as live recording does */
             memcpy(cn, kb_snd[k], KB_CH);
-        } else {                                        /* (the key not in yet: built here, LEAD's memory as it was) */
-            uint8_t last[KB_CH], nl = chord_nlast[ti];
-            memcpy(last, chord_last[ti], KB_CH);
-            nc = chord_build(t, note, cn);
-            memcpy(chord_last[ti], last, KB_CH);
-            chord_nlast[ti] = nl;
-        }
+        } else                                          /* (the key not in yet: built here, LEAD's memory as it was) */
+            nc = chord_peek(t, note, cn);
         for (c = 0; c < nc && c < KB_CH; c++)
             ent_note(t, st, cn[c]);
         last_note = (uint8_t)note;

@@ -45,7 +45,7 @@ PAGE_SHOT = {
            'MASTER': 'fx_effect_master', 'PUNCH': 'toast_punch'},
     'GLO': {'MANO': 'live_mano', 'RIELES': 'live_rieles', 'MIXER': 'mixer', 'SENDS': 'glo_sends',
             'GLOBAL': 'global', 'SYSTEM': 'system'},
-    'ENV': {'AMP': 'env_1', 'MOD ENV': 'env_2'},   # (3b task 6: ENV, SCL, ARP on the ux pages)
+    'ENV': {'AMP': 'env_1', 'ENV TO': 'env_2'},   # (3b task 6: ENV, SCL, ARP on the ux pages)
     'LFO': {'MOD': 'mod', 'LFO': 'lfo', 'LFO 2': 'lfo2', 'LFO DEST': 'lfo_dest', 'MSEQ': 'mseq', 'MSEQ 2': 'mseq2'},
     'SCL': {'KEY': 'scl_1', 'CHORD': 'scl_2', 'MORE': 'scl_more'},
     'ARP': {'ARP': 'arp_1', 'ARP 2': 'arp_2'},

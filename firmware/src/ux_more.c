@@ -283,7 +283,7 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
     d = param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp);
     if (!d || !vp)
         return "";
-    uxs_val(d, *vp, val, nv);                           /* (the knob row's form, units too: ux_section.c) */
+    uxs_vtext(d, *vp, r->kind == UXR_GLOBAL, r->id, val, nv);   /* (the knob row's form, units too: ux_section.c) */
     if (d->max > d->min) {
         int32_t b = (int32_t)(((int32_t)*vp - d->min) * 255 / (d->max - d->min));
         b = clamp(b, 0, 255);
@@ -292,6 +292,36 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
     return uxs_label(nav_sec(), r->kind == UXR_GLOBAL, r->id, d->label);
 }
 
+/* row r's place in its range: a short meter (UXM_BAR_W x 3) in a column of its own left of the values (ending UXM_BAR_X1),
+ * on the text's middle row y: the track UX_LINE, the fill KNOB 2's colour on the pick (else dim); a range either side of 0
+ * (min < 0 < max) filled from the middle, 0 a tick there; none for a list of words (an enum). (3b task 6 fix: a line under
+ * the name, and then one under the value, read as an underline, a link) */
+#define UXM_BAR_W 24
+#define UXM_BAR_X1 168
+static int uxm_bar(const ux_row_t *r, int on, int32_t y, int draw)   /* 1: the row has one */
+{
+    int16_t *vp;
+    const param_desc_t *d = r->kind == UXR_TRACK || r->kind == UXR_GLOBAL ? param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp) : 0;
+    int32_t x0 = UXM_BAR_X1 - UXM_BAR_W, b, f;
+    uint16_t c = on ? UX_SLIDE : ux_mix(UX_LINE, UX_SLIDE, 55);
+    if (!d || !vp || d->max <= d->min || d->fmt == F_ENUM)
+        return 0;
+    if (!draw)
+        return 1;
+    b = clamp(((int32_t)*vp - d->min) * UXM_BAR_W / (d->max - d->min), 0, UXM_BAR_W);
+    if (d->fmt == F_PCTINV)
+        b = UXM_BAR_W - b;
+    cv_rect(x0, y - 1, UXM_BAR_W, 3, on ? ux_mix(UX_BG2, UX_LINE, 80) : UX_LINE);
+    if (d->min < 0 && d->max > 0) {                     /* (bipolar: from the middle, 0 a tick) */
+        int32_t m = (int32_t)(-d->min) * UXM_BAR_W / (d->max - d->min);
+        f = b < m ? b : m;
+        if (b != m)
+            cv_rect(x0 + f, y - 1, b > m ? b - m : m - b, 3, c);
+        cv_rect(x0 + m, y - 2, 1, 5, on ? UX_TEXT : UX_MID);
+    } else if (b)
+        cv_rect(x0, y - 1, b, 3, c);
+    return 1;
+}
 static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
 {
     uint64_t sh;
@@ -332,13 +362,13 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
         GFX_HOOK_CELL(8, y, 228, y + UXM_PITCH - 2);
         vx = 222 - text_w(&UF_HDR, val);
         str_cpy(nm, name, sizeof nm);
-        while (nm[0] && 16 + text_w(&UF_HDR, nm) > vx - 8)   /* (a long name gives way to the value) */
+        while (nm[0] && 16 + text_w(&UF_HDR, nm) > (uxm_bar(rw, on, 0, 0) ? UXM_BAR_X1 - UXM_BAR_W : vx) - 8)   /* (a long
+                                                         * name gives way to the value, its meter) */
             nm[str_len(nm) - 1u] = 0;
         cv_text_on(16, ty, &UF_HDR, nm, on ? UX_TEXT : UX_MID, bg);
         if (val[0])
             cv_text_on(vx, ty, &UF_HDR, val, on ? UX_SLIDE : UX_TEXT, on ? bg : ux_under(vx, ty + 4));
-        if (bar && !on)                                 /* (a hairline of its place under the row) */
-            cv_rect(16, y + UXM_PITCH - 3, (int32_t)bar * 206 / 255, 1, ux_mix(UX_LINE, UX_SLIDE, 35));
+        (void)uxm_bar(rw, on, ty + UF_HDR_CAP_Y + UF_HDR_CAP_H / 2, 1);   /* (its place: a meter beside the value) */
     }
     nv = uxm_nvis(sh);
     if (nv > UXM_ROWS) {                                /* the scroll: where the panel is in the list */

@@ -50,7 +50,10 @@ static uint16_t knob_col(uint32_t c, int32_t ratio, int bip)
 
 /* Matches voice.c: attack is linear, decay and release are exponential
  * (env += (target - env) * k each tick, ~99 % after the set time). Time
- * axis is the parameter value (the times themselves are exponential). */
+ * axis is the parameter value (the times themselves are exponential).
+ * (ACID FM 3b task 6 fix) Only DIGITAL's OP ENV pages (FELUCCA_FM4) still reach it, and MENU > LARGE's strip on them: ENV's
+ * own page is ux_section.c's. Built with FELUCCA_FM4 only (tests/ui_test.c's FM4 build covers it) */
+#if FELUCCA_FM4
 static void graph_adsr(const track_t *t, uint16_t c)
 {
     const page_t *pg = cur_page();
@@ -85,6 +88,7 @@ static void graph_adsr(const track_t *t, uint16_t c)
      * this draws DIGITAL's OP ENV pages (FELUCCA_FM4) and MENU > LARGE's strip */
 #undef EGY
 }
+#endif
 
 /* LFO: the wave as it runs (JIANT 0.5): the phase now at the playhead (a quarter in), two cycles across, scrolling
  * at the LFO's own rate; behind the playhead dimmer (what it played), the level now a dot, its depth after FADE */
@@ -666,7 +670,7 @@ static uint32_t strip_kind(void)
     if (ui.home)
         return SK_SCOPE;
     g = cur_page()->graph;
-    return g == GR_ADSR ? SK_ADSR : g == GR_LFO ? SK_LFO : g == GR_STEPS ? SK_STEPS : g == GR_TRK ? SK_TRK : SK_TITLE;
+    return g == GR_ADSR && FELUCCA_FM4 ? SK_ADSR : g == GR_LFO ? SK_LFO : g == GR_STEPS ? SK_STEPS : g == GR_TRK ? SK_TRK : SK_TITLE;
 }
 /* the page's title and its number in its family ("ENV DEST 2/2", EDIT: the engine's "OSC 1/2"); the piano roll: its
  * scale ("C MIN"); ti holds 20 (the footer, the strip) */
@@ -1588,7 +1592,9 @@ static void draw_graph(void)
         cv_oy = k == SK_ADSR || k == SK_LFO ? 3 : 0;
         graph_ht = LG_H_GRAPH - 6;
         if (k == SK_SCOPE) graph_scope(c);
+#if FELUCCA_FM4
         else if (k == SK_ADSR) graph_adsr(t, c);
+#endif
         else if (k == SK_LFO) graph_lfo(t, c);
         else graph_title();
         graph_ht = 100;
@@ -1619,9 +1625,11 @@ static void draw_graph(void)
     } else {
         cv_oy = GOY;
         switch (pg->graph) {
-        case GR_ADSR:
+#if FELUCCA_FM4
+        case GR_ADSR:                                /* (DIGITAL's OP ENV: ENV's page is ux_section.c's) */
             graph_adsr(t, c);
             break;
+#endif
         case GR_ROLL:
         case GR_CHANCE:
         case GR_SHAPE:                               /* (0.6.85) STRETCH: the whole sequence, as the roll shows it */

@@ -1159,7 +1159,7 @@ static void setup(int s)
         eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; TSEL->p[P_VOICE] = 3;
         memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 20);
         break;
-    /* (3b task 6) ENV, SCL and ARP on the ux pages: AMP with LOOP on; RELEASE just turned (its readout); MOD ENV with LOOP on;
+    /* (3b task 6) ENV, SCL and ARP on the ux pages: AMP with LOOP on; RELEASE just turned (its readout); ENV TO with LOOP on;
      * AMP as first opened (its hint); SCL's MORE, SCL's KEY in WHITE (C minor), the ARP's CHORD */
     case S_ENV_TRACKS: case S_ENV_TRACKS_DEST: case S_ENV_STAGE: case S_ENV_STAGE_SUS:
         TSEL->p[P_ATK] = 30; TSEL->p[P_DEC] = 60; TSEL->p[P_SUS] = 70; TSEL->p[P_REL] = 70;
@@ -1167,7 +1167,7 @@ static void setup(int s)
         if (s != S_ENV_TRACKS_DEST && s != S_ENV_STAGE_SUS) TSEL->p[P_ELOOP] = 1;
         uxs_seen = s == S_ENV_STAGE_SUS ? 0u : 0x3FFu;
         ux_hot_k = -1;
-        nav_scene(SEC_ENV, s == S_ENV_STAGE ? "MOD ENV" : "AMP");
+        nav_scene(SEC_ENV, s == S_ENV_STAGE ? "ENV TO" : "AMP");
         if (s == S_ENV_TRACKS_DEST) { edit_param(3, 4); ux_knob_touch(3); }   /* (RELEASE turned: its column lit, the readout) */
         break;
     case S_MSEQ2: go_title("MSEQ 2"); break;
@@ -1243,11 +1243,11 @@ static void setup(int s)
         song.rec = 1u | 8u; ui.hot_col = 3; ui.hot_t = 30;
         song.g[G_DJF] = 63;                      /* (0.9.1) the DJ FILTER just turned: the high-pass's end */
         break;
-    case S_ENV: case S_ENVDEST:                         /* (3b task 6) ENV's AMP, MOD ENV (the envelope moving the filter up, the
+    case S_ENV: case S_ENVDEST:                         /* (3b task 6) ENV's AMP, ENV TO (the envelope moving the filter up, the
                                                          * pitch a little down, the shape) */
         uxs_seen = 0x3FFu; ux_hot_k = -1;
         TSEL->p[P_ATK] = 20; TSEL->p[P_ED_FLT] = 48; TSEL->p[P_ED_PIT] = -12; TSEL->p[P_ED_SHP] = 24;
-        nav_scene(SEC_ENV, s == S_ENV ? "AMP" : "MOD ENV");
+        nav_scene(SEC_ENV, s == S_ENV ? "AMP" : "ENV TO");
         break;
     case S_LFO: go_title("LFO"); break;
     case S_MOD: TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40; TSEL->p[P_M2SRC] = 6;

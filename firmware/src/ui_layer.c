@@ -11,8 +11,9 @@
  *              black keys 5..8 (D#4 F#4 G#4 A#4) the DRUM group mutes KICK SNARE HAT PERC (eng_drum.c dx_mute; the
  *              row shows while a track plays DRUM; C4 unmutes them too);
  *              GLO + PLAY: from the top without stopping
- *   SCL  SET   any key: its note name is ROOT; KNOB 1..4 ROOT SCL CHRD VOIC (LY_SCL: the SCL page's first two,
- *              the CHORD page's two; QNT TRN stay on SCL); the LEDs show the root lit and the scale's notes breathing
+ *   SCL  SET   any key: its note name is ROOT; KNOB 1..4 ROOT SCALE ROTATE PITCH (LY_SCL: P_ROOT P_SCALE, the SCL page's
+ *              first two, then P_SOFS P_POFS, SCL > CHORD's ROTATE and SCL > MORE's SEQ PITCH; its labels JIANT's until
+ *              3b task 9); the LEDs show the root lit and the scale's notes breathing
  *   EDIT SET   (JIANT: Felucca's engine keys are gone, PRESETS picks engines and sounds) F3 INIT: the track's sound
  *              to its engine's first preset, a DRUM track's DRUM-X kit to the factory one; G3 RECALL: the track's
  *              sound (and a DRUM track's kit) as the section playing stored it, the safe state (project.c

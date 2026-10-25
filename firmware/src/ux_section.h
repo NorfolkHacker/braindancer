@@ -35,5 +35,8 @@ static int ux_more_knob(uint32_t knob, int32_t steps);   /* .. on the MORE page 
 static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char *l);
 /* value v of setting d as the knob row, MORE and the status line show it: the number and its unit, compact ("1.9K", "1.0MS") */
 static void uxs_val(const param_desc_t *d, int32_t v, char *b, uint32_t nb);
+/* .. as setting id (a G_* when glo) shows it: uxs_val's, or its own words (ARP's REPT, SNAP's KEYS, ALL TRACKS' OFF / +2,
+ * FM6's P 5) */
+static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t id, char *b, uint32_t nb);
 
 #endif

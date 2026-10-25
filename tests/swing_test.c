@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Host test of SWING (issue #31), same sources as the firmware (through hostsim.c):
  *   build/host/swing_test
  * 1. the sum: a track's SWG plus the global SWG is at most 100 (core.h track_swing).
@@ -7,7 +8,9 @@
  *    0.2 x), measured from the transport; with the sum at 100 or below nothing changes.
  * 3. the SLICER: its step lengths are the sequencer's (one helper), and it stays on the sequencer's
  *    step at the extremes.
- * 4. the display: SWG (0..100) shows its value, 100 is "100" (not 79); 0..127 percents unchanged. */
+ * 4. the display: SWG (0..100) shows its value, 100 is "100" (not 79); 0..127 percents unchanged.
+ * 5. (ACID FM 3b task 6 fix) the ARP's SWING as the sequencer's: the odd notes late (SWING 40 at 1/16: 0, 1.16, 2.00,
+ *    3.16 steps). */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -165,9 +168,53 @@ static int test_display(void)
     return check("display: SWG / global SWG / ARP SWG 100 -> 100 %, 50 -> 50 %; 0..127 percents unchanged", ok);
 }
 
+/* ------------------------------------------------------------- 5. ARP --- */
+/* the sample where each of the arp's notes starts, C G E held (the ISR's arp_step a block at a time) */
+static uint32_t arp_starts(track_t *t, uint32_t *at, uint32_t n)
+{
+    uint32_t f, got = 0, last;
+    t->nheld = 0; t->arp_phys = 0; t->arp_note = 0;   /* (no keys held from before: the first note even) */
+    arp_add(t, 60); arp_add(t, 67); arp_add(t, 64);
+    last = t->arp_idx;
+    for (f = 0; got < n && f < 20u * FS; f += CTL) {
+        arp_step(t, CTL, CTL);
+        if (t->arp_idx != last) {
+            last = t->arp_idx;
+            at[got++] = f;
+        }
+    }
+    return got;
+}
+static int test_arp(void)
+{
+    static const int SW[] = {40, 100, 0};
+    uint32_t c, k, at[9];
+    int bad = 0;
+    char what[160];
+    for (c = 0; c < sizeof SW / sizeof SW[0]; c++) {
+        track_t *t = &trk[0];
+        uint32_t per, got, err = 0;
+        host_tracks_init();
+        song.g[G_BPM] = 120;
+        t->p[P_AMODE] = 1; t->p[P_ARATE] = 2; t->p[P_APROB] = 127; t->p[P_AGATE] = 64; t->p[P_ASWING] = (int16_t)SW[c];
+        per = div_samples((uint32_t)t->p[P_ARATE]);
+        got = arp_starts(t, at, 9);
+        for (k = 1; k < got; k++) {                      /* note k at k steps, an odd one sw late (the sequencer's): */
+            int32_t sw = SW[c] * (int32_t)per / 250;     /* each gap per + sw after an even note, per - sw after an odd one */
+            int32_t want = (int32_t)per + ((k & 1u) ? sw : -sw);
+            err += abs((int32_t)(at[k] - at[k - 1u]) - want) > (int32_t)CTL;
+        }
+        snprintf(what, sizeof what, "ARP SWING %d at 1/16: notes at %.2f %.2f %.2f %.2f steps (odd late, as SEQ's)", SW[c],
+                 (double)(at[0] - at[0]) / per, (double)(at[1] - at[0]) / per, (double)(at[2] - at[0]) / per,
+                 (double)(at[3] - at[0]) / per);
+        bad += check(what, got == 9u && !err);
+    }
+    return bad;
+}
+
 int main(void)
 {
-    int bad = test_sum() + test_seq() + test_slicer() + test_display();
+    int bad = test_sum() + test_seq() + test_slicer() + test_display() + test_arp();
     printf("swing: %s\n", bad ? "FAILED" : "all ok");
     return bad ? 1 : 0;
 }

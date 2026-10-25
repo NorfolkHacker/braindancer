@@ -9721,7 +9721,7 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -5);
     ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
-    ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.home;          /* (ENV's last, MOD ENV; no LFO; 3b task 6: STAGE gone) */
+    ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.home;          /* (ENV's last, ENV TO; no LFO; 3b task 6: STAGE gone) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
@@ -9937,6 +9937,21 @@ static int test_large(void)
         ok = large_kind() == LK_TALL && strip_kind() == SK_TITLE && diff[1] && !diff[0] && !diff[2] && !diff[3];
     }
     bad += check("#15 LARGE: GLOBAL tall, its title in the strip (3b task 6: ENV's ADSR strip ux_section.c's now); KNOB 2 turned redraws card 2 only", ok);
+#if FELUCCA_FM4
+    {   /* (3b task 6 fix) graph_adsr's last pages: DIGITAL's OP ENV, its envelope in the strip (built with FELUCCA_FM4 only) */
+        uint32_t x, y, n = 0;
+        set_engine_of(TSEL, 1);
+        go_home(); frame(); press(B_EDIT); frame();
+        go_title("OP1 ENV"); ui.force = 1; frame();
+        for (y = graph_y() + 4u; y < graph_y() + graph_h() - 4u; y++)
+            for (x = 20; x < 220u; x++)
+                n += lg_px((int32_t)x, (int32_t)y) != T_SURF && lg_px((int32_t)x, (int32_t)y) != T_BG;
+        ok = large_kind() == LK_TALL && strip_kind() == SK_ADSR && str_eq(cur_page()->title, "OP1 ENV") && n > 200u;
+        if (!ok) printf("  OP1 ENV: strip %u, %u px\n", (unsigned)strip_kind(), (unsigned)n);
+        bad += check("#15 LARGE: DIGITAL's OP1 ENV tall, its envelope in the strip (graph_adsr, FELUCCA_FM4 only)", ok);
+        ui_prefs = PREF_LARGE;
+    }
+#endif
 
     /* per page type: lists and rolls keep the layout, the layers too; MIXER's tracks in the strip */
     go_page(GR_BROWSE); frame();
@@ -12899,8 +12914,9 @@ static int test_ux_section_draw(void)
         const char *q;
         ok &= UXS_NAME[i].p && text_w(&UF_LBL, UXS_NAME[i].p) <= UX_COL_W - 4 &&
               (UXS_NAME[i].sec == UXS_ALL || UXS_NAME[i].sec < SEC_N) && UXS_NAME[i].glo <= 1u &&
-              (UXS_NAME[i].id < (UXS_NAME[i].glo ? G_COUNT : P_COUNT) || UXS_NAME[i].id == ID_ALLTR);   /* (3b task 6: SCL's
-                                                         * ALL TRACKS, a view) */
+              (UXS_NAME[i].id < (UXS_NAME[i].glo ? G_COUNT : P_COUNT) || UXS_NAME[i].id == ID_ALLTR ||
+               (!UXS_NAME[i].glo && fld_is(UXS_NAME[i].id)));   /* (3b task 6: SCL's ALL TRACKS, a view; its fix: DRUM-X's
+                                                         * CRACK, a kit field) */
         if (!ok) { printf("  UXS_NAME[%u] \"%s\": too wide or not a setting\n", (unsigned)i, UXS_NAME[i].p); break; }
         for (q = UXS_NAME[i].p; *q; q++)
             ok &= glyph_at(&UF_LBL, (uint8_t)*q) >= 0 && glyph_at(&UF_HDR, (uint8_t)*q) >= 0;
@@ -14053,7 +14069,7 @@ static int test_edit_drm(void)
     uxe_on(ENGI_DRUM);
     turn(EN_SELECT, 3);
     ok = str_eq(uxe_more_list(&UXM_DRM), "[KIT]|NOISE|CLICK|FOLD|DRIVE|FEEDBACK|METAL|HANDS|STEREO|[DRUM \xB7 BD]|SIDE|PITCH MOD|"
-                                         "MOD TYPE|NOISE TYPE|SNAP|DRIVE|CLANG|FEEDBACK|SEND TO|SEND|[MORPH LFO]|RATE|DEPTH|SHAPE|RANDOM|"
+                                         "MOD TYPE|NOISE TYPE|CRACK|DRIVE|CLANG|FEEDBACK|SEND TO|SEND|[MORPH LFO]|RATE|DEPTH|SHAPE|RANDOM|"
                                          "[FILTER]|FILTER|CUTOFF|RESO");
     if (!ok) printf("  DRUM MORE: %s\n", uxe_more_list(&UXM_DRM));
     bad += check("ACID FM 3b: DRUM-X's MORE lists what its pages leave (KIT 2 and 3, the drum's, MORPH LFO, FILTER; VOICE hidden)",
@@ -14263,7 +14279,7 @@ static int test_edit_t5_fix(void)
         dx_ui_lane = 1;
         l0 = dx_lay[1];
         uxe_more_set(&UXM_DRM, ID_DX_LFB, 1);
-        ok = strstr(uxe_more_list(&UXM_DRM), "[DRUM \xB7 SD]|SIDE|PITCH MOD|MOD TYPE|NOISE TYPE|SNAP|DRIVE|CLANG|FEEDBACK|SEND TO") != 0 &&
+        ok = strstr(uxe_more_list(&UXM_DRM), "[DRUM \xB7 SD]|SIDE|PITCH MOD|MOD TYPE|NOISE TYPE|CRACK|DRIVE|CLANG|FEEDBACK|SEND TO") != 0 &&
              DX_LAY_FB(dx_lay[1]) == (uint32_t)clamp((int32_t)DX_LAY_FB(l0) + 1, 0, 15) && DX_LAY_L(dx_lay[1]) == DX_LAY_L(l0);
         dx_lay[1] = l0;
         bad += check("3b task 5 fix: a drum's own FEEDBACK is in MORE's drum group (after CLANG), writing its nibble", ok);
@@ -14418,7 +14434,7 @@ static int test_edit_t5_fix(void)
 typedef struct { uint8_t sec, btn; const char *title, *where; const char *lab[4]; uint16_t id[4]; } uxt6_pg_t;
 static const uxt6_pg_t UXT6_PG[] = {
     {SEC_ENV, B_ENV, "ENV", "ENV \xB7 AMP", {"ATTACK", "DECAY", "SUSTAIN", "RELEASE"}, {P_ATK, P_DEC, P_SUS, P_REL}},
-    {SEC_ENV, B_ENV, "ENV DEST", "ENV \xB7 MOD ENV", {"FILTER", "PITCH", "SHAPE", "LOOP"}, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},
+    {SEC_ENV, B_ENV, "ENV DEST", "ENV \xB7 ENV TO", {"FILTER", "PITCH", "SHAPE", "LOOP"}, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},
     {SEC_ARP, B_ARP, "ARP", "ARP \xB7 ARP", {"ARP", "RATE", "OCTAVES", "GATE"}, {P_AMODE, P_ARATE, P_AOCT, P_AGATE}},
     {SEC_ARP, B_ARP, "ARP 2", "ARP \xB7 ARP 2", {"SWING", "CHANCE", "HOLD", "ORDER"}, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},
     {SEC_SCL, B_SCL, "SCL", "SCL \xB7 KEY", {"ROOT", "SCALE", "SNAP", "ALL TRACKS"}, {P_ROOT, P_SCALE, P_QUANT, ID_ALLTR}},
@@ -14474,7 +14490,7 @@ static void uxt6_open(uint32_t i)                        /* T1 (ANALOG, its firs
 }
 static int test_t6_nav(void)
 {
-    static const char *const EN[2] = {"AMP", "MOD ENV"}, *const ET[2] = {"ENV", "ENV DEST"};
+    static const char *const EN[2] = {"AMP", "ENV TO"}, *const ET[2] = {"ENV", "ENV DEST"};
     static const char *const AN[2] = {"ARP", "ARP 2"}, *const AT[2] = {"ARP", "ARP 2"};
     static const char *const SN[3] = {"KEY", "CHORD", "MORE"}, *const ST[3] = {"SCL", "CHORD", "SCL MORE"};
     int bad = 0, ok;
@@ -14482,7 +14498,7 @@ static int test_t6_nav(void)
     ui_power_on(); frame();
     press(B_ENV); frame();
     ok = str_eq(cur_page()->title, "ENV") && uxt6_walk(B_ENV, EN, ET, 2);
-    bad += check("ACID FM 3b task 6: ENV is AMP, MOD ENV (its button round, SELECT to the ends, n / 2); opens on AMP; no "
+    bad += check("ACID FM 3b task 6: ENV is AMP, ENV TO (its button round, SELECT to the ends, n / 2); opens on AMP; no "
                  "TRACKS, no STAGE", ok && !nav_put(SEC_ENV, "STAGE") && !nav_put(SEC_ENV, "TRACKS"));
     ui_power_on(); frame();
     press(B_ARP); frame();
@@ -14509,7 +14525,7 @@ static int test_t6_nav(void)
     ok &= song.sel == 1u && str_eq(cur_page()->title, "ENV DEST");
     bad += check("ACID FM 3b task 6: ENV, ARP, SCL each keep the page left; PRESETS a sound, ALGORITHM the track there", ok);
     {   /* the footer: n / N and NEXT the page the section's button goes to */
-        static const struct { uint8_t i; const char *f; } F[] = {{0, "1 / 2 \xB7 NEXT MOD ENV"}, {1, "2 / 2 \xB7 NEXT AMP"},
+        static const struct { uint8_t i; const char *f; } F[] = {{0, "1 / 2 \xB7 NEXT ENV TO"}, {1, "2 / 2 \xB7 NEXT AMP"},
                                                                   {2, "1 / 2 \xB7 NEXT ARP 2"}, {3, "2 / 2 \xB7 NEXT ARP"},
                                                                   {4, "1 / 3 \xB7 NEXT CHORD"}, {5, "2 / 3 \xB7 NEXT MORE"}};
         uint32_t c;
@@ -14545,12 +14561,32 @@ static int test_t6_knobs(void)
             ok = 0;
         }
         for (c = 0; c < 4u; c++) {
+            static track_t was[NTRK];
             track_t before = *TSEL;
             int16_t g0 = song.g[G_STRN], *vp = uxt6_val(UXT6_PG[i].id[c]), v0 = *vp;
-            uint32_t k, moved = 0;
+            uint32_t k, moved = 0, id = UXT6_PG[i].id[c], o, odd = 0, drums = 0, mel = 0;
+            int song_wide = id == P_ROOT || id == P_SCALE || id == P_QUANT;   /* (ROOT SCALE SNAP: the song's, scale_link) */
             int32_t s = v0 >= (UXT6_PG[i].id[c] == ID_ALLTR ? GP[G_STRN].max : track_desc(TSEL, UXT6_PG[i].id[c])->max) ? -1 : 1;
             frames(400);
+            memcpy(was, trk, sizeof was);
             turn(EN_K1 + c, s);
+            frames(4);
+            for (o = 0; o < NTRK; o++) {                /* (3b task 6 fix) the other tracks: a track's setting leaves them; the
+                                                         * song's lands on every melodic one, never a kit */
+                if (o == song.sel % NTRK)
+                    continue;
+                drums += drum_track(&trk[o]);
+                mel += !drum_track(&trk[o]);
+                for (k = 0; k < P_COUNT; k++) {
+                    int want = song_wide && k == id && !drum_track(&trk[o]) ? trk[o].p[k] == TSEL->p[k] : trk[o].p[k] == was[o].p[k];
+                    odd += !want;
+                }
+            }
+            if (odd || !drums || !mel) {
+                printf("  %s KNOB %u: %u settings of other tracks wrong (%u kits, %u melodic)\n", UXT6_PG[i].where,
+                       (unsigned)c + 1u, (unsigned)odd, (unsigned)drums, (unsigned)mel);
+                ok = 0;
+            }
             for (k = 0; k < P_COUNT; k++)
                 moved += TSEL->p[k] != before.p[k] && k != UXT6_PG[i].id[c];
             if (*vp == v0 || moved || (UXT6_PG[i].id[c] != ID_ALLTR && song.g[G_STRN] != g0)) {
@@ -14559,7 +14595,8 @@ static int test_t6_knobs(void)
             }
         }
     }
-    bad += check("ACID FM 3b task 6: ENV, ARP, SCL pages: their knobs in plain words, each its setting turned (edit_param)", ok);
+    bad += check("ACID FM 3b task 6: ENV, ARP, SCL pages: their knobs in plain words, each its setting turned (edit_param); "
+                 "the other tracks left, ROOT SCALE SNAP on every melodic one (not a kit; task 6 fix)", ok);
     uxt6_open(2);                                       /* the ARP's ORD (plays as UP) stepped over, shown UP; REPEAT REPT */
     TSEL->p[P_AMODE] = 4; turn(EN_K1, 1);
     ok = TSEL->p[P_AMODE] == 6 && str_eq(uxe_value(0), "REPT");
@@ -14621,7 +14658,7 @@ static int test_t6_scl_layer(void)
     ui_power_on();
     return bad;
 }
-/* REC + ENV / ARP / SCL: every setting JIANT's pages there held still cleared (ENV: AMP and MOD ENV's eight, STAGE's LOOP; ARP:
+/* REC + ENV / ARP / SCL: every setting JIANT's pages there held still cleared (ENV: AMP and ENV TO's eight, STAGE's LOOP; ARP:
  * its eight; SCL: KEY's three and CHORD's three), and SCL's new ones (ROTATE, SEQ PITCH, TRANSPOSE); another section's stays */
 static int test_t6_rec_clear(void)
 {
@@ -14752,6 +14789,324 @@ static int test_t6_pictures(void)
         ok &= kb_map(TSEL, 11u) % 12u == 3u && kb_map(TSEL, 8u) == KB_SILENT;
         bad += check("ACID FM 3b task 6: SCL's KEY picture reads the keys' map (SNAP: C# plays C; WHITE: E plays D#, black silent)", ok);
     }
+    ui_power_on();
+    return bad;
+}
+
+/* (3b task 6 fix) the pictures against the engine: the ARP's notes (their times, SWING too, and pitches) as seq.c arp_step plays
+ * them from C G E held; the ENV's stages as voice.c env_tick runs them (each stage's width its time on a log axis: the knob's
+ * 1 ms .. 10 s; the sustain the engine's) */
+static uint32_t uxt6_arp_engine(track_t *t, uint32_t *at, uint8_t *note, uint32_t n)   /* the engine's first n notes */
+{
+    uint32_t f, got = 0, last;
+    t->nheld = 0; t->arp_phys = 0; t->arp_note = 0;
+    arp_add(t, 60); arp_add(t, 67); arp_add(t, 64);
+    last = t->arp_idx;
+    for (f = 0; got < n && f < 8u * FS; f += CTL) {
+        arp_step(t, CTL, CTL);
+        if (t->arp_idx != last) {
+            last = t->arp_idx;
+            at[got] = f;
+            note[got++] = t->arp_note;
+        }
+    }
+    t->nheld = 0; t->arp_phys = 0;
+    arp_step(t, CTL, CTL);                              /* (let go: the last note off) */
+    return got;
+}
+static int uxt6_arp_vs_engine(void)
+{
+    static const uint8_t M[] = {1, 2, 3, 6, 7, 8, 9, 10, 11, 12};   /* (the patterns with no chance in their order) */
+    static const uint8_t SW[] = {0, 40, 100};
+    uint32_t mi, o, sw, r, cases = 0;
+    int ok = 1;
+    for (mi = 0; mi < sizeof M; mi++)
+        for (o = 0; o < 4u; o++)
+            for (sw = 0; sw < sizeof SW; sw++)
+                for (r = 1; r <= 2u; r++) {          /* (RATE 1/8, 1/16) */
+                    track_t *t = TSEL;
+                    uint32_t at[12], i, got, len, walk = 0, rnd = 0x2545F491u, per;
+                    uint8_t nt[12];
+                    int32_t list[16], p960 = UXS_ADIV[r];
+                    t->p[P_AMODE] = M[mi]; t->p[P_AOCT] = (int16_t)(1u + (o & 1u)); t->p[P_AORDER] = (int16_t)(o >> 1);
+                    t->p[P_ASWING] = SW[sw]; t->p[P_ARATE] = (int16_t)r; t->p[P_APROB] = 127; t->p[P_AGATE] = 64;
+                    per = div_samples(r);
+                    got = uxt6_arp_engine(t, at, nt, 12);
+                    len = uxs_arp_list(t, list);
+                    cases++;
+                    for (i = 0; i < got; i++) {
+                        int32_t t0, tp;
+                        uint32_t j;
+                        int on;
+                        uxs_arp_note(t, (int32_t)i, len, &walk, &rnd, &t0, &j, &on);
+                        if (i) {                     /* the gap before note i: the picture's, the engine's (a block's grain) */
+                            int32_t ge = (int32_t)(at[i] - at[i - 1u]), gp;
+                            uxs_arp_note(t, (int32_t)i - 1, len, &walk, &rnd, &tp, &j, &on);   /* (WALK / RND not here) */
+                            gp = (t0 - tp) * (int32_t)per / p960;
+                            uxs_arp_note(t, (int32_t)i, len, &walk, &rnd, &t0, &j, &on);
+                            if (abs(ge - gp) > (int32_t)CTL + (int32_t)per / p960) {   /* (the picture's grid: 960 a bar) */
+                                printf("  ARP %u OCT %d ORDER %d SWING %u RATE %u note %u: gap %d samples, the picture's %d\n",
+                                       (unsigned)M[mi], t->p[P_AOCT], t->p[P_AORDER], (unsigned)SW[sw], (unsigned)r, (unsigned)i,
+                                       (int)ge, (int)gp);
+                                ok = 0;
+                            }
+                        }
+                        if ((int32_t)nt[i] != list[j % len] || !on) {
+                            printf("  ARP %u OCT %d ORDER %d note %u: the engine %u, the picture %d\n", (unsigned)M[mi],
+                                   t->p[P_AOCT], t->p[P_AORDER], (unsigned)i, (unsigned)nt[i], (int)list[j % len]);
+                            ok = 0;
+                        }
+                    }
+                    ok &= got == 12u;
+                }
+    return ok && cases == sizeof M * 4u * sizeof SW * 2u;
+}
+/* the engine's envelope: ticks in each stage (attack to the top, decay and release to 1 % of the way), the sustain it settles at */
+static void uxt6_env_engine(track_t *t, uint32_t *ta, uint32_t *td, uint32_t *tr, int32_t *sus)
+{
+    voice_t v;
+    int32_t s = (int32_t)t->p[P_SUS] << 17, k;
+    memset(&v, 0, sizeof v);
+    v.active = 1; v.gate = 1; v.stage = 1;
+    for (k = 0; v.stage == 1u && k < 100000; k++) (void)env_tick(t, &v);
+    *ta = (uint32_t)k;
+    for (k = 0; v.env - s >= ((1 << 24) - s) / 10 && k < 100000; k++) (void)env_tick(t, &v);
+    *td = (uint32_t)k * 2u;                             /* (to 10 % of the way: half its time, 1 % at the time; a column's levels
+                                                         * are too coarse for 1 %) */
+    for (k = 0; k < 20000; k++) (void)env_tick(t, &v);
+    *sus = (int32_t)((int64_t)v.env * 1000 >> 24);
+    v.gate = 0; v.stage = 3;
+    s = v.env;
+    for (k = 0; v.env >= s / 10 && v.stage == 3u && k < 100000; k++) (void)env_tick(t, &v);
+    *tr = (uint32_t)k * 2u;
+}
+static int uxt6_env_vs_engine(void)
+{
+    static const uint8_t V[] = {20, 50, 80, 110, 127};
+    uint32_t i, x;
+    int ok = 1;
+    for (i = 0; i < sizeof V; i++) {
+        track_t *t = TSEL;
+        int16_t e[UXS_EW];
+        uint8_t st[UXS_EW];
+        uint32_t ta, td, tr, pa = 0, pd = 0, pr = 0, peak = 0;
+        int32_t sus, ps, off, ms[3], col[3];
+        t->p[P_ATK] = V[i]; t->p[P_DEC] = V[(i + 2u) % sizeof V]; t->p[P_REL] = V[(i + 4u) % sizeof V];
+        t->p[P_SUS] = (int16_t)(20 + 15 * (int32_t)i); t->p[P_ELOOP] = 0;
+        uxt6_env_engine(t, &ta, &td, &tr, &sus);
+        uxs_env_shape(t, e, st);
+        for (x = 0; x < UXS_EW && st[x] == 0u; x++) pa++;          /* the picture's: columns up, */
+        for (x = 0; x < UXS_EW; x++) if (e[x] > e[peak]) peak = x;
+        ps = t->p[P_SUS] * 1000 / 128;
+        for (x = peak; x < UXS_EW && (e[x] - ps) * 10 >= 1000 - ps && st[x] != 3u; x++) pd++;   /* .. down to 10 % of the way, */
+        off = UXS_EW - (6 + t->p[P_REL] * 46 / 127);
+        for (x = (uint32_t)off; x < UXS_EW && e[x] * 10 >= e[off - 1]; x++) pr++;   /* .. released */
+        ms[0] = (int32_t)ta, ms[1] = (int32_t)td, ms[2] = (int32_t)tr;
+        col[0] = (int32_t)pa - 4, col[1] = 2 * (int32_t)pd - 6, col[2] = 2 * (int32_t)pr - 6;
+        for (x = 0; x < 3u; x++) {                   /* a stage's columns past its least: 46 over 4 decades of the engine's time */
+            double tm = (double)ms[x] * CTL * 1000.0 / FS, want = 11.5 * log10(tm < 1.0 ? 1.0 : tm);
+            if (fabs((double)col[x] - want) > 3.0) {
+                printf("  ENV %u stage %u: %d columns past its least, the engine's %.1f ms: %.1f wanted\n", (unsigned)V[i],
+                       (unsigned)x, (int)col[x], tm, want);
+                ok = 0;
+            }
+        }
+        if (abs(e[off - 1] - sus) > 12) {               /* the sustain the engine settles at (P_SUS << 17 of 1 << 24) */
+            printf("  ENV SUSTAIN %d: the picture's %d, the engine's %d\n", t->p[P_SUS], e[off - 1], (int)sus);
+            ok = 0;
+        }
+    }
+    {   /* LOOP: held, the attack again from the sustain, in both */
+        track_t *t = TSEL;
+        voice_t v;
+        int16_t e[UXS_EW];
+        uint8_t st[UXS_EW];
+        uint32_t k, back = 0, pback = 0;
+        t->p[P_ATK] = 40; t->p[P_DEC] = 40; t->p[P_SUS] = 50; t->p[P_ELOOP] = 1; t->p[P_REL] = 60;
+        memset(&v, 0, sizeof v);
+        v.active = 1; v.gate = 1; v.stage = 1;
+        for (k = 0; k < 20000u; k++) {
+            uint32_t s0 = v.stage;
+            (void)env_tick(t, &v);
+            back += s0 == 2u && v.stage == 1u;
+        }
+        uxs_env_shape(t, e, st);
+        for (k = 1; k < UXS_EW; k++)
+            pback += st[k - 1u] == 1u && st[k] == 0u;
+        if (!back || !pback) { printf("  LOOP: the engine again %u, the picture %u\n", (unsigned)back, (unsigned)pback); ok = 0; }
+        t->p[P_ELOOP] = 0;
+        uxs_env_shape(t, e, st);
+        for (k = 1, pback = 0; k < UXS_EW; k++)
+            pback += st[k - 1u] == 1u && st[k] == 0u;
+        ok &= !pback;
+    }
+    return ok;
+}
+/* MORE's value bar (3b task 6 fix): short, right-aligned under the value, not a line under the name; bipolar from the middle */
+static uint32_t uxt6_slide(uint32_t x0, uint32_t x1, uint32_t y0, uint32_t y1)   /* KNOB 2's colour in a box of the screen */
+{
+    uint32_t x, y, n = 0;
+    for (y = y0; y < y1; y++)
+        for (x = x0; x < x1; x++)
+            n += ux_px(x, y) == UX_SLIDE;
+    return n;
+}
+static int test_t6_fix(void)
+{
+    int bad = 0, ok;
+    uint32_t k, y = UX_Y_PANEL + 3u + 4u + UF_HDR_CAP_Y + UF_HDR_CAP_H / 2u, mid = UXM_BAR_X1 - UXM_BAR_W + UXM_BAR_W / 2u;
+    char b[32];
+    ui_power_on();
+    uxt6_open(2);
+    ok = uxt6_arp_vs_engine();
+    bad += check("3b task 6 fix: ARP's picture against seq.c arp_step: every note's time (SWING's odd notes late, as SEQ's) and "
+                 "pitch, 10 patterns x OCTAVES x ORDER x SWING 0 40 100 x RATE", ok);
+    ui_power_on();
+    uxt6_open(0);
+    ok = uxt6_env_vs_engine();
+    bad += check("3b task 6 fix: ENV's picture against voice.c env_tick: each stage as wide as its time (log), the sustain the "
+                 "engine's, LOOP's attack again", ok);
+
+    ui_power_on();                                      /* 2: SNAP and ALL TRACKS in plain words */
+    uxt6_open(4);
+    {
+        static const char *const K[4] = {"OFF", "KEYS", "WHITE", "BOTH"}, *const F[4] = {"OFF", "KEYS SNAP", "WHITE KEYS",
+                                                                                      "KEYS + SEQUENCE"};
+        ok = 1;
+        for (k = 0; k < 4u; k++) {
+            TSEL->p[P_QUANT] = (int16_t)k; frame();
+            ok &= str_eq(uxe_value(2), K[k]) && str_eq(uxs_vfull(0, P_QUANT, (int32_t)k), F[k]);
+            ok &= str_eq(uxs_snap_say(TSEL), UXS_SNAP_SAY[k]);
+        }
+        song.g[G_STRN] = 0; frame(); ok &= str_eq(uxe_value(3), "OFF");
+        song.g[G_STRN] = 2; frame(); ok &= str_eq(uxe_value(3), "+2");
+        song.g[G_STRN] = -3; frame(); ok &= str_eq(uxe_value(3), "-3") && str_eq(uxs_vfull(1, G_STRN, -3), "-3 STEPS");
+        ok &= str_eq(uxs_vfull(0, ID_ALLTR, 1), "+1 STEP") && str_eq(uxs_vfull(0, ID_ALLTR, 0), "OFF");
+        frames(400); turn(EN_K4, 1); frames(20);
+        ok &= song.g[G_STRN] == -2 && str_eq(uxt6_status(), "ALL TRACKS \xB7 -2 STEPS");
+        TSEL->p[P_QUANT] = 3; frames(400); turn(EN_K3, -1); frames(20);
+        ok &= TSEL->p[P_QUANT] == 2 && str_eq(uxt6_status(), "SNAP \xB7 WHITE KEYS");
+        if (!ok) printf("  \"%s\" \"%s\" \"%s\"\n", uxe_value(2), uxe_value(3), uxt6_status());
+    }
+    bad += check("3b task 6 fix: SNAP reads OFF / KEYS / WHITE / BOTH (in full in the status line, as the picture's line); ALL "
+                 "TRACKS OFF, +2, -3 (status: -2 STEPS)", ok);
+
+    ui_power_on();                                      /* 3: MORE's meter beside the value (not a line under a word), bipolar
+                                                         * from the middle */
+    uxt6_open(5); turn(EN_SELECT, 1);
+    uxm_at[uxm_key()].sel = 0; uxm_at[uxm_key()].top = 0;
+    TSEL->p[P_POFS] = 0; TSEL->p[P_TRANS] = 0; ui.force = 1; frame();
+    ok = cur_page()->graph == GR_MORE && !uxt6_slide(8, UXM_BAR_X1 + 2u, y - 1u, y + 2u) && !uxt6_slide(8, 228, y + 4u, y + 7u);
+    TSEL->p[P_POFS] = 12; frames(20);
+    ok &= uxt6_slide(mid + 1u, UXM_BAR_X1, y - 1u, y + 2u) >= 3u * 5u && !uxt6_slide(8, mid, y - 1u, y + 2u) &&
+          !uxt6_slide(8, 228, y + 4u, y + 7u);
+    TSEL->p[P_POFS] = -24; frames(20);
+    ok &= uxt6_slide(UXM_BAR_X1 - UXM_BAR_W, mid, y - 1u, y + 2u) >= 3u * 11u && !uxt6_slide(mid + 1u, UXM_BAR_X1 + 2u, y - 1u, y + 2u) &&
+          !uxt6_slide(8, 228, y + 4u, y + 7u);
+    if (!ok) printf("  MORE meter: %u left, %u right, %u under the row\n", (unsigned)uxt6_slide(8, mid, y - 1u, y + 2u),
+                    (unsigned)uxt6_slide(mid + 1u, UXM_BAR_X1 + 2u, y - 1u, y + 2u), (unsigned)uxt6_slide(8, 228, y + 4u, y + 7u));
+    {   /* every MORE row with a meter: its value, at every value, clear of it (these engines' lists) */
+        static const uint8_t E[] = {ENGI_ANALOG, ENGI_PHASE, ENGI_LOFI, ENGI_VOICE, ENGI_NOISE, ENGI_FM6, ENGI_DRUM};
+        uint32_t e, p, r, nr = 0;
+        for (e = 0; e < sizeof E; e++) {
+            uxs_syn_on(E[e]);
+            for (p = 0; p < NPAGES; p++) {
+                const ux_more_t *m = PAGES[p].more;
+                if (PAGES[p].graph != GR_MORE || !m)
+                    continue;
+                for (r = 0; r < m->n; r++) {
+                    int16_t *vp, keep;
+                    const param_desc_t *d;
+                    int32_t v;
+                    if (!uxm_bar(&m->rows[r], 0, 0, 0) ||
+                        !(d = param_ref(m->rows[r].kind == UXR_GLOBAL ? 0 : TSEL, m->rows[r].id, &vp)) || !vp ||
+                        fld_is(m->rows[r].id))
+                        continue;
+                    keep = *vp;
+                    nr++;
+                    for (v = d->min; v <= d->max; v++) {
+                        char val[24];
+                        uint8_t bar;
+                        *vp = (int16_t)v;
+                        (void)uxm_row_text(&m->rows[r], val, sizeof val, &bar);
+                        if (222 - text_w(&UF_HDR, val) < UXM_BAR_X1 + 4) {
+                            printf("  %s row %u: \"%s\" over the meter\n", PAGES[p].title, (unsigned)r, val);
+                            ok = 0;
+                            break;
+                        }
+                    }
+                    *vp = keep;
+                }
+            }
+        }
+        ok &= nr > 40u;
+    }
+    bad += check("3b task 6 fix: MORE's meter beside the value (nothing under the row: not an underline), SEQ PITCH from the "
+                 "middle; every value clear of it", ok);
+
+    ui_power_on();                                      /* 4: ENV TO */
+    uxt6_open(1);
+    ok = str_eq(uxs_where(), "ENV \xB7 ENV TO") && str_eq(nav_page_name(), "ENV TO") && nav_put(SEC_ENV, "ENV TO") &&
+         !nav_put(SEC_ENV, "MOD ENV");
+    bad += check("3b task 6 fix: ENV's second page is ENV TO (was MOD ENV: the same envelope's amounts)", ok);
+
+    ui_power_on();                                      /* 5..7: the pictures' words */
+    uxt6_open(5);
+    TSEL->p[P_CHRD] = 0; uxs_chord_word(TSEL, 1, b, sizeof b); ok = str_eq(b, UXS_CHORD_SAY[0]);
+    TSEL->p[P_CHRD] = 1; TSEL->p[P_VOICE] = V_MONO; uxs_chord_word(TSEL, 1, b, sizeof b); ok &= str_eq(b, UXS_CHORD_SAY[1]);
+    ui.force = 1; frame();
+    {   /* (ROTATE's strip named, in KNOB 4's colour) */
+        uint32_t xx, yy, n = 0;
+        for (yy = UX_Y_PANEL + 116u; yy < UX_Y_PANEL + 132u; yy++)
+            for (xx = 180; xx < 230u; xx++)
+                n += ux_px(xx, yy) != ux_px(179, yy) && ux_px(xx, yy) != UX_BG;
+        ok &= n > 20u;
+    }
+    set_engine_of(TSEL, ENGI_DRUM); frame();
+    TSEL->p[P_CHRD] = 1; uxs_chord_word(TSEL, chord_peek(TSEL, 60, (uint8_t[KB_CH]){0}), b, sizeof b);
+    ok &= str_eq(b, UXS_CHORD_SAY[3]) && str_eq(uxs_snap_say(TSEL), UXS_SNAP_SAY[4]);
+    TSEL->p[P_QUANT] = 1; ok &= str_eq(uxs_snap_say(TSEL), UXS_SNAP_SAY[4]);
+    if (!ok) printf("  \"%s\" \"%s\"\n", b, uxs_snap_say(TSEL));
+    bad += check("3b task 6 fix: CHORD's word says why one note (CHORD off; a voice not POLY; a kit's hits); a kit's KEY line: its "
+                 "keys play the drums; ROTATE's strip named", ok);
+
+    ui_power_on();                                      /* 8: the picture leaves LEAD's memory as it was */
+    uxt6_open(5);
+    {
+        uint32_t ti = song.sel % NTRK;
+        uint8_t keep[KB_CH], out[KB_CH];
+        TSEL->p[P_CHRD] = 1; TSEL->p[P_VOICE] = V_POLY; TSEL->p[P_CVOI] = 1;
+        for (k = 0; k < KB_CH; k++) chord_last[ti][k] = (uint8_t)(40u + k);
+        chord_nlast[ti] = 3;
+        memcpy(keep, chord_last[ti], KB_CH);
+        ok = chord_peek(TSEL, 62, out) > 1u && !memcmp(keep, chord_last[ti], KB_CH) && chord_nlast[ti] == 3u;
+        ui.force = 1; frame();
+        ok &= !memcmp(keep, chord_last[ti], KB_CH) && chord_nlast[ti] == 3u;
+    }
+    bad += check("3b task 6 fix: CHORD's picture (chord_peek, the audio interrupt held off) leaves LEAD's last chord as it was", ok);
+
+    ui_power_on();                                      /* 9: a stored ORD turns as UP */
+    uxt6_open(2);
+    TSEL->p[P_AMODE] = 5; frames(400); turn(EN_K1, 1);
+    ok = TSEL->p[P_AMODE] == 2;
+    TSEL->p[P_AMODE] = 5; frames(400); turn(EN_K1, -1);
+    ok &= TSEL->p[P_AMODE] == 0;
+    TSEL->p[P_AMODE] = 4; frames(400); turn(EN_K1, 1);
+    ok &= TSEL->p[P_AMODE] == 6;
+    if (!ok) printf("  ARP: %d\n", TSEL->p[P_AMODE]);
+    bad += check("3b task 6 fix: a stored ORD (shown UP) turns as UP: right DOWN, left OFF (RANDOM right: REPEAT, ORD skipped)", ok);
+
+    ui_power_on();                                      /* 11: PRESETS on KEY leaves ROOT; KNOB 1 the ROOT */
+    uxt6_open(4);
+    {
+        int16_t r = TSEL->p[P_ROOT];
+        uint32_t pr = TSEL->preset;
+        turn(EN_PRESET, 1); frame();
+        ok = str_eq(cur_page()->title, "SCL") && TSEL->p[P_ROOT] == r && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
+        frames(400); turn(EN_K1, 1); frame();
+        ok &= TSEL->p[P_ROOT] == (r + 1) % 12;
+    }
+    bad += check("3b task 6 fix: SCL > KEY: PRESETS a sound (ROOT kept), KNOB 1 the ROOT", ok);
     ui_power_on();
     return bad;
 }
@@ -14948,6 +15303,7 @@ int main(void)
     bad += test_t6_rec_clear();
     bad += test_t6_widths();
     bad += test_t6_pictures();
+    bad += test_t6_fix();                               /* (ACID FM 3b task 6 fix) */
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

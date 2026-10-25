@@ -89,11 +89,12 @@ static const nv_t CE_GLO[] = {NV("MANO", 0, 0, 0), NV("RIELES", 0, 0, 0), NV("MI
                               NV("GLOBAL", 0, 2, 1), NV("SYSTEM", 0, 3, 2)};   /* (0.9.11) LIVE first (ui_live.c) */
 static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}};
 /* (ACID FM 3b task 6) ENV, SCL, ARP on the ux pages (ux_section.c), a page a group (the button steps them round, spec 2.2,
- * 2.5): ENV's AMP (ATTACK DECAY SUSTAIN RELEASE) and MOD ENV (the envelope's FILTER PITCH SHAPE amounts, LOOP), JIANT's
+ * 2.5): ENV's AMP (ATTACK DECAY SUSTAIN RELEASE) and ENV TO (the same envelope's FILTER PITCH SHAPE amounts, LOOP; the
+ * user's name, task 6 fix: the spec's MOD ENV read as a second envelope), JIANT's
  * TRACKS views (the six tracks' envelopes) and STAGE (the same four values a stage at a time) gone; SCL's KEY (ROOT SCALE SNAP
  * ALL TRACKS), CHORD (CHORD VOICING STRUM ROTATE), MORE (SEQ PITCH, TRANSPOSE); ARP's ARP, ARP 2 */
-static const nv_t CE_ENV[] = {NV("ENV", "AMP", 0, 0), NV("ENV DEST", "MOD ENV", 1, 0)};
-static const ng_t CG_ENV[] = {{"AMP", 0}, {"MOD ENV", 0}};
+static const nv_t CE_ENV[] = {NV("ENV", "AMP", 0, 0), NV("ENV DEST", "ENV TO", 1, 0)};
+static const ng_t CG_ENV[] = {{"AMP", 0}, {"ENV TO", 0}};
 static const nv_t CE_LFO[] = {NV("MOD", 0, 0, 0), NV("LFO", 0, 1, 1), NV("LFO 2", 0, 1, 1), NV("LFO DEST", 0, 1, 1),
                               NV("MSEQ", 0, 2, 2), NV("MSEQ 2", 0, 2, 2)};   /* (0.9.18: LFO 2, PHASE) */
 static const ng_t CG_LFO[] = {{"MOD", 0}, {"LFO", 0}, {"MSEQ", 0}};
