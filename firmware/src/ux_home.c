@@ -333,6 +333,8 @@ static void ux_tracks_panel(void)
     }
     ux_strip(UXR_STRIP_Y, st, n16, ph, ph);
 }
+static uint32_t ux_trk_draws, ux_trk_ms;              /* TRACKS panels drawn (the host tests count them), the last one's time */
+static uint8_t ux_trk_glow;                             /* .. its glow level */
 static uint32_t ux_tracks_sig(void)
 {
     int32_t ph;
@@ -491,7 +493,7 @@ static void ux_home_foot(char *b, uint32_t n)
 
 static void ux_home_draw(void)
 {
-    static uint32_t head_sig, panel_sig, foot_sig, panel_ms;
+    static uint32_t head_sig, panel_sig, panel_p, foot_sig;   /* (panel_p: the page whose panel is shown, + 1) */
     ux_knob_t k[4];
     char lbl[4][10], right[32];
     uint32_t p = ux_home_page(), all, sig, shed;
@@ -511,7 +513,7 @@ static void ux_home_draw(void)
     }
     ux_home_knobs(k, lbl);
     ux_knobs(k, -1);
-    {   /* the overload guard's sheds: the time it last shed (VISUAL frozen UX_SHED_HOLD_MS after) */
+    {   /* the overload guard's sheds: the time it last shed (VISUAL's and TRACKS' panels frozen UX_SHED_HOLD_MS after) */
         uint32_t sh = load_diag.shed;
         if (sh != uxv.shed) {
             uxv.shed_ms = fm1_ms;
@@ -520,18 +522,26 @@ static void ux_home_draw(void)
         uxv.shed = sh;
         shed = uxv.shed_any ? fm1_ms - uxv.shed_ms : UX_NO_SHED;
     }
-    if (p == UXH_TRACKS) {
-        sig = ux_tracks_sig();
-        if (all || (sig != panel_sig && !(sys_load && fm1_ms - panel_ms < (sys_load == LOAD_ECO ? 70u : 50u)))) {
-            panel_sig = sig;                            /* (LOAD LITE / ECO: the lines at most every 50 / 70 ms) */
-            panel_ms = fm1_ms;
+    if (p == UXH_TRACKS) {                              /* TRACKS: entered at once; then on a change, as the load allows */
+        sig = ux_tracks_sig();                          /* (ux_pace_at: every UX_TRK_MS at most, UX_TRK_SLOW_MS while tight or
+                                                         * LOAD LITE / ECO, frozen while the guard's shed hold or gov_lite; the
+                                                         * header, knob row and status line answer every frame all the same) */
+        uint32_t gl = ux_glow_eff(2), gn = gl != ux_trk_glow;   /* (the glow changed - off when load goes tight: at once) */
+        if (all || panel_p != p + 1u || (sig != panel_sig &&
+            ux_pace_at(fm1_ms, ux_trk_ms, load_tight, shed, gov_lite, sys_load, 0, gn ? 0u : UX_TRK_MS,
+                       gn ? 0u : UX_TRK_SLOW_MS).draw)) {
+            panel_sig = sig;
+            panel_p = p + 1u;
+            ux_trk_glow = (uint8_t)gl;
+            ux_trk_ms = fm1_ms;
             ux_panel_begin(2);
             ux_tracks_panel();
             ux_panel_end();
+            ux_trk_draws++;
         }
-    } else if (all || panel_sig != p + 1u ||           /* VISUAL: entered at once, then as the load allows (ux_pace) */
+    } else if (all || panel_p != p + 1u ||             /* VISUAL: entered at once, then as the load allows (ux_pace) */
                ux_pace(fm1_ms, uxv.ms, load_tight, shed, gov_lite, sys_load, 0).draw) {
-        panel_sig = p + 1u;
+        panel_p = p + 1u;
         uxv.ms = fm1_ms;
         ux_visual_panel();
         ux_panel_end();

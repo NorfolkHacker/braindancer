@@ -50,14 +50,20 @@ static int32_t ux_knob_hot(void);                                               
 typedef struct { uint8_t draw, glow; } ux_pace_t;
 static ux_pace_t ux_pace(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite, uint32_t sys_load,
                          uint32_t glow);
+/* the same rule at other intervals: gap normally, slow while load_tight or LOAD LITE / ECO (ux_pace: UX_VIS_MS,
+ * UX_VIS_SLOW_MS). HOME TRACKS' ridges (fix wave I2): UX_TRK_MS (25 frames a second at most), UX_TRK_SLOW_MS */
+#define UX_TRK_MS 40u
+#define UX_TRK_SLOW_MS 100u
+static ux_pace_t ux_pace_at(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite,
+                            uint32_t sys_load, uint32_t glow, uint32_t gap, uint32_t slow);
 static uint32_t ux_glow_eff(uint32_t glow_level);                               /* the glow as the load allows (ux_pace) */
 static void ux_panel_begin(uint32_t glow_level);                                /* canvas 240x150 for LCD y 56: BG + glow (ux_glow_eff) */
 static void ux_panel_end(void);                                                 /* push the panel (changed cells only) */
-/* where (left) is the location, e.g. "HOME · TRACKS"; right the page number and/or the knobs' short names, e.g.
- * "LVL · LVL · LVL · LVL": dark text on the blend band, LCD y 226..239 */
 /* the status line, LCD y 206..225 (whole strip BG every call, so nothing stays on it); text (NULL: none) in col, left at
  * the page margin: UX_MID a hint, UX_TEXT a readout, UX_ACCENT a refusal / warning, UX_QUEUED pending */
 static void ux_status(const char *text, uint16_t col);
+/* where (left) is the location, e.g. "HOME · TRACKS"; right the page number and/or the knobs' short names, e.g.
+ * "LVL · LVL · LVL · LVL": dark text on the blend band, LCD y 226..239 */
 static void ux_footer(const char *where, const char *right);
 /* the transport for a header's right: "\x87 124 BPM" playing, "\x88 124 BPM" stopped (UF_HDR's play / stop glyphs,
  * tools/gen_aa_font.py CODE: U+25B6 at 0x87, U+25A0 at 0x88), into b (n bytes) */

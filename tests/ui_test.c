@@ -103,9 +103,11 @@ static int16_t scope_buf[SCOPE_N];
 static uint32_t scope_w;
 static uint32_t host_blit_rows;                    /* rows blitted (what a frame draws) */
 static uint32_t host_blit_px;                      /* (ACID FM 3a) pixels blitted (what a frame sends the LCD) */
+static uint32_t host_blit_n;                       /* (fix wave I2) blits (each a window set and a run of cells) */
 static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *p)
 {
     uint32_t i, j;
+    host_blit_n++;
     host_blit_rows += h;
     host_blit_px += w * h;
     for (j = 0; j < h && y + j < 240u; j++)
@@ -11056,6 +11058,90 @@ static int test_ux_tracks(void)
     return bad;
 }
 
+/* HOME TRACKS' pacing (fix wave I2; spec 5.3): the ridges as the load allows, through ux_pace_at: at most every UX_TRK_MS
+ * (40 ms, 25 a second), every UX_TRK_SLOW_MS (100 ms) while load_tight or MENU LOAD LITE / ECO, frozen UX_SHED_HOLD_MS after
+ * the guard's last shed and while gov_lite (the last picture kept); the level history sampled all along (a point every
+ * UXR_MS); the header, knob row and status line still answer in the frame of a turn. All six tracks loud the whole time */
+static void trk_loud(uint32_t i)
+{
+    uint32_t c;
+    for (c = 0; c < NTRK; c++) trk[c].peak = (int32_t)(2000u + ((i * 7u + c * 13u) % 9u) * 600u);
+}
+static uint32_t trk_gaps(uint32_t ms, uint32_t *gmin, uint32_t *gmax, uint32_t *pxr, uint32_t *pxo, uint32_t *bl)
+{   /* ms of frames, all loud: the panels drawn; the gaps between them; the most px a ridge frame / another frame sent */
+    uint32_t i, n0 = ux_trk_draws, last = 0, px, b;
+    *gmin = 0xFFFFFFFFu; *gmax = 0; *pxr = *pxo = 0; *bl = 0;
+    for (i = 0; i < ms / 16u; i++) {
+        uint32_t d = ux_trk_draws;
+        trk_loud(i);
+        px = host_blit_px; b = host_blit_n;
+        frame();
+        px = host_blit_px - px; b = host_blit_n - b;
+        if (ux_trk_draws != d) {
+            if (last) { uint32_t g = fm1_ms - last; if (g < *gmin) *gmin = g; if (g > *gmax) *gmax = g; }
+            last = fm1_ms;
+            if (px > *pxr) { *pxr = px; *bl = b; }
+        } else if (px > *pxo) *pxo = px;
+    }
+    return ux_trk_draws - n0;
+}
+static int test_ux_tracks_pace(void)
+{
+    int bad = 0, ok;
+    uint32_t n, gmin, gmax, pxr, pxo, bl, at0, t0;
+    char hd[240 * UX_H_KNOBS * 2];
+    ui_power_on(); ux_levels_reset(); frame();
+    song.playing = 1;
+    n = trk_gaps(1600, &gmin, &gmax, &pxr, &pxo, &bl);
+    printf("ui:   (TRACKS, six tracks loud: %u panels in 1.6 s, %u..%u ms apart; a ridge frame <= %u px in %u blits (~%u.%u ms of"
+           " LCD at 12 MHz), another frame <= %u px)\n", n, gmin, gmax, pxr, bl, pxr / 750u, pxr % 750u * 10u / 750u, pxo);
+    ok = ux_home_at(UXH_TRACKS) && n >= 30u && n <= 34u && gmin >= UX_TRK_MS && gmax < UX_TRK_MS + 16u;
+    ok &= pxr <= 240u * (UX_H_PANEL + UX_H_STATUS + UX_H_KNOBS + UX_H_HEAD) && pxo <= 240u * (UX_H_STATUS + UX_H_HEAD);
+    bad += check("I2 TRACKS: the ridges at most every 40 ms (25 a second), each frame's LCD send bounded", ok);
+    load_tight = 1;
+    n = trk_gaps(1600, &gmin, &gmax, &pxr, &pxo, &bl);
+    ok = n >= 12u && n <= 17u && gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    load_tight = 0;
+    ui_load = LOAD_LITE; frame();
+    n = trk_gaps(1600, &gmin, &gmax, &pxr, &pxo, &bl);
+    ok &= gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ui_load = LOAD_ECO; frame();
+    n = trk_gaps(1600, &gmin, &gmax, &pxr, &pxo, &bl);
+    ok &= gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ui_load = LOAD_FULL; frame();
+    n = trk_gaps(800, &gmin, &gmax, &pxr, &pxo, &bl);
+    ok &= gmin >= UX_TRK_MS && gmax < UX_TRK_MS + 16u;
+    bad += check("I2 TRACKS: every 100 ms while load_tight or MENU LOAD LITE / ECO", ok);
+    load_diag.shed++; trk_loud(0); frame();                         /* the guard shed a voice: frozen 400 ms */
+    t0 = fm1_ms; n = ux_trk_draws; at0 = uxr.at;
+    while (fm1_ms - t0 < 384u) { trk_loud(fm1_ms); frame(); }
+    ok = ux_trk_draws == n && uxr.at != at0;                        /* (the history sampled all along) */
+    while (ux_trk_draws == n && fm1_ms - t0 < 1000u) { trk_loud(fm1_ms); frame(); }
+    ok &= fm1_ms - t0 >= UX_SHED_HOLD_MS && fm1_ms - t0 < UX_SHED_HOLD_MS + 16u;
+    gov_lite = LOAD_LITE; frame();
+    n = ux_trk_draws; t0 = fm1_ms; at0 = uxr.at;
+    while (fm1_ms - t0 < 800u) { trk_loud(fm1_ms); frame(); }
+    at0 = (uxr.at - at0 + UXR_N) % UXR_N;
+    ok &= ux_trk_draws == n && at0 >= 800u / UXR_MS && at0 <= 800u / UXR_MS + 1u;   /* (a point every UXR_MS, frozen or not) */
+    memcpy(hd, host_screen + UX_Y_KNOBS * 240u, sizeof hd);
+    turn(EN_K2, 3); trk_loud(0);
+    frame();                                                        /* frozen: the knob row and the status answer at once */
+    {
+        uint16_t col;
+        const char *st = ux_home_status(&col);
+        ok &= ux_trk_draws == n && memcmp(hd, host_screen + UX_Y_KNOBS * 240u, sizeof hd) != 0 && st[0] == 'T' && st[1] == '2' &&
+              col == UX_TEXT;
+    }
+    ui.force = 1; frame();                                          /* a page entered (drawn whole): drawn even frozen */
+    ok &= ux_trk_draws == n + 1u;
+    gov_lite = 0; trk_loud(1); fm1_ms += UX_TRK_MS; frame();
+    ok &= ux_trk_draws == n + 2u;
+    bad += check("I2 TRACKS: frozen 400 ms after the guard's last shed and while gov_lite (history sampled; knobs, status at once)", ok);
+    song.playing = 0;
+    ui_power_on();
+    return bad;
+}
+
 /* HOME VISUAL (ACID FM 3a task 7, ux_home.c; spec 4.3, 5.3): rings of the blend round the centre, their colours turning with
  * the bar (stopped: a slow drift), their brightness the level; the song's name and SECTION . BAR over them; KNOB 1..4 M1..M4,
  * a turn in the status line. The load rules (fix 1): the panel redrawn at most every 100 ms, every 200 ms while load_tight or
@@ -12508,6 +12594,7 @@ int main(void)
     bad += test_ux_nav_sections();
     bad += test_ux_nav_home();
     bad += test_ux_tracks();
+    bad += test_ux_tracks_pace();
     bad += test_ux_visual();
     bad += test_lz_edit();
     bad += test_lz_env();

@@ -70,14 +70,20 @@ static void ux_knobs(const ux_knob_t k[4], int32_t hot)
 #ifndef UX_TIGHT
 #define UX_TIGHT() load_tight                          /* (voice.c; the host tests set their own) */
 #endif
-static ux_pace_t ux_pace(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite, uint32_t sys_load,
-                         uint32_t glow)
+static ux_pace_t ux_pace_at(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite,
+                            uint32_t sys_load, uint32_t glow, uint32_t gap, uint32_t slow)
 {
     ux_pace_t r;
-    uint32_t gap = tight || sys_load ? UX_VIS_SLOW_MS : UX_VIS_MS;
+    if (tight || sys_load)
+        gap = slow;
     r.draw = (uint8_t)(since_shed >= UX_SHED_HOLD_MS && !gov_lite && now - last >= gap);
     r.glow = (uint8_t)(tight ? 0u : glow);
     return r;
+}
+static ux_pace_t ux_pace(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite, uint32_t sys_load,
+                         uint32_t glow)
+{
+    return ux_pace_at(now, last, tight, since_shed, gov_lite, sys_load, glow, UX_VIS_MS, UX_VIS_SLOW_MS);
 }
 static uint32_t ux_glow_eff(uint32_t glow_level) { return ux_pace(0, 0, UX_TIGHT(), UX_NO_SHED, 0, 0, glow_level).glow; }
 
