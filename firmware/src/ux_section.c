@@ -2,12 +2,13 @@
 /* Copyright (C) 2026 NorfolkHacker */
 /* ACID FM's section pages on the screen (ux_section.h; 3b spec 2, parent spec 3.3): any PAGES row drawn with the 3a widgets.
  *   header   T3 . the sound, the transport at the right (ux_header)
- *   knobs    the PAGES row's four: the label in plain words (UXS_NAME, UXS_LABEL), the value as params.c param_format shows it, the
- *            bar its place in the range, KNOB 1..4 ACID SLIDE VIOLET ACCENT; MORE: KNOB 1 the setting picked (n/N), KNOB 2
- *            its value
- *   panel    the page's picture over the glow: a synth's EDIT its wave (its FILTER page the filter's response); MORE its
+ *   knobs    the PAGES row's four: the label in plain words (UXS_NAME, UXS_LABEL), the value with its unit (uxs_val: "1.9K",
+ *            "1.0MS"; MORE's rows and the status line the same), the bar its place in the range, KNOB 1..4 ACID SLIDE VIOLET
+ *            ACCENT; MORE: KNOB 1 the setting picked (n/N), KNOB 2 its value
+ *   panel    the page's picture over the glow: a synth's EDIT what it sounds like (the engine's signal path, ported; its
+ *            FILTER page the filter's response; VOICE singing words the word); MORE its
  *            list (ux_more.c); the sections still to come (3b tasks 5..8) their title and the four values as bars
- *   status   a message (STOP TO EDIT in ACCENT), else the knob just turned: its full name and value ("RELEASE . 420 ms"),
+ *   status   a message (STOP TO EDIT in ACCENT), else the knob just turned: its full name and value ("RELEASE . 420MS"),
  *            else the section's first-time hint ("ARP AGAIN: NEXT PAGE", once a power-on, spec 0 rule 7), else on MORE
  *            what its controls do
  *   footer   SECTION . PAGE at the left; n / N of the section's chain (N counts MORE) and the knobs' names (the knob row's,
@@ -73,6 +74,29 @@ static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char
     return l;
 }
 
+/* (3b task 4 fix) a value as the knob row, MORE's rows and the status line all show it (spec 0 rule 4: one form): params.c
+ * param_format's, its unit after it, compact so a knob's column (48 px) holds it: "355HZ", "1.9K" (kHz; from 10 kHz whole:
+ * "16K"), "1.0MS", "1.00S", "50%", "+12ST", "10CT". A unit that would not fit is left out (none on the synth pages: their
+ * every value is checked, tests/ui_test.c) */
+static const char *const uxs_unit_j[] = {"Hz", "kHz", "ms", "s", "st", "ct", "dB", "%"};   /* (param_format's: not drawn) */
+static const char *const UXS_UNIT[] = {"HZ", "K", "MS", "S", "ST", "CT", "DB", "%"};       /* .. each as it is drawn */
+typedef char uxs_unit_ok[NELEM(uxs_unit_j) == NELEM(UXS_UNIT) ? 1 : -1];
+static void uxs_val(const param_desc_t *d, int32_t v, char *b, uint32_t nb)
+{
+    const char *u = "", *c = "";
+    char t[16];
+    uint32_t i;
+    param_format(d, v, t, &u);
+    for (i = 0; u && i < NELEM(UXS_UNIT); i++)
+        if (str_eq(u, uxs_unit_j[i]))
+            c = UXS_UNIT[i];
+    if (d->fmt == F_CUTOFF && CUTOFF_HZ[v & 127] >= 10000u)   /* (10 kHz and up: whole kHz) */
+        fmt_int(t, (int32_t)((CUTOFF_HZ[v & 127] + 500u) / 1000u));
+    str_cpy(b, t, nb);
+    if (c[0] && text_w(&UF_VAL, b) + text_w(&UF_VAL, c) <= UX_COL_W - 4)
+        str_cpy(b + str_len(b), c, nb - str_len(b));
+}
+
 #define UXS_HINT " AGAIN: NEXT PAGE"                    /* (after the section's name: what its button does next) */
 #define UXM_HINT "SELECT SCROLLS \xB7 KNOB 2 SETS"      /* MORE: what its controls do (KNOB 1 picks: its column says so) */
 #define UXS_PICK "SETTING"                              /* MORE's KNOB 1 */
@@ -134,7 +158,7 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
             str_cpy(k[0].value + str_len(k[0].value), "/", sizeof k[0].value - str_len(k[0].value));
             fmt_int(k[0].value + str_len(k[0].value), (int32_t)b);
             k[0].bar = (uint8_t)(b > 1u ? (a - 1u) * 255u / (b - 1u) : 255u);
-            k[1].label = uxm_row_text(&pg->more->rows[s], v, sizeof v, 0, &k[1].bar);
+            k[1].label = uxm_row_text(&pg->more->rows[s], v, sizeof v, &k[1].bar);
             if (pg->more->rows[s].kind == UXR_ACTION)
                 str_cpy(v, "GO", sizeof v);
             str_cpy(k[1].value, v, sizeof k[1].value);
@@ -144,12 +168,9 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(pg, c, &vp);
-        const char *u;
-        char v[16];
         if (!d || !vp || !d->label || d->label[0] == '-')
             continue;
-        param_format(d, *vp, v, &u);
-        str_cpy(k[c].value, v, sizeof k[c].value);
+        uxs_val(d, *vp, k[c].value, sizeof k[c].value);
         k[c].label = uxs_label(nav_sec(), pg->scope == SC_GLOBAL, page_id(pg, c), d->label);
         if (d->max > d->min) {
             int32_t b = clamp(((int32_t)*vp - d->min) * 255 / (d->max - d->min), 0, 255);
@@ -194,17 +215,12 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
             uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
             uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
             if (s < uxm_n(pg->more))
-                nm = uxm_row_text(&pg->more->rows[s], v, sizeof v, 1, &bar);
+                nm = uxm_row_text(&pg->more->rows[s], v, sizeof v, &bar);
         } else if (pg->graph != GR_MORE) {
             int16_t *vp;
             const param_desc_t *d = page_desc(pg, (uint32_t)h, &vp);
             if (d && vp && d->label && d->label[0] != '-') {
-                const char *u = "";
-                param_format(d, *vp, v, &u);
-                if (u && u[0]) {
-                    str_cpy(v + str_len(v), " ", sizeof v - str_len(v));
-                    str_cpy(v + str_len(v), u, sizeof v - str_len(v));
-                }
+                uxs_val(d, *vp, v, sizeof v);
                 nm = uxs_label(sec, pg->scope == SC_GLOBAL, page_id(pg, (uint32_t)h), d->label);
             }
         }
@@ -226,162 +242,460 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
 }
 
 /* ------------------------------------------------------------------------- the synths' EDIT picture --- */
-/* (3b task 4, spec 2.1) a synth's EDIT pages draw its waveform: two cycles of the engine's shape from the track's stored
- * settings (the knobs' values: a turn redraws it, once; silence or playing, nothing per frame), a short render of the
- * oscillator as the old creatures' own math had it (ANALOG's two oscillators through its filter and DRIVE, PHASE's bent
- * cosine, LOFI's chip waves, its WRAM table, its BYTE / FLOAT formula (eng_lofi.c lofi_algo_at), NOISE's colour or its
- * register, VOICE's glottal pulses through its vowel's formants (eng_formant.c vowel_at)); FILTER the part's filter's
- * response (ui_lzedit.c ed_resp). Nothing here runs in the audio path */
-#define UXS_WN 128u              /* two cycles of 64 */
-static int32_t uxs_x2(int32_t l)                        /* 2^(l / 256), Q12 */
-{
-    int32_t i = l >> 8, f = l & 255, m = 4096 + ((f * (2690 + ((f * 1407) >> 8))) >> 8);
-    return i >= 0 ? m << i : i > -31 ? m >> -i : 0;
-}
-static int32_t uxs_anb(uint32_t w, uint32_t q)          /* ANALOG's SAW SQR TRI SIN at phase q (16 bit), Q15 */
-{
-    q &= 65535u;
-    w &= 3u;
-    return w == 0u ? 32767 - (int32_t)q : w == 1u ? (q < 32768u ? 32767 : -32767) :
-           w == 2u ? (q < 32768u ? (int32_t)q * 2 - 32768 : 98303 - (int32_t)q * 2) : og_sin(q);
-}
+/* (3b task 4; its fix: the picture is the sound) a synth's EDIT pages draw what it plays: the engine's own signal path, in
+ * its order and with its ranges, ported from its render (eng_analog.c analog_dispatch, eng_phase.c phase_render, eng_lofi.c
+ * lofi_render, eng_noise.c noise_render; VOICE: glottal pulses through its vowel's formants) with the dsp.c helpers they use,
+ * from the track's stored settings. The note is C4 as it strikes (uxs_vmod: the envelope at its peak, ENV > FILTER and
+ * SHAPE with it; no LFO), MORPH where the knob is (the engines slew to it). A short render a change (a turn redraws it,
+ * once; idle or playing, nothing a frame), never in the audio path; tests/ui_test.c checks it against the engines' own
+ * output. ANALOG's SOUND page draws its oscillators raw (WAVE DETUNE MIX NOISE: before DRIVE and the filter), its TONE
+ * and VOICE the sound out of DRIVE and the filter. The panel's 128 columns hold the window's samples (uxs_win: two cycles
+ * of C4 after two to settle; DUST a fifth of a second, for its sparse impulses; LFSR 16 cycles, its register's steps),
+ * each the sample farthest from 0 in it (of two about as far, the first). FILTER draws the part's filter's response (ui_lzedit.c ed_resp) */
+#define UXS_WN 128u              /* the panel's columns */
+#define UXS_C4 (60 * 16)         /* the note drawn (1/16 semitones) */
+#define UXS_DUST 8192u           /* DUST's window, samples */
 static uint32_t uxs_rnd(uint32_t *r) { *r ^= *r << 13; *r ^= *r >> 17; *r ^= *r << 5; return *r; }
-/* ANALOG: WAVE (MORPH towards the next), osc 2 at INT and DETUNE mixed in by MIX, NOISE, the filter (CUTOFF at the note
- * C4, RESO), DRIVE (tanh); a cycle for the filter to settle first */
-static void uxs_wave_analog(const int16_t *p, int32_t *o)
+/* the window's samples into the columns o[]: pre samples to settle first, then len across the 128 */
+typedef struct { int32_t *o; uint32_t pre, len, j, c; } uxs_tap_t;
+static void uxs_tap_on(uxs_tap_t *t, int32_t *o, uint32_t pre, uint32_t len)
 {
-    uint32_t w = (uint32_t)p[P_E0] & 7u, i, rep, r = 4096, rs = 2654435761u, inc2;
-    int32_t det = p[P_E1], mix = (p[P_E2] * 516 >> 8), nz = (p[P_E3] * 361 >> 8), mo = clamp(p[P_MORPH] * 256 / 127, 0, 256), k;
-    int32_t pos = (int32_t)w * 256 + mo * 3, fr = pos & 255, i0 = pos >> 8, g, a1, a2, a3, ic1 = 0, ic2 = 0, dg;
-    int32_t r5 = 256 + det * 2022 / 127 * (256 - mo / 2) / 256 + mo * 3, d3 = det * 218 * (256 + 4 * mo) >> 8;
-    uint32_t wd = (uint32_t)(32768 - (mo * 27525 >> 8));   /* (PWM's width) */
-    for (k = p[P_E7]; k > 0; k--) r = (r * 4340u) >> 12;   /* (INTERVAL: osc 2 semitones away, DETUNE cents) */
-    for (k = p[P_E7]; k < 0; k++) r = (r * 3866u) >> 12;
-    r += r * (uint32_t)det / 1200u;
-    inc2 = 1024u * r >> 12;
-    g = clamp(uxs_x2(-992 - 1536 + ((p[P_E4] * 4851) >> 8) + 9 * 256 / 12), 4, 1843);
-    g = (g * 12868) >> 12;
-    g = clamp(g + (((((g * g) >> 12) * g) >> 12) / 3), 1, 12288);
-    k = 8192 - (p[P_E5] * 16017 >> 8);
-    a1 = (4096 * 4096) / (4096 + ((g * (g + k)) >> 12));
-    a2 = (g * a1) >> 12;
-    a3 = (g * a2) >> 12;
-    dg = 256 + (p[P_E6] * 3612 >> 8);
-    for (rep = 0; rep < 2u; rep++)
-        for (i = rep ? 0u : 64u; i < UXS_WN; i++) {
-            uint32_t P = i * 1024u, q = P & 65535u, q2 = (i * inc2) & 65535u;
-            int32_t s, v1, v2, v3, u;
-            if (w < 4u) {
-                int32_t x1 = (uxs_anb((uint32_t)i0, q) * (256 - fr) + uxs_anb((uint32_t)i0 + 1u, q) * fr) >> 8;
-                int32_t x2 = (uxs_anb((uint32_t)i0, q2) * (256 - fr) + uxs_anb((uint32_t)i0 + 1u, q2) * fr) >> 8;
-                s = (x1 * (256 - mix / 2) + x2 * (mix / 2)) >> 8;
-            } else if (w == 4u)
-                s = ((q < wd ? 32767 : -32767) * (256 - mix / 2) + (q2 < wd ? 32767 : -32767) * (mix / 2)) >> 8;
-            else if (w == 5u)
-                s = (uxs_anb(0, q) * (256 - mix) + uxs_anb(0, (q * (uint32_t)r5) >> 8) * mix) >> 8;
-            else if (w == 6u)
-                s = (uxs_anb(0, q) * (256 - mix) + ((uxs_anb(0, q) * og_sin((P * (uint32_t)r5) >> 8)) >> 15) * mix) >> 8;
+    t->o = o;
+    t->pre = pre;
+    t->len = len ? len : 1u;
+    t->j = 0;
+    t->c = 0xFFFFFFFFu;
+}
+static int uxs_tap(uxs_tap_t *t, int32_t s)              /* a sample in; 0: the window is full */
+{
+    uint32_t j = t->j++, c;
+    if (j < t->pre)
+        return 1;
+    j -= t->pre;
+    c = j * UXS_WN / t->len;
+    if (c != t->c) {
+        t->c = c;
+        t->o[c] = s;
+    } else {
+        int32_t a = s < 0 ? -s : s, b = t->o[c] < 0 ? -t->o[c] : t->o[c];
+        if (a > b + (b >> 6) + 2)                       /* (clearly farther: two of a size, the first stays) */
+            t->o[c] = s;
+    }
+    return j + 1u < t->len;
+}
+/* the window for engine e at settings p: pre samples to settle, len drawn */
+static void uxs_win(const engine_t *e, const int16_t *p, uint32_t *pre, uint32_t *len)
+{
+    uint32_t cyc = 0xFFFFFFFFu / pitch_inc(UXS_C4);     /* (a cycle of C4: ~169 samples) */
+    *pre = 2u * cyc;
+    *len = 2u * cyc;
+    if (e == &ENG_NOISE && p[P_E0] == NZ_DUST)
+        *len = UXS_DUST;
+    else if (e == &ENG_NOISE && p[P_E0] == NZ_LFSR)
+        *len = 16u * cyc;
+}
+/* the note as voice.c's track_render hands it to the engine: C4 at full level, the envelope at its peak (its FILTER and
+ * SHAPE amounts with it), velocity 100 (no accent), no LFO, no drift, no bend */
+static void uxs_vmod(const int16_t *p, vmod_t *m)
+{
+    m->pitch16 = UXS_C4;
+    m->inc = pitch_inc(UXS_C4);
+    m->amp0 = m->amp1 = 32767;
+    m->envq15 = 32767;
+    m->fine = 0;
+    m->cutoff = (32767 * p[P_ED_FLT]) >> 7;
+    m->shape = (64 << 8) + ((32767 * p[P_ED_SHP]) >> 7);
+}
+/* ANALOG (analog_dispatch: analog_render, analog_ext, analog_morph): the two oscillators (MORPH, PWM's width, SYNC RING
+ * SAW3, osc 2 at INTERVAL and DETUNE), MIX (osc 2 0 .. 100 %), NOISE; then (raw 0) DRIVE (1x .. 3x, only above 0) before
+ * the filter (FILTER LP HP BP; COMB: open here, its comb the part's) at CUTOFF and RESO, its soft knee */
+static void uxs_wave_analog(const int16_t *p, int32_t *o, uint32_t pre, uint32_t len, int raw)
+{
+    vmod_t m;
+    uxs_tap_t tp;
+    tsvf_t flt;
+    uint32_t wave = (uint32_t)p[P_E0] & 7u, ft = (uint32_t)p[P_FTYPE] & 3u, ph0 = 0, ph1 = 0x40000000u, ph2 = 0, inc1, inc2;
+    uint32_t inc3 = 0, r = 0, pw;
+    int32_t mq = clamp(p[P_MORPH], 0, 127) << 8, mpos = -1, mx, det, m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200;
+    int32_t drv = p[P_E6], drive = 32768 + drv * 512, kd = 8192 - p[P_E5] * 7600 / 127, ic1 = 0, ic2 = 0, nst = 0x1234567, s;
+    uxs_vmod(p, &m);
+    inc1 = m.inc;
+    tsvf_coef(&flt, (p[P_E4] << 8) + m.cutoff, p[P_E5]);   /* (C4: no key tracking) */
+    if (wave < 4u && (mq || m.shape != (64 << 8)))      /* (an_mpos) */
+        mpos = clamp((int32_t)wave * 256 + clamp(mq + m.shape - (64 << 8), 0, 127 << 8) * 768 / (127 << 8), 0, 1536);
+    mx = wave >= AW_SYNC ? clamp(mq + m.shape - (64 << 8), 0, 127 << 8) : 0;   /* (an_mext) */
+    det = p[P_E1] + (wave == AW_SAW3 ? mx * 40 / (127 << 8) : 0);
+    pw = 0x80000000u + (uint32_t)(clamp((m.shape - (64 << 8)) + (wave == 4u ? mq * 2 : 0), -16384, 65000) << 15);   /* (an_pw) */
+    if (wave >= AW_SYNC) {                              /* (analog_ext) */
+        r = 16u + (uint32_t)det + (wave != AW_SAW3 ? (uint32_t)(mx * 64 / (127 << 8)) : 0u);
+        inc2 = wave == AW_SAW3 ? cents_inc(m.pitch16 + p[P_E7] * 16, det, 0) : (inc1 >> 4) * r;
+        if (wave != AW_SAW3 && p[P_E7]) {
+            inc2 = (cents_inc(m.pitch16 + p[P_E7] * 16, 0, 0) >> 4) * r;
+            r = inc1 >> 8 ? (inc2 / (inc1 >> 8)) >> 4 : r;
+            if (r < 1u)
+                r = 1u;
+        }
+        inc3 = wave == AW_SAW3 ? cents_inc(m.pitch16, -det, 0) : 0u;
+    } else
+        inc2 = p[P_E1] || p[P_E7] ? cents_inc(m.pitch16 + p[P_E7] * 16, p[P_E1], 0) : inc1;
+    uxs_tap_on(&tp, o, pre, len);
+    do {
+        int32_t a, b;
+        if (mpos >= 0) {
+            a = an_morph(mpos, ph0, inc1);
+            b = an_morph(mpos, ph1, inc2);
+        } else if (wave < AW_SYNC) {
+            switch (wave) {
+            case 1: a = osc_pulse(ph0, inc1, 0x80000000u); b = osc_pulse(ph1, inc2, 0x80000000u); break;
+            case 2: a = osc_tri(ph0); b = osc_tri(ph1); break;
+            case 3: a = osc_sine(ph0); b = osc_sine(ph1); break;
+            case 4: a = osc_pulse(ph0, inc1, pw); b = osc_pulse(ph1, inc2, pw); break;
+            default: a = osc_saw(ph0, inc1); b = osc_saw(ph1, inc2); break;
+            }
+        } else {
+            a = osc_saw(ph0, inc1);
+            if (wave == AW_SAW3) {
+                b = (osc_saw(ph1, inc2) + osc_saw(ph2, inc3)) >> 1;
+                ph2 += inc3;
+            } else if (wave == AW_SYNC)
+                b = osc_saw(ph1, inc2);
             else
-                s = (uxs_anb(0, P) + uxs_anb(0, P + (((P >> 4) * (uint32_t)d3) >> 12)) +
-                     uxs_anb(0, P - (((P >> 4) * (uint32_t)d3) >> 12))) / 3;
-            s = (s + ((((int32_t)(uxs_rnd(&rs) >> 16) - 32768) * nz) >> 7)) >> 3;   /* (NOISE) Q12 */
-            v3 = s - ic2;
-            v1 = (a1 * ic1 + a2 * v3) >> 12;
-            v2 = ic2 + ((a2 * ic1 + a3 * v3) >> 12);
+                b = ((a >> 1) * (osc_sine(ph1) >> 1)) >> 13;
+        }
+        ph1 += inc2;
+        if (wave == AW_SYNC && ph0 + inc1 < ph0)
+            ph1 = ((ph0 + inc1) >> 4) * r;
+        ph0 += inc1;
+        s = mulq15(a, m1) + mulq15(b, m2);
+        if (nz)
+            s += mulq15((int32_t)(noise32(&nst) >> 17) - 16384, nz);
+        if (!raw) {
+            if (drv)
+                s = softclip(((s >> 2) * (drive >> 2)) >> 11);
+            s = soft_knee(svf_mode(&flt, s >> 1, &ic1, &ic2, ft, kd), 16000) << 1;
+        }
+    } while (uxs_tap(&tp, s));
+}
+/* PHASE (phase_render): the bent -cos at BRIGHT (DCW, the classic range: up to 56000 of 65535) and SWEEP (ENV, at the
+ * strike), WAVE then WAVE 2 a cycle each, MORPH towards the next WAVE, FEEDBACK bending its phase, line 2 at DETUNE
+ * (LINE 2 MIX / RING), SUB an octave down */
+static void uxs_wave_phase(const int16_t *p, int32_t *o, uint32_t pre, uint32_t len)
+{
+    vmod_t m;
+    uxs_tap_t tp;
+    pd_t b1, b2, bm;
+    uint32_t w1 = (uint32_t)p[P_E0] & 7u, w2 = (uint32_t)p[P_E1], dcw, inc, inc2, ph0 = 0, ph1 = 0, ph2 = 0;
+    int32_t depth, det = p[P_E4], line2 = det != 0 || p[P_E5], ring = p[P_E5], sub = p[P_E6] * 200;
+    int32_t mq = clamp(p[P_MORPH], 0, 127) << 8, tg0 = 0, tg1 = 0, fb = p[P_E7] << 8, f1 = 0, f2 = 0, mf = 0, s;
+    uxs_vmod(p, &m);
+    inc = m.inc;
+    depth = (p[P_E2] << 8) + m.cutoff + mulq15(m.envq15, p[P_E3] * 256);
+    depth = clamp(depth + (m.shape - (64 << 8)), 0, 127 << 8);
+    dcw = (uint32_t)depth * 65535u / (127u << 8);
+    dcw = (dcw * 56000u) >> 16;
+    inc2 = cents_inc(m.pitch16, det, 0);
+    if (mq) {
+        int32_t pos = (int32_t)w1 * 256 + mq * 3 / 127;
+        w1 = ((uint32_t)pos >> 8) & 7u;
+        mf = (pos & 255) << 8;
+        pd_setup(&bm, (w1 + 1u) & 7u, dcw);
+    }
+    pd_setup(&b1, w1, dcw);
+    pd_setup(&b2, w2 ? w2 - 1u : w1, dcw);
+    uxs_tap_on(&tp, o, pre, len);
+    do {
+        uint32_t old = ph0, pp = ((ph0 >> 16) + (uint32_t)((((f1 + f2) >> 1) * (fb >> 8)) >> 8)) & 0xFFFFu;
+        s = pd_wave(tg0 ? &b2 : &b1, pp);
+        if (mf && !tg0)
+            s += ((pd_wave(&bm, pp) - s) * (mf >> 8)) >> 8;
+        f2 = f1;
+        f1 = s;
+        ph0 += inc;
+        if (ph0 < old)
+            tg0 ^= 1;
+        if (line2) {
+            uint32_t old2 = ph1;
+            int32_t s2 = pd_wave(tg1 ? &b2 : &b1, ph1 >> 16);
+            ph1 += inc2;
+            if (ph1 < old2)
+                tg1 ^= 1;
+            s = ring ? mulq15(s, s2) : (s + s2) >> 1;
+        }
+        if (sub) {
+            ph2 += inc >> 1;
+            s += mulq15(osc_sine(ph2), sub);
+        }
+    } while (uxs_tap(&tp, s));
+}
+/* LOFI (lofi_render): PLS (DUTY: 12.5 .. 50 %; STEP 12.5 25 50 75), TRI (STEP: 32 steps), SAW, NOIS, a WRAM TABLE; MORPH
+ * towards the next; BEND, VIBRATO (a block at a time); held for CHIP (4B/2: two samples) and CRUSH, in CHIP's bits
+ * (4BIT 4B/2 STEP 4, 8BIT 8, 1BIT 1), MASK, LOFI_SOFT and the FILTER page's filter. BYTE / FLOAT: the formula over its
+ * first 1024 steps of t (lofi_algo_at), in CHIP's bits */
+static void uxs_wave_lofi(const int16_t *p, int32_t *o, uint32_t pre, uint32_t len)
+{
+    static const uint8_t STEP_DUTY[4] = {1, 2, 4, 6};
+    vmod_t m;
+    uxs_tap_t tp;
+    tsvf_t flt;
+    uint32_t chip = (uint32_t)p[P_E0], wave = (uint32_t)p[P_E1], stepc = chip == CHIP_STEP, ft = (uint32_t)p[P_FTYPE] & 3u;
+    uint32_t ph = 0, lfsr = 0x7FFFu, inc0, bx = 0, bk0 = 0, bk1 = 0, vph = 0, i;
+    uint32_t duty = stepc ? 0x20000000u * STEP_DUTY[(p[P_E2] / 32) & 3] : 0x20000000u * (1u + (uint32_t)p[P_E2] / 32u);
+    int32_t crush = stepc ? 0 : p[P_E3], bits = chip == CHIP_8BIT ? 8 : chip == CHIP_1BIT ? 1 : 4;
+    int32_t hold = 1 + crush / 8 + (chip == 1u ? 1 : 0), held = 0, cnt = 0, ic1 = 0, ic2 = 0, msk = p[P_E7] >> 1, sm = 0;
+    int32_t wdc = 0, mf = 0, rs = p[P_FRES] > 50 ? p[P_FRES] : 50, kd = 8192 - rs * 7600 / 127, mo, y = 0;
+    const uint8_t *wr = WRAM[((uint32_t)p[P_E2] >> 3) & 15u];
+    if (wave >= RW_BYTE) {                              /* BYTE / FLOAT: the formula, in the chip's bits */
+        uint32_t lv = chip == CHIP_8BIT ? 256u : chip == CHIP_1BIT ? 2u : 16u;
+        for (i = 0; i < UXS_WN; i++) {
+            int32_t s = wave == RW_BYTE ?
+                ((int32_t)(lofi_algo_at(0, (uint32_t)p[P_E2] >> 2, i * 8u, 1u + ((uint32_t)p[P_E3] >> 3)) & 255) - 128) * 256 :
+                lofi_algo_at(1, (uint32_t)p[P_E2] >> 2, i * 8u, 0);
+            s = clamp(s, -32767, 32767);
+            if (lv < 256u) {
+                int32_t q = (int32_t)(((uint32_t)(s + 32768) * lv) >> 16);
+                s = (int32_t)((q * 65535) / (int32_t)(lv - 1u)) - 32768;
+            }
+            o[i] = s;
+        }
+        return;
+    }
+    uxs_vmod(p, &m);
+    inc0 = pitch_inc(m.pitch16);
+    tsvf_coef(&flt, (p[P_FCUT] << 8) + m.cutoff, rs);
+    if (p[P_E6]) {                                      /* (lofi_bend_set) */
+        bx = 32768u - (uint32_t)p[P_E6] * 250u;
+        bk0 = (32768u << 16) / bx;
+        bk1 = (32767u << 16) / (65535u - bx);
+    }
+    mo = clamp((clamp(p[P_MORPH], 0, 127) << 8) + m.shape - (64 << 8), 0, 127 << 8);
+    if (wave == RW_WRAM || mo) {
+        if (mo) {
+            int32_t pos = clamp((int32_t)wave * 256 + mo * 768 / (127 << 8), 0, RW_WRAM * 256);
+            wave = (uint32_t)pos >> 8;
+            mf = (pos & 255) << 8;
+        }
+        if ((uint32_t)p[P_E1] == RW_WRAM || wave == RW_WRAM || (mf && wave + 1u == RW_WRAM)) {   /* (the table's mean) */
+            int32_t sum = 0;
+            for (i = 0; i < 16u; i++)
+                sum += bits == 1 ? ((wr[i] >> 7) + ((wr[i] >> 3) & 1)) * 2 - 2 : (wr[i] >> 4) + (wr[i] & 15) - 15;
+            wdc = bits == 1 ? sum * 32767 / 32 : sum * 2 * Q4 / 32;
+        }
+    }
+    uxs_tap_on(&tp, o, pre, len);
+    for (;;) {                                          /* a block of CTL: the vibrato's step */
+        uint32_t inc = inc0;
+        if (p[P_E5])
+            inc += (uint32_t)(((int32_t)(inc >> 12) * (((osc_sine(vph) >> 8) * p[P_E5]) >> 4)) >> 4);
+        vph += 0x01000000u;
+        for (i = 0; i < CTL; i++) {
+            if (--cnt <= 0) {
+                uint32_t q = bits < 16, ph0 = ph;
+                int32_t s;
+                if (p[P_E6] && wave != RW_NOIS) {       /* (lofi_bend) */
+                    uint32_t b = ph >> 16;
+                    b = b < bx ? (b * bk0) >> 16 : 32768u + (((b - bx) * bk1) >> 16);
+                    ph0 = b << 16 | (ph & 0xFFFFu);
+                }
+                cnt = hold;
+                switch (wave) {
+                case RW_TRI:
+                    if (stepc) {
+                        uint32_t k = ph0 >> 27;
+                        s = (int32_t)(k < 16u ? 15u - k : k - 16u) * (2 * Q4) - 15 * Q4;
+                        q = 0;
+                    } else
+                        s = osc_tri(ph0);
+                    break;
+                case RW_SAW:
+                    s = (int32_t)(ph0 >> 16) - 32768;
+                    break;
+                case RW_NOIS: {
+                    uint32_t l = lfsr;
+                    if ((ph + inc * (uint32_t)hold) < ph || chip == 3u)
+                        l = (l >> 1) | (((l ^ (l >> 1)) & 1u) << 14);
+                    lfsr = l;
+                    s = (l & 1u) ? 32767 : -32768;
+                    break;
+                }
+                case RW_WRAM: {
+                    uint32_t k = ph0 >> 27, b = wr[k >> 1];
+                    b = (k & 1u) ? b & 15u : b >> 4;
+                    s = (bits == 1 ? (b >= 8u ? 32767 : -32767) : ((int32_t)b * 2 - 15) * Q4) - wdc;
+                    q = 0;
+                    break;
+                }
+                default:
+                    s = (ph0 < duty ? 32767 : -32768) - ((int32_t)(duty >> 16) - 32768);
+                    break;
+                }
+                if (mf >> 8)
+                    s += ((lofi_mto(wave + 1u, ph0, duty, wr, wdc, lfsr) - s) * (mf >> 8)) >> 8;
+                if (q)
+                    s = ((s + (1 << (15 - bits))) >> (16 - bits)) << (16 - bits);
+                if (crush > 64)
+                    s = (s >> 12) << 12;
+                held = msk ? (((s >> 8) ^ msk) << 8) : s;   /* (lofi_mask) */
+            }
+            ph += inc;
+            sm = LOFI_SOFT(held >> 1, sm);
+            y = soft_knee(svf_mode(&flt, sm, &ic1, &ic2, ft, kd), 16000) << 1;
+            if (!uxs_tap(&tp, y))
+                return;
+        }
+    }
+}
+/* eng_noise.c's noise_inc and isqrt32, again: called from here too, the compiler would stop putting them inside noise_render
+ * (its code changed: tests/target_budget.py) */
+static uint32_t uxs_ninc(int32_t p)
+{
+    uint32_t sh = 0, inc;
+    while (p > 2047) {
+        p -= 192;
+        sh++;
+    }
+    inc = pitch_inc((uint32_t)clamp(p, 0, 2047));
+    return sh && inc >= 0x80000000u >> (sh - 1u) ? 0xFFFFFFFFu : inc << sh;
+}
+static uint32_t uxs_isqrt(uint32_t x)
+{
+    uint32_t r = 0, b = 1u << 30;
+    while (b > x)
+        b >>= 2;
+    while (b) {
+        if (x >= r + b) {
+            x -= r + b;
+            r = (r >> 1) + b;
+        } else
+            r >>= 1;
+        b >>= 2;
+    }
+    return r;
+}
+/* NOISE (noise_render): SOURCE ANLG (white, DENSITY's impulses), DUST (the impulses alone), LFSR (the register of LENGTH
+ * clocked CLOCK semitones above the key), META (a short register's cycle a period of the key); COLOR white .. pink ..
+ * brown; the filter at FREQ (KEY TRACK: none at C4), low-pass to band-pass as PEAK rises, its level made up; DRIFT a block
+ * at a time (from its start: its wander takes seconds); CRUSH (ANLG, DUST) held and fewer bits */
+static void uxs_wave_noise(const int16_t *p, int32_t *o, uint32_t pre, uint32_t len)
+{
+    vmod_t m;
+    uxs_tap_t tp;
+    uint32_t mode = (uint32_t)p[P_E0] & 3u, sel = ((uint32_t)p[P_E5] >> 4) & 7u, ph = 0, reg = 0, taps = NOISE_TAPS[sel], i;
+    int32_t res = p[P_E3], drft = p[P_E6], crsh = mode < NZ_LFSR ? p[P_E7] : 0, ic1 = 0, ic2 = 0, b0 = 0, b1 = 0, b2 = 0;
+    int32_t br = 0, s3 = 0, drift = 0, rng = (int32_t)((60u + 1u) * 0x9E3779B9u);   /* (noise_note_on's seed, the note C4) */
+    uxs_vmod(p, &m);
+    uxs_tap_on(&tp, o, pre, len);
+    for (;;) {                                          /* a block of CTL: noise_render's set-up */
+        int32_t d16 = 0, gain = 32767, gq, colr, cut, k, a1, a2, a3, g, bpg, mix, cf, thr = 0;
+        uint32_t inc = 0;
+        if (drft) {
+            int32_t tg = s3 >> 16, cnt = s3 & 0xFFFF;
+            if (--cnt <= 0) {
+                uint32_t r = noise32(&rng);
+                tg = (int32_t)(r >> 16) - 32768;
+                cnt = 1024 + (int32_t)(r & 3071u);
+            }
+            s3 = (int32_t)((uint32_t)tg << 16 | (uint32_t)cnt);
+            drift += ((tg << 4) - drift) >> 10;
+            d16 = ((drift >> 11) * drft * drft) >> 14;
+            gain = 32767 - ((((32767 - (drift >> 4)) >> 1) * drft) >> 8);
+        }
+        colr = clamp((p[P_E1] << 8) + m.shape - (64 << 8), 0, 127 << 8);
+        cf = colr <= (64 << 8) ? colr << 1 : ((colr - (64 << 8)) * 520) >> 8;
+        cut = (p[P_E2] << 8) + m.cutoff + (((m.pitch16 - 60 * 16) * p[P_E4] * 151) >> 10) + ((d16 * 4785) >> 8);
+        cut = clamp(cut, 0, 127 << 8);
+        g = SVF_G[cut >> 8];
+        if (cut < (127 << 8))
+            g += ((SVF_G[(cut >> 8) + 1] - g) * (cut & 255)) >> 8;
+        k = 8192 - res * 7800 / 127;
+        a1 = (int32_t)((4096u << 13) / (uint32_t)(4096 + ((g * (g + k)) >> 12)));
+        a2 = (a1 * g) >> 12;
+        a3 = (a2 * g) >> 12;
+        bpg = (int32_t)uxs_isqrt((uint32_t)k << 12);
+        mix = res * 258;
+        {
+            int32_t wf = 32767 - ((colr * 230) >> 8), mk = (((((127 << 8) - cut) >> 8) * 7) * wf) >> 15;
+            mk += 214 + (mode == NZ_DUST ? 512 : 0);
+            if (mk > 1279)
+                mk = 1279;
+            gq = (4096 + ((mk & 255) << 4)) << (mk >> 8);
+            gq = (gq * (gain >> 3)) >> 12;
+            if (gq > 65535)
+                gq = 65535;
+        }
+        if (mode <= NZ_DUST && (p[P_E5] || mode == NZ_DUST)) {
+            uint32_t dn = p[P_E5] ? (uint32_t)p[P_E5] : 48u, e = dn * 22u, r = 1u << (e >> 8);
+            r += (r * (e & 255u)) >> 8;
+            thr = (int32_t)((r * 97391u) >> 16);
+        }
+        if (mode == NZ_LFSR) {
+            uint32_t mask = taps;
+            inc = uxs_ninc(m.pitch16 + p[P_E7] * 16 + d16);
+            mask |= mask >> 1;
+            mask |= mask >> 2;
+            mask |= mask >> 4;
+            mask |= mask >> 8;
+            mask |= mask >> 16;
+            if (!(reg & mask))
+                reg = (uint32_t)rng | 1u;
+            reg &= mask;
+        } else if (mode == NZ_META)
+            inc = p[P_E7] || d16 ? uxs_ninc(m.pitch16 + p[P_E7] * 16 + d16) : m.inc;
+        for (i = 0; i < CTL; i++) {
+            int32_t w, x, v1, v2, v3, y;
+            if (mode <= NZ_DUST) {
+                uint32_t r = noise32(&rng);
+                w = mode == NZ_ANLG ? (int32_t)(r >> 17) - 16384 : 0;
+                if ((int32_t)(r & 0xFFFFu) < thr) {
+                    int32_t a = 8192 + (int32_t)((r >> 18) & 0x7FFFu);
+                    w += (r & 0x20000u) ? a : -a;
+                }
+            } else if (mode == NZ_LFSR) {
+                uint32_t ol = ph;
+                ph += inc;
+                if (ph < ol)
+                    reg = (reg >> 1) ^ (-(reg & 1u) & taps);
+                w = (reg & 1u) ? 12000 : -12000;
+            } else {
+                uint32_t j = ((ph >> 16) * NOISE_SEQ[sel].len) >> 16;
+                ph += inc;
+                w = (NOISE_SEQ[sel].w[j >> 5] >> (j & 31u)) & 1u ? NOISE_SEQ[sel].hi : NOISE_SEQ[sel].lo;
+            }
+            x = w;
+            if (colr) {
+                int32_t pk;
+                b0 = ((b0 * 32690) >> 15) + ((w * 3245) >> 15);
+                b1 = ((b1 * 31555) >> 15) + ((w * 9716) >> 15);
+                b2 = ((b2 * 18678) >> 15) + ((w * 17247) >> 14);
+                pk = (b0 + b1 + b2 + ((w * 6055) >> 15)) >> 2;
+                if (colr <= (64 << 8))
+                    x = w + mulq15(pk - w, cf);
+                else {
+                    br = ((br * 32580) >> 15) + ((w * 3480) >> 15);
+                    x = pk + mulq15(br - pk, cf);
+                }
+            }
+            v3 = x - ic2;
+            v1 = (a1 * ic1 + a2 * v3 + 4096) >> 13;
+            v2 = ic2 + ((a2 * ic1 + a3 * v3 + 4096) >> 13);
             ic1 = clamp(2 * v1 - ic1, -150000, 150000);
             ic2 = clamp(2 * v2 - ic2, -150000, 150000);
-            if (!rep)
-                continue;
-            u = clamp(((v2 * dg) >> 8) >> 4, -768, 768);   /* (DRIVE: tanh, Q8) */
-            o[i] = (u * (1769472 + u * u) / (1769472 + 9 * u * u)) << 4;
-        }
-}
-/* PHASE: the -cos of the phase bent by SHAPE (DCW) as eng_phase.c bends it, WAVE then WAVE 2 (none: WAVE again), SUB an
- * octave down */
-static uint32_t uxs_pd(uint32_t w, uint32_t dcw, uint32_t ph)
-{
-    uint32_t x, pk;
-    switch (w) {
-    case 0: x = 32768u + ((dcw * 32767u) >> 16); return ph < x ? ph * 32768u / x : 32768u + (ph - x) * 32767u / (65535u - x);
-    case 1:
-        x = 32768u - ((dcw * 31120u) >> 16);
-        return ph < x ? ph * 32768u / x : ph < 32768u ? 32768u : ph < 32768u + x ? 32768u + (ph - 32768u) * 32767u / x : 65535u;
-    case 2: x = 65535u - ((dcw * 63487u) >> 16); return ph < x ? ph * 65535u / x : 65535u;
-    case 3: x = 65535u - ((dcw * 49151u) >> 16); return ph < x ? ph * 65535u / x : (ph - x) * 65535u / (65535u - x);
-    case 4:
-        x = 65535u - ((dcw * 32767u) >> 16);
-        pk = (x * (32768u + ((dcw * 29491u) >> 16))) >> 16;
-        pk = pk ? pk : 1u;
-        return ph >= x ? 65535u : ph < pk ? ph * 32768u / pk : 32768u + (ph - pk) * 32767u / (x - pk);
-    default: return (ph + ((ph * ((dcw * 44000u) >> 16)) >> 16) * 7u) & 65535u;
-    }
-}
-static void uxs_wave_phase(const int16_t *p, int32_t *o)
-{
-    uint32_t i, dcw = (uint32_t)clamp(p[P_E2], 0, 127) * 516u;
-    for (i = 0; i < UXS_WN; i++) {
-        uint32_t ph = (i & 63u) * 1024u, w = i < 64u || !p[P_E1] ? (uint32_t)p[P_E0] & 7u : (uint32_t)(p[P_E1] - 1) & 7u;
-        int32_t c = -og_cos(uxs_pd(w, dcw, ph)), win;
-        if (w >= 5u) {                                  /* (RSAW RTRI RTRP windowed) */
-            win = w == 5u ? 65535 - (int32_t)ph : w == 6u ? (ph < 32768u ? (int32_t)ph * 2 : (65535 - (int32_t)ph) * 2) :
-                  (ph < 16384u ? (int32_t)ph * 4 : ph > 49152u ? (65535 - (int32_t)ph) * 4 : 65535);
-            c = (c * (win > 65535 ? 65535 : win)) >> 16;
-        }
-        o[i] = c + ((og_sin(i * 512u) * p[P_E6]) >> 8);   /* (SUB) */
-    }
-}
-/* LOFI: its WAVE (PLS at DUTY, TRI, SAW, NOIS, a WRAM table, the BYTE / FLOAT formula with VARIANT) in CHIP's bits */
-static void uxs_wave_lofi(const int16_t *p, int32_t *o)
-{
-    uint32_t i, w = (uint32_t)p[P_E1], chip = (uint32_t)p[P_E0], rs = 2463534242u, lv;
-    int32_t h = 0;
-    lv = chip == CHIP_8BIT || w == RW_FLOAT ? 256u : chip == CHIP_1BIT ? 2u : chip == CHIP_4B2 ? 8u : 16u;
-    for (i = 0; i < UXS_WN; i++) {
-        uint32_t ph = (i & 63u) * 1024u;
-        int32_t s;
-        if (w == RW_PLS)
-            s = ph < 1024u + (uint32_t)clamp(p[P_E2], 0, 127) * 500u ? 32767 : -32767;
-        else if (w == RW_TRI)
-            s = ph < 32768u ? (int32_t)ph * 2 - 32768 : 98303 - (int32_t)ph * 2;
-        else if (w == RW_SAW)
-            s = (int32_t)ph - 32768;
-        else if (w == RW_NOIS) {
-            if (!(i & 3u))
-                h = (int32_t)(uxs_rnd(&rs) >> 16) - 32768;
-            s = h;
-        } else if (w == RW_WRAM)
-            s = (int32_t)lofi_wram_nib((uint32_t)p[P_E2] >> 3, (i & 63u) >> 1) * 4369 - 32767;
-        else if (w == RW_BYTE)
-            s = ((int32_t)(lofi_algo_at(0, (uint32_t)p[P_E2] >> 2, i * 8u, 1u + ((uint32_t)p[P_E3] >> 3)) & 255) - 128) * 256;
-        else
-            s = lofi_algo_at(1, (uint32_t)p[P_E2] >> 2, i * 8u, 0);
-        s = clamp(s, -32767, 32767);
-        if (lv < 256u) {                                /* (the chip's bits: its steps) */
-            int32_t q = (int32_t)(((uint32_t)(s + 32768) * lv) >> 16);
-            s = (int32_t)((q * 65535) / (int32_t)(lv - 1u)) - 32768;
-        }
-        o[i] = s;
-    }
-}
-/* NOISE: ANLG / DUST a noise as dark as COLOR (DUST its impulses), LFSR / META the register's bits, held for CRUSH / CLOCK */
-static void uxs_wave_noise(const int16_t *p, int32_t *o)
-{
-    uint32_t i, rs = 88172645u, reg = 1u, mode = (uint32_t)p[P_E0];
-    int32_t y = 0, k = 4096 - clamp(p[P_E1], 0, 127) * 30, hold = 1 + p[P_E7] / 16, h = 0;
-    for (i = 0; i < UXS_WN; i++) {
-        int32_t x = (int32_t)(uxs_rnd(&rs) >> 16) - 32768;
-        if (mode >= 2u) {                               /* LFSR, META: a 9-bit register, a bit a step */
-            if (!(i % (uint32_t)hold)) {
-                reg = (reg >> 1) ^ (-(reg & 1u) & 0x110u);
-                h = reg & 1u ? 30000 : -30000;
+            v1 = (v1 * bpg * 3) >> 13;
+            y = v2 + (((v1 - v2) * (mix >> 3)) >> 12);
+            y = soft_knee(((y >> 4) * gq) >> 8, 24000);
+            if (mode == NZ_META) {
+                reg += (uint32_t)(((y << 8) - (int32_t)reg) >> 9);
+                y -= (int32_t)reg >> 8;
             }
-            o[i] = h;
-            continue;
+            if (crsh) {
+                if ((int32_t)--ph <= 0 || ph > 16u) {
+                    ph = 1u + (uint32_t)crsh / 8u;
+                    reg = (uint32_t)(y >> (crsh / 11) << (crsh / 11));
+                }
+                y = (int32_t)reg;
+            }
+            if (!uxs_tap(&tp, y))
+                return;
         }
-        if (mode == 1u)                                 /* DUST: a few impulses */
-            x = (x & 0x7E00) == 0x7E00 ? x * 4 : 0;
-        y += ((x - y) * k) >> 12;                        /* (COLOR: white .. brown) */
-        o[i] = y;
     }
 }
 /* VOICE: a glottal pulse a cycle (BUZZ), BREATH's noise, through the vowel's first two formants (the first cycle VOWEL's,
@@ -410,41 +724,79 @@ static void uxs_wave_voice(const int16_t *p, int32_t *o)
         o[i] = s + ((((int32_t)(uxs_rnd(&rs) >> 16) - 32768) * br) >> 9);
     }
 }
-/* the synth's two cycles, -4096..4096 (Q12, scaled to the largest; silence flat) */
-static void uxs_wave(const track_t *t, int16_t *w)
+/* the columns o[] scaled to the largest, -4096..4096 (Q12; silence flat) */
+static void uxs_norm(const int32_t *o, int16_t *w)
 {
-    static int32_t o[UXS_WN];
-    const engine_t *e = trk_engp(t);
     int32_t mx = 1;
     uint32_t i;
-    for (i = 0; i < UXS_WN; i++)
-        o[i] = 0;
-    if (e == &ENG_ANALOG)
-        uxs_wave_analog(t->p, o);
-    else if (e == &ENG_PHASE)
-        uxs_wave_phase(t->p, o);
-    else if (e == &ENG_LOFI)
-        uxs_wave_lofi(t->p, o);
-    else if (e == &ENG_NOISE)
-        uxs_wave_noise(t->p, o);
-    else if (e == &ENG_FORMANT)
-        uxs_wave_voice(t->p, o);
     for (i = 0; i < UXS_WN; i++)
         mx = o[i] > mx ? o[i] : -o[i] > mx ? -o[i] : mx;
     for (i = 0; i < UXS_WN; i++)
         w[i] = (int16_t)(mx > 64 ? (int64_t)o[i] * 4096 / mx : 0);
 }
-/* the panel: the page's name small at the top left, the wave across it in KNOB 1's colour over a dim fill, its axis */
+/* track t's picture (raw: ANALOG's oscillators alone), -4096..4096 */
+static void uxs_wave(const track_t *t, int16_t *w, int raw)
+{
+    static int32_t o[UXS_WN];
+    const engine_t *e = trk_engp(t);
+    uint32_t i, pre, len;
+    for (i = 0; i < UXS_WN; i++)
+        o[i] = 0;
+    uxs_win(e, t->p, &pre, &len);
+    if (e == &ENG_ANALOG)
+        uxs_wave_analog(t->p, o, pre, len, raw);
+    else if (e == &ENG_PHASE)
+        uxs_wave_phase(t->p, o, pre, len);
+    else if (e == &ENG_LOFI)
+        uxs_wave_lofi(t->p, o, pre, len);
+    else if (e == &ENG_NOISE)
+        uxs_wave_noise(t->p, o, pre, len);
+    else if (e == &ENG_FORMANT)
+        uxs_wave_voice(t->p, o);
+    uxs_norm(o, w);
+}
+/* (3b task 4 fix, the user's YES) VOICE singing words (WORDS ES / EN / JA): the word it sings now (sing.c sing_view), else
+ * "" (b holds 20 at least): the picture's top right says it, redrawn when it changes */
+#define UXS_SINGS "SINGS "
+static void uxs_word(const track_t *t, char *b, uint32_t nb)
+{
+    const sing_t *s;
+    uint32_t i, n = 0;
+    b[0] = 0;
+    if (trk_engp(t) != &ENG_FORMANT || !t->p[P_VLANG] || nb < 2u)
+        return;
+    s = sing_view(t);
+    for (i = 0; i < sizeof s->w && s->w[i] && n + 1u < nb; i++)   /* (the audio's: read once, a printable copy) */
+        if (s->w[i] >= ' ' && s->w[i] <= '~')
+            b[n++] = s->w[i];
+    b[n] = 0;
+}
+/* the panel: the page's name small at the top left (VOICE's sung word at the right), the wave across it in KNOB 1's colour
+ * over a dim fill, its axis */
 #define UXS_WY 78                /* the wave's axis (the panel's 150 rows), its height either side */
 #define UXS_WA 50
-static void uxs_wave_draw(const track_t *t, const char *name)
+static void uxs_pic_head(const track_t *t, const char *name)   /* the name; the word VOICE sings */
+{
+    char w[20], b[32];
+    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "EDIT picture's name");
+    cv_text_on(12, 8, &UF_LBL, name, UX_MID, ux_under(12, 12));
+    if (t->p[P_VLANG] && trk_engp(t) == &ENG_FORMANT) {
+        int32_t x;
+        uxs_word(t, w, sizeof w);
+        str_cpy(b, UXS_SINGS, sizeof b);
+        str_cpy(b + str_len(b), w[0] ? w : "-", sizeof b - str_len(b));
+        x = 228 - text_w(&UF_LBL, b);
+        GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "EDIT picture's word");
+        cv_text_on(x, 8, &UF_LBL, b, UX_TEXT, ux_under(x, 12));
+    }
+}
+static void uxs_wave_draw(const track_t *t, const char *name, int raw)
 {
     int16_t w[UXS_WN];
     int32_t i, px = 0, py = 0;
     uint16_t fill = ux_mix(UX_BG, UX_ACID, 22);
-    uxs_wave(t, w);
-    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "EDIT picture's name");
-    cv_text_on(12, 8, &UF_LBL, name, UX_MID, ux_under(12, 12));
+    uxs_wave(t, w, raw);
+    uxs_pic_head(t, name);
     cv_rect(12, UXS_WY, 216, 1, UX_LINE);
     for (i = 0; i < (int32_t)UXS_WN; i++) {
         int32_t x = 12 + i * 216 / (int32_t)(UXS_WN - 1u), y = UXS_WY - w[i] * UXS_WA / 4096;
@@ -459,20 +811,19 @@ static void uxs_wave_draw(const track_t *t, const char *name)
     }
 }
 /* FILTER (the part's): its response, TYPE at CUTOFF with RESO (ui_lzedit.c ed_resp, 62 its unity line: here the panel's
- * row 70), CUTOFF a line in KNOB 2's colour, DRIVE a row of cells in KNOB 4's */
+ * row 70), CUTOFF a line in KNOB 2's colour (DRIVE: its knob's value says it) */
 static void uxs_filter_draw(const track_t *t, const page_t *pg, const char *name)
 {
     int16_t *vp;
     const param_desc_t *d;
-    int32_t r[4], x, py = 0, xc, k, nd;
+    int32_t r[3], x, py = 0, xc, k;
     uint32_t ty = (uint32_t)clamp(t->p[P_FTYPE], 0, 3);
     uint16_t fill = ux_mix(UX_BG, UX_SLIDE, 20);
-    for (k = 0; k < 4; k++) {
+    for (k = 0; k < 3; k++) {
         d = page_desc(pg, (uint32_t)k, &vp);
         r[k] = d && vp && d->max > d->min ? clamp(RATIO(d, enum_rank(d, *vp)), 0, 1000) : 0;
     }
-    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "EDIT picture's name");
-    cv_text_on(12, 8, &UF_LBL, name, UX_MID, ux_under(12, 12));
+    uxs_pic_head(t, name);
     xc = 10 + r[1] * 216 / 1000;
     for (x = 10; x <= 226; x++) {
         int32_t y = ed_resp(ty, x, xc, r[2]) + 8;
@@ -482,11 +833,7 @@ static void uxs_filter_draw(const track_t *t, const page_t *pg, const char *name
         py = y;
     }
     cv_rect(xc, 14, 1, 99, UX_SLIDE);
-    nd = r[3] * 20 / 1000;
-    for (k = 0; k < 20; k++)
-        cv_rect(60 + k * 6, 126, 4, 10, k < nd ? UX_ACCENT : UX_EMPTY);
 }
-
 /* the page's picture: MORE its list; the others (until Tasks 4..8 give each its own) the page's title over its four
  * values as bars in the knobs' colours */
 static void uxs_picture(const page_t *pg, const ux_knob_t k[4])
@@ -501,7 +848,8 @@ static void uxs_picture(const page_t *pg, const ux_knob_t k[4])
         if (pg->id[0] == P_FTYPE)
             uxs_filter_draw(TSEL, pg, nav_page_name());
         else
-            uxs_wave_draw(TSEL, nav_page_name());
+            uxs_wave_draw(TSEL, nav_page_name(), trk_engp(TSEL) == &ENG_ANALOG && pg->id[0] == P_E0);   /* (ANALOG's
+                                                         * SOUND: its oscillators) */
         return;
     }
     w = text_w(f, pg->title);
@@ -568,10 +916,13 @@ static void ux_section_draw(void)
     }
     if (pg->fam == FAM_EDIT && !edit_kind() && pg->graph != GR_MORE) {   /* (a synth's wave: every setting it is drawn from) */
         static const uint8_t W[] = {P_E0, P_E1, P_E2, P_E3, P_E4, P_E5, P_E6, P_E7, P_MORPH, P_VLANG, P_FTYPE, P_FCUT, P_FRES,
-                                    P_DIST};
+                                    P_DIST, P_ED_FLT, P_ED_SHP};
+        char wd[20];
         for (c = 0; c < sizeof W; c++)
             sig = sig * 31u + (uint16_t)TSEL->p[W[c]];
         sig = sig * 31u + trk_eng(TSEL);
+        uxs_word(TSEL, wd, sizeof wd);                  /* (VOICE singing: the word, when it changes) */
+        sig = str_hash(sig, wd);
     }
     if (all || sig != panel_sig) {
         panel_sig = sig;

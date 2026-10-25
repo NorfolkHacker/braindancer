@@ -714,7 +714,7 @@ static const char *uxm_row_name(uint32_t id)
     uint8_t bar;
     for (r = 0; r < UXM_SYN.n; r++)
         if (uxm_on(m, r) && UXM_SYN.rows[r].kind == UXR_TRACK && UXM_SYN.rows[r].id == id)
-            return uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, 0, &bar);
+            return uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, &bar);
     return "";
 }
 /* (0.6.45) MORPH: ANALOG, PHASE, LOFI: 0 keeps the WAVE's own render (an_mpos -1), more slides it toward the next
@@ -12879,7 +12879,7 @@ static const char *uxs_more_list(void)
         uint8_t bar;
         const char *nm;
         if (!uxm_on(m, r)) continue;
-        nm = uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, 0, &bar);
+        nm = uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, &bar);
         if (b[0]) str_cpy(b + str_len(b), "|", sizeof b - str_len(b));
         if (UXM_SYN.rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "[", sizeof b - str_len(b));
         str_cpy(b + str_len(b), nm, sizeof b - str_len(b));
@@ -12937,7 +12937,7 @@ static int test_ux_more_nav(void)
     {   /* what each synth's MORE lists: what its pages leave, by JIANT's rules (MORPH, RETRIG, WORDS) */
         static const char *const W[5] = {"[VOICE]|GLIDE MODE|[TONE]|FILTER|MORPH|DRIFT",
                                           "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|[TONE]|MORPH|DRIFT",
-                                          "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|[TONE]|MORPH|DRIFT",
+                                          "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|[TONE]|DRIFT",   /* (LOFI PLS: MORPH on TONE) */
                                           "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD",
                                           "[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD|[WORDS]|WORDS|LYRIC|TYPE LYRIC"};
         uint32_t e;
@@ -13066,8 +13066,8 @@ static int test_ux_section_draw(void)
     ui.force = 1; frame();
     uxs_knobs(cur_page(), k);
     ok = str_eq(k[0].label, "WAVE") && str_eq(k[1].label, "DETUNE") && str_eq(k[2].label, "MIX") && str_eq(k[3].label, "NOISE");
-    param_format(track_desc(TSEL, P_E1), TSEL->p[P_E1], v, &u);
-    ok &= str_eq(k[1].value, v);
+    uxs_val(track_desc(TSEL, P_E1), TSEL->p[P_E1], v, sizeof v);   /* (task 4 fix: its unit with it, "10CT") */
+    ok &= str_eq(k[1].value, v) && str_len(v) > 2u && str_eq(v + str_len(v) - 2u, "CT");
     ok &= ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 200u &&
           ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 2000u && ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 50u &&
           ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 2000u;
@@ -13118,12 +13118,12 @@ static int test_ux_section_draw(void)
     if (!ok) printf("  status: \"%s\"\n", st ? st : "(none)");
     turn(EN_K2, 1);
     st = uxs_status(cur_page(), &col);
-    param_format(track_desc(TSEL, P_E1), TSEL->p[P_E1], v, &u);
+    uxs_val(track_desc(TSEL, P_E1), TSEL->p[P_E1], v, sizeof v);   /* (the knob row's form: "13CT") */
+    (void)u;
     {
         char w[40];
         str_cpy(w, "DETUNE \xB7 ", sizeof w);
         str_cpy(w + str_len(w), v, sizeof w - str_len(w));
-        if (u && u[0]) { str_cpy(w + str_len(w), " ", sizeof w - str_len(w)); str_cpy(w + str_len(w), u, sizeof w - str_len(w)); }
         ok &= st && str_eq(st, w) && col == UX_TEXT;
         if (!ok) printf("  status: \"%s\" wanted \"%s\"\n", st ? st : "(none)", w);
     }
@@ -13167,7 +13167,7 @@ static int test_ux_section_draw(void)
                     int32_t x;
                     uint8_t bar;
                     char val[24];
-                    const char *nm = uxm_row_text(rw, val, sizeof val, 1, &bar), *q;
+                    const char *nm = uxm_row_text(rw, val, sizeof val, &bar), *q;
                     for (q = nm; *q; q++)
                         if (glyph_at(&UF_HDR, (uint8_t)*q) < 0 || glyph_at(&UF_LBL, (uint8_t)*q) < 0) {
                             printf("  MORE row name \"%s\": no glyph 0x%02X\n", nm, (uint8_t)*q); ok = 0; break;
@@ -13178,13 +13178,13 @@ static int test_ux_section_draw(void)
                     keep = *vp;
                     for (x = d->min; x <= d->max; x++) {
                         *vp = (int16_t)x;
-                        (void)uxm_row_text(rw, val, sizeof val, 1, &bar);
+                        (void)uxm_row_text(rw, val, sizeof val, &bar);
                         nchk++;
                         for (q = val; *q; q++)
                             if (glyph_at(&UF_HDR, (uint8_t)*q) < 0) {
                                 printf("  MORE value \"%s\" (%s): no glyph 0x%02X\n", val, nm, (uint8_t)*q); ok = 0; break;
                             }
-                        (void)uxm_row_text(rw, val, sizeof val, 0, &bar);
+                        (void)uxm_row_text(rw, val, sizeof val, &bar);
                         for (q = val; *q; q++)
                             if (glyph_at(&UF_VAL, (uint8_t)*q) < 0) {
                                 printf("  MORE knob value \"%s\" (%s): no glyph 0x%02X\n", val, nm, (uint8_t)*q); ok = 0; break;
@@ -13279,7 +13279,8 @@ static const uxs_pg_t UXS_PG[5][3] = {
      {"EDIT 2", "EDIT \xB7 TONE", {"DETUNE", "LINE 2", "SUB", "FEEDBACK"}, {P_E4, P_E5, P_E6, P_E7}},
      {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
     {{"EDIT 1", "EDIT \xB7 SOUND", {"CHIP", "WAVE", "DUTY", "CRUSH"}, {P_E0, P_E1, P_E2, P_E3}},
-     {"EDIT 2", "EDIT \xB7 TONE", {"", "VIBRATO", "BEND", "MASK"}, {P_E4, P_E5, P_E6, P_E7}},
+     {"EDIT 2", "EDIT \xB7 TONE", {"MORPH", "VIBRATO", "BEND", "MASK"}, {P_MORPH, P_E5, P_E6, P_E7}},   /* (task 4 fix: MORPH
+                                                         * in JIANT's empty slot; WRAM DRIFT: test_edit_lofi_knob1) */
      {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
     {{"EDIT 1", "EDIT \xB7 SOUND", {"SOURCE", "COLOR", "FREQ", "PEAK"}, {P_E0, P_E1, P_E2, P_E3}},
      {"EDIT 2", "EDIT \xB7 TONE", {"KEY TRACK", "DENSITY", "DRIFT", "CRUSH"}, {P_E4, P_E5, P_E6, P_E7}},
@@ -13484,6 +13485,337 @@ static int test_edit_syn_picture(void)
     ui_power_on();
     return bad;
 }
+/* (3b task 4 fix) the picture is the sound: the engine's own render of what the picture draws (C4 as it strikes, uxs_vmod;
+ * MORPH settled where the knob is), through the same window and columns (uxs_win, uxs_tap) and the same scale (uxs_norm):
+ * a scratch copy of the track, a voice from silence, e->note_on and e->render a block at a time */
+static int32_t uxs_eng_wave(const track_t *src, int16_t *w)   /* .. its peak (the engine's output scale) */
+{
+    static track_t tt;
+    static int32_t o[UXS_WN];
+    const engine_t *e = trk_engp(src);
+    voice_t v;
+    vmod_t m;
+    uxs_tap_t tp;
+    int32_t out[CTL];
+    uint32_t pre, len, i;
+    memcpy(&tt, src, sizeof tt);
+    tt.mo_cur = tt.mo_prev = (uint16_t)(clamp(src->p[P_MORPH], 0, 127) << 8);
+    memset(&v, 0, sizeof v);
+    v.note = 60; v.vel = 100; v.active = 1; v.gate = 1; v.stage = 2; v.pitch16 = v.pitch_cur = UXS_C4;
+    e->note_on(&tt, &v);
+    uxs_vmod(tt.p, &m);
+    uxs_win(e, tt.p, &pre, &len);
+    for (i = 0; i < UXS_WN; i++) o[i] = 0;
+    uxs_tap_on(&tp, o, pre, len);
+    for (;;) {
+        memset(out, 0, sizeof out);
+        e->render(&tt, &v, out, CTL, &m);
+        for (i = 0; i < CTL; i++)
+            if (!uxs_tap(&tp, out[i])) {
+                int32_t mx = 1;
+                uxs_norm(o, w);
+                for (i = 0; i < UXS_WN; i++) mx = o[i] > mx ? o[i] : -o[i] > mx ? -o[i] : mx;
+                return mx;
+            }
+    }
+}
+/* the columns of two pictures more than tol apart (of 4096), *dm the largest gap; a column whose extremes tie in size (the
+ * same size, either sign: uxs_tap keeps the first) counts when their sizes are apart */
+static uint32_t uxs_wdiff(const int16_t *a, const int16_t *b, int32_t tol, int32_t *dm)
+{
+    int32_t x, y;
+    uint32_t i, n = 0;
+    *dm = 0;
+    for (i = 0; i < UXS_WN; i++) {
+        x = a[i] - b[i]; x = x < 0 ? -x : x;
+        y = (a[i] < 0 ? -a[i] : a[i]) - (b[i] < 0 ? -b[i] : b[i]); y = y < 0 ? -y : y;
+        *dm = x > *dm ? x : *dm;
+        n += x > tol && ((a[i] < 0) == (b[i] < 0) || y > tol + (a[i] < 0 ? -a[i] : a[i]) / 16);
+    }
+    return n;
+}
+static int test_edit_syn_is_sound(void)
+{
+    static const uint8_t ENG[4] = {ENGI_ANALOG, ENGI_PHASE, ENGI_LOFI, ENGI_NOISE};
+    uint32_t e, k, i, seed = 12345u, n = 0;
+    int bad = 0, ok = 1;
+    for (e = 0; e < 4u; e++)
+        for (k = 0; k < 60u; k++) {
+            int16_t wp[UXS_WN], we[UXS_WN];
+            int32_t d, pk, tol;
+            uint32_t nb;
+            uxs_syn_on(ENG[e]);
+            for (i = 0; i < 8u; i++) {                  /* (every knob of SOUND and TONE somewhere in its range) */
+                const param_desc_t *pd = track_desc(TSEL, P_E0 + i);
+                seed = seed * 1103515245u + 12345u;
+                if (pd && pd->max > pd->min) TSEL->p[P_E0 + i] = (int16_t)(pd->min + (int32_t)((seed >> 8) % (uint32_t)(pd->max - pd->min + 1)));
+            }
+            seed = seed * 1103515245u + 12345u;
+            TSEL->p[P_MORPH] = (int16_t)((seed >> 9) & 1u ? (seed >> 12) % 128u : 0);
+            TSEL->p[P_FTYPE] = (int16_t)((seed >> 20) % 4u);
+            TSEL->p[P_FCUT] = (int16_t)((seed >> 13) % 128u);
+            TSEL->p[P_FRES] = (int16_t)((seed >> 5) % 128u);
+            TSEL->p[P_ED_FLT] = (int16_t)((int32_t)((seed >> 17) % 128u) - 64);
+            TSEL->p[P_ED_SHP] = (int16_t)((seed >> 3) & 4u ? (int32_t)((seed >> 22) % 128u) - 64 : 0);
+            if (ENG[e] == ENGI_LOFI) TSEL->p[P_E1] = (int16_t)(TSEL->p[P_E1] % RW_BYTE);   /* (BYTE / FLOAT: the formula) */
+            if (k < 4u && ENG[e] == ENGI_NOISE) TSEL->p[P_E0] = (int16_t)k;   /* (each SOURCE once at least) */
+            uxs_wave(TSEL, wp, 0);
+            pk = uxs_eng_wave(TSEL, we);
+            tol = 90 + 4096 * 6 / (pk > 1 ? pk : 1);    /* (2 %: uxs_tap's "about as far"; the engine's output is integers, a
+                                                         * quiet one's steps coarse) */
+            nb = uxs_wdiff(wp, we, tol, &d);
+            n++;
+            if (nb > 3u) {                              /* (a column whose two extremes tie in size may take either: 3 at most) */
+                printf("  %s setting %u: %u columns off the engine's sound, by up to %d of 4096 (E0..E7 %d %d %d %d %d %d %d %d MORPH %d)\n",
+                       UXS_SYN_NM[e], (unsigned)k, (unsigned)nb, (int)d, TSEL->p[P_E0], TSEL->p[P_E1], TSEL->p[P_E2], TSEL->p[P_E3],
+                       TSEL->p[P_E4], TSEL->p[P_E5], TSEL->p[P_E6], TSEL->p[P_E7], TSEL->p[P_MORPH]);
+                ok = 0;
+            }
+        }
+    bad += check("ACID FM 3b fix: EDIT's picture is the engine's own sound (ANALOG PHASE LOFI NOISE, 240 settings)", ok && n == 240u);
+    {   /* ACID (SAW, CUTOFF 50, RESO 100, DRIVE 25): a saw through the filter on TONE, not a square (under 30 % of the columns
+         * within 10 % of the peak); SOUND its raw saw */
+        int16_t w[UXS_WN];
+        uint32_t near, p;
+        uxs_syn_on(ENGI_ANALOG);
+        apply_preset_to(TSEL, 4);
+        ok = str_eq(ANALOG_PRESETS[4].name, "ACID") && TSEL->p[P_E0] == 0 && TSEL->p[P_E4] == 50 && TSEL->p[P_E5] == 100 &&
+             TSEL->p[P_E6] == 25;
+        for (p = 0; p < 2u; p++) {
+            int32_t mx = 0;
+            uxs_wave(TSEL, w, (int)p);
+            for (i = 0; i < UXS_WN; i++) mx = w[i] > mx ? w[i] : -w[i] > mx ? -w[i] : mx;
+            for (i = near = 0; i < UXS_WN; i++) near += (w[i] < 0 ? -w[i] : w[i]) * 10 >= mx * 9;
+            if (near * 100u >= 30u * UXS_WN) { printf("  ACID %s: %u of 128 columns at the peak (a square)\n", p ? "SOUND" : "TONE", (unsigned)near); ok = 0; }
+        }
+        bad += check("ACID FM 3b fix: ACID's SAW draws as a saw through its filter and DRIVE, not a square", ok);
+    }
+    {   /* MIX 127 is osc 2 alone (the engine's 0 .. 100 %): an octave up (INTERVAL +12), four cycles where osc 1 has two */
+        int16_t w[UXS_WN];
+        int32_t d = 0, a = 0;
+        uxs_syn_on(ENGI_ANALOG);
+        TSEL->p[P_E0] = 0; TSEL->p[P_E1] = 0; TSEL->p[P_E2] = 127; TSEL->p[P_E3] = 0; TSEL->p[P_E7] = 12; TSEL->p[P_MORPH] = 0;
+        uxs_wave(TSEL, w, 1);
+        for (i = 0; i + 32u < UXS_WN; i++) { int32_t x = w[i] - w[i + 32u]; d += x < 0 ? -x : x; a += w[i] < 0 ? -w[i] : w[i]; }
+        ok = d * 10 < a;                                /* (a period of 32 columns) */
+        TSEL->p[P_E2] = 64;
+        uxs_wave(TSEL, w, 1);
+        for (i = d = 0; i + 32u < UXS_WN; i++) { int32_t x = w[i] - w[i + 32u]; d += x < 0 ? -x : x; }
+        ok &= d * 10 >= a;                              /* (half and half: osc 1's period too) */
+        bad += check("ACID FM 3b fix: ANALOG's MIX reaches osc 2 alone, as the engine's", ok);
+    }
+    return bad;
+}
+/* turning a knob changes the picture (spec 0 rule 6): every knob of ANALOG's SOUND and TONE, its FILTER type; NOISE's in each
+ * SOURCE that uses them (FREQ PEAK COLOR, ANLG's DENSITY, DUST's impulses at its defaults, LFSR's LENGTH and CLOCK, META's);
+ * PHASE's; LOFI's (CHIP 4BIT against 4B/2 against 1BIT, DUTY, CRUSH, BEND, MASK, MORPH) */
+static uint32_t uxs_wcrc(const track_t *t, int raw)
+{
+    int16_t w[UXS_WN];
+    uint32_t h = 2166136261u, i;
+    uxs_wave(t, w, raw);
+    for (i = 0; i < UXS_WN; i++) h = (h ^ (uint16_t)(w[i] >> 5)) * 16777619u;   /* (a change of 1/128 of the height) */
+    return h;
+}
+static int uxs_moves(const char *nm, uint32_t id, int16_t a, int16_t b, int raw)
+{
+    int16_t keep = TSEL->p[id];
+    uint32_t h0, h1;
+    TSEL->p[id] = a; h0 = uxs_wcrc(TSEL, raw);
+    TSEL->p[id] = b; h1 = uxs_wcrc(TSEL, raw);
+    TSEL->p[id] = keep;
+    if (h0 == h1) printf("  %s: setting %u %d -> %d left the picture as it was\n", nm, (unsigned)id, a, b);
+    return h0 != h1;
+}
+static int test_edit_syn_knobs_move(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t i;
+    uxs_syn_on(ENGI_ANALOG);                            /* ANALOG (SAW LEAD): SOUND raw, TONE through the filter */
+    ok &= uxs_moves("ANALOG WAVE", P_E0, 0, 1, 1) && uxs_moves("ANALOG DETUNE", P_E1, 0, 40, 1) &&
+          uxs_moves("ANALOG MIX", P_E2, 0, 127, 1) && uxs_moves("ANALOG NOISE", P_E3, 0, 60, 1) &&
+          uxs_moves("ANALOG CUTOFF", P_E4, 30, 90, 0) && uxs_moves("ANALOG RESO", P_E5, 0, 110, 0) &&
+          uxs_moves("ANALOG DRIVE", P_E6, 0, 127, 0) && uxs_moves("ANALOG INTERVAL", P_E7, 0, 7, 0) &&
+          uxs_moves("ANALOG FILTER LP HP", P_FTYPE, 0, 1, 0) && uxs_moves("ANALOG FILTER HP BP", P_FTYPE, 1, 2, 0) &&
+          uxs_moves("ANALOG MORPH", P_MORPH, 0, 60, 1);
+    ok &= uxs_wcrc(TSEL, 1) != uxs_wcrc(TSEL, 0);       /* (SOUND raw, TONE filtered) */
+    bad += check("ACID FM 3b fix: each ANALOG knob moves its picture (WAVE .. INTERVAL, the FILTER type, MORPH)", ok);
+    ok = 1;
+    uxs_syn_on(ENGI_NOISE);
+    TSEL->p[P_E0] = NZ_ANLG;
+    ok &= uxs_moves("NOISE ANLG COLOR", P_E1, 0, 127, 0) && uxs_moves("NOISE ANLG FREQ", P_E2, 40, 100, 0) &&
+          uxs_moves("NOISE ANLG PEAK", P_E3, 0, 120, 0) && uxs_moves("NOISE ANLG DENSITY", P_E5, 0, 120, 0) &&
+          uxs_moves("NOISE ANLG CRUSH", P_E7, 0, 100, 0);
+    TSEL->p[P_E0] = NZ_DUST;
+    ok &= uxs_moves("NOISE DUST FREQ", P_E2, 40, 110, 0) && uxs_moves("NOISE DUST PEAK", P_E3, 0, 120, 0) &&
+          uxs_moves("NOISE DUST DENSITY", P_E5, 0, 90, 0);
+    {   /* DUST at its defaults: its impulses seen (not a flat line) */
+        int16_t w[UXS_WN];
+        uint32_t hi = 0, lo = 0;
+        uxs_syn_on(ENGI_NOISE);
+        TSEL->p[P_E0] = NZ_DUST;
+        uxs_wave(TSEL, w, 0);
+        for (i = 0; i < UXS_WN; i++) { hi += (w[i] < 0 ? -w[i] : w[i]) > 1600; lo += (w[i] < 0 ? -w[i] : w[i]) < 400; }
+        if (!(hi >= 2u && lo >= 32u)) { printf("  DUST at its defaults: %u columns high, %u low\n", (unsigned)hi, (unsigned)lo); ok = 0; }
+    }
+    TSEL->p[P_E0] = NZ_LFSR;
+    ok &= uxs_moves("NOISE LFSR LENGTH", P_E5, 0, 112, 0) && uxs_moves("NOISE LFSR CLOCK", P_E7, 0, 24, 0) &&
+          uxs_moves("NOISE LFSR FREQ", P_E2, 40, 110, 0);
+    TSEL->p[P_E0] = NZ_META;
+    ok &= uxs_moves("NOISE META LENGTH", P_E5, 0, 96, 0) && uxs_moves("NOISE META CLOCK", P_E7, 0, 12, 0) &&
+          uxs_moves("NOISE META PEAK", P_E3, 0, 120, 0);
+    bad += check("ACID FM 3b fix: NOISE's FREQ, PEAK, COLOR, DENSITY, LENGTH, CLOCK, CRUSH move its picture; DUST is seen", ok);
+    ok = 1;
+    uxs_syn_on(ENGI_PHASE);
+    ok &= uxs_moves("PHASE WAVE", P_E0, 0, 3, 0) && uxs_moves("PHASE WAVE 2", P_E1, 0, 2, 0) &&
+          uxs_moves("PHASE BRIGHT", P_E2, 10, 100, 0) && uxs_moves("PHASE SWEEP", P_E3, 0, 120, 0) &&
+          uxs_moves("PHASE DETUNE", P_E4, 0, 60, 0) && uxs_moves("PHASE LINE 2", P_E5, 0, 1, 0) &&
+          uxs_moves("PHASE SUB", P_E6, 0, 100, 0) && uxs_moves("PHASE FEEDBACK", P_E7, 0, 100, 0);
+    bad += check("ACID FM 3b fix: each PHASE knob moves its picture", ok);
+    ok = 1;
+    uxs_syn_on(ENGI_LOFI);
+    TSEL->p[P_E1] = RW_SAW;
+    ok &= uxs_moves("LOFI CHIP 4BIT 4B/2", P_E0, CHIP_4BIT, CHIP_4B2, 0) && uxs_moves("LOFI CHIP 4BIT 1BIT", P_E0, CHIP_4BIT, CHIP_1BIT, 0) &&
+          uxs_moves("LOFI CRUSH", P_E3, 0, 100, 0) && uxs_moves("LOFI BEND", P_E6, 0, 100, 0) &&
+          uxs_moves("LOFI MASK", P_E7, 0, 90, 0) && uxs_moves("LOFI MORPH", P_MORPH, 0, 60, 0);
+    TSEL->p[P_E1] = RW_PLS;
+    ok &= uxs_moves("LOFI DUTY", P_E2, 0, 100, 0);
+    {   /* 4B/2 is 4 bits held two samples (the engine's), as many steps as 4BIT's: 15 a cycle of the saw, not 8 levels' 7 */
+        int16_t w[UXS_WN];
+        uint32_t c, up[2];
+        TSEL->p[P_E1] = RW_SAW; TSEL->p[P_E3] = 0; TSEL->p[P_E6] = 0; TSEL->p[P_E7] = 0; TSEL->p[P_MORPH] = 0;
+        for (c = 0; c < 2u; c++) {
+            TSEL->p[P_E0] = (int16_t)(c ? CHIP_4B2 : CHIP_4BIT);
+            uxs_wave(TSEL, w, 0);
+            for (i = up[c] = 0; i + 1u < UXS_WN; i++) up[c] += w[i + 1u] - w[i] > 150 && w[i + 1u] - w[i] < 2000;
+        }
+        if (!(up[0] >= 24u && up[1] >= 24u && up[1] <= up[0] + 4u)) { printf("  LOFI SAW steps: 4BIT %u, 4B/2 %u\n", (unsigned)up[0], (unsigned)up[1]); ok = 0; }
+    }
+    bad += check("ACID FM 3b fix: each LOFI knob moves its picture; 4B/2 drawn in 4 bits", ok);
+    return bad;
+}
+/* (3b task 4 fix) LOFI's TONE KNOB 1 is never empty: MORPH on PLS TRI SAW NOIS (MORE then leaves it out), DRIFT on WRAM (which
+ * MORPH cannot move), MOTION on BYTE / FLOAT as before; it turns its setting; the FILTER picture has no unlabelled DRIVE row */
+static int test_edit_lofi_knob1(void)
+{
+    static const char *const W[7] = {"MORPH", "MORPH", "MORPH", "MORPH", "DRIFT", "MOTION", "MOTION"};
+    static const uint8_t ID[7] = {P_MORPH, P_MORPH, P_MORPH, P_MORPH, P_DRIFT, P_E4, P_E4};
+    uint32_t w;
+    int bad = 0, ok = 1;
+    for (w = 0; w < 7u; w++) {
+        ux_knob_t k[4];
+        int16_t v0;
+        uxs_syn_on(ENGI_LOFI);
+        TSEL->p[P_E1] = (int16_t)w;
+        press(B_EDIT); frame();                         /* (TONE) */
+        uxs_knobs(cur_page(), k);
+        if (!str_eq(k[0].label, W[w]) || !k[0].value[0]) { printf("  LOFI wave %u TONE knob 1: \"%s\" \"%s\"\n", (unsigned)w, k[0].label, k[0].value); ok = 0; }
+        v0 = TSEL->p[ID[w]];
+        frames(UX_HOT_MS);
+        turn(EN_K1, 3);
+        if (TSEL->p[ID[w]] == v0) turn(EN_K1, -3);
+        if (TSEL->p[ID[w]] == v0) { printf("  LOFI wave %u TONE knob 1: setting %u not turned\n", (unsigned)w, (unsigned)ID[w]); ok = 0; }
+        if (w < 5u && uxm_row_name(ID[w])[0]) { printf("  LOFI wave %u: %s in MORE too\n", (unsigned)w, W[w]); ok = 0; }
+    }
+    bad += check("ACID FM 3b fix: LOFI's TONE KNOB 1 never empty (MORPH; WRAM DRIFT; BYTE FLOAT MOTION), it turns, MORE drops it", ok);
+    {   /* the FILTER page: DRIVE changes nothing in its picture (its knob says it) */
+        uint32_t h0;
+        uxs_syn_on(ENGI_PHASE);
+        press(B_EDIT); frame(); press(B_EDIT); frame();
+        ok = str_eq(cur_page()->title, "SYN FILTER");
+        TSEL->p[P_DIST] = 0; ui.force = 1; frame(); h0 = uxs_panel_crc();
+        TSEL->p[P_DIST] = 100; ui.force = 1; frame();
+        ok &= uxs_panel_crc() == h0;
+        bad += check("ACID FM 3b fix: the FILTER picture has no unlabelled DRIVE row", ok);
+    }
+    return bad;
+}
+/* (3b task 4 fix) the knob row, MORE and the status line show a value one way, its unit with it: GLIDE "1.0MS", CUTOFF
+ * "355HZ" / "1.9K" / "16K", MIX "50%"; each fits its column */
+static int test_ux_units(void)
+{
+    char v[24], m[24];
+    uint32_t x, nhz = 0, nk = 0, nms = 0;
+    int bad = 0, ok = 1;
+    for (x = 0; x < 128u; x++) {
+        uxs_val(&ENG_ANALOG.edit[4], (int32_t)x, v, sizeof v);
+        nhz += str_len(v) > 2u && str_eq(v + str_len(v) - 2u, "HZ");
+        nk += str_len(v) > 1u && v[str_len(v) - 1u] == 'K' && (CUTOFF_HZ[x] < 10000u || !strchr(v, '.'));
+        ok &= text_w(&UF_VAL, v) <= UX_COL_W - 4;
+        uxs_val(&TP[P_GLIDE], (int32_t)x, v, sizeof v);
+        nms += str_len(v) > 2u && (str_eq(v + str_len(v) - 2u, "MS") || (v[str_len(v) - 1u] == 'S' && v[str_len(v) - 2u] != 'M'));
+        ok &= text_w(&UF_VAL, v) <= UX_COL_W - 4;
+    }
+    ok &= nhz > 10u && nk > 10u && nhz + nk == 128u && nms == 128u;
+    uxs_val(&ENG_ANALOG.edit[2], 64, v, sizeof v);
+    ok &= str_eq(v, "50%");
+    {   /* MORE's row shows GLIDE as the knob row does; the status line too */
+        uint16_t col;
+        const char *st;
+        uxs_syn_on(ENGI_PHASE);
+        TSEL->p[P_GLIDE] = 20;
+        uxs_val(&TP[P_GLIDE], 20, v, sizeof v);
+        ui.page = (uint8_t)uxs_more_page(); page_entered(); frame();
+        {
+            uint32_t r;
+            uint8_t bar;
+            for (r = 0; r < UXM_SYN.n; r++)
+                if (UXM_SYN.rows[r].kind == UXR_TRACK && UXM_SYN.rows[r].id == P_GLIDE) {
+                    (void)uxm_row_text(&UXM_SYN.rows[r], m, sizeof m, &bar);
+                    ok &= str_eq(m, v);
+                }
+        }
+        uxs_syn_on(ENGI_ANALOG);
+        press(B_EDIT); frame(); press(B_EDIT); frame();   /* (ANALOG VOICE: GLIDE KNOB 2) */
+        TSEL->p[P_GLIDE] = 20;
+        frames(UX_HOT_MS);
+        turn(EN_K2, 1); turn(EN_K2, -1);
+        st = uxs_status(cur_page(), &col);
+        str_cpy(m, "GLIDE \xB7 ", sizeof m);
+        str_cpy(m + str_len(m), v, sizeof m - str_len(m));
+        ok &= st && str_eq(st, m);
+        if (!ok) printf("  GLIDE: knob \"%s\", status \"%s\"\n", v, st ? st : "(none)");
+    }
+    bad += check("ACID FM 3b fix: values carry their units in one compact form (knob row, MORE, status line), each fitting", ok);
+    ui_power_on();
+    return bad;
+}
+/* (3b task 4 fix, the user's YES) VOICE singing words: the word it sings on its pages' picture, redrawn once when it changes,
+ * nothing while it stays; WORDS OFF: none */
+static int test_edit_voice_word(void)
+{
+    uint32_t n0, k;
+    int bad = 0, ok = 1;
+    char w[20];
+    uxs_syn_on(ENGI_VOICE);
+    TSEL->p[P_VLANG] = 0;
+    str_cpy(sing[song.sel % NTRK].w, "hola", sizeof sing[0].w);
+    uxs_word(TSEL, w, sizeof w);
+    ok &= !w[0];
+    TSEL->p[P_VLANG] = 2;                               /* (WORDS EN) */
+    uxs_word(TSEL, w, sizeof w);
+    ok &= str_eq(w, "hola");
+    for (k = 0; k < 3u; k++) {                          /* (SOUND, TONE, FILTER) */
+        uint32_t ink0;
+        frames(UX_HOT_MS + 100u);
+        str_cpy(sing[song.sel % NTRK].w, "hola", sizeof sing[0].w);
+        frames(50);
+        n0 = uxs_panels;
+        frames(400);
+        ok &= uxs_panels == n0;                         /* (the same word: nothing) */
+        ink0 = ux_rows_ink(UX_Y_PANEL, 20);
+        str_cpy(sing[song.sel % NTRK].w, "mundo grande", sizeof sing[0].w);
+        frames(400);
+        ok &= uxs_panels == n0 + 1u;                    /* (a new word: once) */
+        ok &= ux_rows_ink(UX_Y_PANEL, 20) != ink0;
+        if (!ok) { printf("  VOICE page %u: the word's panels %u\n", (unsigned)k, (unsigned)(uxs_panels - n0)); break; }
+        press(B_EDIT); frame();
+    }
+    bad += check("ACID FM 3b fix: VOICE's sung word on its pictures, redrawn when it changes and only then", ok);
+    sing[song.sel % NTRK].w[0] = 0;
+    ui_power_on();
+    return bad;
+}
 static int nv_ok_page(uint32_t pgi)                     /* page pgi is one of EDIT's chain's shown now */
 {
     uint8_t v[16];
@@ -13525,7 +13857,8 @@ static int test_ux_knob_widths(void)
                         *vp = (int16_t)x;
                         if (pg->id[0] == P_E0 && c == 0u && UXS_SYN[e] != ENGI_ANALOG) { /* (a mode: the others' names change) */ }
                         uxs_knobs(pg, k);
-                        param_format(page_desc(pg, c, &vp), *vp, v, &u);
+                        uxs_val(page_desc(pg, c, &vp), *vp, v, sizeof v);
+                        (void)u;
                         n++;
                         if (text_w(&UF_LBL, k[c].label) > UX_COL_W - 4 || text_w(&UF_VAL, k[c].value) > UX_COL_W - 4 ||
                             !str_eq(k[c].value, v)) {
@@ -13559,7 +13892,8 @@ static int test_ux_knob_widths(void)
                         if (d && vp) *vp = (int16_t)x;
                         uxs_knobs(cur_page(), k);
                         n++;
-                        if (d && vp) param_format(d, *vp, v, &u); else str_cpy(v, "GO", sizeof v);
+                        if (d && vp) uxs_val(d, *vp, v, sizeof v); else str_cpy(v, "GO", sizeof v);
+                        (void)u;
                         if (text_w(&UF_VAL, k[0].value) > UX_COL_W - 4 || text_w(&UF_LBL, k[1].label) > UX_COL_W - 4 ||
                             text_w(&UF_VAL, k[1].value) > UX_COL_W - 4 || !str_eq(k[1].value, v)) {
                             printf("  %s MORE row %u: \"%s\" \"%s\" %d px (\"%s\")\n", UXS_SYN_NM[e], (unsigned)r, k[1].label,
@@ -13762,6 +14096,11 @@ int main(void)
     bad += test_edit_syn_more_knobs();
     bad += test_edit_syn_picture();
     bad += test_ux_knob_widths();
+    bad += test_edit_syn_is_sound();
+    bad += test_edit_syn_knobs_move();
+    bad += test_edit_lofi_knob1();
+    bad += test_ux_units();
+    bad += test_edit_voice_word();
     bad += test_engine_order_099();
 
     if (getenv("UI_SCREEN_DIR")) chain_screens(getenv("UI_SCREEN_DIR"));

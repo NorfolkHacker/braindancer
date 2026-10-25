@@ -762,6 +762,10 @@ static uint32_t page_id(const page_t *pg, uint32_t slot)
         return ID_NONE;
     if (pg->scope == SC_GLOBAL)
         return pg->graph == GR_SLPIT && id == G_SLP0 ? id + (sl_ui_step & 15u) : id;   /* the pitch of the step shown */
+    if (pg->scope == SC_ENGINE && id == P_E4 && ENGINES[TSEL->eng_req % NENGINES] == &ENG_LOFI && TSEL->p[P_E1] < RW_BYTE)
+        return TSEL->p[P_E1] == RW_WRAM ? P_DRIFT : P_MORPH;   /* (ACID FM 3b task 4 fix) LOFI's TONE KNOB 1, JIANT's empty
+                                                         * slot outside BYTE / FLOAT (no knob dead): MORPH, the chip wave on
+                                                         * towards the next; WRAM, the last, which MORPH cannot move: DRIFT */
     if (pg->graph == GR_MOD)                          /* SRC DST AMT of the slot shown */
         id += 3u * mod_ui_slot;
     if (pg->graph == GR_MSEQ && id == P_MS0)          /* the level of the step shown */

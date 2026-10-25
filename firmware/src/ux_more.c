@@ -254,13 +254,12 @@ static int ux_more_knob(uint32_t knob, int32_t steps)
     return r;
 }
 
-/* row r's words: its name (plain, as its section names it: ux_section.c uxs_label), its value into val (unit: with its
- * unit, "420 ms"), its place 0..255 into *bar (0: none) */
-static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, int unit, uint8_t *bar)
+/* row r's words: its name (plain, as its section names it: ux_section.c uxs_label), its value into val (as the knob row
+ * shows it, its unit with it: "420MS"), its place 0..255 into *bar (0: none) */
+static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8_t *bar)
 {
     int16_t *vp;
     const param_desc_t *d;
-    const char *u = "";
     val[0] = 0;
     *bar = 0;
     if (r->kind == UXR_HEAD)
@@ -272,15 +271,7 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, int u
     d = param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp);
     if (!d || !vp)
         return "";
-    {
-        char b[16];
-        param_format(d, *vp, b, &u);
-        str_cpy(val, b, nv);
-    }
-    if (unit && u && u[0]) {
-        str_cpy(val + str_len(val), " ", nv - str_len(val));
-        str_cpy(val + str_len(val), u, nv - str_len(val));
-    }
+    uxs_val(d, *vp, val, nv);                           /* (the knob row's form, units too: ux_section.c) */
     if (d->max > d->min) {
         int32_t b = (int32_t)(((int32_t)*vp - d->min) * 255 / (d->max - d->min));
         b = clamp(b, 0, 255);
@@ -309,7 +300,7 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
         if (!uxm_on(sh, i))
             continue;
         r++;
-        name = uxm_row_text(rw, val, sizeof val, 1, &bar);
+        name = uxm_row_text(rw, val, sizeof val, &bar);
         if (rw->kind == UXR_HEAD) {                     /* a heading: VIOLET capitals, a rule after them */
             int32_t w;
             bg = ux_under(12, ty + 4);

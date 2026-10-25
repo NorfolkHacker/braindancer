@@ -30,5 +30,7 @@ static int ux_more_knob(uint32_t knob, int32_t steps);   /* .. on the MORE page 
 /* setting id (a G_* when glo, else a P_* or a view) as section sec shows it: its plain name (ux_section.c UXS_NAME by section,
  * engine and id, else UXS_LABEL by JIANT's label l: "RES": "RESO"), else l */
 static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char *l);
+/* value v of setting d as the knob row, MORE and the status line show it: the number and its unit, compact ("1.9K", "1.0MS") */
+static void uxs_val(const param_desc_t *d, int32_t v, char *b, uint32_t nb);
 
 #endif
