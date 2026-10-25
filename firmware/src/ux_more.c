@@ -12,8 +12,9 @@
  * ux_home.c (ux_under), before ux_section.c (uxs_label: ux_section.h). */
 
 /* the headings' words (ux_more.h UXM_H_*) */
-static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "MSEQ", "DELAY", "REVERB", "CHORUS",
-                                              "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH"};
+static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "STEPS", "DELAY", "REVERB", "CHORUS",
+                                              "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO"};   /* (3b
+                                                         * task 7: JIANT's MSEQ, the modulation sequence, its STEPS) */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
 static const char *uxm_head(uint32_t h)
 {
@@ -52,7 +53,7 @@ static void uxm_act_do(uint32_t a)
 static int uxm_row_ok(const ux_row_t *r)
 {
     uint32_t id = r->id;
-    int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP;
+    int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT;
     return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
            r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
 }

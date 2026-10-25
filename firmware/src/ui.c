@@ -751,8 +751,7 @@ static void chain_play_ui(void)
 static int lock_page_ok(uint32_t i)
 {
     uint32_t k;
-    if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD ||
-        PAGES[i].graph == GR_MSEQ)
+    if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD)
         return 0;
     for (k = 0; k < 4u; k++)
         if (PAGES[i].id[k] != 0xFFu && motion_param(PAGES[i].id[k]))

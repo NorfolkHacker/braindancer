@@ -1236,10 +1236,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         sl_ui_step = (uint8_t)clamp((int32_t)sl_ui_step + steps, 0, 15);
         return;
     }
-    if (pg->graph == GR_MSEQ && slot == 0u) {            /* (JIANT) MSEQ: KNOB 1 the step, 2 its level */
-        ms_ui_step = (uint8_t)clamp((int32_t)ms_ui_step + steps, 0, 15);
-        return;
-    }
     if (pg->graph == GR_MOD && slot == 0u) {             /* MOD: KNOB 1 the slot, 2..4 its SRC DST AMT */
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;
@@ -1383,6 +1379,9 @@ static int rec_first(uint32_t b)
         ui.ly_t0 |= 8u;                                 /* (LY_DEAD: no REC map, no arming tap) */
     return 1;
 }
+/* (ACID FM 3b task 7) the stored setting a page's or a MORE row's id records under: LFO's MODE and PHASE (views) P_LPHASE (ui_input.c
+ * param_knob: knob_cap(P_LPHASE)); the others themselves */
+static uint32_t rec_clear_id(uint32_t id) { return id == ID_LMODE || id == ID_LPHS ? P_LPHASE : id; }
 static void rec_clear_auto(uint32_t b)
 {
     uint32_t m[(P_COUNT + 31u) / 32u], i, f, n = 0, k;
@@ -1402,16 +1401,21 @@ static void rec_clear_auto(uint32_t b)
             ;
         for (i = 0; i < NPAGES; i++)
             if (PAGES[i].fam == f && (PAGES[i].scope == SC_TRACK || PAGES[i].scope == SC_ENGINE)) {
-                for (k = 0; k < 4u; k++)
-                    if (PAGES[i].id[k] < P_COUNT && !(f == FAM_EDIT && PAGES[i].id[k] == P_DIST))   /* (EDIT > FILTER's
-                                                         * DRV is the part's DIST: FX's) */
-                        m[PAGES[i].id[k] / 32u] |= 1u << (PAGES[i].id[k] % 32u);
+                for (k = 0; k < 4u; k++) {
+                    uint32_t id = rec_clear_id(PAGES[i].id[k]);
+                    if (id < P_COUNT && !(f == FAM_EDIT && id == P_DIST))   /* (EDIT > FILTER's DRV is the part's DIST: FX's) */
+                        m[id / 32u] |= 1u << (id % 32u);
+                }
                 for (k = 0; PAGES[i].graph == GR_MORE && PAGES[i].more && k < PAGES[i].more->n; k++) {   /* (ACID FM 3b
                                                          * task 6) its MORE's rows too: SCL's SEQ PITCH, TRANSPOSE */
                     const ux_row_t *r = &PAGES[i].more->rows[k];
-                    if (r->kind == UXR_TRACK && r->id < P_COUNT && !(f == FAM_EDIT && r->id == P_DIST))
-                        m[r->id / 32u] |= 1u << (r->id % 32u);
+                    uint32_t id = rec_clear_id(r->id);
+                    if (r->kind == UXR_TRACK && id < P_COUNT && !(f == FAM_EDIT && id == P_DIST))
+                        m[id / 32u] |= 1u << (id % 32u);
                 }
+                if (PAGES[i].graph == GR_MOD)                   /* (3b task 7) MOD's four slots (the page names slot 1) */
+                    for (k = P_M1SRC; k <= P_M4AMT; k++)
+                        m[k / 32u] |= 1u << (k % 32u);
             }
         if (f == FAM_EDIT)                              /* (3b task 5 fix) every drum's LEVEL: DRUM-X's SOUND names P_LN0 */
             for (k = P_LN0; k <= P_LN7; k++)            /* and turns the drum picked's (params.c page_id), as JIANT's */
@@ -2528,7 +2532,7 @@ static void ui_input_frame(void)
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
-            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) &&
+            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_PATS) &&
              k == 0u)
             || pg->graph == GR_SONG ||
             pg->graph == GR_LIVE || pg->graph == GR_MORE) {   /* (not an empty column) */

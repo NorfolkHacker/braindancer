@@ -46,7 +46,7 @@ PAGE_SHOT = {
     'GLO': {'MANO': 'live_mano', 'RIELES': 'live_rieles', 'MIXER': 'mixer', 'SENDS': 'glo_sends',
             'GLOBAL': 'global', 'SYSTEM': 'system'},
     'ENV': {'AMP': 'env_1', 'ENV TO': 'env_2'},   # (3b task 6: ENV, SCL, ARP on the ux pages)
-    'LFO': {'MOD': 'mod', 'LFO': 'lfo', 'LFO 2': 'lfo2', 'LFO DEST': 'lfo_dest', 'MSEQ': 'mseq', 'MSEQ 2': 'mseq2'},
+    'LFO': {'LFO': 'lfo_1', 'DEST': 'lfo_2', 'MOD MATRIX': 'lfo_3', 'MORE': 'lfo_more'},   # (3b task 7: LFO on the ux pages)
     'SCL': {'KEY': 'scl_1', 'CHORD': 'scl_2', 'MORE': 'scl_more'},
     'ARP': {'ARP': 'arp_1', 'ARP 2': 'arp_2'},
     'SAVE': {'USER': 'save_sound', 'PRESETS': 'save_presets', 'SECTIONS': 'save_project', 'ARRANGE': 'save_arrange',

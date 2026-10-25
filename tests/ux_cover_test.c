@@ -19,7 +19,8 @@ typedef struct { uint8_t key, glo, id; } uxc_id_t;      /* a setting reached in 
 #define GLO 1
 
 /* the settings JIANT's pages reached, chain by chain (tests/ux_cover_test.c --dump at a5ae3f7 / 06ccb6f: every PAGES row its
- * chain names, every knob, MOD's four slots, MSEQ's and SL PITCH's sixteen steps). Reviewed: the special pages (DRUM's
+ * chain names, every knob, MOD's four slots, MSEQ's and SL PITCH's sixteen steps; 3b task 7: MSEQ's steps are LFO's MORE rows,
+ * reached there). Reviewed: the special pages (DRUM's
  * SOUND 1..4, X-MOD, KIT 3, FM6's OPERATOR / OP ENV / OPERATOR 2, FOCUS, STAGE's stages) turn kit and patch fields or other
  * pages' settings, not ids of their own: Task 5 covers the kit and patch fields; the held layers are Task 9's, but for SCL's
  * (3b task 6: its knobs the section's own, spec 2.5) */
@@ -123,13 +124,13 @@ static const char *uxc_key_name(uint32_t key)
            key == SEC_SCL ? "SEC_SCL" : "?";
 }
 
-/* the settings chain key reaches now, a bit each ([glo][id]): its pages' knobs (MOD's slots, MSEQ's and SL PITCH's steps
- * all), and (more) its MORE lists' settings */
+/* the settings chain key reaches now, a bit each ([glo][id]): its pages' knobs (MOD's slots, SL PITCH's steps all), and
+ * (more) its MORE lists' settings */
 static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
 {
     const ch_t *c = &CHAINS[key];
     uint32_t sec = key < SEC_N ? key : SEC_EDIT, e, i, sl, v, r;
-    uint8_t ms = ms_ui_step, sp = sl_ui_step, mo = mod_ui_slot, dl = dx_ui_lane;
+    uint8_t sp = sl_ui_step, mo = mod_ui_slot, dl = dx_ui_lane;
     memset(got, 0, 2 * 256);
     for (e = 0; e < c->n; e++) {
         if (!c->e[e].t)
@@ -151,7 +152,6 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
                 for (v = 0; v < 16u; v++) {             /* (the slot / the step shown: every one) */
                     uint32_t id;
                     mod_ui_slot = (uint8_t)(v & 3u);
-                    ms_ui_step = (uint8_t)v;
                     sl_ui_step = (uint8_t)v;
                     dx_ui_lane = (uint8_t)(v & 7u);     /* (3b task 5: DRUM-X's SOUND, the drum picked's LEVEL) */
                     id = page_id(pg, sl);
@@ -160,7 +160,7 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
                 }
         }
     }
-    ms_ui_step = ms; sl_ui_step = sp; mod_ui_slot = mo; dx_ui_lane = dl;
+    sl_ui_step = sp; mod_ui_slot = mo; dx_ui_lane = dl;
 }
 
 static const uxc_hid_t *uxc_hidden(uint32_t key, uint32_t glo, uint32_t id)
@@ -252,8 +252,12 @@ int main(int argc, char **argv)
     ok &= got[TRK][P_MORPH] && got[TRK][P_VLYR] && got[TRK][P_E0];
     uxc_reach(UXC_SYN, 0, got);
     ok &= !got[TRK][P_MORPH] && got[TRK][P_FCUT];
-    uxc_reach(SEC_LFO, 0, got);                         /* (MSEQ's sixteen steps, MOD's four slots) */
-    ok &= got[TRK][P_MS0] && got[TRK][P_MS15] && got[TRK][P_M1SRC] && got[TRK][P_M4AMT];
+    uxc_reach(SEC_LFO, 0, got);                         /* (MOD MATRIX's four slots on its page; 3b task 7: the STEPS' sixteen
+                                                         * and PHASE MORE's rows, on no page) */
+    ok &= got[TRK][P_M1SRC] && got[TRK][P_M4AMT] && got[TRK][P_LRATE] && got[TRK][ID_LMODE] && got[TRK][P_LD_AMP] &&
+          !got[TRK][P_MS0] && !got[TRK][P_MSDIV] && !got[TRK][ID_LPHS];
+    uxc_reach(SEC_LFO, 1, got);
+    ok &= got[TRK][P_MS0] && got[TRK][P_MS15] && got[TRK][P_MSLEN] && got[TRK][P_MSDIV] && got[TRK][P_MSSLW] && got[TRK][ID_LPHS];
     uxc_reach(SEC_FX, 0, got);
     ok &= got[GLO][G_SLP0] && got[GLO][G_SLP15] && got[TRK][P_DIST] && got[GLO][G_DTIME];
     uxc_reach(UXC_DRM, 0, got);                         /* (3b task 5: SOUND's LEVEL, every drum's; the kit's fields) */

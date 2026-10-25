@@ -95,9 +95,12 @@ static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM",
  * ALL TRACKS), CHORD (CHORD VOICING STRUM ROTATE), MORE (SEQ PITCH, TRANSPOSE); ARP's ARP, ARP 2 */
 static const nv_t CE_ENV[] = {NV("ENV", "AMP", 0, 0), NV("ENV DEST", "ENV TO", 1, 0)};
 static const ng_t CG_ENV[] = {{"AMP", 0}, {"ENV TO", 0}};
-static const nv_t CE_LFO[] = {NV("MOD", 0, 0, 0), NV("LFO", 0, 1, 1), NV("LFO 2", 0, 1, 1), NV("LFO DEST", 0, 1, 1),
-                              NV("MSEQ", 0, 2, 2), NV("MSEQ 2", 0, 2, 2)};   /* (0.9.18: LFO 2, PHASE) */
-static const ng_t CG_LFO[] = {{"MOD", 0}, {"LFO", 0}, {"MSEQ", 0}};
+/* (ACID FM 3b task 7) LFO on the ux pages, a page a group (spec 2.3): LFO (RATE WAVE MODE FADE: its wave scrolling), DEST (the
+ * LFO's PITCH FILTER SHAPE AMP), MOD MATRIX (JIANT's MOD: SLOT SOURCE DEST AMOUNT, the slot picked a track each), MORE (PHASE;
+ * the STEPS, JIANT's MSEQ and MSEQ 2). JIANT's LFO 2 (PHASE alone) and MSEQ pages are MORE's rows */
+static const nv_t CE_LFO[] = {NV("LFO", 0, 0, 0), NV("LFO DEST", "DEST", 1, 0), NV("MOD", "MOD MATRIX", 2, 0),
+                              NV("LFO MORE", "MORE", 3, 0)};
+static const ng_t CG_LFO[] = {{"LFO", 0}, {"DEST", 0}, {"MOD MATRIX", "MATRIX"}, {"MORE", 0}};
 static const nv_t CE_SCL[] = {NV("SCL", "KEY", 0, 0), NV("CHORD", 0, 1, 0), NV("SCL MORE", "MORE", 2, 0)};
 static const ng_t CG_SCL[] = {{"KEY", 0}, {"CHORD", 0}, {"MORE", 0}};
 static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 0), NV("ARP 2", 0, 1, 0)};
@@ -114,7 +117,8 @@ static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, CG_HOME), CH(CE_SYN, CG_SYN), 
                                       CH(CE_DIG, CG_DIG)};
 /* the page each opens on at power-on (the mock-up's): SEQ its STEP, ENV its ENV, LFO its LFO, (0.9.11) GLO its MIXER (LIVE's
  * pages before it: a GLO tap inside, rule 2); ui.nmem holds it ^ this */
-static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 5, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0};   /* (3b task 6: ENV its AMP, 0) */   /* (0.9.11: GLO its MIXER; 0.9.18: SEQ its
+static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 5, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0};   /* (3b task 6: ENV its AMP, 0; task 7: LFO
+                                                         * its LFO, now the first) */   /* (0.9.11: GLO its MIXER; 0.9.18: SEQ its
                                                          * STEP, 5 with BAR gone) */
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }

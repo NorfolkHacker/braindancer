@@ -658,7 +658,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
     "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum", "drum_hand", "drum_cym",
-    "mixer", "mixer_pan", "env_1", "env_2", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl_1", "shift",
+    "mixer", "mixer_pan", "env_1", "env_2", "lfo_1", "lfo_3", "fx", "slicer", "slbus", "slpitch", "dly", "scl_1", "shift",
     "arp_off", "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env",
     "edit_voice", "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level",
     "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2",
@@ -677,13 +677,13 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "words", "words_en", "words_ja", "words_edit", "words_off", "name_lyric", "name_lyric_long", "roll_empty",
     "roll_acid", "roll_chords", "roll_ties", "roll_len32_p2", "roll_high", "roll_low", "roll_wide", "roll_playing",
     "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "drum_lock_page", "motion_locks", "auto_list",
-    "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "mseq", "dist",
-    "dly2", "reverb2", "chorus", "master", "lfo_dest", "lfo2", "lfo2_free", "countin", "countin_2bars", "menu_audio",
+    "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "lfo_more", "dist",
+    "dly2", "reverb2", "chorus", "master", "lfo_2", "lfo_sh", "lfo_free", "countin", "countin_2bars", "menu_audio",
     "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock", "head_bpm_locked", "head_glo_turn",
     "head_downbeat", "head_beat_2", "save_library", "save_tools", "save_project", "save_arrange", "save_sound",
     "save_presets", "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay",
     "fx_effect_delay2", "fx_effect_reverb", "fx_effect_slicer", "fx_effect_master", "gen_lead", "ed_filter",
-    "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop", "env_first", "mseq2",
+    "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop", "env_first", "lfo_more_end",
     "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs",
     "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "drum_hit_x4",
     "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum",
@@ -1090,13 +1090,16 @@ static void setup(int s)
      * over STEP armed, CLICK REC, COUNT-IN 2 BARS, LEVEL HIGH (KNOB 2 just turned); a song playing on an empty
      * track (CLEAR dimmed: STOP TO EDIT) */
     case S_REC_LAYER: go_home(); ui.layer = LAYER_REC; break;
-    case S_MSEQ: {                                   /* a rising, falling line over LEN 12, step 5 picked, playing */
+    case S_MSEQ: case S_MSEQ2: {                     /* (3b task 7) LFO's MORE: the STEPS, a rising, falling line over LENGTH 12;
+                                                         * STEP 5 picked (its rows in sight), then the list's end */
         static const uint8_t L[16] = {10, 40, 70, 100, 127, 90, 60, 30, 0, 50, 110, 20, 80, 80, 80, 80};
         uint32_t k;
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
         for (k = 0; k < 16u; k++) TSEL->p[P_MS0 + k] = L[k];
-        TSEL->p[P_MSLEN] = 12; ms_ui_step = 4; ms_clock = div_samples(2) * 6u + 3u;
-        TSEL->ms_v = 60 * 258;
-        go_title("MSEQ");
+        TSEL->p[P_MSLEN] = 12; TSEL->p[P_MSSLW] = 30;
+        memset(uxm_at, 0, sizeof uxm_at);
+        nav_scene(SEC_LFO, "MORE");
+        (void)ux_more_knob(0, s == S_MSEQ ? 6 : 30);
         break;
     }
     case S_DIST_PAGE: TSEL->p[P_DIST] = 70; TSEL->p[P_DTYPE] = 2; TSEL->p[P_DTONE] = 20; go_title("DIST"); break;
@@ -1105,9 +1108,20 @@ static void setup(int s)
     case S_REVERB2: song.g[G_RMOD] = 80; song.g[G_RWIDE] = 100; go_title("REVERB 2"); break;
     case S_CHORUS: song.g[G_CDEPTH] = 90; go_title("CHORUS"); break;
     case S_MASTER: song.g[G_CLIP] = 60; song.g[G_PUNCH] = 50; song.g[G_DUCK] = 40; go_title("MASTER"); break;
-    case S_LFO2: TSEL->p[P_LPHASE] = 32; go_title("LFO 2"); break;   /* (0.9.18) PHASE, TRIG */
-    case S_LFO2_FREE: TSEL->p[P_LPHASE] = -1; go_title("LFO 2"); break;   /* .. FREE: PHASE dimmed */
-    case S_LFO_DEST: TSEL->p[P_LD_PIT] = 20; TSEL->p[P_LD_FLT] = -40; TSEL->p[P_LD_AMP] = 60; go_title("LFO DEST"); break;
+    case S_LFO2: case S_LFO2_FREE:                      /* (3b task 7) LFO: RANDOM in time (1/8), TRIG at PHASE 32; a square
+                                                         * at 1/16, FREE (the 1 BEAT window) */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_LRATE] = s == S_LFO2 ? -8 : -10; TSEL->p[P_LWAVE] = s == S_LFO2 ? 4 : 3;
+        TSEL->p[P_LPHASE] = s == S_LFO2 ? 32 : -1; TSEL->p[P_LFADE] = 0;
+        TSEL->lfo_ph = 0x60000000u; TSEL->lfo_rnd = 0x9E3779B9u; TSEL->lfo_fade = 32767;
+        TSEL->lfo_val = lfo_wave(TSEL, TSEL->lfo_ph);
+        nav_scene(SEC_LFO, "LFO");
+        break;
+    case S_LFO_DEST:                                    /* (3b task 7) DEST: PITCH a little vibrato, FILTER down, AMP a tremolo */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_LRATE] = 70; TSEL->p[P_LD_PIT] = 20; TSEL->p[P_LD_FLT] = -40; TSEL->p[P_LD_AMP] = 60;
+        nav_scene(SEC_LFO, "DEST");
+        break;
     case S_MACRO_LAYER:                              /* M1: T1 CUT and T4's MRPH; M2: CLIP; M3 at 0, M4 none */
         go_home(); ui.layer = LAYER_MACRO;
         macro_v[0] = 90; macro_v[1] = 40; macro_v[3] = 127;
@@ -1170,7 +1184,6 @@ static void setup(int s)
         nav_scene(SEC_ENV, s == S_ENV_STAGE ? "ENV TO" : "AMP");
         if (s == S_ENV_TRACKS_DEST) { edit_param(3, 4); ux_knob_touch(3); }   /* (RELEASE turned: its column lit, the readout) */
         break;
-    case S_MSEQ2: go_title("MSEQ 2"); break;
     case S_DLG_MUT_BACK:                                /* (0.9.3) MUTATE turned OFF on T3 after mutating: the NOTICE */
         song.sel = 2; trk[2].p[P_MSND] = 2; trk[2].p[P_MPAT] = 4; mut_keep();
         trk[2].p[P_MSND] = trk[2].p[P_MPAT] = 0;
@@ -1249,9 +1262,20 @@ static void setup(int s)
         TSEL->p[P_ATK] = 20; TSEL->p[P_ED_FLT] = 48; TSEL->p[P_ED_PIT] = -12; TSEL->p[P_ED_SHP] = 24;
         nav_scene(SEC_ENV, s == S_ENV ? "AMP" : "ENV TO");
         break;
-    case S_LFO: go_title("LFO"); break;
-    case S_MOD: TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40; TSEL->p[P_M2SRC] = 6;
-        TSEL->p[P_M2DST] = 14; TSEL->p[P_M2AMT] = -64; mod_ui_slot = 1; go_title("MOD"); break;
+    case S_LFO:                                         /* (3b task 7) LFO: a sine at 1.18 Hz (1 BAR), FADE 0.5 s, TRIG */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_LRATE] = 60; TSEL->p[P_LWAVE] = 0; TSEL->p[P_LFADE] = 70; TSEL->p[P_LPHASE] = 0;
+        TSEL->lfo_ph = 0x30000000u; TSEL->lfo_fade = 32767; TSEL->lfo_val = lfo_wave(TSEL, TSEL->lfo_ph);
+        nav_scene(SEC_LFO, "LFO");
+        break;
+    case S_MOD:                                         /* (3b task 7) MOD MATRIX: the LFO to the FILTER, the mod wheel down on
+                                                         * E3 (slot 2 picked), slot 3 the velocity to AMP; slot 4 off */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40; TSEL->p[P_M2SRC] = 6;
+        TSEL->p[P_M2DST] = 14; TSEL->p[P_M2AMT] = -64; TSEL->p[P_M3SRC] = 3; TSEL->p[P_M3DST] = 4; TSEL->p[P_M3AMT] = 20;
+        mod_ui_slot = 1;
+        nav_scene(SEC_LFO, "MOD MATRIX");
+        break;
     case S_FX: go_title("FX"); break;
     case S_SLICER: song.g[G_SLMODE] = 1; go_title("SLICER"); break;   /* (0.6.3: the bus) */
     case S_SLBUS: song.g[G_SLMODE] = 2; song.g[G_SLT1 + 2] = 0; song.g[G_SLFX] = 0; go_title("SL BUS 2"); break;
@@ -2481,7 +2505,8 @@ int main(int argc, char **argv)
                                    S_EDIT_DRUM_1, S_EDIT_DRUM_2,
                                    S_EDIT_ANALOG_1, S_EDIT_FM6_1, S_EDIT_FM6_2, S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_NOISE_1,
                                    S_EDIT_PHASE_1, S_EDIT_LOFI_1, S_EDIT_LOFI_BYTE_1, S_EDIT_PHASE_3, S_EDIT_DRUM_MORE,
-                                   S_EDIT_VOICE_MORE};   /* (3b task 4: the synths' EDIT the ux pages, their creatures gone) */   /* (0.9.6: the six, EDIT, HOME, the whole panel) */   /* (0.9.4: the creatures against a being) */   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
+                                   S_EDIT_VOICE_MORE, S_LFO, S_LFO_DEST};   /* (3b task 4: the synths' EDIT the ux pages, their
+                                                         * creatures gone; task 7: LFO's wave, DEST) */   /* (0.9.6: the six, EDIT, HOME, the whole panel) */   /* (0.9.4: the creatures against a being) */   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
         uint32_t i, k;

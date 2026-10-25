@@ -7,11 +7,11 @@
  * 1/16 px (Q4) so curves move smoothly between pixels; lines antialiased (two pixels across, blended over what
  * is there). Angles are 16-bit turns (0x10000 = 360 degrees), through dsp.c's sine table.
  *   og_line     an antialiased line (Q4 ends)
- *   og_quad_a   a quadratic Bezier, in short lines
  *   og_ring, og_node    a circle; a dot with a soft rim
  *   bg_energy   the output's level now (what FX's lens moves with; ui_being.c's until ACID FM 3b task 5)
  * (ACID FM 3b task 5: the plates, shapes and illustrations (og_path, og_plate, og_ill, og_dash, og_stipple, og_label: the
- * beings' and creatures' line art) gone with the creatures, the user's "get rid of any creatures") */
+ * beings' and creatures' line art) gone with the creatures, the user's "get rid of any creatures"; task 7: og_quad_a, the LFO
+ * MOD net's curves) */
 static int og_neutral(uint16_t c) { return (c >> 11) == (c & 31u) && ((c >> 5) & 63u) >> 1 == (c >> 11); }
 /* c over the canvas pixel at (x, y) with coverage a (0..256) */
 static inline void og_plot(int32_t x, int32_t y, uint16_t c, int32_t a)
@@ -63,21 +63,6 @@ static void og_line_a(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c
     }
 }
 static void og_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c) { og_line_a(x0, y0, x1, y1, c, 256); }
-
-/* a quadratic Bezier (Q4 points) in n short lines */
-static void og_quad_a(int32_t x0, int32_t y0, int32_t cx, int32_t cy, int32_t x1, int32_t y1, uint16_t c, uint32_t n,
-                      int32_t a)
-{
-    int32_t px = x0, py = y0;
-    uint32_t i;
-    for (i = 1; i <= n; i++) {
-        int32_t t = (int32_t)((i << 8) / n), u = 256 - t;   /* Q8 */
-        int32_t x = (u * u * x0 + 2 * u * t * cx + t * t * x1) >> 16, y = (u * u * y0 + 2 * u * t * cy + t * t * y1) >> 16;
-        og_line_a(px, py, x, y, c, a);
-        px = x;
-        py = y;
-    }
-}
 
 /* cos / sin of a 16-bit angle, Q15 */
 static int32_t og_cos(uint32_t ang) { return sine_i((ang + 0x4000u) << 16); }

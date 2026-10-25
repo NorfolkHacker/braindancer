@@ -1483,32 +1483,7 @@ static void draw_columns(void)
         draw_column(3, "QUANT", val, unit, VAL(3u), -1, ICON_AUTO);
         return;
     }
-    if (cur_page()->graph == GR_MSEQ) {                  /* (JIANT) STEP, its LVL, LEN, SLEW */
-        const track_t *t = TSEL;
-        uint32_t id = P_MS0 + (ms_ui_step & 15u);
-        fmt_int(val, (int32_t)ms_ui_step + 1);
-        draw_column(0, "STEP", val, "/16", ms_ui_step < (uint32_t)t->p[P_MSLEN] ? VAL(0u) : T_DIM,
-                    (int32_t)ms_ui_step * 1000 / 15, ICON_AUTO);
-        param_format(&TP[id], t->p[id], val, &unit);
-        draw_column(1, "LEVEL", val, unit, VAL(1u), RATIO(&TP[id], t->p[id]), ICON_LEVEL);
-        param_format(&TP[P_MSLEN], t->p[P_MSLEN], val, &unit);
-        draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&TP[P_MSLEN], t->p[P_MSLEN]), ICON_AUTO);
-        param_format(&TP[P_MSSLW], t->p[P_MSSLW], val, &unit);
-        draw_column(3, "SLEW", val, unit, t->p[P_MSSLW] ? VAL(3u) : T_DIM, RATIO(&TP[P_MSSLW], t->p[P_MSSLW]), ICON_GLIDE);
-        return;
-    }
-    if (cur_page()->graph == GR_MOD) {                   /* SLOT, then that slot's SRC DST AMT */
-        const track_t *t = TSEL;
-        uint32_t id = P_M1SRC + 3u * mod_ui_slot;
-        int32_t s = t->p[id], d = t->p[id + 1u], a = t->p[id + 2u];
-        fmt_int(val, (int32_t)mod_ui_slot + 1);
-        draw_column(0, "SLOT", val, "/4", VAL(0u), (int32_t)mod_ui_slot * 1000 / 3, mod_src_icon(MS_OFF));   /* (the mod icon) */
-        draw_column(1, "SRC", N_MSRC[clamp(s, 0, MS_N - 1)], "", s ? VAL(1u) : T_DIM, -1, mod_src_icon(s));
-        draw_column(2, "DEST", mod_dst_name(t, d), "", d ? VAL(2u) : T_DIM, -1, mod_dst_icon(t, d));
-        param_format(&TP[id + 2u], a, val, &unit);
-        draw_column(3, "AMT", val, unit, a ? VAL(3u) : T_DIM, RATIO(&TP[id + 2u], a), mod_src_icon(MS_OFF));
-        return;
-    }
+    /* (ACID FM 3b task 7) MSEQ's and MOD's columns gone: LFO is drawn by ux_section.c (MOD MATRIX, its MORE's STEPS) */
     if (cur_page()->graph == GR_ROLL && lock_held()) {   /* a step held: what KNOB 1..4 lock (ui_input.c lock_turn) */
         uint64_t held = lock_held();
         uint32_t st = 0;

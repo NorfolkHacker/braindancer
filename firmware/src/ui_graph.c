@@ -90,27 +90,8 @@ static void graph_adsr(const track_t *t, uint16_t c)
 }
 #endif
 
-/* LFO: the wave as it runs (JIANT 0.5): the phase now at the playhead (a quarter in), two cycles across, scrolling
- * at the LFO's own rate; behind the playhead dimmer (what it played), the level now a dot, its depth after FADE */
-static void graph_lfo(const track_t *t, uint16_t c)
-{
-    int32_t x, cy = graph_ht / 2, a = 38 * graph_ht / 100, py = cy, xp = PANEL_W / 4;
-    uint32_t span = 0xFFFFFFFFu / (PANEL_W / 2u), ph = t->lfo_ph - (uint32_t)xp * span;
-    int32_t now = cy - mulq15(t->lfo_val, t->lfo_fade) * a / 32768;
-    cv_rect(PANEL_X0, cy, PANEL_W, 1, T_RAISE);
-    for (x = 0; x < PANEL_W; x++) {                  /* (lfo_wave only reads the track) */
-        uint32_t px = ph + (uint32_t)x * span;
-        int32_t y = cy - lfo_wave((track_t *)t, px) * a / 32768;
-        if (t->p[P_LWAVE] == 4)                      /* S&H: a value per cycle part, held */
-            y = cy - ((int32_t)((((px >> 29) + 1u) * 2654435761u) >> 16) - 32768) * a / 32768;
-        if (x)
-            cv_line_t(PANEL_X0 + x - 1, py, PANEL_X0 + x, y,
-                      x < xp ? ux_mix(T_SURF, c, 45) : c, 2);
-        py = y;
-    }
-    cv_rect(PANEL_X0 + xp, cy - a - 4, 1, 2 * a + 8, T_MID);   /* the playhead */
-    cv_rrect(PANEL_X0 + xp - 3, now - 3, 7, 7, 3, T_TEXT, T_SURF);
-}
+/* (ACID FM 3b task 7) graph_lfo (LFO's wave, JIANT 0.5; MENU > LARGE's LFO strip) gone: LFO's pages are ux_section.c's, their
+ * wave drawn from the engine's (voice.c lfo_wave, track_lfo_tick) */
 
 
 /* (0.6.43) SEQ > MUTATE: a row a track, the next 32 bars: SOUND's changes an orange mark on top, PATTERN's a violet one
@@ -659,9 +640,9 @@ static const char *graph_project_name(uint32_t slot)  /* (after graph_project_us
     return graph_pname[slot & 3u];
 }
 
-/* MENU > LARGE's strip under the tall cards (ui.c LK_TALL): HOME's scope, ENV's ADSR, LFO's wave, PATTERN's steps,
+/* MENU > LARGE's strip under the tall cards (ui.c LK_TALL): HOME's scope, DIGITAL's ADSR, PATTERN's steps,
  * MIXER's tracks drawn small; on the other pages the page's title and number (their charts need the whole panel) */
-enum { SK_NONE, SK_SCOPE, SK_ADSR, SK_LFO, SK_STEPS, SK_TRK, SK_TITLE };
+enum { SK_NONE, SK_SCOPE, SK_ADSR, SK_STEPS, SK_TRK, SK_TITLE };   /* (3b task 7: SK_LFO gone, LFO the ux pages') */
 static uint32_t strip_kind(void)
 {
     uint32_t g;
@@ -670,7 +651,7 @@ static uint32_t strip_kind(void)
     if (ui.home)
         return SK_SCOPE;
     g = cur_page()->graph;
-    return g == GR_ADSR && FELUCCA_FM4 ? SK_ADSR : g == GR_LFO ? SK_LFO : g == GR_STEPS ? SK_STEPS : g == GR_TRK ? SK_TRK : SK_TITLE;
+    return g == GR_ADSR && FELUCCA_FM4 ? SK_ADSR : g == GR_STEPS ? SK_STEPS : g == GR_TRK ? SK_TRK : SK_TITLE;
 }
 /* the page's title and its number in its family ("ENV DEST 2/2", EDIT: the engine's "OSC 1/2"); the piano roll: its
  * scale ("C MIN"); ti holds 20 (the footer, the strip) */
@@ -912,14 +893,10 @@ static uint32_t graph_signature(void)
                                                          * FX's lens pictures change with their values, */
     if (fx_on() && (song.playing || bg_energy() > 2))   /* .. and with the sound while it sounds: FX live) */
         h ^= ui.frame / 2u * 2246822519u;
-    if (pg->graph == GR_LFO)                         /* (JIANT 0.5) the LFO runs: its phase, its level */
-        h ^= (t->lfo_ph >> 23) * 2654435761u ^ (uint32_t)(t->lfo_val * t->lfo_fade >> 22);
     for (i = 0; i < P_COUNT; i++)
         h = (h ^ (uint32_t)t->p[i]) * 16777619u;
     h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u +
          ui.ppick * 1299709u;
-    if (pg->graph == GR_MSEQ)                        /* (JIANT) the step picked, the one playing, the level now */
-        h ^= (ms_ui_step + 1u) * 40503u + (song.playing ? ui.frame * 2654435761u : 0u);
     if (pg->graph == GR_SONG) {
         for (uint32_t r = 0; r < CHAIN_ROWS; r++)
             h = (h ^ (song_idx.scene[song_cur][r].on * (r + 1u))) * 16777619u;
@@ -931,13 +908,8 @@ static uint32_t graph_signature(void)
         for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (24u + i);
         h += graph_pname_sig;
     }
-    if (pg->graph == GR_MOD)
-        h ^= (mod_ui_slot + 1u) * 40503u;
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
         h ^= (pd_level() + 1u) * 668265263u;
-        if (pd_cur() == PD_MOD && pg->graph != GR_MSEQ)   /* (MOD's pulse,
-                                                         * LFO DEST's LFO) */
-            h ^= ui.frame / 2u * 2654435761u;
     }
     if ((pg->graph == GR_SLCR || pg->graph == GR_SLPIT) && song.g[G_SLMODE])   /* the SLICER's step playing */
         h ^= (sl.idx + 1u) * 2654435761u;
@@ -1414,25 +1386,7 @@ static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c)
 }
 
 /* SONG: the rows, each a section (the saved project A..D, sounds and steps) and its bars (song_chain.c) */
-/* (JIANT) MSEQ: the 16 levels as bars (past LEN dim), the step KNOB 1 picked framed, the one playing in the accent, and
- * the level the matrix reads now (STEP, slewed) as a line */
-static void graph_mseq(const track_t *t, uint16_t c)
-{
-    uint32_t i, len = t->p[P_MSLEN] > 0 ? (uint32_t)t->p[P_MSLEN] : 1u;
-    uint32_t per = div_samples((uint32_t)t->p[P_MSDIV]), now = song.playing && per ? ms_clock / per % len : 0xFFu;
-    int32_t y0 = 92, hmax = 80;
-    for (i = 0; i < 16u; i++) {
-        int32_t x = 13 + (int32_t)i * 13, h = t->p[P_MS0 + i] * hmax / 127;
-        uint16_t col = i >= len ? T_RAISE : i == now ? T_ACCENT : c;
-        cv_rrect(x, y0 - hmax, 10, hmax, 2, T_RAISE, T_SURF);
-        if (h > 0)
-            cv_rrect(x, y0 - (h < 3 ? 3 : h), 10, h < 3 ? 3 : h, 2, col, T_RAISE);
-        if (i == ms_ui_step)
-            cv_rect(x, y0 + 3, 10, 2, T_TEXT);
-    }
-    if (song.playing)
-        cv_rect(13, y0 - t->ms_v * hmax / 32767, 205, 1, T_TEXT);
-}
+/* (ACID FM 3b task 7) graph_mseq (JIANT's MSEQ: the 16 levels as bars) gone: the STEPS are LFO's MORE rows */
 /* (0.6.22) ARRANGE / SEQ > SONG, after SLOOP's arranger in JIANT's colours: the song as a column of rows, each a section
  * chip (A..D, each its own heat), its bars as blocks (one a bar, up to 16; past 16 each a 16th of it) filling as they
  * play, the bars' count, a dot for its scene; under them + ADD (the rows used of CHAIN_ROWS) and the song's END (STOP,
@@ -1589,13 +1543,12 @@ static void draw_graph(void)
     cv_oy = GOY;                                     /* graphs on a 100 px scale */
     if (strip_kind() != SK_NONE) {            /* MENU > LARGE: the strip */
         uint32_t k = strip_kind();
-        cv_oy = k == SK_ADSR || k == SK_LFO ? 3 : 0;
+        cv_oy = k == SK_ADSR ? 3 : 0;
         graph_ht = LG_H_GRAPH - 6;
         if (k == SK_SCOPE) graph_scope(c);
 #if FELUCCA_FM4
         else if (k == SK_ADSR) graph_adsr(t, c);
 #endif
-        else if (k == SK_LFO) graph_lfo(t, c);
         else graph_title();
         graph_ht = 100;
     } else if (ui.confirm == CF_DICE_ALL) {          /* (0.8.5) GEN, HOME's lens's last level (gen.c) */
@@ -1618,7 +1571,6 @@ static void draw_graph(void)
         cv_oy = 0;
         graph_fx_lz(t, pg);
     } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
-    } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
     } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
         cv_oy = 0;
         graph_system();

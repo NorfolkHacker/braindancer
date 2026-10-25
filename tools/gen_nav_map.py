@@ -96,7 +96,7 @@ L = {
          'ARP': 'ARP again: the other page. The picture: the notes it plays from C G E held.',
          'SCL': 'ROTATE (CHORD) and SEQ PITCH (MORE) without the layer. The picture: what each key plays.',
          'ENV': 'AMP: the envelope as it sounds; ENV TO: what that same envelope moves (FILTER, PITCH, SHAPE).', 'GLO': 'LIVE: MANO plays the modifiers on the keys. MIXER KNOB 4: the DJ FILTER.',
-         'LFO': 'KNOB 1: the slot on MOD, the step on MSEQ.'},
+         'LFO': 'The picture: the wave running. KNOB 1 picks the slot on MOD MATRIX (a track each). MORE: PHASE, the STEPS (was MSEQ).'},
   layers=[('HOME', 'the MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (SELECT the pages, ALGORITHM the tabs, KNOB 1–4 the settings)'),
           ('EDIT', 'F3 INIT · G3 RECALL · DRUM: black keys 1–8 mute each sound'),
           ('SEQ', 'F3 CLEAR · G3 REVERSE · A3/B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO · D5 REVERT · **G5 CLR STEP** · REC: CLEAR ALL'),
@@ -142,7 +142,7 @@ L = {
          'ARP': 'ARP otra vez: la otra página. El dibujo: las notas que toca con C G E apretadas.',
          'SCL': 'ROTATE (CHORD) y SEQ PITCH (MORE) sin la capa. El dibujo: qué toca cada tecla.',
          'ENV': 'AMP: la envolvente como suena; ENV TO: qué mueve esa misma envolvente (FILTER, PITCH, SHAPE).', 'GLO': 'LIVE: en MANO las teclas tocan los modificadores. MIXER KNOB 4: el DJ FILTER.',
-         'LFO': 'KNOB 1: el slot en MOD, el paso en MSEQ.'},
+         'LFO': 'El dibujo: la onda corriendo. KNOB 1 elige el slot en MOD MATRIX (uno por pista). MORE: PHASE, los STEPS (era MSEQ).'},
   layers=[('HOME', 'el MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (SELECT las páginas, ALGORITHM las pestañas, KNOB 1–4 los ajustes)'),
           ('EDIT', 'F3 INIT · G3 RECALL · DRUM: negras 1–8 silencian cada sonido'),
           ('SEQ', 'F3 CLEAR · G3 REVERSE · A3/B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO · D5 REVERT · **G5 CLR STEP** · REC: CLEAR ALL'),
@@ -174,7 +174,8 @@ def is_cond(sec, ce, name):
     return (sec, name) in COND or (ce, name) in COND
 
 # the map's rows: the sections in each (EDIT: its three chains side by side) and their accent (KNOB 1..4 colours)
-ROWS = [['HOME', 'SEQ', 'ARP'], ['EDIT'], ['FX', 'GLO'], ['ENV', 'LFO', 'SCL', 'SAVE']]   # (3b task 6: SCL 3 pages, ARP 2)
+ROWS = [['HOME', 'SEQ', 'ARP'], ['EDIT'], ['FX', 'GLO'], ['ENV', 'LFO', 'SCL'], ['SAVE']]   # (3b task 6: SCL 3 pages, ARP 2;
+                                                        # task 7: LFO 4, MOD MATRIX's pill too narrow beside SAVE)
 ACCENT = {'HOME': K[0], 'SEQ': K[2], 'SCL': K[3], 'EDIT': K[1], 'FX': K[3], 'GLO': K[0], 'ENV': K[1], 'LFO': K[2],
           'ARP': K[0], 'SAVE': K[1]}
 

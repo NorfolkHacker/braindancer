@@ -257,6 +257,8 @@ static uint32_t ux_rows_ink(uint32_t y0, uint32_t h)    /* pixels of LCD rows y0
 }
 
 /* one UI frame (input, then the drawing on the stub display) */
+struct ux_more_s;
+static void uxe_more_set(const ux_more_t *m, uint32_t id, int32_t s);   /* (3b task 7: LFO's MORE in the LFO tests) */
 static void frame(void)
 {
     host_ticks += 16000u;
@@ -1259,19 +1261,19 @@ static int test_lfo_free(void)
         trk_note_on(t, 60, 100);
         ok &= t->lfo_fade == 32767;
         trk_note_off(t, 60);
-        go_title("LFO 2"); frame();
-        d = page_desc(cur_page(), 0, &vp);
-        ok &= d && str_eq(d->label, "PHASE") && *vp == 40;   /* (dimmed: FREE) */
-        turn(EN_K1, 1); turn(EN_K1, 1); frame();
+        go_title("LFO MORE"); frame();                  /* (3b task 7: PHASE, JIANT's LFO 2, a row of LFO's MORE) */
+        d = param_ref(t, ID_LPHS, &vp);
+        ok &= d && str_eq(d->label, "PHASE") && *vp == 40;   /* (FREE: what TRIG will start from) */
+        uxe_more_set(&UXM_LFO, ID_LPHS, 1); frames(200); uxe_more_set(&UXM_LFO, ID_LPHS, 1); frame();
         ok &= t->p[P_LPHASE] == -1;                      /* (PHASE in FREE: only what TRIG will start from) */
         go_title("LFO"); frame();
         turn(EN_K3, -1); frame();
         ok &= t->p[P_LPHASE] == 42;
-        go_title("LFO 2"); frame();
-        turn(EN_K1, -2); frame();
+        go_title("LFO MORE"); frame();
+        uxe_more_set(&UXM_LFO, ID_LPHS, -1); frames(200); uxe_more_set(&UXM_LFO, ID_LPHS, -1); frame();
         ok &= t->p[P_LPHASE] == 40;
     }
-    bad += check("LFO pages: RATE WAVE MODE FADE, LFO 2 PHASE; FREE keeps TRIG's PHASE, fades in once when turned on", ok);
+    bad += check("LFO pages: RATE WAVE MODE FADE, MORE's PHASE (3b task 7: was LFO 2); FREE keeps TRIG's PHASE, fades in once when turned on", ok);
     /* a project: MODE kept as stored (PHASE -1 FREE, 40 TRIG at 40); its load fades the LFOs in once, a song's next
      * section (or UNDO) does not */
     t->p[P_LPHASE] = -1;
@@ -4958,14 +4960,14 @@ static int test_macro_layer(void)
     ok &= !song_idx.scene[song_cur][1].on;
     trk[3].p[P_MUTE] = 0; chain_config.count = 0;
     bad += check("SONG KNOB 4 SCENE: right stores the mutes and macros into the row, left takes it away", ok);
-    ui_power_on();                                     /* (JIANT) LFO > MSEQ: KNOB 1 the step, 2 its level, 3 LEN */
-    ms_ui_step = 0;
-    go_title("MSEQ"); frame();
-    turn(EN_K1, 3); frame();
-    turn(EN_K2, 10); frame();
-    turn(EN_K3, -4); frame();
-    bad += check("MSEQ: KNOB 1 picks step 4, KNOB 2 its level, KNOB 3 LEN", ms_ui_step == 3u && TSEL->p[P_MS0 + 3] == 10 &&
-                 TSEL->p[P_MS0] == 0 && TSEL->p[P_MSLEN] == 12);
+    ui_power_on();                                     /* (JIANT) LFO > MSEQ (3b task 7: LFO's MORE, its STEPS): step 4's level,
+                                                         * LENGTH; step 1 left */
+    press(B_LFO); frame();
+    nav_put(SEC_LFO, "MORE"); frame();
+    uxe_more_set(&UXM_LFO, P_MS0 + 3, 10);
+    uxe_more_set(&UXM_LFO, P_MSLEN, -4);
+    bad += check("MSEQ (3b task 7: LFO > MORE's STEPS): step 4's level, LENGTH", cur_page()->graph == GR_MORE &&
+                 TSEL->p[P_MS0 + 3] == 10 && TSEL->p[P_MS0] == 0 && TSEL->p[P_MSLEN] == 12);
     return bad;
 }
 
@@ -10737,13 +10739,15 @@ static void uxn_walk(uint32_t t, uint32_t sec, char *b, uint32_t n)
 }
 static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE, T2 EDIT .. SAVE, .. (3b task 6: ENV AMP MOD
                                                          * ENV, SCL KEY CHORD MORE, ARP ARP ARP 2: a page a group; ENV and ARP
-                                                         * + SELECT then let go here: the chain's next, then the tap, round) */
+                                                         * + SELECT then let go here: the chain's next, then the tap, round;
+                                                         * task 7: LFO's LFO DEST MOD MATRIX MORE, a page a group, opening on
+                                                         * LFO; LFO + SELECT its dice as before) */
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
-    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
@@ -10752,7 +10756,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
-    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
@@ -10761,7 +10765,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
-    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
@@ -10770,7 +10774,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
-    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
@@ -10779,7 +10783,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
-    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
@@ -10788,7 +10792,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
-    "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
+    "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
@@ -11479,49 +11483,8 @@ static int test_lz_edit(void)
 }
 
 /* (ACID FM 3b task 6: ENV's lens test gone with it: test_t6_nav) */
-/* LFO (0.9.2, ui_lzpage.c): MOD . LFO (LFO, LFO DEST) . MSEQ (MSEQ, MSEQ 2) one chain; it opens on LFO; KNOB 1 the slot on
- * MOD, the step on MSEQ (PRESETS: a sound; it was the slot, the track, the step); MOD's net pulses */
-static int test_lz_mod(void)
-{
-    int bad = 0, ok;
-    uint32_t pr;
-    ui_power_on(); frame();
-    press(B_LFO); frame();
-    ok = pd_on() && lz_fam() == LZ_MOD && pd_level() == 1u && str_eq(cur_page()->title, "LFO") && lz_tab_lit(1) &&
-         lz_crumb_is("LFO \xB7 LFO \xB7 LFO") && lz_count_is("2/6");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "LFO 2") && lz_crumb_is("LFO \xB7 LFO \xB7 LFO 2");   /* (0.9.18: PHASE) */
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "LFO DEST");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "MSEQ") && lz_crumb_is("LFO \xB7 MSEQ \xB7 MSEQ");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "MSEQ 2") && lz_crumb_is("LFO \xB7 MSEQ \xB7 MSEQ 2") && lz_count_is("6/6");
-    frames(320); press(B_LFO); frame();
-    ok &= pd_level() == 0u && str_eq(cur_page()->title, "MOD") && lz_tab_lit(0) && lz_crumb_is("LFO \xB7 MOD \xB7 MOD");
-    bad += check("0.9.2 LFO: opens on LFO; MOD . LFO (LFO, LFO 2, LFO DEST) . MSEQ (MSEQ, MSEQ 2) by SELECT; an LFO tap round to MOD", ok);
-    mod_ui_slot = 0;
-    TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
-    turn(EN_K1, 1); frame();
-    ok = mod_ui_slot == 1u;
-    turn(EN_K1, -1); frame();
-    ok &= mod_ui_slot == 0u;
-    pr = TSEL->preset;
-    turn(EN_PRESET, 1); frame();
-    ok &= mod_ui_slot == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0)) && str_eq(cur_page()->title, "MOD");
-    TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
-    {
-        static uint16_t a[240 * 140];
-        frames(1600);                                               /* (any toast gone) */
-        memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
-        frames(160);
-        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0;   /* (the pulse along slot 1's curve) */
-    }
-    bad += check("0.9.2 LFO > MOD: KNOB 1 the slot (PRESETS a sound, was the slot); the net's pulse runs", ok);
-    ui_power_on();
-    return bad;
-}
-
+/* (ACID FM 3b task 7: LFO's lens test gone with it: test_t7_nav keeps its checks, the chain opening on LFO, the slot KNOB 1
+ * picks, PRESETS a sound there; the MOD net's pulse: test_t7_pace, the wave scrolling) */
 /* (ACID FM 3b task 6: SCL's and ARP's lens test gone with them: test_t6_nav) */
 /* GLO (0.9.2, ui_lzpage.c): MIX (MIXER, SENDS) . GLOBAL . SYSTEM one chain; a GLO tap the next group (MIX's first: MIXER),
  * from elsewhere the page left (was always MIXER); SENDS's knobs the track's sends. (0.9.11) LIVE (MANO, RIELES) first in
@@ -11873,7 +11836,8 @@ static const old_lv_t OLD_LV[] = {
                                                          * EDIT their own; JIANT's other pages MORE's rows) */
     {FAM_EDIT, 0, 2, {"EDIT 1", "DRUM SOUND", "DRUM SOUND 2"}}, {FAM_EDIT, 1, 2, {"DRUM MORE"}},
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}},   /* (3b task 6: ENV, SCL, ARP their own; ENV's TRACKS and STAGE gone, SCL's MORE) */
-    {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO 2", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
+    {FAM_LFO, 0, 9, {"LFO", "LFO DEST", "MOD", "LFO MORE"}},   /* (3b task 7: LFO its own; LFO 2's PHASE and MSEQ's STEPS MORE's
+                                                         * rows) */
     {FAM_SCL, 0, 9, {"SCL", "CHORD", "SCL MORE"}}, {FAM_ARP, 0, 9, {"ARP", "ARP 2"}},
     {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"GLOBAL"}}, {FAM_GLO, 2, 9, {"SYSTEM"}},
     {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}}, {FAM_SAVE, SV_PROJ, 9, {"PROJECT", "ARRANGE"}},
@@ -12491,6 +12455,12 @@ static const param_desc_t *old_page_desc(const page_t *pg, uint32_t slot, int16_
         *valp = &load_ui;
         return &LOAD_DESC;
     }
+    if (id == ID_MSLOT) {                               /* (3b task 7) MOD's KNOB 1, JIANT's empty slot that picked the slot:
+                                                         * its view (SLOT), turned as JIANT's (ui_input.c edit_param) */
+        mslot_ui = (int16_t)(mod_ui_slot & 3u);
+        *valp = &mslot_ui;
+        return &MSLOT_DESC;
+    }
     if (pg->scope == SC_STEP || pg->scope == SC_TRK) {
         *valp = 0;
         return 0;
@@ -12507,9 +12477,7 @@ static const param_desc_t *old_page_desc(const page_t *pg, uint32_t slot, int16_
     }
     if (pg->graph == GR_MOD)
         id += 3u * mod_ui_slot;
-    if (pg->graph == GR_MSEQ && id == P_MS0)
-        id += ms_ui_step & 15u;
-    *valp = &TSEL->p[id];
+    *valp = &TSEL->p[id];                               /* (3b task 7: JIANT's MSEQ page, its step, gone) */
     if (id == P_APRATE && TSEL->p[P_APSYNC])
         return &AP_BEAT;
     return track_desc(TSEL, id);
@@ -12601,11 +12569,11 @@ static int test_param_knob_same(void)
         for (i = 0; i < NPAGES; i++)
             for (sl = 0; sl < 4u && PAGES[i].graph != GR_FM6P && PAGES[i].graph != GR_DXP; sl++)   /* (3b task 5's pages: no
                                                          * JIANT's to compare, test_edit_fm6 / test_edit_drm) */
-                for (st = 0; st < 64u; st++) {   /* the views' state: MOD's slot, MSEQ's and SL PITCH's step, the reverb's
+                for (st = 0; st < 64u; st++) {   /* the views' state: MOD's slot, SL PITCH's step, the reverb's
                                                   * type, AUTO PAN on the tempo, the LFO FREE / TRIG */
                     int16_t *v0, *v1;
                     const param_desc_t *d0, *d1;
-                    mod_ui_slot = (uint8_t)(st & 3u); ms_ui_step = (uint8_t)(st * 5u); sl_ui_step = (uint8_t)(st * 7u);
+                    mod_ui_slot = (uint8_t)(st & 3u); sl_ui_step = (uint8_t)(st * 7u);
                     song.g[G_RTYPE] = (int16_t)(st % 5u); TSEL->p[P_APSYNC] = (int16_t)((st >> 2) & 1u);
                     TSEL->p[P_LPHASE] = (int16_t)((st >> 3) & 1u ? -1 : 20); lfo_ph_mem[song.sel] = (uint8_t)(st + 3u);
                     d0 = old_page_desc(&PAGES[i], sl, &v0);
@@ -12628,7 +12596,7 @@ static int test_param_knob_same(void)
                     uint32_t id = PAGES[i].id[sl];
                     if (id == G_TRKS || id == G_LOADP)
                         continue;                       /* (the device's settings, saved: moved verbatim, not run here) */
-                    mod_ui_slot = (uint8_t)(n & 3u); ms_ui_step = (uint8_t)(n * 5u); sl_ui_step = (uint8_t)(n * 3u);
+                    mod_ui_slot = (uint8_t)(n & 3u); sl_ui_step = (uint8_t)(n * 3u);
                     song.g[G_RTYPE] = (int16_t)(n % 5u); TSEL->p[P_APSYNC] = (int16_t)((n >> 1) & 1u);
                     TSEL->p[P_LPHASE] = (int16_t)(n % 3u == 0u ? -1 : (int16_t)(n % 100u));
                     song.rec = (uint8_t)(st >= 4u ? 1u << song.sel : 0u);   /* (recording: AUTOMATION's events) */
@@ -15159,6 +15127,590 @@ static int test_ux_more_rows_ok(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3b task 7: LFO on the ux pages (LFO, DEST, MOD MATRIX, MORE).
+ * ------------------------------------------------------------------------------------------------------------------------- */
+typedef struct { const char *nm, *title; const char *lab[4]; uint16_t id[4]; } uxt7_pg_t;   /* id: what the knob stores */
+static const uxt7_pg_t UXT7_PG[] = {
+    {"LFO", "LFO", {"RATE", "WAVE", "MODE", "FADE"}, {P_LRATE, P_LWAVE, P_LPHASE, P_LFADE}},
+    {"DEST", "LFO DEST", {"PITCH", "FILTER", "SHAPE", "AMP"}, {P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP}},
+    {"MOD MATRIX", "MOD", {"SLOT", "SOURCE", "DEST", "AMOUNT"}, {ID_NONE, P_M1SRC, P_M1DST, P_M1AMT}},
+};
+static void uxt7_open(uint32_t i)                        /* T1 (ANALOG, its first sound), LFO's page i shown */
+{
+    uxs_syn_on(ENGI_ANALOG);
+    memset(mod_ui_slot_tr, 0, sizeof mod_ui_slot_tr);
+    press(B_LFO); frame();
+    nav_put(SEC_LFO, i < NELEM(UXT7_PG) ? UXT7_PG[i].nm : "MORE"); frame();
+}
+static const char *const UXT7_MORE =
+    "[LFO]|PHASE|[STEPS]|LENGTH|RATE|SMOOTH|STEP 1|STEP 2|STEP 3|STEP 4|STEP 5|STEP 6|STEP 7|STEP 8|STEP 9|STEP 10|STEP 11|"
+    "STEP 12|STEP 13|STEP 14|STEP 15|STEP 16";
+/* the chain (LFO's button round, SELECT to the ends, n / 4), opening on LFO, no JIANT LFO 2 / MSEQ / MSEQ 2; the footers; the
+ * page left kept, PRESETS a sound and ALGORITHM the track there; MOD MATRIX's KNOB 1 the slot (a slot a detent), a track each;
+ * MORE's list (was test_lz_mod's: JIANT's MOD . LFO . MSEQ lens chain) */
+static int test_t7_nav(void)
+{
+    static const char *const N[4] = {"LFO", "DEST", "MOD MATRIX", "MORE"}, *const T[4] = {"LFO", "LFO DEST", "MOD", "LFO MORE"};
+    int bad = 0, ok;
+    uint32_t pr;
+    ui_power_on(); frame();
+    press(B_LFO); frame();
+    ok = str_eq(cur_page()->title, "LFO") && ux_section_owns(SEC_LFO) && uxt6_walk(B_LFO, N, T, 4);
+    bad += check("ACID FM 3b task 7: LFO is LFO, DEST, MOD MATRIX, MORE (its button round, SELECT to the ends, n / 4); opens "
+                 "on LFO; no LFO 2, MSEQ, MSEQ 2", ok && !nav_put(SEC_LFO, "LFO 2") && !nav_put(SEC_LFO, "MSEQ") &&
+                 !nav_put(SEC_LFO, "MSEQ 2"));
+    {   /* the footers: n / N and NEXT the page LFO's button goes to; MORE its knobs */
+        static const char *const F[3] = {"1 / 4 \xB7 NEXT DEST", "2 / 4 \xB7 NEXT MOD MATRIX", "3 / 4 \xB7 NEXT MORE"};
+        uint32_t c;
+        ux_knob_t k[4];
+        char b[48];
+        ok = 1;
+        for (c = 0; c < 4u; c++) {
+            uxt7_open(c);
+            uxs_knobs(cur_page(), k);
+            uxs_foot(uxs_where(), k, uxs_count(), uxs_next(), b, sizeof b);
+            if (c < 3u ? !str_eq(b, F[c]) : strncmp(b, "4 / 4 \xB7 SETTING \xB7 PHASE", 24) != 0) {
+                printf("  %s: footer \"%s\"\n", uxs_where(), b);
+                ok = 0;
+            }
+        }
+        bad += check("ACID FM 3b task 7: LFO's footers: n / 4 . NEXT the next page; MORE SETTING . PHASE", ok);
+    }
+    ui_power_on(); frame();                             /* its page left; PRESETS a sound, ALGORITHM the track there */
+    press(B_LFO); frame(); turn(EN_SELECT, 2); frame();
+    press(B_ENV); frame(); press(B_LFO); frame();
+    ok = str_eq(cur_page()->title, "MOD");
+    mod_ui_slot = 0;
+    TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
+    turn(EN_K1, 1); frame();
+    ok &= mod_ui_slot == 1u && str_eq(uxe_value(0), "2");
+    turn(EN_K1, 5); frame();
+    ok &= mod_ui_slot == 2u;                            /* (JIANT's: a slot a detent) */
+    turn(EN_K1, -1); frame(); turn(EN_K1, -1); frame(); turn(EN_K1, -1); frame();
+    ok &= mod_ui_slot == 0u;
+    pr = TSEL->preset;
+    turn(EN_PRESET, 1); frame();
+    ok &= mod_ui_slot == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0)) && str_eq(cur_page()->title, "MOD");
+    turn(EN_ALGO, 1); frame();
+    ok &= song.sel == 1u && str_eq(cur_page()->title, "MOD");
+    bad += check("ACID FM 3b task 7: MOD MATRIX's KNOB 1 the slot (a detent each, as JIANT's MOD); the page left kept; PRESETS a "
+                 "sound, ALGORITHM the track there", ok);
+    ui_power_on(); frame();                             /* the slot picked: a track each */
+    memset(mod_ui_slot_tr, 0, sizeof mod_ui_slot_tr);
+    track_select(1); press(B_LFO); frame(); nav_put(SEC_LFO, "MOD MATRIX"); frame();
+    turn(EN_K1, 1); frame(); turn(EN_K1, 1); frame();
+    track_select(3); frame(); turn(EN_K1, 1); frame(); turn(EN_K1, 1); frame(); turn(EN_K1, 1); frame();
+    ok = mod_ui_slot == 3u;
+    track_select(1); frame();
+    ok &= mod_ui_slot == 2u && str_eq(uxe_value(0), "3");
+    track_select(3); frame();
+    ok &= mod_ui_slot == 3u && str_eq(uxe_value(0), "4");
+    track_select(0); frame();
+    ok &= mod_ui_slot == 0u;
+    bad += check("ACID FM 3b task 7: MOD MATRIX's slot picked a track each (T2 slot 3, T4 slot 4, kept switching back)", ok);
+    uxt7_open(3);
+    ok = cur_page()->graph == GR_MORE && str_eq(uxe_more_list(&UXM_LFO), UXT7_MORE);
+    if (!ok) printf("  MORE: %s\n", uxe_more_list(&UXM_LFO));
+    bad += check("ACID FM 3b task 7: LFO's MORE lists LFO (PHASE) and STEPS (LENGTH RATE SMOOTH, STEP 1 .. 16)", ok);
+    ui_power_on();
+    return bad;
+}
+/* a knob turned on T2: its one setting moved (MODE: P_LPHASE; SLOT: none stored, the pick), nothing else of any track or any
+ * global; the matrix's knobs as JIANT's MOD page wrote them (old_edit_tail: its page_desc and param_turn), each slot */
+static int test_t7_knobs(void)
+{
+    static track_t was[NTRK];
+    static int16_t gw[G_COUNT];
+    uint32_t i, c, sl;
+    int bad = 0, ok = 1;
+    for (i = 0; i < NELEM(UXT7_PG); i++) {
+        char want[64];
+        uxt7_open(i);
+        track_select(1); frame();                       /* (on T2: the scope probe) */
+        want[0] = 0;
+        for (c = 0; c < 4u; c++) {
+            if (c) str_cpy(want + str_len(want), "|", sizeof want - str_len(want));
+            str_cpy(want + str_len(want), UXT7_PG[i].lab[c], sizeof want - str_len(want));
+        }
+        if (!str_eq(uxe_labels(), want)) { printf("  LFO %s: %s\n", UXT7_PG[i].nm, uxe_labels()); ok = 0; }
+        for (sl = 0; sl < (i == 2u ? 4u : 1u); sl++) {
+            mod_ui_slot = (uint8_t)sl;
+            for (c = 0; c < 4u; c++) {
+                uint32_t id = UXT7_PG[i].id[c] == ID_NONE ? ID_NONE : UXT7_PG[i].id[c] + (i == 2u ? 3u * sl : 0u), o, k, odd = 0;
+                int16_t v0 = id != ID_NONE ? TSEL->p[id] : 0;
+                uint8_t s0 = mod_ui_slot;
+                int32_t s = id == ID_NONE ? (sl == 3u ? -1 : 1) : v0 >= track_desc(TSEL, id)->max ? -1 : 1;
+                static int16_t exp_p[P_COUNT];
+                frames(400);
+                if (i == 2u && c) {                     /* (JIANT's MOD page's write, for the same slot and detent) */
+                    memcpy(was, trk, sizeof was);
+                    old_edit_tail(cur_page(), c, s);
+                    memcpy(exp_p, TSEL->p, sizeof exp_p);
+                    memcpy(trk, was, sizeof was);
+                    frames(400);
+                }
+                memcpy(was, trk, sizeof was);
+                memcpy(gw, song.g, sizeof gw);
+                turn(EN_K1 + c, s);
+                frames(4);
+                for (o = 0; o < NTRK; o++)
+                    for (k = 0; k < P_COUNT; k++)
+                        odd += trk[o].p[k] != was[o].p[k] && !(o == 1u && k == id);
+                for (k = 0; k < G_COUNT; k++)
+                    odd += song.g[k] != gw[k];
+                if (odd || (id != ID_NONE && TSEL->p[id] == v0) || (id == ID_NONE && mod_ui_slot == s0) ||
+                    (i == 2u && c && memcmp(exp_p, TSEL->p, sizeof exp_p))) {
+                    printf("  LFO %s slot %u KNOB %u: %d -> %d, %u others moved, JIANT's %s\n", UXT7_PG[i].nm, (unsigned)sl,
+                           (unsigned)c + 1u, v0, id != ID_NONE ? TSEL->p[id] : mod_ui_slot, (unsigned)odd,
+                           i == 2u && c ? (memcmp(exp_p, TSEL->p, sizeof exp_p) ? "differs" : "the same") : "-");
+                    ok = 0;
+                }
+                if (id == ID_NONE)
+                    mod_ui_slot = (uint8_t)sl;
+            }
+        }
+    }
+    bad += check("ACID FM 3b task 7: LFO's pages: their knobs in plain words, each its one setting on T2 (every track, every "
+                 "global else left); MOD MATRIX's SOURCE DEST AMOUNT of each slot as JIANT's MOD page wrote them", ok);
+    uxt7_open(3);                                       /* MORE: PHASE, LENGTH RATE SMOOTH, the sixteen steps, each alone */
+    track_select(1); frame();
+    ok = 1;
+    for (i = 0; i < NELEM(UXM_LFO_ROWS); i++) {
+        uint32_t id = UXM_LFO_ROWS[i].id, st = id == ID_LPHS ? P_LPHASE : id, o, k, odd = 0;
+        int16_t v0;
+        if (UXM_LFO_ROWS[i].kind == UXR_HEAD) continue;
+        if (id == ID_LPHS) TSEL->p[P_LPHASE] = 20;
+        v0 = TSEL->p[st];
+        frames(400);
+        memcpy(was, trk, sizeof was);
+        memcpy(gw, song.g, sizeof gw);
+        uxe_more_set(&UXM_LFO, id, v0 >= track_desc(TSEL, st)->max ? -1 : 1);
+        frames(4);
+        for (o = 0; o < NTRK; o++)
+            for (k = 0; k < P_COUNT; k++)
+                odd += trk[o].p[k] != was[o].p[k] && !(o == 1u && k == st);
+        for (k = 0; k < G_COUNT; k++)
+            odd += song.g[k] != gw[k];
+        if (odd || TSEL->p[st] == v0) { printf("  MORE row %u (id %u): %d -> %d, %u others\n", (unsigned)i, (unsigned)id, v0, TSEL->p[st], (unsigned)odd); ok = 0; }
+    }
+    bad += check("ACID FM 3b task 7: LFO's MORE: PHASE, the STEPS' LENGTH RATE SMOOTH and STEP 1 .. 16 each set from MORE, alone, "
+                 "on T2", ok);
+    {   /* the values in plain words: the knob's short, the status line's full */
+        static const struct { uint8_t pg, knob; uint16_t id; int16_t v; const char *k, *f; } V[] = {
+            {0, 0, P_LRATE, -6, "1/8D", "RATE \xB7 1/8 DOTTED"}, {0, 0, P_LRATE, 0, "20S", "RATE \xB7 0.05 HZ: 20S A CYCLE"},
+            {0, 0, P_LRATE, 60, "1.2HZ", "RATE \xB7 1.18 HZ"}, {0, 0, P_LRATE, 127, "40HZ", "RATE \xB7 40.0 HZ"},
+            {0, 1, P_LWAVE, 4, "RAND", "WAVE \xB7 RANDOM STEPS"}, {0, 1, P_LWAVE, 3, "SQR", "WAVE \xB7 SQUARE"},
+            {0, 2, P_LPHASE, -1, "FREE", "MODE \xB7 FREE: RUNS ON ITS OWN"}, {0, 3, P_LFADE, 0, "OFF", "FADE \xB7 OFF"},
+            {1, 0, P_LD_PIT, 63, "+12ST", "PITCH \xB7 +12 SEMITONES"}, {1, 0, P_LD_PIT, 32, "+5.9ST", "PITCH \xB7 +5.9 SEMITONES"},
+            {1, 0, P_LD_PIT, 1, "+13CT", "PITCH \xB7 +13 CENTS"}, {1, 0, P_LD_PIT, -64, "-12ST", "PITCH \xB7 -12 SEMITONES"},
+            {1, 1, P_LD_FLT, 0, "OFF", "FILTER \xB7 OFF"},
+            {2, 1, P_M1SRC, 6, "WHEEL", "SOURCE \xB7 MOD WHEEL"}, {2, 1, P_M1SRC, 13, "STEPS", "SOURCE \xB7 STEPS: IN MORE"},
+            {2, 2, P_M1DST, 22, "D.TIM", "DEST \xB7 DELAY TIME"}, {2, 2, P_M1DST, 2, "FILTER", "DEST \xB7 FILTER"},
+            {2, 3, P_M1AMT, 0, "OFF", "AMOUNT \xB7 OFF"},
+        };
+        ok = 1;
+        for (i = 0; i < NELEM(V); i++) {
+            int16_t keep;
+            uxt7_open(V[i].pg);
+            keep = TSEL->p[V[i].id];
+            TSEL->p[V[i].id] = V[i].v;
+            frames(UX_HOT_MS + 50u);
+            ux_knob_touch(V[i].knob);
+            frame();
+            if (!str_eq(uxe_value(V[i].knob), V[i].k) || !str_eq(uxt6_status(), V[i].f)) {
+                printf("  %s = %d: \"%s\", \"%s\"\n", UXT7_PG[V[i].pg].lab[V[i].knob], V[i].v, uxe_value(V[i].knob), uxt6_status());
+                ok = 0;
+            }
+            TSEL->p[V[i].id] = keep;
+        }
+        uxt7_open(3);                                   /* PHASE in degrees (FREE: for TRIG) */
+        TSEL->p[P_LPHASE] = 64; frame();
+        uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_LFO, ID_LPHS);
+        ok &= str_eq(uxe_value(1), "180");
+        ux_knob_touch(1); frame();
+        ok &= str_eq(uxt6_status(), "PHASE \xB7 180 DEGREES");
+        if (!ok) printf("  PHASE: \"%s\" \"%s\"\n", uxe_value(1), uxt6_status());
+        bad += check("ACID FM 3b task 7: LFO's values in plain words (RATE 1/8D, 20S, 1.2HZ, 40HZ; WAVE RAND; PITCH in cents and "
+                     "semitones; OFF at 0; SOURCE WHEEL; DEST D.TIM; PHASE 180), the status line in full", ok);
+    }
+    ui_power_on();
+    return bad;
+}
+/* REC + LFO: every setting its pages and MORE hold that can be recorded cleared (RATE WAVE PHASE FADE, DEST's four, SMOOTH and
+ * the sixteen steps: 25; at 0647b47 PHASE and steps 2..16 were not), another section's kept */
+static int test_t7_rec_clear(void)
+{
+    static const uint8_t ID[] = {P_LRATE, P_LWAVE, P_LPHASE, P_LFADE, P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP, P_MSSLW,
+                                 P_MS0, P_MS0 + 1, P_MS0 + 2, P_MS0 + 3, P_MS0 + 4, P_MS0 + 5, P_MS0 + 6, P_MS0 + 7, P_MS0 + 8,
+                                 P_MS0 + 9, P_MS0 + 10, P_MS0 + 11, P_MS0 + 12, P_MS0 + 13, P_MS0 + 14, P_MS0 + 15, P_MSLEN,
+                                 P_MSDIV, P_M1SRC, P_M4AMT};
+    uint32_t k, put = 0, left = 0;
+    int bad = 0, ok;
+    track_t *t;
+    ui_power_on();
+    t = TSEL;
+    go_home(); frame();
+    for (k = 0; k < NELEM(ID); k++)
+        put += !((k & 1u) ? motion_set_lock(t, k, ID[k], 1) : motion_set_event(t, k, ID[k], 1));
+    ok = !motion_set_event(t, 40, P_ATK, 1);
+    btn_down(B_REC); frame();
+    btn_down(B_LFO); frame(); btn_up(B_LFO); frame();
+    btn_up(B_REC); frames(20);
+    for (k = 0; k < NELEM(ID); k++)
+        if (motion_find(t, k, ID[k]) >= 0) { printf("  id %u left\n", (unsigned)ID[k]); left++; }
+    ok &= put == 25u && !left && motion_find(t, 40, P_ATK) >= 0 && msg_is("LFO AUTOMATION CLEARED");
+    if (!ok) printf("  %u put, %u left, \"%s\"\n", (unsigned)put, (unsigned)left, ui.msg);
+    bad += check("ACID FM 3b task 7: REC + LFO clears every LFO setting that can be recorded (25: RATE WAVE PHASE FADE, DEST, "
+                 "SMOOTH, the 16 steps), ENV's kept", ok);
+    ui_power_on();
+    return bad;
+}
+/* every label and value of LFO's pages (each slot, MOD's DEST on every engine) and MORE fits its column (48 px) with its glyphs,
+ * the status line's full words their glyphs (UF_HDR) */
+static int test_t7_widths(void)
+{
+    uint32_t i, c, w, n = 0, e;
+    int32_t v;
+    int bad = 0, ok = 1;
+    for (e = 0; e < NELEM(UXK_ENG); e++)
+        for (i = 0; i < NELEM(UXT7_PG); i++) {
+            uxt7_open(i);
+            uxk_engine(UXK_ENG[e]); frame();
+            for (c = 0; c < 4u; c++) {
+                uint32_t id = UXT7_PG[i].id[c];
+                const param_desc_t *d;
+                int16_t keep;
+                if (id == ID_NONE) id = P_M1SRC;        /* (SLOT: its four, below) */
+                d = track_desc(TSEL, id);
+                keep = TSEL->p[id];
+                for (v = d->min; v <= d->max; v++) {
+                    ux_knob_t k[4];
+                    const char *f;
+                    TSEL->p[id] = (int16_t)v;
+                    if (UXT7_PG[i].id[c] == ID_NONE) mod_ui_slot = (uint8_t)(v & 3);
+                    uxs_knobs(cur_page(), k);
+                    n++;
+                    if ((w = (uint32_t)text_w(&UF_VAL, k[c].value)) > UX_COL_W - 4u || str_len(k[c].value) + 1u >= sizeof k[c].value ||
+                        !uxe_glyphs(&UF_VAL, k[c].value) || !uxe_glyphs(&UF_HDR, k[c].value)) {
+                        printf("  LFO %s %s = \"%s\": %u px\n", UXT7_PG[i].nm, k[c].label, k[c].value, (unsigned)w);
+                        ok = 0;
+                    }
+                    if (text_w(&UF_LBL, k[c].label) > UX_COL_W - 4 || !uxe_glyphs(&UF_LBL, k[c].label)) {
+                        printf("  LFO %s label %s\n", UXT7_PG[i].nm, k[c].label);
+                        ok = 0;
+                    }
+                    {
+                        int16_t *vp;
+                        uint32_t pid = page_id(cur_page(), c);
+                        f = param_ref(TSEL, pid, &vp) && vp ? uxs_vfull(0, pid, *vp) : 0;
+                    }
+                    if (f && (!uxe_glyphs(&UF_HDR, f) || str_len(f) > 23u)) { printf("  LFO %s full \"%s\"\n", UXT7_PG[i].nm, f); ok = 0; }
+                }
+                TSEL->p[id] = keep;
+            }
+        }
+    for (e = 0; e < NELEM(UXK_ENG); e++) {             /* MOD MATRIX's boxes: every SOURCE and DEST in UF_LBL, within 60 px */
+        uxt7_open(2);
+        uxk_engine(UXK_ENG[e]); frame();
+        for (v = 0; v < MD_N; v++) {
+            char b[24];
+            uxs_mtx_name(TSEL, P_M1DST, v, b, sizeof b);
+            n++;
+            if (text_w(&UF_LBL, b) > 60 || !uxe_glyphs(&UF_LBL, b)) { printf("  MOD box DEST %d: \"%s\"\n", (int)v, b); ok = 0; }
+            if (v < MS_N) {
+                uxs_mtx_name(TSEL, P_M1SRC, v, b, sizeof b);
+                if (text_w(&UF_LBL, b) > 60 || !uxe_glyphs(&UF_LBL, b)) { printf("  MOD box SOURCE %d: \"%s\"\n", (int)v, b); ok = 0; }
+            }
+        }
+    }
+    uxt7_open(3);                                       /* MORE: KNOB 2's name and every value */
+    for (i = 0; i < NELEM(UXM_LFO_ROWS); i++) {
+        uint32_t id = UXM_LFO_ROWS[i].id, st = id == ID_LPHS ? P_LPHASE : id;
+        const param_desc_t *d;
+        int16_t keep;
+        if (UXM_LFO_ROWS[i].kind == UXR_HEAD) continue;
+        d = track_desc(TSEL, st);
+        keep = TSEL->p[st];
+        uxm_at[uxm_key()].sel = (uint8_t)i;
+        for (v = id == ID_LPHS ? 0 : d->min; v <= d->max; v++) {
+            ux_knob_t k[4];
+            TSEL->p[st] = (int16_t)v;
+            uxs_knobs(cur_page(), k);
+            n++;
+            if (text_w(&UF_VAL, k[1].value) > UX_COL_W - 4 || text_w(&UF_LBL, k[1].label) > UX_COL_W - 4 ||
+                !uxe_glyphs(&UF_HDR, k[1].value) || !uxe_glyphs(&UF_VAL, k[1].value) || !uxe_glyphs(&UF_HDR, k[1].label)) {
+                printf("  LFO MORE %s = %s\n", k[1].label, k[1].value);
+                ok = 0;
+            }
+        }
+        TSEL->p[st] = keep;
+    }
+    bad += check("ACID FM 3b task 7: every LFO label and value (each slot, DEST on 7 engines) fits its column (48 px), with its "
+                 "glyphs; the full words too", ok && n > 3000u);
+    ui_power_on();
+    return bad;
+}
+/* the pictures: each knob moves its picture (one panel a turn), none idle, ink there, a forced redraw within DC_MAX */
+static int test_t7_pictures(void)
+{
+    uint32_t i, c;
+    int bad = 0, ok = 1;
+    for (i = 0; i < NELEM(UXT7_PG); i++)
+        for (c = 0; c < 4u; c++) {
+            char w[40];
+            int32_t s = 2;
+            uxt7_open(i);
+            TSEL->p[P_M1SRC] = MS_LFO; TSEL->p[P_M1DST] = MD_PITCH; TSEL->p[P_M1AMT] = 30;   /* (a route to draw) */
+            TSEL->p[P_LD_PIT] = 10; TSEL->p[P_LD_FLT] = -20; TSEL->p[P_LD_SHP] = 30; TSEL->p[P_LD_AMP] = 40;
+            if (i == 0u && c == 2u) s = 1;
+            if (i == 0u && c == 3u) TSEL->p[P_LFADE] = 0, s = 60;   /* (FADE: long enough to see) */
+            frame();
+            sprintf(w, "LFO %s KNOB %u", UXT7_PG[i].nm, (unsigned)c + 1u);
+            ok &= uxe_pic_turn(c, s, w);
+            if (ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) < 1500u) { printf("  %s: no picture\n", w); ok = 0; }
+            ok &= uxe_cells_ok();
+        }
+    uxt7_open(3); ok &= uxe_cells_ok();                 /* (MORE, scrolled to its end too) */
+    turn(EN_SELECT, 3); ok &= uxe_cells_ok();
+    bad += check("ACID FM 3b task 7: LFO's pictures: every knob moves its picture, one panel a turn, none idle; cells within "
+                 "DC_MAX", ok);
+    ui_power_on();
+    return bad;
+}
+/* the LFO picture against the engine (voice.c track_lfo_tick, lfo_wave): the phase it draws dc columns from now is the phase the
+ * engine reaches that many samples later (within a block), free and in time (stopped; playing: on the transport's grid), the
+ * cycles the window holds, RANDOM's level this cycle, FADE's length; the wave drawn where the level is; DEST's PITCH what voice.c
+ * moves; the matrix's line for a route */
+static int uxt7_pix_near(int32_t x, int32_t y, uint16_t col, int32_t r)   /* a pixel of col within r rows of LCD (x, y) */
+{
+    int32_t k;
+    for (k = -r; k <= r; k++)
+        if (y + k >= 0 && y + k < 240 && swap16(host_screen[(uint32_t)(y + k) * 240u + (uint32_t)x]) == col)
+            return 1;
+    return 0;
+}
+static int test_t7_engine(void)
+{
+    static const int16_t R[] = {0, 20, 45, 60, 80, 100, 127, -1, -2, -3, -5, -6, -8, -10, -11, -12};
+    static const uint16_t DC[] = {1, 7, 40, 99, 158};
+    uint32_t r, wv, k, n = 0;
+    int bad = 0, ok = 1, okw = 1, okp = 1;
+    track_t x, y;
+    ui_power_on();
+    song.playing = 0;
+    for (r = 0; r < NELEM(R); r++)
+        for (wv = 0; wv < 4u; wv++) {
+            uxs_lw_t w;
+            uint32_t tick_inc, cyc_n;
+            memcpy(&x, TSEL, sizeof x);
+            x.p[P_LRATE] = R[r]; x.p[P_LWAVE] = (int16_t)wv; x.p[P_LPHASE] = 0;
+            x.lfo_ph = 0x12345678u; x.lfo_fade = 32767;
+            uxs_lfo_win(&x, &w);
+            tick_inc = R[r] < 0 ? (uint32_t)(((uint64_t)CTL << 32) / w.cyc) : LFO_INC[R[r] & 127];
+            for (k = 0; k < NELEM(DC); k++) {
+                uint64_t smp = (uint64_t)DC[k] * w.win / UXS_LW;
+                uint32_t t, ticks = (uint32_t)((smp + CTL / 2u) / CTL), php;
+                int32_t d;
+                memcpy(&y, &x, sizeof y);
+                for (t = 0; t < ticks; t++)
+                    track_lfo_tick(&y);
+                php = x.lfo_ph + DC[k] * w.inc;
+                d = (int32_t)(y.lfo_ph - php);
+                n++;
+                if ((uint32_t)(d < 0 ? -d : d) > tick_inc + DC[k] + 2u) {
+                    printf("  RATE %d WAVE %u, %u columns: engine %08x, picture %08x (a block %u)\n", R[r], (unsigned)wv,
+                           (unsigned)DC[k], y.lfo_ph, php, tick_inc);
+                    okp = 0;
+                }
+                if (lfo_wave(&y, y.lfo_ph) != uxs_lfo_at(&x, &w, y.lfo_ph, 0)) okp = 0;
+            }
+            cyc_n = (uint32_t)(((uint64_t)w.inc * UXS_LW) >> 32);   /* (the cycles across: the window over a cycle) */
+            if ((uint64_t)cyc_n * w.cyc > w.win + w.cyc || (uint64_t)(cyc_n + 1u) * w.cyc < w.win ||
+                (w.wb == 1u && w.win != 4u * beat_samples()) || (w.wb == 1u && (w.cyc > w.win || 8u * w.cyc < w.win))) {
+                printf("  RATE %d: %u cycles of %u in %u (%s)\n", R[r], (unsigned)cyc_n, (unsigned)w.cyc, (unsigned)w.win, UXS_LWIN[w.wb]);
+                okw = 0;
+            }
+        }
+    {   /* in time while playing: the transport's grid (ms_clock) */
+        uxs_lw_t w;
+        uint32_t ms0 = 123457u, php;
+        int32_t d;
+        memcpy(&x, TSEL, sizeof x);
+        x.p[P_LRATE] = -5; x.p[P_LPHASE] = 30;
+        song.playing = 1; ms_clock = ms0;
+        track_lfo_tick(&x);
+        uxs_lfo_win(&x, &w);
+        memcpy(&y, &x, sizeof y);
+        ms_clock = ms0 + 60u * w.win / UXS_LW;
+        track_lfo_tick(&y);
+        php = x.lfo_ph + 60u * w.inc;
+        d = (int32_t)(y.lfo_ph - php);
+        okp &= (uint32_t)(d < 0 ? -d : d) < 1u << 22;
+        song.playing = 0; ms_clock = 0;
+    }
+    bad += check("ACID FM 3b task 7: the LFO picture's phase dc columns on is the engine's that many samples on (16 rates, free "
+                 "and in time, 4 waves; in time playing: the grid)", okp && n > 300u);
+    bad += check("ACID FM 3b task 7: the LFO picture's window: the cycles it holds are the window over a cycle; 1 BAR holds 1..8",
+                 okw);
+    {   /* RANDOM: this cycle's level the engine's, flat within a cycle, a new one past its end */
+        uxs_lw_t w;
+        int32_t a, b2, c2;
+        memcpy(&x, TSEL, sizeof x);
+        x.p[P_LRATE] = -9; x.p[P_LWAVE] = 4; x.lfo_rnd = 0xA5A5F00Du; x.lfo_ph = 0x10000000u;
+        uxs_lfo_win(&x, &w);
+        a = uxs_lfo_at(&x, &w, x.lfo_ph, 0);
+        b2 = uxs_lfo_at(&x, &w, x.lfo_ph, (int32_t)((0xE0000000u) / w.inc));
+        c2 = uxs_lfo_at(&x, &w, x.lfo_ph, (int32_t)((0xF8000000u) / w.inc) + 2);
+        ok = a == lfo_wave(&x, x.lfo_ph) && a == b2 && c2 != a;
+        bad += check("ACID FM 3b task 7: the LFO picture's RANDOM: this cycle's level the engine's (lfo_rnd), held to the cycle's "
+                     "end, another after", ok);
+    }
+    {   /* FADE: the ramp as long as the engine's fade from a note to the whole depth */
+        static const int16_t F[] = {1, 20, 60, 90, 110, 127};
+        ok = 1;
+        for (k = 0; k < NELEM(F); k++) {
+            uxs_lw_t w;
+            uint32_t ticks = 0;
+            int32_t cols, want;
+            memcpy(&x, TSEL, sizeof x);
+            x.p[P_LRATE] = -1; x.p[P_LFADE] = F[k]; x.lfo_fade = 0;
+            uxs_lfo_win(&x, &w);
+            while (x.lfo_fade < 32767 && ticks < 2000000u) { track_lfo_tick(&x); ticks++; }
+            want = (int32_t)((uint64_t)ticks * CTL * UXS_LW / w.win);
+            cols = uxs_lfo_fade_cols(&x, &w);
+            if (cols < want - 1 || cols > want + 1) { printf("  FADE %d: %d columns, the engine's %d\n", F[k], cols, want); ok = 0; }
+        }
+        bad += check("ACID FM 3b task 7: the LFO picture's FADE ramp is the engine's fade from a note to its depth", ok);
+    }
+    {   /* the wave drawn: a WAVE-coloured pixel where the level is, columns past the playhead (SINE, SQUARE, SAW) */
+        static const uint8_t WV[3] = {0, 3, 2};
+        ok = 1;
+        for (k = 0; k < 3u; k++) {
+            uxs_lw_t w;
+            uint32_t c;
+            uxt7_open(0);
+            TSEL->p[P_LRATE] = -5; TSEL->p[P_LWAVE] = WV[k]; TSEL->lfo_ph = 0x0C000000u; TSEL->lfo_val = 0; TSEL->lfo_fade = 32767;
+            ui.force = 1; frame();
+            uxs_lfo_win(TSEL, &w);
+            for (c = UXS_LXP + 4u; c < UXS_LW - 2u; c += 9u) {
+                int32_t l0 = uxs_lfo_at(TSEL, &w, TSEL->lfo_ph, (int32_t)c - UXS_LXP);
+                int32_t l1 = uxs_lfo_at(TSEL, &w, TSEL->lfo_ph, (int32_t)c - UXS_LXP - 1);
+                if (l0 != l1 && (l0 - l1 > 8000 || l1 - l0 > 8000)) continue;   /* (a square's edge: the line's vertical) */
+                if (!uxt7_pix_near(UXS_LX0 + (int32_t)c, (int32_t)UX_Y_PANEL + 74 - l0 * 40 / 32768, UX_SLIDE, 2)) {
+                    printf("  WAVE %u column %u: no line at level %d\n", (unsigned)WV[k], (unsigned)c, l0);
+                    ok = 0;
+                }
+            }
+        }
+        bad += check("ACID FM 3b task 7: the LFO picture draws its wave where the engine's level is (SINE SQUARE SAW)", ok);
+    }
+    {   /* DEST's PITCH: what voice.c moves a note by at the LFO's top, (lfo x PIT x 3) >> 15 sixteenths of a semitone */
+        int32_t v;
+        char b[16];
+        ok = 1;
+        for (v = -64; v <= 63; v++) {
+            int32_t sx = (32767 * v * 3) >> 15, cents = sx * 100 / 16, got, tol;
+            const char *u;
+            if (!v) continue;
+            uxs_semis(v, b, sizeof b, 0);
+            u = strstr(b, "CT") ? "CT" : "ST";
+            got = (int32_t)(strtod(b, 0) * (u[0] == 'C' ? 1.0 : 100.0) + (v < 0 ? -0.5 : 0.5));
+            tol = u[0] == 'C' ? 1 : cents > 999 || cents < -999 ? 50 : 5;   /* (cents whole, semitones a tenth, from 10 whole) */
+            if (got - cents > tol || cents - got > tol || (u[0] == 'C') != (cents < 100 && cents > -100)) {
+                printf("  PITCH %d: \"%s\", the engine %d cents\n", v, b, cents);
+                ok = 0;
+            }
+        }
+        bad += check("ACID FM 3b task 7: DEST's PITCH (and ENV TO's) in cents / semitones: what voice.c moves the note by", ok);
+    }
+    {   /* MOD MATRIX: a route's line (AMOUNT's colour) between its boxes, none for an OFF slot */
+        uxt7_open(2);
+        TSEL->p[P_M1SRC] = MS_LFO; TSEL->p[P_M1DST] = MD_CUT; TSEL->p[P_M1AMT] = 63;
+        TSEL->p[P_M2SRC] = 0; TSEL->p[P_M2DST] = MD_PITCH; TSEL->p[P_M2AMT] = 40;
+        mod_ui_slot = 0;
+        ui.force = 1; frame();
+        ok = uxt7_pix_near(127, (int32_t)UX_Y_PANEL + 28 + 9, UX_ACCENT, 2) && !uxt7_pix_near(127, (int32_t)UX_Y_PANEL + 58 + 9, UX_ACCENT, 3) &&
+             !uxt7_pix_near(127, (int32_t)UX_Y_PANEL + 58 + 9, ux_mix(UX_BG, UX_ACCENT, 55), 3);
+        bad += check("ACID FM 3b task 7: MOD MATRIX draws a route as a line from its SOURCE to its DEST, none for an OFF slot", ok);
+    }
+    ui_power_on();
+    return bad;
+}
+/* the pace (spec 2.3, 3a spec 5.3), on the host's frames with the LFO running (track_lfo_tick a frame's blocks each frame): the
+ * wave redrawn as it moves, at most every UX_TRK_MS (HOME's ridges), every UX_TRK_SLOW_MS while load_tight or LOAD LITE / ECO,
+ * frozen UX_SHED_HOLD_MS after a shed and while gov_lite (a knob turn still drawn at once), not at all with ANIM OFF; a frame
+ * changes no more of the LCD than the panel and the status */
+static uint32_t uxt7_run(uint32_t ms, uint32_t *gmin, uint32_t *gmax, uint32_t *px)
+{
+    uint32_t i, n0 = uxs_panels, last = 0, k;
+    *gmin = 0xFFFFFFFFu; *gmax = 0; *px = 0;
+    for (i = 0; i < ms / 16u; i++) {
+        uint32_t d = uxs_panels, p0 = host_blit_px;
+        for (k = 0; k < 16u * 44100u / 1000u / CTL; k++)
+            track_lfo_tick(TSEL);
+        frame();
+        if (uxs_panels != d) {
+            if (last) { uint32_t g = fm1_ms - last; if (g < *gmin) *gmin = g; if (g > *gmax) *gmax = g; }
+            last = fm1_ms;
+            if (host_blit_px - p0 > *px) *px = host_blit_px - p0;
+        }
+    }
+    return uxs_panels - n0;
+}
+static int test_t7_pace(void)
+{
+    uint32_t n, gmin, gmax, px, t0;
+    int bad = 0, ok;
+    uxt7_open(0);
+    TSEL->p[P_LRATE] = 60; TSEL->p[P_LWAVE] = 0;
+    frames(UX_HOT_MS + 50u);
+    n = uxt7_run(1600, &gmin, &gmax, &px);
+    printf("ui:   (LFO 1.18 Hz: %u panels in 1.6 s, %u..%u ms apart, a frame <= %u LCD px)\n", n, gmin, gmax, px);
+    ok = n >= 30u && n <= 34u && gmin >= UX_TRK_MS && gmax < UX_TRK_MS + 16u && px <= 240u * (UX_H_PANEL + UX_H_STATUS);
+    bad += check("ACID FM 3b task 7: LFO's wave scrolls as the LFO runs, at most every 40 ms (HOME's ridges)", ok);
+    load_tight = 1;
+    n = uxt7_run(1600, &gmin, &gmax, &px);
+    ok = n >= 12u && n <= 17u && gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    load_tight = 0;
+    ui_load = LOAD_LITE; rp_apply(); frame();
+    n = uxt7_run(1600, &gmin, &gmax, &px);
+    ok &= gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ui_load = LOAD_FULL; rp_apply(); frame();
+    bad += check("ACID FM 3b task 7: LFO's wave every 100 ms while load_tight or LOAD LITE", ok);
+    load_diag.shed++; frame();                          /* the guard shed a voice: frozen 400 ms */
+    t0 = fm1_ms; n = uxs_panels;
+    (void)uxt7_run(384, &gmin, &gmax, &px);
+    ok = uxs_panels == n;
+    while (uxs_panels == n && fm1_ms - t0 < 1000u) (void)uxt7_run(16, &gmin, &gmax, &px);
+    ok &= fm1_ms - t0 >= UX_SHED_HOLD_MS && fm1_ms - t0 < UX_SHED_HOLD_MS + 32u;
+    gov_lite = LOAD_LITE; frame();
+    n = uxs_panels;
+    (void)uxt7_run(800, &gmin, &gmax, &px);
+    ok &= uxs_panels == n;
+    turn(EN_K1, 1); frame();                            /* frozen: a knob turn still drawn, once */
+    ok &= uxs_panels == n + 1u;
+    (void)uxt7_run(400, &gmin, &gmax, &px);
+    ok &= uxs_panels == n + 1u;
+    gov_lite = 0;
+    bad += check("ACID FM 3b task 7: LFO's wave frozen 400 ms after the guard's shed and while gov_lite; a knob turn drawn at once",
+                 ok);
+    ui_prefs |= PREF_ANIM_OFF;
+    n = uxt7_run(800, &gmin, &gmax, &px);
+    ui_prefs &= ~PREF_ANIM_OFF;
+    ok = n == 0u;
+    TSEL->p[P_LRATE] = 60;
+    nav_put(SEC_LFO, "DEST"); frame();                  /* (DEST, MOD MATRIX, MORE: still while the LFO runs) */
+    n = uxt7_run(800, &gmin, &gmax, &px);
+    ok &= n == 0u;
+    nav_put(SEC_LFO, "MOD MATRIX"); frame();
+    n = uxt7_run(400, &gmin, &gmax, &px);
+    ok &= n == 0u;
+    bad += check("ACID FM 3b task 7: no scrolling with MENU > ANIM OFF; DEST and MOD MATRIX still while the LFO runs", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -15171,7 +15723,6 @@ int main(void)
     bad += test_ux_home_head();
     bad += test_ux_visual();
     bad += test_lz_edit();
-    bad += test_lz_mod();
     bad += test_lz_glo();
     bad += test_lz_layer();
     bad += test_lz_dialogs();
@@ -15304,6 +15855,13 @@ int main(void)
     bad += test_t6_widths();
     bad += test_t6_pictures();
     bad += test_t6_fix();                               /* (ACID FM 3b task 6 fix) */
+    bad += test_t7_nav();                               /* (ACID FM 3b task 7) */
+    bad += test_t7_knobs();
+    bad += test_t7_rec_clear();
+    bad += test_t7_widths();
+    bad += test_t7_pictures();
+    bad += test_t7_engine();
+    bad += test_t7_pace();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();
@@ -15333,7 +15891,8 @@ static int test_card_heat(void)
     int bad = 0, other = 1;
     uint32_t c, i;
     ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
-    go_title("LFO DEST"); ui.force = 1; frames(160);    /* (3b task 6: four JIANT cards; ENV's the ux pages') */
+    go_title("GLOBAL"); ui.force = 1; frames(160);      /* (3b task 6: four JIANT cards; ENV's the ux pages'; task 7: LFO's
+                                                         * too, so GLO > GLOBAL's: GLO stays JIANT's after task 8's FX) */
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(cur_page(), c, &vp);

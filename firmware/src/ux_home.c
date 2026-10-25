@@ -445,6 +445,18 @@ static struct {
     uint8_t frac, q_ok, shed_any, intro;                /* the bar position last seen (0..255); a step taken; a shed seen; the
                                                          * legend shown (once a power-on) */
 } uxv;
+/* the overload guard's sheds: ms since it last shed (load_diag.shed rose), UX_NO_SHED none seen; (3b task 7) HOME's panels and
+ * LFO's scrolling wave (ux_section.c) freeze UX_SHED_HOLD_MS after one */
+static uint32_t ux_since_shed(void)
+{
+    uint32_t sh = load_diag.shed;
+    if (sh != uxv.shed) {
+        uxv.shed_ms = fm1_ms;
+        uxv.shed_any = 1;
+    }
+    uxv.shed = sh;
+    return uxv.shed_any ? fm1_ms - uxv.shed_ms : UX_NO_SHED;
+}
 #define UXV_STEP_MS 200u                                /* the rings change at most every 200 ms (5 steps a second) */
 #define UXV_PH_Q 4u                                     /* .. their phase in steps of 4 / 512 (a few a step: smooth) */
 #define UXV_IDLE_MS 48u                                 /* stopped: a phase step every 48 ms (a turn in ~25 s) */
@@ -588,15 +600,7 @@ static void ux_home_draw(void)
     }
     ux_home_knobs(k, lbl);
     ux_knobs(k, -1);
-    {   /* the overload guard's sheds: the time it last shed (VISUAL's and TRACKS' panels frozen UX_SHED_HOLD_MS after) */
-        uint32_t sh = load_diag.shed;
-        if (sh != uxv.shed) {
-            uxv.shed_ms = fm1_ms;
-            uxv.shed_any = 1;
-        }
-        uxv.shed = sh;
-        shed = uxv.shed_any ? fm1_ms - uxv.shed_ms : UX_NO_SHED;
-    }
+    shed = ux_since_shed();                             /* (VISUAL's and TRACKS' panels frozen UX_SHED_HOLD_MS after) */
     if (p == UXH_TRACKS) {                              /* TRACKS: entered at once; then on a change, as the load allows */
         sig = ux_tracks_sig();                          /* (ux_pace_at: every UX_TRK_MS at most, UX_TRK_SLOW_MS while tight or
                                                          * LOAD LITE / ECO, frozen while the guard's shed hold or gov_lite; the

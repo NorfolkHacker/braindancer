@@ -525,11 +525,11 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACKS page (ui_input.c tracks_edit) */
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
-       GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_MSEQ, GR_SLPIT,
+       GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_SLPIT,
        GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES,
        GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP };   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
                                                          * (task 5) GR_FM6P FM6's OPERATOR, OP ENV; GR_DXP DRUM-X's SOUND, SOUND 2 */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
-                                                         * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone) */
+                                                         * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone; task 7: GR_MSEQ, MSEQ's) */
 
 #include "ux_more.h"
 typedef struct {
@@ -566,6 +566,12 @@ static const param_desc_t LFO_PHASE_DESC = PD("PHASE", F_INT, 0, 127, 0);
 static int16_t lmode_ui, lphase_ui;
 static uint8_t lfo_ph_mem[NTRK];
 static int lfo_mode_of(const track_t *t) { return t->p[P_LPHASE] < 0; }   /* 1 FREE */
+/* (ACID FM 3b task 7) LFO > MOD MATRIX's KNOB 1, the slot picked (a track each: mod_ui_slot) as the ux knob row names it: a view
+ * as ID_LMODE; ui_input.c edit_param turns it as JIANT's MOD page did (a slot a detent) */
+#define ID_MSLOT 0xF9u
+static const char *const N_MSLOT[] = {"1", "2", "3", "4"};
+static const param_desc_t MSLOT_DESC = PE("SLOT", N_MSLOT, 0);
+static int16_t mslot_ui;
 /* (ACID FM 3b) EDIT's MORE on a synth track (ANALOG PHASE LOFI NOISE VOICE): what its three pages leave, grouped. A row on a
  * page shown in the chain (ANALOG's VOICE page, the others' FILTER: its TYPE) is not listed again (ux_more.c); a row JIANT showed only
  * on some engines follows its rule (MORPH, RETRIG, WORDS). ALLOC is on no page or list (tests/ux_cover_test.c UXC_HIDDEN) */
@@ -693,14 +699,24 @@ static const ux_row_t UXM_SCL_ROWS[] = {
     {P_POFS, UXR_TRACK, 0}, {P_TRANS, UXR_TRACK, 0},
 };
 static const ux_more_t UXM_SCL = {UXM_SCL_ROWS, (uint8_t)(sizeof UXM_SCL_ROWS / sizeof UXM_SCL_ROWS[0])};
+/* (3b task 7) LFO's MORE: the LFO's PHASE (where MODE TRIG starts it), then the STEPS (JIANT's MSEQ: sixteen levels the matrix's
+ * source STEPS plays, LENGTH steps of RATE each, SMOOTH gliding between them, mod.c MS_STEP) */
+static const ux_row_t UXM_LFO_ROWS[] = {
+    {UXM_H_LFO, UXR_HEAD, 0}, {ID_LPHS, UXR_TRACK, 0},
+    {UXM_H_MSEQ, UXR_HEAD, 0}, {P_MSLEN, UXR_TRACK, 0}, {P_MSDIV, UXR_TRACK, 0}, {P_MSSLW, UXR_TRACK, 0},
+    {P_MS0, UXR_TRACK, 0}, {P_MS0 + 1, UXR_TRACK, 0}, {P_MS0 + 2, UXR_TRACK, 0}, {P_MS0 + 3, UXR_TRACK, 0},
+    {P_MS0 + 4, UXR_TRACK, 0}, {P_MS0 + 5, UXR_TRACK, 0}, {P_MS0 + 6, UXR_TRACK, 0}, {P_MS0 + 7, UXR_TRACK, 0},
+    {P_MS0 + 8, UXR_TRACK, 0}, {P_MS0 + 9, UXR_TRACK, 0}, {P_MS0 + 10, UXR_TRACK, 0}, {P_MS0 + 11, UXR_TRACK, 0},
+    {P_MS0 + 12, UXR_TRACK, 0}, {P_MS0 + 13, UXR_TRACK, 0}, {P_MS0 + 14, UXR_TRACK, 0}, {P_MS0 + 15, UXR_TRACK, 0},
+};
+static const ux_more_t UXM_LFO = {UXM_LFO_ROWS, (uint8_t)(sizeof UXM_LFO_ROWS / sizeof UXM_LFO_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
     {"LFO", FAM_LFO, SC_TRACK, GR_LFO, {P_LRATE, P_LWAVE, ID_LMODE, P_LFADE}},   /* (0.9.18: MODE where PHASE was) */
     {"LFO DEST", FAM_LFO, SC_TRACK, GR_NONE, {P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP}},
-    {"MOD", FAM_LFO, SC_TRACK, GR_MOD, {0xFF, P_M1SRC, P_M1DST, P_M1AMT}},   /* KNOB 1: the slot (mod_ui_slot) */
-    {"MSEQ", FAM_LFO, SC_TRACK, GR_MSEQ, {0xFF, P_MS0, P_MSLEN, P_MSSLW}},   /* JIANT: KNOB 1 the step (ms_ui_step) */
-    {"MSEQ 2", FAM_LFO, SC_TRACK, GR_NONE, {P_MSDIV, 0xFF, 0xFF, 0xFF}},
+    {"MOD", FAM_LFO, SC_TRACK, GR_MOD, {ID_MSLOT, P_M1SRC, P_M1DST, P_M1AMT}},   /* KNOB 1: the slot (mod_ui_slot) */
+    /* (ACID FM 3b task 7) JIANT's MSEQ (KNOB 1 the step, its LEVEL, LEN, SLEW) and MSEQ 2 (DIV) gone: LFO's MORE rows (STEPS) */
     {"FX", FAM_FX, SC_TRACK, GR_FX, {P_DIST, P_CHOR, P_DLY, P_REV}},
     {"MASTER", FAM_FX, SC_GLOBAL, GR_NONE, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}},   /* JIANT: clipper, drum bus, ducking;
                                                          * (0.7.6) FX's second page, at hand (was after SL PITCH) */
@@ -794,7 +810,7 @@ static const page_t PAGES[] = {
     {"MANO", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.11) GLO > LIVE: the keys a board of live
                                                          * modifiers (ui_live.c, seq_live.c) */
     {"RIELES", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* .. the six sequences as rails, four knobs */
-    {"LFO 2", FAM_LFO, SC_TRACK, GR_LFO, {ID_LPHS, 0xFF, 0xFF, 0xFF}},   /* (0.9.18) PHASE: where TRIG starts (FREE: dimmed) */
+    /* (ACID FM 3b task 7) LFO 2 (0.9.18: PHASE, where TRIG starts) gone: LFO's MORE row */
     /* (ACID FM 3b) EDIT on a synth track (ui_lens.c CE_SYN): SOUND (EDIT 1), TONE (EDIT 2), then ANALOG's VOICE or the
      * others' FILTER, then MORE. Titles of their own: nav_page takes the first page shown with its chain entry's title */
     {"SYN VOICE", FAM_EDIT, SC_TRACK, GR_SYN, {P_VOICE, P_GLIDE, P_PRIO, P_DETUNE}},   /* ANALOG's (ui.c page_jiant) */
@@ -813,10 +829,14 @@ static const page_t PAGES[] = {
     /* (ACID FM 3b task 6) SCL's MORE (ui_lens.c CE_SCL: KEY, CHORD, MORE): the sequence's PITCH (SEQ > TRACK's, the SCL layer's
      * KNOB 4), TRANSPOSE (every note the track plays, on no page since 0.7.6) */
     {"SCL MORE", FAM_SCL, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SCL},
+    /* (ACID FM 3b task 7) LFO's MORE (ui_lens.c CE_LFO: LFO, DEST, MOD MATRIX, MORE): PHASE (JIANT's LFO 2), the STEPS (JIANT's
+     * MSEQ, MSEQ 2: the modulation sequence the matrix's source STEPS reads) */
+    {"LFO MORE", FAM_LFO, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_LFO},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
-static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */
-static uint8_t ms_ui_step;       /* (JIANT) the MSEQ page: the step (0..15) KNOB 2 edits */
+static uint8_t mod_ui_slot_tr[NTRK];   /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit, a track each (3b task 7: as FM6's
+                                                         * operator and DRUM-X's drum, ui_fm6op.c fop_op; RAM, 0 at boot) */
+#define mod_ui_slot (mod_ui_slot_tr[song.sel % NTRK])
 static const char *const N_RFOLW[] = {"OFF", "T1", "T2", "T3", "T4", "T5", "T6"};
 static const param_desc_t RESO_PITCH = PD("PITCH", F_INT, 0, 14, 0);   /* (0.6.5) RESO: the chord's steps up the scale (G_RPRE) */
 static const param_desc_t RESO_FOLW = PE("FOLLOW", N_RFOLW, 0);          /* .. the track whose notes it follows (G_RDAMP) */
@@ -827,7 +847,7 @@ static const param_desc_t AP_BEAT = PE("RATE", N_APDIV, 2);          /* (0.6.9) 
 static uint8_t sl_ui_step;       /* (JIANT 0.6.3) the SL PITCH page: the step KNOB 2 edits */
 
 /* (ACID FM 3b) the setting id of track t (0: the globals, song.g) as a knob turns it: its descriptor and value (*valp; 0 and 0:
- * none). The ids past both tables are views (ID_ALLTR, G_TRKS, ID_LMODE / ID_LPHS, G_LOADP), whatever t. page_desc (a page's
+ * none). The ids past both tables are views (ID_ALLTR, G_TRKS, ID_LMODE / ID_LPHS, G_LOADP, ID_MSLOT), whatever t. page_desc (a page's
  * knob) and ux_more.c (a MORE row) read through it, ui_input.c param_knob writes through it */
 #define ID_NONE 0xFFFFu
 static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
@@ -852,6 +872,11 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
         *valp = id == ID_LMODE ? &lmode_ui : &lphase_ui;
         return id == ID_LMODE ? &LFO_MODE_DESC : &LFO_PHASE_DESC;
     }
+    if (id == ID_MSLOT) {                             /* (3b task 7) MOD MATRIX's SLOT: the slot picked */
+        mslot_ui = (int16_t)(mod_ui_slot & 3u);
+        *valp = &mslot_ui;
+        return &MSLOT_DESC;
+    }
     if (id == G_LOADP) {                              /* (0.6.30) the same */
         *valp = &load_ui;
         return &LOAD_DESC;
@@ -871,13 +896,13 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
         return &AP_BEAT;
     return track_desc(t, id);
 }
-/* page pg's knob slot: the setting it turns (the step / slot shown on MSEQ, SL PITCH, MOD), ID_NONE none; whose (0: global) */
+/* page pg's knob slot: the setting it turns (the step / slot shown on SL PITCH, MOD), ID_NONE none; whose (0: global) */
 static uint32_t page_id(const page_t *pg, uint32_t slot)
 {
     uint32_t id = pg->id[slot];
     if (id == 0xFFu)
         return ID_NONE;
-    if (id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP)
+    if (id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT)
         return id;
     if (pg->scope == SC_STEP || pg->scope == SC_TRK)
         return ID_NONE;
@@ -891,8 +916,6 @@ static uint32_t page_id(const page_t *pg, uint32_t slot)
         return P_LN0 + dx_lane_picked();
     if (pg->graph == GR_MOD)                          /* SRC DST AMT of the slot shown */
         id += 3u * mod_ui_slot;
-    if (pg->graph == GR_MSEQ && id == P_MS0)          /* the level of the step shown */
-        id += ms_ui_step & 15u;
     return id;
 }
 static track_t *page_trk(const page_t *pg) { return pg->scope == SC_GLOBAL ? 0 : TSEL; }
