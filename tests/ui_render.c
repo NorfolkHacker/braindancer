@@ -639,7 +639,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS, S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY,
        S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER, S_GEN_LEAD, S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2,
        S_ED_OPERATOR, S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD,
-       S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE,
+       S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_SCL_MORE, S_SCL_WHITE, S_ARP_CHORD, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE,
        S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK, S_DRUM_X4, S_DRUM_GHOST,
        S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP,
        S_GEN_EXPLORE, S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS, S_MIXER_T4, S_MOCK_HOME,
@@ -658,8 +658,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
     "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum", "drum_hand", "drum_cym",
-    "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift",
-    "arp", "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env",
+    "mixer", "mixer_pan", "env_1", "env_2", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl_1", "shift",
+    "arp_off", "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env",
     "edit_voice", "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level",
     "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2",
     "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern", "confirm_motion", "confirm_erase", "gen",
@@ -683,8 +683,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "head_downbeat", "head_beat_2", "save_library", "save_tools", "save_project", "save_arrange", "save_sound",
     "save_presets", "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay",
     "fx_effect_delay2", "fx_effect_reverb", "fx_effect_slicer", "fx_effect_master", "gen_lead", "ed_filter",
-    "ed_filter_bp", "ed_voice2", "ed_operator", "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2",
-    "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs",
+    "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop", "env_first", "mseq2",
+    "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs",
     "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "drum_hit_x4",
     "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum",
     "comp_jump", "gen_explore", "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys", "mixer_tracks4",
@@ -907,9 +907,10 @@ static void setup(int s)
     trk_live = NTRK;                              /* (the six awake but on *_tracks4) */
     if (s >= S_TOAST_ENV && s <= S_TOAST_ANALOG) {   /* (0.9.5) a toast over a page with words to its foot: the pill keeps clear
                                                    * of them (or is not drawn: the header says it), never over one (hk_overlay) */
-        static const uint16_t BASE[] = {S_ENV, S_MUTATE, S_MUTATE, S_MOTION, S_MOTION_LOCKS, S_COUNT, S_AUTO_LIST,
+        static const uint16_t BASE[] = {S_GLOBAL, S_MUTATE, S_MUTATE, S_MOTION, S_MOTION_LOCKS, S_COUNT, S_AUTO_LIST,
                                        S_AUTO_LIST_DRUM, S_PATTERN, S_EDIT_FM6_2, S_EDIT_ANALOG_1};   /* (0.9.6: over the creatures
-                                                   * too; 3b: ANALOG's EDIT the ux page, FM6's OPERATOR) */
+                                                   * too; 3b: ANALOG's EDIT the ux page, FM6's OPERATOR; task 6: toast_env
+                                                   * over GLOBAL, ENV the ux pages', their message the status line) */
         int b = BASE[s - S_TOAST_ENV];
         if (b == S_COUNT) { setup(S_HOME); go_page(GR_PUNCH); }
         else setup(b);
@@ -1128,14 +1129,14 @@ static void setup(int s)
      * the BPM being turned (the accent's); BPM LOCK ON (the lock right of the BPM), and its message after a turn;
      * GLO with the tempo turned and BPM LOCK ON (the label right of the lock); the metronome on the bar's 1st beat
      * (the accent's) and its 2nd (mirrored) */
-    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_title("ENV"); break;
-    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_title("ENV"); break;
-    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_title("ENV"); break;
-    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_title("ENV"); break;
-    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_title("ENV"); ui_message("BPM LOCKED"); break;
+    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_title("GLOBAL"); break;
+    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_title("GLOBAL"); break;
+    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_title("GLOBAL"); break;
+    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_title("GLOBAL"); break;
+    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_title("GLOBAL"); ui_message("BPM LOCKED"); break;
     case S_HEAD_GLO_TURN: ui_prefs |= PREF_BPM_LOCK; go_home(); ui.layer = LAYER_GLO; ui.bpm_t = 40; break;
-    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_title("ENV"); break;
-    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_title("ENV"); break;
+    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_title("GLOBAL"); break;
+    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_title("GLOBAL"); break;
     case S_DRUM: drum(0); go_page(GR_ROLL); ui.cursor = 4; ui.lane = 1; trk[3].seq_idx = 9; break;
     case S_DRUM_HAND: drum(1); go_page(GR_ROLL); ui.lane = 5; ui.cursor = 7; break;
     case S_DRUM_CYM: drum(2); go_page(GR_ROLL); ui.lane = 7; break;
@@ -1158,13 +1159,17 @@ static void setup(int s)
         eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; TSEL->p[P_VOICE] = 3;
         memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 20);
         break;
-    case S_ENV_TRACKS: case S_ENV_TRACKS_DEST:          /* (0.8.5) ENV's lens: TRACKS (ENV / DEST), T2 sounding */
-        song.sel = 1; nav_scene(SEC_ENV, s == S_ENV_TRACKS ? "TRACKS" : "TRACKS DEST");
-        trk[1].v[0].stage = 2; trk[1].v[0].env = 10u << 20; trk[2].p[P_ED_FLT] = 60; trk[2].p[P_ED_PIT] = -40;
-        trk[1].p[P_ED_SHP] = 90; trk[3].p[P_MUTE] = 1;
+    /* (3b task 6) ENV, SCL and ARP on the ux pages: AMP with LOOP on; RELEASE just turned (its readout); MOD ENV with LOOP on;
+     * AMP as first opened (its hint); SCL's MORE, SCL's KEY in WHITE (C minor), the ARP's CHORD */
+    case S_ENV_TRACKS: case S_ENV_TRACKS_DEST: case S_ENV_STAGE: case S_ENV_STAGE_SUS:
+        TSEL->p[P_ATK] = 30; TSEL->p[P_DEC] = 60; TSEL->p[P_SUS] = 70; TSEL->p[P_REL] = 70;
+        TSEL->p[P_ED_FLT] = 48; TSEL->p[P_ED_PIT] = -12; TSEL->p[P_ED_SHP] = 24;
+        if (s != S_ENV_TRACKS_DEST && s != S_ENV_STAGE_SUS) TSEL->p[P_ELOOP] = 1;
+        uxs_seen = s == S_ENV_STAGE_SUS ? 0u : 0x3FFu;
+        ux_hot_k = -1;
+        nav_scene(SEC_ENV, s == S_ENV_STAGE ? "MOD ENV" : "AMP");
+        if (s == S_ENV_TRACKS_DEST) { edit_param(3, 4); ux_knob_touch(3); }   /* (RELEASE turned: its column lit, the readout) */
         break;
-    case S_ENV_STAGE: case S_ENV_STAGE_SUS:
-        go_title("STAGE"); ui.stage = s == S_ENV_STAGE ? 1 : 2; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_MSEQ2: go_title("MSEQ 2"); break;
     case S_DLG_MUT_BACK:                                /* (0.9.3) MUTATE turned OFF on T3 after mutating: the NOTICE */
         song.sel = 2; trk[2].p[P_MSND] = 2; trk[2].p[P_MPAT] = 4; mut_keep();
@@ -1196,12 +1201,29 @@ static void setup(int s)
         trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
         go_title("SENDS"); ui.hot_col = 2; ui.hot_t = 30;
         break;
-    case S_KEY_CHORD: TSEL->p[P_CHRD] = 2; TSEL->p[P_CVOI] = 1; TSEL->p[P_ROOT] = 9; TSEL->p[P_SCALE] = 2; go_title("CHORD"); break;
-    case S_KEY_CHORD_OFF: go_title("CHORD"); break;
-    case S_KEY_ARP: case S_KEY_ARP2:                   /* (0.8.5) SCL . ARP's lens: ARP on (UPDN, 2 octaves), ARP 2 */
-        TSEL->p[P_AMODE] = 3; TSEL->p[P_AOCT] = 2; TSEL->p[P_ASWING] = 40; TSEL->p[P_APROB] = 100;
-        go_title(s == S_KEY_ARP ? "ARP" : "ARP 2");
-        break;           /* (0.8.5) LFO . MOD's lens: MSEQ 2 */
+    case S_KEY_CHORD: case S_KEY_CHORD_OFF:             /* (3b task 6) SCL's CHORD: A minor, 7TH LEAD strummed, a line rotated 3 */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_ROOT] = 9; TSEL->p[P_SCALE] = 2; TSEL->p[P_VOICE] = V_POLY;
+        if (s == S_KEY_CHORD) { TSEL->p[P_CHRD] = 2; TSEL->p[P_CVOI] = 1; TSEL->p[P_CSTR] = 70; TSEL->p[P_SOFS] = 3; seq_line(); }
+        nav_scene(SEC_SCL, "CHORD");
+        break;
+    case S_KEY_ARP: case S_KEY_ARP2: case S_ARP_CHORD:  /* (3b task 6) ARP: UPDN over 2 octaves, SWING 40, a few left to CHANCE;
+                                                         * ARP 2; CHORD */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_AMODE] = s == S_ARP_CHORD ? 14 : 3; TSEL->p[P_AOCT] = 2; TSEL->p[P_ASWING] = 40; TSEL->p[P_APROB] = 100;
+        nav_scene(SEC_ARP, s == S_KEY_ARP2 ? "ARP 2" : "ARP");
+        break;
+    case S_SCL_MORE:                                    /* (3b task 6) SCL's MORE: SEQ PITCH picked, +7 */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_POFS] = 7;
+        memset(uxm_at, 0, sizeof uxm_at);
+        nav_scene(SEC_SCL, "MORE");
+        break;
+    case S_SCL_WHITE:                                   /* .. KEY: C minor, WHITE (the white keys play it), ALL TRACKS +2 */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_ROOT] = 0; TSEL->p[P_SCALE] = 2; TSEL->p[P_QUANT] = 2; song.g[G_STRN] = 2;
+        nav_scene(SEC_SCL, "KEY");
+        break;
     case S_ED_OPERATOR: eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; nav_scene(SEC_EDIT, "OPERATOR"); break;   /* (3b task 5) */
     case S_GEN_EXPLORE:                                 /* (0.8.6) GEN 1/3 on EXPLORE, where it opens, after a piece */
         ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = GEN_EXPLORE; gp.seed = 421;
@@ -1221,8 +1243,12 @@ static void setup(int s)
         song.rec = 1u | 8u; ui.hot_col = 3; ui.hot_t = 30;
         song.g[G_DJF] = 63;                      /* (0.9.1) the DJ FILTER just turned: the high-pass's end */
         break;
-    case S_ENV: go_title("ENV"); ui.hot_col = 2; ui.hot_t = 30; break;
-    case S_ENVDEST: go_title("ENV DEST"); break;
+    case S_ENV: case S_ENVDEST:                         /* (3b task 6) ENV's AMP, MOD ENV (the envelope moving the filter up, the
+                                                         * pitch a little down, the shape) */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_ATK] = 20; TSEL->p[P_ED_FLT] = 48; TSEL->p[P_ED_PIT] = -12; TSEL->p[P_ED_SHP] = 24;
+        nav_scene(SEC_ENV, s == S_ENV ? "AMP" : "MOD ENV");
+        break;
     case S_LFO: go_title("LFO"); break;
     case S_MOD: TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40; TSEL->p[P_M2SRC] = 6;
         TSEL->p[P_M2DST] = 14; TSEL->p[P_M2AMT] = -64; mod_ui_slot = 1; go_title("MOD"); break;
@@ -1236,9 +1262,13 @@ static void setup(int s)
         break;
     }
     case S_DLY: go_title("DLY"); break;
-    case S_SCL: TSEL->p[P_SCALE] = 2; go_title("SCL"); break;
+    case S_SCL:                                         /* (3b task 6) SCL's KEY: A minor, SNAP (each black key the scale's note) */
+        uxs_seen = 0x3FFu; ux_hot_k = -1;
+        TSEL->p[P_ROOT] = 9; TSEL->p[P_SCALE] = 2; TSEL->p[P_QUANT] = 1;
+        nav_scene(SEC_SCL, "KEY");
+        break;
     case S_SHIFT: seq_line(); TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
-    case S_ARP: go_title("ARP"); break;
+    case S_ARP: uxs_seen = 0x3FFu; ux_hot_k = -1; nav_scene(SEC_ARP, "ARP"); break;   /* (3b task 6: OFF, the chord as played) */
     case S_VOICE:                                       /* (3b task 4: FM6's: a synth's VOICE is EDIT's ux page 3; task 5: FM6's */
         eng(ENGI_FM6); TSEL->engine = TSEL->eng_req;    /* MORE, its VOICE rows) */
         memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 15);
@@ -1325,11 +1355,11 @@ static void setup(int s)
     }
     case S_UBOOT: ui.uboot = 3; break;
     /* the header's battery at each stock level (raw ADC: under 531, 531.., 561.., 591..) and on USB power */
-    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_title("ENV"); break;
-    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_title("ENV"); break;
-    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("ENV"); break;
-    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("ENV"); break;
-    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("ENV"); break;
+    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_title("GLOBAL"); break;
+    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_title("GLOBAL"); break;
+    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("GLOBAL"); break;
+    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("GLOBAL"); break;
+    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("GLOBAL"); break;
     case S_MOTION_REC: song.rec = 1u << song.sel; go_page(GR_MOTION); break;    /* recording into the motion */
     case S_MOTION_OFF: song.playing = 0; go_page(GR_MOTION); ui.act = 4; break;  /* stopped, CLEAR picked */
     case S_MOTION_CARD: {                                          /* #63: EDIT 1 (ACID FM 3a: was HOME), MOTION drives KNOB 1
@@ -1346,7 +1376,7 @@ static void setup(int s)
         song.playing = 0; project_save(0); project_save(1);
         chain_config.count = 2;
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4};
-        go_page(GR_SONG); chain_prepare(); events_block(32); go_title("ENV"); ui.msg_t = 0;   /* (3a: a lens page's header) */
+        go_page(GR_SONG); chain_prepare(); events_block(32); go_title("GLOBAL"); ui.msg_t = 0;   /* (3a: a lens page's header) */
         break;
     /* the FX layer's map: held alone; REPEAT 1/16 + GLITCH + the CRUSH sweep + a mute playing with the macros turned;
      * at 72 BPM: a REPEAT 1/16 waiting for its 1/16 (shown THEME) beside the FILTER sweep playing, and REPEAT 1/8

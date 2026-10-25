@@ -21,7 +21,8 @@ typedef struct { uint8_t key, glo, id; } uxc_id_t;      /* a setting reached in 
 /* the settings JIANT's pages reached, chain by chain (tests/ux_cover_test.c --dump at a5ae3f7 / 06ccb6f: every PAGES row its
  * chain names, every knob, MOD's four slots, MSEQ's and SL PITCH's sixteen steps). Reviewed: the special pages (DRUM's
  * SOUND 1..4, X-MOD, KIT 3, FM6's OPERATOR / OP ENV / OPERATOR 2, FOCUS, STAGE's stages) turn kit and patch fields or other
- * pages' settings, not ids of their own: Task 5 covers the kit and patch fields; the held layers are Task 9's */
+ * pages' settings, not ids of their own: Task 5 covers the kit and patch fields; the held layers are Task 9's, but for SCL's
+ * (3b task 6: its knobs the section's own, spec 2.5) */
 static const uxc_id_t UXC_JIANT[] = {
     {UXC_SYN, TRK, P_DIST}, {UXC_SYN, TRK, P_VOICE}, {UXC_SYN, TRK, P_GLIDE}, {UXC_SYN, TRK, P_GLMODE},
     {UXC_SYN, TRK, P_PRIO}, {UXC_SYN, TRK, P_ALLOC}, {UXC_SYN, TRK, P_DETUNE}, {UXC_SYN, TRK, P_LRTRG},
@@ -79,6 +80,9 @@ static const uxc_id_t UXC_JIANT[] = {
     {SEC_ARP, TRK, P_ASWING}, {SEC_ARP, TRK, P_APROB}, {SEC_ARP, TRK, P_AHOLD}, {SEC_ARP, TRK, P_AORDER},
     {SEC_SCL, TRK, P_ROOT}, {SEC_SCL, TRK, P_SCALE}, {SEC_SCL, TRK, P_QUANT}, {SEC_SCL, TRK, P_CHRD},
     {SEC_SCL, TRK, P_CVOI}, {SEC_SCL, TRK, P_CSTR}, {SEC_SCL, TRK, ID_ALLTR},
+    /* (3b task 6) the SCL layer's (ui_layer.c LY_SCL: ROOT SCALE ROTATE PITCH): spec 2.5 puts ROTATE and PITCH OFFSET (SEQ
+     * PITCH) in the section too, reached without the layer (spec 0 rule 2) */
+    {SEC_SCL, TRK, P_SOFS}, {SEC_SCL, TRK, P_POFS},
     /* (3b task 5) the patch's and the kit's fields JIANT's special pages turned, reviewed from ui_fm6op.c and ui_dx.c as of
      * d96b47f (params.c's views name them): FM6's OPERATOR (OP, RATIO, FINE, LEVEL), OP ENV (OP, STAGE, RATE, LEVEL),
      * OPERATOR 2 (OP, MODE, DETUNE, VEL); DRUM-X's SOUND (LANE, SIDE, PITCH, PMOD), SOUND 2 (LANE, DECAY, NOISE, COLOR), SOUND 3
@@ -259,6 +263,20 @@ int main(int argc, char **argv)
                                                          * drum's FEEDBACK shown, gen.c sets the snare's) */
     uxc_reach(UXC_FM6, 1, got);
     ok &= got[TRK][ID_FO_DTUN] && got[TRK][ID_FO_ELVL] && got[TRK][P_E7] && !got[TRK][P_ALLOC];
+    {   /* (3b task 6) the SCL layer's four (ui_layer.c LY_SCL) all in SCL's chain: ROTATE on a page, PITCH (SEQ PITCH) in MORE;
+         * ENV's eight on its two pages (STAGE gone, none in a MORE), ARP's eight on its two */
+        uint32_t k;
+        uxc_reach(SEC_SCL, 1, got);
+        for (k = 0; k < 4u; k++)
+            ok &= got[LY_SCL.scope == SC_GLOBAL][LY_SCL.id[k]];
+        ok &= got[TRK][P_TRANS];
+        uxc_reach(SEC_SCL, 0, got);
+        ok &= got[TRK][P_SOFS] && !got[TRK][P_POFS];
+        uxc_reach(SEC_ENV, 0, got);
+        ok &= got[TRK][P_ATK] && got[TRK][P_ELOOP] && got[TRK][P_ED_SHP];
+        uxc_reach(SEC_ARP, 0, got);
+        ok &= got[TRK][P_AMODE] && got[TRK][P_AORDER];
+    }
     bad += check("ux cover: the reach counts the pages' knobs (every step and slot) and the MORE rows, and sees a gap", ok);
     printf("ux cover: %u settings JIANT reached, %u hidden on purpose\n", (unsigned)n, (unsigned)nh);
     if (bad)

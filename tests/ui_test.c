@@ -3536,19 +3536,20 @@ static int test_product_ux(void)
     {   /* #63: a card shows MOTION's icon while the track's motion changes its parameter */
         uint32_t id;                                     /* (ACID FM 3a: on EDIT 1, HOME has its own knob row; 3b task 4: on
                                                           * FM6's, T2: a synth's EDIT is the ux pages'; task 5: on ENV, FM6's
-                                                          * EDIT is the ux pages' too: their knob row has no mark yet) */
-        ui_power_on(); track_select(1); go_title("ENV"); frame();
-        id = P_ATK;
+                                                          * EDIT is the ux pages' too: their knob row has no mark yet; task 6: on FX > DIST, ENV
+                                                          * the ux pages' too) */
+        ui_power_on(); track_select(1); go_title("DIST"); frame();
+        id = P_DIST;
         ok = !card_motion(0) && !card_motion(1);
-        song.rec = 2; seq_start(); go_title("ENV"); turn(EN_K1, 1); frame();
+        song.rec = 2; seq_start(); go_title("DIST"); turn(EN_K1, 1); frame();
         ok &= card_motion(0) && !card_motion(1) && !card_motion(2) && !card_motion(3);
-        bad += check("MOTION: a recorded knob marks its card, ENV (and no other; ACID FM 3a: HOME's were JIANT's; 3b: EDIT's the ux row)", ok && motion_count(TSEL) == 1);
+        bad += check("MOTION: a recorded knob marks its card, FX DIST (and no other; ACID FM 3a: HOME's were JIANT's; 3b: EDIT's the ux row)", ok && motion_count(TSEL) == 1);
         song.rec = 0; press(B_PLAY); events_block(32); frame();
         ok = card_motion(0);
-        go_page(GR_MOTION); turn(EN_K1, -1); go_title("ENV"); frame();
+        go_page(GR_MOTION); turn(EN_K1, -1); go_title("DIST"); frame();
         ok &= !card_motion(0) && motion_count(TSEL) == 1;
         bad += check("MOTION: PLAY OFF takes the icon off the card, the events stay", ok);
-        go_page(GR_MOTION); turn(EN_K1, 1); go_title("ENV"); frame();
+        go_page(GR_MOTION); turn(EN_K1, 1); go_title("DIST"); frame();
         ok = card_motion(0);
         track_select(3); frame();
         ok &= !card_motion(0);                           /* (another track: its own motion, none) */
@@ -3562,7 +3563,7 @@ static int test_product_ux(void)
         bad += check("MOTION: a mix parameter's event marks its MIXER card (PAN)", ok);
         go_page(GR_MOTION); turn(EN_K4, 1); press(B_OCTUP); press(B_OCTUP);
         ok = motion_count(TSEL) == 0;
-        go_title("ENV"); frame();
+        go_title("DIST"); frame();
         ok &= !card_motion(0) && !card_motion(1);
         go_page(GR_TRK); frame();
         ok &= !card_motion(1);
@@ -3594,7 +3595,7 @@ static int test_product_ux(void)
     for (p = 0; p < NPALETTES; p++) for (b = 0; b < 1u; b++) {
         uint16_t graph[240 * H_GRAPH], columns[240 * (Y_SEP_END - Y_LABEL)];
         ui_power_on(); palette_set(p); settings.zoom = 1;
-        open_family(FAM_ENV); frame();
+        open_family(FAM_FX); frame();                   /* (3b task 6: FX's, ENV's the ux pages') */
         uint32_t gy = lz_on() ? LZ_GRAPH_Y : Y_GRAPH;   /* (0.8.5: ENV a lens, its panel under the cards' 38 px) */
         memcpy(graph, host_screen + gy * 240, sizeof graph);
         memcpy(columns, host_screen + Y_LABEL * 240, sizeof columns);
@@ -4372,13 +4373,13 @@ static int test_quick_layers(void)
             btn_down(B_ENV); frame(); turn(EN_SELECT, 1); frame();   /* (0.9.2: into ENV, its page left, then the chain) */
             ok = str_eq(cur_page()->title, "ENV DEST") && !ui.confirm;
             turn(EN_SELECT, 1); frame();
-            ok &= str_eq(cur_page()->title, "STAGE");
+            ok &= str_eq(cur_page()->title, "ENV DEST");   /* (3b task 6: ENV's last page; STAGE gone) */
             btn_up(B_ENV); frame(); turn(EN_SELECT, -1); frame();   /* (the same turn, the button let go first) */
-            ok &= str_eq(cur_page()->title, "STAGE") && !ui.layer;
+            ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.layer;
             frames(30);
             sig = steps_sig(TSEL);
             held_turn(B_SEQ, 1);
-            ok &= ui.confirm == CF_DICE_SEQ && steps_sig(TSEL) != sig && str_eq(cur_page()->title, "STAGE");
+            ok &= ui.confirm == CF_DICE_SEQ && steps_sig(TSEL) != sig && str_eq(cur_page()->title, "ENV DEST");
             press(B_OCTDN); frame();
             ok &= !ui.confirm && steps_sig(TSEL) == sig && msg_is("SEQ BACK");
             for (j = 0; j < 8u; j++) lf[j] = TSEL->p[P_LRATE + j];
@@ -9720,7 +9721,7 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -5);
     ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
-    ok &= str_eq(cur_page()->title, "STAGE") && !ui.home;             /* (0.8.5 LENTE: ENV -> STAGE, the last; no LFO) */
+    ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.home;          /* (ENV's last, MOD ENV; no LFO; 3b task 6: STAGE gone) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
@@ -9897,9 +9898,9 @@ static int test_large(void)
     press(B_HOME);
     bad += check("#15 MENU > LARGE: OFF by default (ACID FM 0.3: SCREEN KNOB 1; was after STYLE, KNOB 4); right / OCT+ ON, left / OCT- OFF", ok && !ui.menu);
 
-    /* a lens page (ACID FM 3a: was HOME's, now ux_home.c's own strips): tall cards under its tabs (rows 42..146) and the
+    /* a lens page (ACID FM 3a: was HOME's, now ux_home.c's own strips; 3b task 6: GLO > GLOBAL, ENV the ux pages'): tall cards under its tabs (rows 42..146) and the
      * strip; the footer as it was */
-    go_title("ENV"); frame();
+    go_title("GLOBAL"); frame();
     ok = large_kind() == LK_TALL && card_y() == LZ_CARD_Y && card_h() == LG_CARD_H && graph_y() == LZ_LG_Y_GRAPH;
     ok &= lg_px(30, LZ_LG_Y_GRAPH - 2) == T_BG;                  /* (the gap) */
     for (c = 0; c < 4u; c++)                                      /* each column's K pill, over its knob */
@@ -9924,7 +9925,7 @@ static int test_large(void)
     bad += check("#15 LARGE: a card value in L (GLOBAL's BPM 120: about 21 rows of figures, M's 11)", ok);
 
     /* a knob turned: its own card redrawn, the other three not */
-    go_title("ENV"); frame(); frames(600);
+    go_title("GLOBAL"); frame(); frames(600);
     memcpy(off, host_screen, sizeof off);
     turn(EN_K2, 3);
     {
@@ -9933,9 +9934,9 @@ static int test_large(void)
             for (c = 0; c < 4u; c++)
                 for (x = CARD_X(c); x < CARD_X(c) + CARD_W; x++)
                     diff[c] += off[y * 240 + x] != host_screen[y * 240 + x];
-        ok = large_kind() == LK_TALL && strip_kind() == SK_ADSR && diff[1] && !diff[0] && !diff[2] && !diff[3];
+        ok = large_kind() == LK_TALL && strip_kind() == SK_TITLE && diff[1] && !diff[0] && !diff[2] && !diff[3];
     }
-    bad += check("#15 LARGE: ENV tall with its ADSR in the strip; KNOB 2 turned redraws card 2 only", ok);
+    bad += check("#15 LARGE: GLOBAL tall, its title in the strip (3b task 6: ENV's ADSR strip ux_section.c's now); KNOB 2 turned redraws card 2 only", ok);
 
     /* per page type: lists and rolls keep the layout, the layers too; MIXER's tracks in the strip */
     go_page(GR_BROWSE); frame();
@@ -9945,7 +9946,7 @@ static int test_large(void)
     ok &= large_kind() == LK_LABEL;
     go_page(GR_TRK); frame();
     ok &= large_kind() == LK_TALL && strip_kind() == SK_TRK && lg_px(CARD_X(0) + 8, (int32_t)graph_y() + 56) == T_SURF;   /* (0.8.5: graph_y, a lens's) */
-    go_title("ENV"); frame();
+    go_title("GLOBAL"); frame();
     btn_down(B_GLO); frames(800);
     ok &= ui.layer && large_kind() == LK_LABEL && card_h() == LZ_CARD_H;   /* (0.8.5: the layer's lens) */
     btn_up(B_GLO); frame(); frame();
@@ -10028,14 +10029,14 @@ static int test_skin(void)
                      "the screen the same whatever it holds", ok);
     }
     ui_power_on(); frame();                                       /* the geometry, AIR's (ACID FM 3a: HOME is ux_home.c's) */
-    go_title("ENV"); frame();                                     /* the knob row on top, under the tabs */
+    go_title("GLOBAL"); frame();                                     /* the knob row on top, under the tabs */
     ok = lg_px(LT_X(0) + LT_W / 2 + 30, LT_Y + 1) == T_BG;        /* (the tabs words: no fill) */
     ok &= lz_low() && card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && graph_h() == LB_GRAPH_H &&
           graph_y() + graph_h() <= LZ_FOOT_Y && skin_ink(LA_CARD_Y, LA_CARD_Y + LB_CARD_H) > 100 &&
           lg_px(CARD_X(0) + COL_W / 2, LA_CARD_Y + 1) == T_BG;  /* (no boxes) */
     go_title("PATTERN"); frame();                                 /* (the SEQ pages too) */
     ok &= lz_low() && card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && skin_ink(LA_CARD_Y, LA_CARD_Y + LB_CARD_H) > 100;
-    go_title("ENV"); frame();
+    go_title("GLOBAL"); frame();
     ui_prefs |= PREF_LARGE; frame();
     ok &= !lz_low() && large_kind() == LK_TALL && card_y() == LZ_CARD_Y;   /* (LARGE: its tall cards on top) */
     ui_prefs &= ~PREF_LARGE; go_home(); frame();
@@ -10305,7 +10306,7 @@ static int test_style(void)
     static uint16_t sh[240 * 240];
     uint32_t rule;                                     /* (where LINE's rule over the panel was) */
     ui_power_on();
-    go_title("ENV"); frames(200);                      /* (a still page: HOME's beings move every frame) */
+    go_title("DIST"); frames(200);                      /* (a still page: HOME's beings move every frame) */
     rule = (card_y() + card_h() + graph_y()) / 2u * 240u + 120u;
     ok = ui_style == 0u && T_SURF == T_BG && str_eq(MI_NAME[MI_STYLE], "STYLE") && menu_hidden(MI_STYLE) && menu_n(MI_STYLE) == 1u &&
          menu_get(MI_STYLE) == 0u && str_eq(menu_vname(MI_STYLE, 0), "ACID");
@@ -10719,60 +10720,62 @@ static void uxn_walk(uint32_t t, uint32_t sec, char *b, uint32_t n)
     press(B_HOME); frames(500);
     held_turn(UXN_BTN[sec], 1); frames(32); frames(500); uxn_at(b, n);
 }
-static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE, T2 EDIT .. SAVE, .. */
+static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE, T2 EDIT .. SAVE, .. (3b task 6: ENV AMP MOD
+                                                         * ENV, SCL KEY CHORD MORE, ARP ARP ARP 2: a page a group; ENV and ARP
+                                                         * + SELECT then let go here: the chain's next, then the tap, round) */
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
-    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
-    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
-    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
+    "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/2/FM6 OP ENV|EDIT/2/FM6 OP ENV|HOME/0/*",   /* (3b task 5) */
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
-    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
-    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
-    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
+    "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
-    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
-    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
-    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
+    "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/2/DRUM SOUND 2|EDIT/2/DRUM SOUND 2|HOME/0/*",   /* (3b task 5) */
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
-    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
-    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
-    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
+    "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
-    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
-    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
-    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
+    "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
     "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
-    "ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/2/ENV|ENV/4/STAGE|ENV/0/ENV|ENV/1/ENV DEST|ENV/2/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/4/STAGE",
+    "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/4/MSEQ|LFO/0/MOD|LFO/1/LFO|LFO/2/LFO 2|LFO/1/LFO|LFO/1/LFO|HOME/0/*",
-    "SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/0/SCL|SCL/1/CHORD|SCL/1/CHORD|SCL/1/CHORD|SCL/0/SCL|SCL/0/SCL|SCL/1/CHORD",
-    "ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
+    "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
+    "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
 };
 static int test_ux_nav_sections(void)
@@ -11460,60 +11463,7 @@ static int test_lz_edit(void)
     return bad;
 }
 
-/* ENV (0.9.2, ui_lzpage.c): TRACKS (TRACKS, TRACKS DEST: the six) . ENV (ENV, ENV DEST) . STAGE one chain; it opens on
- * ENV; an ENV tap the next group; PRESETS the sounds (rule 3: was the track, the stage), ALGORITHM the track; STAGE's
- * knobs: the stage, its value, LOOP */
-static int test_lz_env(void)
-{
-    int bad = 0, ok;
-    int16_t v;
-    uint32_t pr;
-    ui_power_on(); frame();
-    press(B_ENV); frame();
-    ok = pd_on() && lz_fam() == LZ_ENV && pd_level() == 1u && str_eq(cur_page()->title, "ENV") && lz_tab_lit(1) &&
-         lz_crumb_is("ENV \xB7 ENV \xB7 ENV") && lz_count_is("3/5");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("ENV \xB7 ENV \xB7 ENV DEST") && lz_count_is("4/5");
-    turn(EN_SELECT, -3); frame();
-    ok &= pd_level() == 0u && lz_tab_lit(0) && str_eq(cur_page()->title, "ENV") && lz_crumb_is("ENV \xB7 TRACKS \xB7 TRACKS");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 0u && str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("ENV \xB7 TRACKS \xB7 TRACKS DEST");
-    frames(320); press(B_ENV); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "ENV");
-    frames(320); press(B_ENV); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "STAGE") && lz_tab_lit(2);
-    frames(320); press(B_ENV); frame();
-    ok &= pd_level() == 0u && lz_crumb_is("ENV \xB7 TRACKS \xB7 TRACKS");   /* (round) */
-    bad += check("0.9.2 ENV: opens on ENV; TRACKS (TRACKS, TRACKS DEST) . ENV (ENV, ENV DEST) . STAGE, SELECT and the taps", ok);
-    pr = TSEL->preset;                                              /* TRACKS: ALGORITHM the track, PRESETS the sound */
-    turn(EN_ALGO, 1); frame();
-    ok = song.sel == 1u && pd_level() == 0u && pd_on();
-    turn(EN_ALGO, -1); frame();
-    pr = TSEL->preset;
-    turn(EN_PRESET, 1); frame();
-    ok &= song.sel == 0u && pd_level() == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
-    bad += check("0.9.2 ENV > TRACKS: ALGORITHM picks the track (the tiles), PRESETS the sound (was the track); the page stays", ok);
-    go_title("STAGE"); frame();
-    ui.stage = 0;
-    turn(EN_K1, 1); frame();
-    ok = ui.stage == 1u && !strncmp(ui.col[1], "DEC|", 4);
-    v = TSEL->p[P_DEC];
-    turn(EN_K2, 3); frame();
-    ok &= TSEL->p[P_DEC] > v;
-    turn(EN_K1, 1); frame();
-    ok &= ui.stage == 2u;
-    v = TSEL->p[P_ELOOP];
-    turn(EN_K3, 1); frame();
-    ok &= TSEL->p[P_ELOOP] != v;
-    turn(EN_K1, 5); frame();
-    ok &= ui.stage == 3u;                                           /* (no wrap) */
-    turn(EN_PRESET, 1); frame();
-    ok &= ui.stage == 3u && str_eq(cur_page()->title, "STAGE");     /* (PRESETS: a sound, not the stage) */
-    bad += check("0.9.2 ENV > STAGE: KNOB 1 the stage, 2 its value, 3 LOOP; PRESETS a sound (was the stage)", ok);
-    ui_power_on();
-    return bad;
-}
-
+/* (ACID FM 3b task 6: ENV's lens test gone with it: test_t6_nav) */
 /* LFO (0.9.2, ui_lzpage.c): MOD . LFO (LFO, LFO DEST) . MSEQ (MSEQ, MSEQ 2) one chain; it opens on LFO; KNOB 1 the slot on
  * MOD, the step on MSEQ (PRESETS: a sound; it was the slot, the track, the step); MOD's net pulses */
 static int test_lz_mod(void)
@@ -11557,51 +11507,7 @@ static int test_lz_mod(void)
     return bad;
 }
 
-/* SCL and ARP (0.9.2): two sections, two buttons. SCL: KEY (SCL) . CHORD, a SCL tap the other; ARP: ARP (ARP, ARP 2), an
- * ARP tap back to ARP. KNOB 1 the ROOT on KEY; PRESETS a sound on both (was the ROOT, the track) */
-static int test_lz_key(void)
-{
-    int bad = 0, ok;
-    int16_t r;
-    uint32_t pr;
-    ui_power_on(); frame();
-    press(B_SCL); frame();
-    ok = pd_on() && lz_fam() == LZ_KEY && pd_level() == 0u && str_eq(cur_page()->title, "SCL") && lz_tab_lit(0) &&
-         lz_tabs() == 2u && lz_crumb_is("SCL \xB7 KEY \xB7 SCL") && lz_count_is("1/2");
-    frames(320); press(B_SCL); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD") && lz_tab_lit(1) && lz_crumb_is("SCL \xB7 CHORD \xB7 CHORD");
-    frames(320); press(B_SCL); frame();
-    ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL");
-    turn(EN_SELECT, 3); frame();
-    ok &= str_eq(cur_page()->title, "CHORD");                       /* (SCL's chain ends there: not into ARP) */
-    frames(320); press(B_ARP); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "ARP") && lz_tab_lit(0) && lz_tabs() == 1u &&
-          lz_crumb_is("ARP \xB7 ARP \xB7 ARP") && lz_count_is("1/2");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "ARP 2") && lz_crumb_is("ARP \xB7 ARP \xB7 ARP 2");
-    frames(320); press(B_ARP); frame();
-    ok &= str_eq(cur_page()->title, "ARP");                         /* (its one group: back to ARP) */
-    turn(EN_SELECT, 1); frame();
-    press(B_SCL); frame();
-    ok &= str_eq(cur_page()->title, "CHORD");                       /* (SCL from ARP: SCL's page left) */
-    press(B_ARP); frame();
-    ok &= str_eq(cur_page()->title, "ARP 2");                       /* (ARP from SCL: ARP's) */
-    bad += check("0.9.2 SCL and ARP: two sections; SCL KEY . CHORD, ARP ARP . ARP 2; taps, SELECT, each its page left", ok);
-    press(B_SCL); frame();
-    pr = TSEL->preset;
-    turn(EN_PRESET, 1); frame();
-    ok = song.sel == 0u && str_eq(cur_page()->title, "CHORD") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
-    turn(EN_SELECT, -1); frame();
-    r = TSEL->p[P_ROOT];
-    turn(EN_PRESET, 1); frame();
-    ok &= pd_level() == 0u && TSEL->p[P_ROOT] == r;
-    turn(EN_K1, 1); frame();
-    ok &= TSEL->p[P_ROOT] == r + 1;
-    bad += check("0.9.2 SCL: PRESETS a sound on CHORD and KEY (was the track, the ROOT); KNOB 1 the ROOT", ok);
-    ui_power_on();
-    return bad;
-}
-
+/* (ACID FM 3b task 6: SCL's and ARP's lens test gone with them: test_t6_nav) */
 /* GLO (0.9.2, ui_lzpage.c): MIX (MIXER, SENDS) . GLOBAL . SYSTEM one chain; a GLO tap the next group (MIX's first: MIXER),
  * from elsewhere the page left (was always MIXER); SENDS's knobs the track's sends. (0.9.11) LIVE (MANO, RIELES) first in
  * the chain; at power-on GLO still opens MIXER */
@@ -11691,7 +11597,7 @@ static int test_lz_dialogs(void)
     int bad = 0, ok;
     int16_t e0;
     uint32_t y, x, acc = 0;
-    ui_power_on(); go_title("ENV"); frame();
+    ui_power_on(); go_title("DIST"); frame();
     confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frame();
     ok = dlg_tab_lit(0) && swap16(host_screen[66 * 240 + 120]) == T_THEME;   /* (the card's THEME rule, 1 px: no card) */
     press(B_OCTDN); frame();
@@ -11736,7 +11642,7 @@ static int test_toasts(void)
             for (lg = 0; lg < 2u; lg++) {
                 ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
                 if (lg) ui_prefs |= PREF_LARGE; else ui_prefs &= ~PREF_LARGE;
-                go_title("ENV"); ui.force = 1; frames(1600);
+                go_title("DIST"); ui.force = 1; frames(1600);
                 memcpy(toast_snap, host_screen, sizeof toast_snap);
                 ui_message("SAVED A LONG MESSAGE"); frame();
                 toast_box(ui.msg, b);
@@ -11772,7 +11678,7 @@ static int test_toasts(void)
     for (ok = 1, sk = 0; sk < 1u; sk++) {               /* NOTICE: the page round its box, its tabs, its breadcrumb */
         static const int16_t R[3][4] = {{0, LT_Y, 240, 0}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
         ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
-        go_title("ENV"); ui.force = 1; frames(800);
+        go_title("DIST"); ui.force = 1; frames(800);
         memcpy(toast_snap, host_screen, sizeof toast_snap);
         confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frames(160);
         for (n = out = 0, y = H_HEAD; y < 240u; y++)
@@ -11951,9 +11857,9 @@ static const old_lv_t OLD_LV[] = {
     {FAM_EDIT, 0, 1, {"EDIT 1", "FM6 OP", "FM6 OP ENV"}}, {FAM_EDIT, 1, 1, {"FM6 MORE"}},   /* (3b task 5: FM6's and DRUM-X's
                                                          * EDIT their own; JIANT's other pages MORE's rows) */
     {FAM_EDIT, 0, 2, {"EDIT 1", "DRUM SOUND", "DRUM SOUND 2"}}, {FAM_EDIT, 1, 2, {"DRUM MORE"}},
-    {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
+    {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}},   /* (3b task 6: ENV, SCL, ARP their own; ENV's TRACKS and STAGE gone, SCL's MORE) */
     {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO 2", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
-    {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP", "ARP 2"}},
+    {FAM_SCL, 0, 9, {"SCL", "CHORD", "SCL MORE"}}, {FAM_ARP, 0, 9, {"ARP", "ARP 2"}},
     {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"GLOBAL"}}, {FAM_GLO, 2, 9, {"SYSTEM"}},
     {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}}, {FAM_SAVE, SV_PROJ, 9, {"PROJECT", "ARRANGE"}},
     {FAM_SAVE, SV_SOUND, 9, {"USER", "PRESETS"}},
@@ -12984,7 +12890,7 @@ static int test_ux_section_draw(void)
      * JIANT's MODE is the arp's, the glide's, the slicer's and the LFO's; only the glide's is GLIDE MODE */
     ok = str_eq(uxs_label(SEC_EDIT, 0, P_GLMODE, TP[P_GLMODE].label), "GLIDE MODE") &&
          str_eq(uxs_label(SEC_ARP, 0, P_GLMODE, TP[P_GLMODE].label), "GLIDE MODE") &&
-         str_eq(uxs_label(SEC_ARP, 0, P_AMODE, TP[P_AMODE].label), TP[P_AMODE].label) &&
+         str_eq(uxs_label(SEC_ARP, 0, P_AMODE, TP[P_AMODE].label), "ARP") &&   /* (3b task 6: ARP OFF / UP ..) */
          str_eq(uxs_label(SEC_FX, 1, G_SLMODE, GP[G_SLMODE].label), GP[G_SLMODE].label) &&
          str_eq(uxs_label(SEC_LFO, 0, ID_LMODE, "MODE"), "MODE") &&
          str_eq(uxs_label(SEC_FX, 1, P_GLMODE, GP[P_GLMODE].label), uxs_label(SEC_FX, 1, 0xFFFFu, GP[P_GLMODE].label)) &&
@@ -12993,7 +12899,8 @@ static int test_ux_section_draw(void)
         const char *q;
         ok &= UXS_NAME[i].p && text_w(&UF_LBL, UXS_NAME[i].p) <= UX_COL_W - 4 &&
               (UXS_NAME[i].sec == UXS_ALL || UXS_NAME[i].sec < SEC_N) && UXS_NAME[i].glo <= 1u &&
-              UXS_NAME[i].id < (UXS_NAME[i].glo ? G_COUNT : P_COUNT);
+              (UXS_NAME[i].id < (UXS_NAME[i].glo ? G_COUNT : P_COUNT) || UXS_NAME[i].id == ID_ALLTR);   /* (3b task 6: SCL's
+                                                         * ALL TRACKS, a view) */
         if (!ok) { printf("  UXS_NAME[%u] \"%s\": too wide or not a setting\n", (unsigned)i, UXS_NAME[i].p); break; }
         for (q = UXS_NAME[i].p; *q; q++)
             ok &= glyph_at(&UF_LBL, (uint8_t)*q) >= 0 && glyph_at(&UF_HDR, (uint8_t)*q) >= 0;
@@ -14381,6 +14288,8 @@ static int test_edit_t5_fix(void)
     }
     {   /* 5. the OP picked (FM6) and the drum picked (DRUM-X) are each track's own (spec 2.1: one selection per track) */
         uxe_on(ENGI_FM6);
+        memset(fop_op_tr, 0, sizeof fop_op_tr);          /* (as at boot: the picks are RAM's, an earlier test's left; 3b task 6) */
+        memset(dx_ui_lane_tr, 0, sizeof dx_ui_lane_tr);
         for (i = 1; i < 4u; i++) {
             set_engine_of(&trk[i], i == 2u ? ENGI_DRUM : ENGI_FM6);
             trk[i].engine = trk[i].eng_req;
@@ -14503,6 +14412,350 @@ static int test_edit_t5_fix(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3b task 6: ENV, ARP and SCL on the ux pages.
+ * ------------------------------------------------------------------------------------------------------------------------- */
+typedef struct { uint8_t sec, btn; const char *title, *where; const char *lab[4]; uint16_t id[4]; } uxt6_pg_t;
+static const uxt6_pg_t UXT6_PG[] = {
+    {SEC_ENV, B_ENV, "ENV", "ENV \xB7 AMP", {"ATTACK", "DECAY", "SUSTAIN", "RELEASE"}, {P_ATK, P_DEC, P_SUS, P_REL}},
+    {SEC_ENV, B_ENV, "ENV DEST", "ENV \xB7 MOD ENV", {"FILTER", "PITCH", "SHAPE", "LOOP"}, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},
+    {SEC_ARP, B_ARP, "ARP", "ARP \xB7 ARP", {"ARP", "RATE", "OCTAVES", "GATE"}, {P_AMODE, P_ARATE, P_AOCT, P_AGATE}},
+    {SEC_ARP, B_ARP, "ARP 2", "ARP \xB7 ARP 2", {"SWING", "CHANCE", "HOLD", "ORDER"}, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},
+    {SEC_SCL, B_SCL, "SCL", "SCL \xB7 KEY", {"ROOT", "SCALE", "SNAP", "ALL TRACKS"}, {P_ROOT, P_SCALE, P_QUANT, ID_ALLTR}},
+    {SEC_SCL, B_SCL, "CHORD", "SCL \xB7 CHORD", {"CHORD", "VOICING", "STRUM", "ROTATE"}, {P_CHRD, P_CVOI, P_CSTR, P_SOFS}},
+};
+static int16_t *uxt6_val(uint32_t id)                    /* a setting of the selected track (ALL TRACKS: the global) */
+{
+    return id == ID_ALLTR ? &song.g[G_STRN] : &TSEL->p[id];
+}
+/* the section's chain walked: its button from each page to the next (round), SELECT to the ends, the footer's where and n / N */
+static int uxt6_walk(uint32_t btn, const char *const *nm, const char *const *title, uint32_t n)
+{
+    uint32_t k, sec = sec_of_fam(PAGES[ui.page].fam);
+    uint8_t v[16];
+    int ok = nav_list(sec, v) == n && ux_section_owns(sec);
+    for (k = 0; k < n; k++) {
+        char w[32];
+        str_cpy(w, SEC_NAME[sec], sizeof w);
+        str_cpy(w + str_len(w), " \xB7 ", sizeof w - str_len(w));
+        str_cpy(w + str_len(w), nm[k], sizeof w - str_len(w));
+        if (!str_eq(uxs_where(), w) || !str_eq(cur_page()->title, title[k])) {
+            printf("  page %u: \"%s\" (%s)\n", (unsigned)k, uxs_where(), cur_page()->title);
+            ok = 0;
+        }
+        fmt_int(w, (int32_t)k + 1);
+        str_cpy(w + str_len(w), " / ", sizeof w - str_len(w));
+        fmt_int(w + str_len(w), (int32_t)n);
+        ok &= str_eq(uxs_count(), w);
+        frames(320); press(btn); frame();
+    }
+    ok &= str_eq(cur_page()->title, title[0]);          /* (round) */
+    turn(EN_SELECT, -3); ok &= str_eq(cur_page()->title, title[0]);
+    for (k = 1; k < n; k++)
+        turn(EN_SELECT, 1);
+    turn(EN_SELECT, 1);
+    ok &= str_eq(cur_page()->title, title[n - 1u]);   /* (the last: SELECT stops) */
+    for (k = 0; k < n + 2u; k++)
+        turn(EN_SELECT, -1);
+    ok &= str_eq(cur_page()->title, title[0]);
+    return ok;
+}
+static const char *uxt6_status(void)                    /* the status line's text now */
+{
+    uint16_t col;
+    const char *st = uxs_status(cur_page(), &col);
+    return st ? st : "";
+}
+static void uxt6_open(uint32_t i)                        /* T1 (ANALOG, its first sound), page i of UXT6_PG shown */
+{
+    uxs_syn_on(ENGI_ANALOG);
+    press(UXT6_PG[i].btn); frame();
+    go_title(UXT6_PG[i].title); frame();
+}
+static int test_t6_nav(void)
+{
+    static const char *const EN[2] = {"AMP", "MOD ENV"}, *const ET[2] = {"ENV", "ENV DEST"};
+    static const char *const AN[2] = {"ARP", "ARP 2"}, *const AT[2] = {"ARP", "ARP 2"};
+    static const char *const SN[3] = {"KEY", "CHORD", "MORE"}, *const ST[3] = {"SCL", "CHORD", "SCL MORE"};
+    int bad = 0, ok;
+    uint32_t pr;
+    ui_power_on(); frame();
+    press(B_ENV); frame();
+    ok = str_eq(cur_page()->title, "ENV") && uxt6_walk(B_ENV, EN, ET, 2);
+    bad += check("ACID FM 3b task 6: ENV is AMP, MOD ENV (its button round, SELECT to the ends, n / 2); opens on AMP; no "
+                 "TRACKS, no STAGE", ok && !nav_put(SEC_ENV, "STAGE") && !nav_put(SEC_ENV, "TRACKS"));
+    ui_power_on(); frame();
+    press(B_ARP); frame();
+    ok = uxt6_walk(B_ARP, AN, AT, 2);
+    bad += check("ACID FM 3b task 6: ARP is ARP, ARP 2 (its button round now: a page a group), no MORE", ok);
+    ui_power_on(); frame();
+    press(B_SCL); frame();
+    ok = uxt6_walk(B_SCL, SN, ST, 3);
+    bad += check("ACID FM 3b task 6: SCL is KEY, CHORD, MORE (its button round, SELECT to the ends, n / 3)", ok);
+    ui_power_on(); frame();                             /* each section its page left; PRESETS a sound, ALGORITHM the track */
+    press(B_SCL); frame(); turn(EN_SELECT, 1);
+    press(B_ARP); frame(); turn(EN_SELECT, 1);
+    press(B_ENV); frame(); turn(EN_SELECT, 1);
+    press(B_SCL); frame();
+    ok = str_eq(cur_page()->title, "CHORD");
+    press(B_ARP); frame();
+    ok &= str_eq(cur_page()->title, "ARP 2");
+    press(B_ENV); frame();
+    ok &= str_eq(cur_page()->title, "ENV DEST");
+    pr = TSEL->preset;
+    turn(EN_PRESET, 1); frame();
+    ok &= str_eq(cur_page()->title, "ENV DEST") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
+    turn(EN_ALGO, 1); frame();
+    ok &= song.sel == 1u && str_eq(cur_page()->title, "ENV DEST");
+    bad += check("ACID FM 3b task 6: ENV, ARP, SCL each keep the page left; PRESETS a sound, ALGORITHM the track there", ok);
+    {   /* the footer: n / N and NEXT the page the section's button goes to */
+        static const struct { uint8_t i; const char *f; } F[] = {{0, "1 / 2 \xB7 NEXT MOD ENV"}, {1, "2 / 2 \xB7 NEXT AMP"},
+                                                                  {2, "1 / 2 \xB7 NEXT ARP 2"}, {3, "2 / 2 \xB7 NEXT ARP"},
+                                                                  {4, "1 / 3 \xB7 NEXT CHORD"}, {5, "2 / 3 \xB7 NEXT MORE"}};
+        uint32_t c;
+        ux_knob_t k[4];
+        char b[48];
+        ok = 1;
+        for (c = 0; c < NELEM(F); c++) {
+            uxt6_open(F[c].i);
+            uxs_knobs(cur_page(), k);
+            uxs_foot(uxs_where(), k, uxs_count(), uxs_next(), b, sizeof b);
+            if (!str_eq(b, F[c].f)) { printf("  %s: footer \"%s\"\n", UXT6_PG[F[c].i].where, b); ok = 0; }
+        }
+    }
+    bad += check("ACID FM 3b task 6: ENV, ARP, SCL footers: n / N . NEXT the next page", ok);
+    ui_power_on();
+    return bad;
+}
+/* each page's knobs in plain words, each turning its one setting through edit_param (the same write JIANT's page did) */
+static int test_t6_knobs(void)
+{
+    uint32_t i, c;
+    int bad = 0, ok = 1;
+    for (i = 0; i < NELEM(UXT6_PG); i++) {
+        char want[64];
+        uxt6_open(i);
+        want[0] = 0;
+        for (c = 0; c < 4u; c++) {
+            if (c) str_cpy(want + str_len(want), "|", sizeof want - str_len(want));
+            str_cpy(want + str_len(want), UXT6_PG[i].lab[c], sizeof want - str_len(want));
+        }
+        if (!str_eq(uxe_labels(), want) || !str_eq(uxs_where(), UXT6_PG[i].where)) {
+            printf("  %s: %s (%s)\n", UXT6_PG[i].where, uxe_labels(), uxs_where());
+            ok = 0;
+        }
+        for (c = 0; c < 4u; c++) {
+            track_t before = *TSEL;
+            int16_t g0 = song.g[G_STRN], *vp = uxt6_val(UXT6_PG[i].id[c]), v0 = *vp;
+            uint32_t k, moved = 0;
+            int32_t s = v0 >= (UXT6_PG[i].id[c] == ID_ALLTR ? GP[G_STRN].max : track_desc(TSEL, UXT6_PG[i].id[c])->max) ? -1 : 1;
+            frames(400);
+            turn(EN_K1 + c, s);
+            for (k = 0; k < P_COUNT; k++)
+                moved += TSEL->p[k] != before.p[k] && k != UXT6_PG[i].id[c];
+            if (*vp == v0 || moved || (UXT6_PG[i].id[c] != ID_ALLTR && song.g[G_STRN] != g0)) {
+                printf("  %s KNOB %u: %d -> %d, %u others moved\n", UXT6_PG[i].where, (unsigned)c + 1u, v0, *vp, (unsigned)moved);
+                ok = 0;
+            }
+        }
+    }
+    bad += check("ACID FM 3b task 6: ENV, ARP, SCL pages: their knobs in plain words, each its setting turned (edit_param)", ok);
+    uxt6_open(2);                                       /* the ARP's ORD (plays as UP) stepped over, shown UP; REPEAT REPT */
+    TSEL->p[P_AMODE] = 4; turn(EN_K1, 1);
+    ok = TSEL->p[P_AMODE] == 6 && str_eq(uxe_value(0), "REPT");
+    frames(100);
+    ok &= strstr(uxt6_status(), "REPEAT") != 0;
+    turn(EN_K1, -1);
+    ok &= TSEL->p[P_AMODE] == 4;
+    TSEL->p[P_AMODE] = 5; frame();
+    ok &= str_eq(uxe_value(0), "UP");
+    TSEL->p[P_AMODE] = 12; frame();
+    ok &= str_eq(uxe_value(0), "THMB");
+    if (!ok) printf("  ARP: %d %s \"%s\"\n", TSEL->p[P_AMODE], uxe_value(0), uxt6_status());
+    bad += check("ACID FM 3b task 6: ARP's ORD stepped over (it plays as UP; stored, shown UP), REPEAT / THUMB short on the knob, "
+                 "in full in the status line", ok);
+    uxt6_open(4);                                       /* SCALE in full in the status line */
+    TSEL->p[P_SCALE] = 1;
+    frames(400);
+    turn(EN_K2, 1);
+    frames(32);
+    ok = TSEL->p[P_SCALE] == 2 && str_eq(uxe_value(1), "MIN") && strstr(uxt6_status(), "SCALE \xB7 MINOR") != 0;
+    if (!ok) printf("  SCALE: \"%s\"\n", uxt6_status());
+    bad += check("ACID FM 3b task 6: SCALE's knob MIN, its status line SCALE . MINOR", ok);
+    ui_power_on();
+    return bad;
+}
+/* ROTATE and SEQ PITCH (PITCH OFFSET) without the SCL layer: CHORD's KNOB 4, MORE's row; TRANSPOSE in MORE; the layer still
+ * turns them (its K3 K4) and sets ROOT from a key */
+static int test_t6_scl_layer(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    uxt6_open(5);
+    v = TSEL->p[P_SOFS];
+    turn(EN_K4, 3);
+    ok = !ui.layer && TSEL->p[P_SOFS] == v + 3 && str_eq(cur_page()->title, "CHORD");
+    turn(EN_SELECT, 1);
+    ok &= cur_page()->graph == GR_MORE && str_eq(uxe_more_list(&UXM_SCL), "SEQ PITCH|TRANSPOSE");
+    v = TSEL->p[P_POFS];
+    uxe_more_set(&UXM_SCL, P_POFS, 2);
+    ok &= !ui.layer && TSEL->p[P_POFS] == v + 2;
+    v = TSEL->p[P_TRANS];
+    uxe_more_set(&UXM_SCL, P_TRANS, -5);
+    ok &= TSEL->p[P_TRANS] == v - 5;
+    if (!ok) printf("  SCL: SOFS %d POFS %d TRANS %d, %s\n", TSEL->p[P_SOFS], TSEL->p[P_POFS], TSEL->p[P_TRANS], uxe_more_list(&UXM_SCL));
+    bad += check("ACID FM 3b task 6: ROTATE (CHORD's KNOB 4) and SEQ PITCH (MORE) turn without the SCL layer; TRANSPOSE in MORE", ok);
+    ui_power_on(); frame();                             /* the layer: as before */
+    btn_down(B_SCL); frame();
+    v = TSEL->p[P_SOFS];
+    turn(EN_K3, 2);
+    ok = ui.layer == LAYER_SCL && TSEL->p[P_SOFS] == v + 2;
+    v = TSEL->p[P_POFS];
+    turn(EN_K4, -3);
+    ok &= TSEL->p[P_POFS] == v - 3;
+    key_down(white(4)); frame(); key_up(white(4)); frame();
+    ok &= TSEL->p[P_ROOT] == (int16_t)((key_at(0, 4) + 5u) % 12u);
+    btn_up(B_SCL); frames(20);
+    ok &= !ui.layer;
+    bad += check("ACID FM 3b task 6: the SCL layer as before: its K3 ROTATE, K4 PITCH, a key the ROOT", ok);
+    ui_power_on();
+    return bad;
+}
+/* REC + ENV / ARP / SCL: every setting JIANT's pages there held still cleared (ENV: AMP and MOD ENV's eight, STAGE's LOOP; ARP:
+ * its eight; SCL: KEY's three and CHORD's three), and SCL's new ones (ROTATE, SEQ PITCH, TRANSPOSE); another section's stays */
+static int test_t6_rec_clear(void)
+{
+    static const struct { uint8_t btn; const char *msg, *none; uint8_t keep; uint8_t id[9]; uint8_t n, put; } C[] = {   /* (put: how
+                                                         * many can be recorded: ENV's eight; ARP's none; SCL's CHORD VOICING STRUM, ROTATE, SEQ PITCH) */
+        {B_ENV, "ENV AUTOMATION CLEARED", "NO ENV AUTOMATION", P_DIST,
+         {P_ATK, P_DEC, P_SUS, P_REL, P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}, 8, 8},
+        {B_ARP, "ARP AUTOMATION CLEARED", "NO ARP AUTOMATION", P_ATK,
+         {P_AMODE, P_ARATE, P_AOCT, P_AGATE, P_ASWING, P_APROB, P_AHOLD, P_AORDER}, 8, 0},
+        {B_SCL, "SCL AUTOMATION CLEARED", "NO SCL AUTOMATION", P_LRATE,
+         {P_ROOT, P_SCALE, P_QUANT, P_CHRD, P_CVOI, P_CSTR, P_SOFS, P_POFS, P_TRANS}, 9, 5},
+    };
+    uint32_t c, k;
+    int bad = 0, ok = 1;
+    for (c = 0; c < NELEM(C); c++) {
+        track_t *t;
+        ui_power_on();
+        t = TSEL;
+        go_home(); frame();
+        uint32_t put = 0;
+        for (k = 0; k < C[c].n; k++)                    /* (only what can be recorded: motion.c motion_param) */
+            put += !((k & 1u) ? motion_set_lock(t, k, C[c].id[k], 1) : motion_set_event(t, k, C[c].id[k], 1));
+        ok &= !motion_set_event(t, 12, C[c].keep, 1);
+        btn_down(B_REC); frame();
+        btn_down(C[c].btn); frame(); btn_up(C[c].btn); frame();
+        btn_up(B_REC); frames(20);
+        if (motion_find(t, 12, C[c].keep) < 0 || put != C[c].put) {
+            printf("  %s: %u put, the other section's %s\n", C[c].msg, (unsigned)put, motion_find(t, 12, C[c].keep) < 0 ? "gone" : "kept");
+            ok = 0;
+        }
+        if (!msg_is(C[c].put ? C[c].msg : C[c].none)) { printf("  \"%s\" (%u put)\n", ui.msg, (unsigned)put); ok = 0; }
+        for (k = 0; k < C[c].n; k++)
+            if (motion_find(t, k, C[c].id[k]) >= 0) { printf("  %s: id %u left\n", C[c].msg, (unsigned)C[c].id[k]); ok = 0; }
+    }
+    bad += check("ACID FM 3b task 6: REC + ENV / ARP / SCL clear every id their pages (and SCL's MORE) hold, nothing else", ok);
+    ui_power_on();
+    return bad;
+}
+/* every label and every value of these pages (and SCL's MORE) fits its knob's column, in the faces they are drawn in */
+static int test_t6_widths(void)
+{
+    uint32_t i, c, w, n = 0;
+    int32_t v;
+    int bad = 0, ok = 1;
+    for (i = 0; i < NELEM(UXT6_PG); i++) {
+        uxt6_open(i);
+        for (c = 0; c < 4u; c++) {
+            uint32_t id = UXT6_PG[i].id[c];
+            int16_t *vp = uxt6_val(id), keep = *vp;
+            const param_desc_t *d = id == ID_ALLTR ? &GP[G_STRN] : track_desc(TSEL, id);
+            for (v = d->min; v <= d->max; v++) {
+                ux_knob_t k[4];
+                *vp = (int16_t)v;
+                uxs_knobs(cur_page(), k);
+                n++;
+                if ((w = (uint32_t)text_w(&UF_VAL, k[c].value)) > UX_COL_W - 4u || str_len(k[c].value) + 1u >= sizeof k[c].value ||
+                    !uxe_glyphs(&UF_VAL, k[c].value)) {
+                    printf("  %s %s = \"%s\": %u px\n", UXT6_PG[i].where, k[c].label, k[c].value, (unsigned)w);
+                    ok = 0;
+                }
+                if ((w = (uint32_t)text_w(&UF_LBL, k[c].label)) > UX_COL_W - 4u) {
+                    printf("  %s label %s: %u px\n", UXT6_PG[i].where, k[c].label, (unsigned)w);
+                    ok = 0;
+                }
+            }
+            *vp = keep;
+        }
+    }
+    uxt6_open(5); turn(EN_SELECT, 1);                   /* SCL's MORE: KNOB 2's name and every value */
+    for (i = 0; i < NELEM(UXM_SCL_ROWS); i++) {
+        const param_desc_t *d = track_desc(TSEL, UXM_SCL_ROWS[i].id);
+        int16_t keep = TSEL->p[UXM_SCL_ROWS[i].id];
+        uxm_at[uxm_key()].sel = (uint8_t)i;
+        for (v = d->min; v <= d->max; v++) {
+            ux_knob_t k[4];
+            TSEL->p[UXM_SCL_ROWS[i].id] = (int16_t)v;
+            uxs_knobs(cur_page(), k);
+            n++;
+            if (text_w(&UF_VAL, k[1].value) > UX_COL_W - 4 || text_w(&UF_LBL, k[1].label) > UX_COL_W - 4) {
+                printf("  SCL MORE %s = %s\n", k[1].label, k[1].value);
+                ok = 0;
+            }
+        }
+        TSEL->p[UXM_SCL_ROWS[i].id] = keep;
+    }
+    bad += check("ACID FM 3b task 6: every ENV / ARP / SCL label and value fits its column (48 px), with its glyphs", ok && n > 500u);
+    ui_power_on();
+    return bad;
+}
+/* the pictures: each knob of each page moves its picture (one panel a turn), none idle (stopped or playing), ink there,
+ * a forced redraw within DC_MAX */
+static int test_t6_pictures(void)
+{
+    uint32_t i, c;
+    int bad = 0, ok = 1;
+    for (i = 0; i < NELEM(UXT6_PG); i++)
+        for (c = 0; c < 4u; c++) {
+            char w[40];
+            int32_t s;
+            uxt6_open(i);
+            if (UXT6_PG[i].sec == SEC_ARP)              /* (ARP 2's knobs act on a pattern playing: UP, CHANCE a little off) */
+                TSEL->p[P_AMODE] = 1, TSEL->p[P_APROB] = 120;
+            if (UXT6_PG[i].sec == SEC_SCL)              /* (CHORD: a chord to voice and strum, a POLY voice) */
+                TSEL->p[P_CHRD] = 1, TSEL->p[P_VOICE] = V_POLY, TSEL->p[P_SLEN] = 16;
+            if (i == 1u && c == 3u)                     /* (LOOP: from a sustain below the top) */
+                TSEL->p[P_SUS] = 60;
+            s = *uxt6_val(UXT6_PG[i].id[c]) >= 2 ? -2 : 2;
+            if (UXT6_PG[i].id[c] == P_ED_FLT || UXT6_PG[i].id[c] == P_ED_PIT || UXT6_PG[i].id[c] == P_ED_SHP)
+                s = 20;
+            if (UXT6_PG[i].id[c] == P_APROB)
+                s = -30;
+            if (UXT6_PG[i].id[c] == P_ASWING)           /* (SWING moves the even notes a little: 40 % of a step at most) */
+                s = 40;
+            frame();
+            sprintf(w, "%s KNOB %u", UXT6_PG[i].where, (unsigned)c + 1u);
+            ok &= uxe_pic_turn(c, s, w);
+            if (ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) < 1500u) { printf("  %s: no picture\n", w); ok = 0; }
+            ok &= uxe_cells_ok();
+        }
+    uxt6_open(5); turn(EN_SELECT, 1); ok &= uxe_cells_ok();   /* (SCL's MORE) */
+    bad += check("ACID FM 3b task 6: ENV's, ARP's, SCL's pictures: every knob moves its picture, one panel a turn, none idle; "
+                 "cells within DC_MAX", ok);
+    {   /* what they show: SNAP's keys (C major: C# plays C), WHITE's (C minor: E plays D#), ALL TRACKS' marker, the ARP off */
+        uxt6_open(4);
+        TSEL->p[P_ROOT] = 0; TSEL->p[P_SCALE] = 1; TSEL->p[P_QUANT] = 1;
+        ok = kb_map(TSEL, 8u) % 12u == 0u;
+        TSEL->p[P_SCALE] = 2; TSEL->p[P_QUANT] = 2;
+        ok &= kb_map(TSEL, 11u) % 12u == 3u && kb_map(TSEL, 8u) == KB_SILENT;
+        bad += check("ACID FM 3b task 6: SCL's KEY picture reads the keys' map (SNAP: C# plays C; WHITE: E plays D#, black silent)", ok);
+    }
+    ui_power_on();
+    return bad;
+}
+
 /* (3b task 3 fix) every GR_MORE row names something real (else params.c param_ref would read &t->p[id] past the track, or
  * song.g past its end): a track setting (< P_COUNT) or a view, a global (< G_COUNT) or a view, an action, a heading; a
  * list holds 64 at most (the visibility mask). A row that does not is never shown, never picked, never written */
@@ -14563,9 +14816,7 @@ int main(void)
     bad += test_ux_home_head();
     bad += test_ux_visual();
     bad += test_lz_edit();
-    bad += test_lz_env();
     bad += test_lz_mod();
-    bad += test_lz_key();
     bad += test_lz_glo();
     bad += test_lz_layer();
     bad += test_lz_dialogs();
@@ -14691,6 +14942,12 @@ int main(void)
     bad += test_edit_fm6();
     bad += test_edit_drm();
     bad += test_edit_t5_fix();
+    bad += test_t6_nav();                               /* (ACID FM 3b task 6) */
+    bad += test_t6_knobs();
+    bad += test_t6_scl_layer();
+    bad += test_t6_rec_clear();
+    bad += test_t6_widths();
+    bad += test_t6_pictures();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();
@@ -14720,7 +14977,7 @@ static int test_card_heat(void)
     int bad = 0, other = 1;
     uint32_t c, i;
     ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
-    go_title("ENV"); ui.force = 1; frames(160);
+    go_title("LFO DEST"); ui.force = 1; frames(160);    /* (3b task 6: four JIANT cards; ENV's the ux pages') */
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(cur_page(), c, &vp);

@@ -45,11 +45,10 @@ PAGE_SHOT = {
            'MASTER': 'fx_effect_master', 'PUNCH': 'toast_punch'},
     'GLO': {'MANO': 'live_mano', 'RIELES': 'live_rieles', 'MIXER': 'mixer', 'SENDS': 'glo_sends',
             'GLOBAL': 'global', 'SYSTEM': 'system'},
-    'ENV': {'TRACKS': 'env_tracks', 'TRACKS DEST': 'env_tracks_dest', 'ENV': 'env', 'ENV DEST': 'env_dest',
-            'STAGE': 'env_stage'},
+    'ENV': {'AMP': 'env_1', 'MOD ENV': 'env_2'},   # (3b task 6: ENV, SCL, ARP on the ux pages)
     'LFO': {'MOD': 'mod', 'LFO': 'lfo', 'LFO 2': 'lfo2', 'LFO DEST': 'lfo_dest', 'MSEQ': 'mseq', 'MSEQ 2': 'mseq2'},
-    'SCL': {'SCL': 'scl', 'CHORD': 'key_chord'},
-    'ARP': {'ARP': 'key_arp', 'ARP 2': 'key_arp2'},
+    'SCL': {'KEY': 'scl_1', 'CHORD': 'scl_2', 'MORE': 'scl_more'},
+    'ARP': {'ARP': 'arp_1', 'ARP 2': 'arp_2'},
     'SAVE': {'USER': 'save_sound', 'PRESETS': 'save_presets', 'SECTIONS': 'save_project', 'ARRANGE': 'save_arrange',
              'PROJECTS': 'save_library', 'TOOLS': 'save_tools'},
 }

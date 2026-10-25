@@ -257,7 +257,7 @@ static struct {
     uint8_t nmem[13];            /* (0.9.2) each section's page last shown, its chain's entry ^ its default (ui_lens.c
                                   * nav_mem: EDIT one per kind of track) */
     uint8_t fxmod;               /* (0.8.5) FX: the effect last shown (BUSES' tile lit) */
-    uint8_t stage;               /* .. ENV > STAGE: the stage (ATK DEC SUS REL: 0..3) */
+                                 /* (ACID FM 3b task 6: ENV > STAGE's stage gone with it) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */

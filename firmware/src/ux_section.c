@@ -5,10 +5,11 @@
  *   knobs    the PAGES row's four: the label in plain words (UXS_NAME, UXS_LABEL), the value with its unit (uxs_val: "1.9K",
  *            "1.0MS"; MORE's rows and the status line the same), the bar its place in the range, KNOB 1..4 ACID SLIDE VIOLET
  *            ACCENT; MORE: KNOB 1 the setting picked (n/N), KNOB 2 its value
- *   panel    the page's picture over the glow: a synth's EDIT what it sounds like (the engine's signal path, ported; its
+ *   panel    the page's picture over the glow (3b task 6: ENV's envelope, ARP's notes, SCL's keys and chord, below): a
+ *            synth's EDIT what it sounds like (the engine's signal path, ported; its
  *            FILTER page the filter's response; VOICE singing words the word); FM6's its algorithm (the picked operator
  *            outlined; OP ENV its envelope); DRUM-X's the picked drum's hit (dx_run) and the eight drums; MORE its
- *            list (ux_more.c); the sections still to come (3b tasks 6..8) their title and the four values as bars
+ *            list (ux_more.c); the sections still to come (3b tasks 7, 8) their title and the four values as bars
  *   status   a message (STOP TO EDIT in ACCENT), else the knob just turned: its full name and value ("RELEASE . 420MS"),
  *            else the section's first-time hint ("ARP AGAIN: NEXT PAGE", once a power-on, spec 0 rule 7), else on MORE
  *            what its controls do
@@ -23,7 +24,8 @@
  * more than one thing (MODE: the arp's, the glide's, the slicer's, the LFO's). UXS_ALL: every section / engine; the most
  * specific row wins (its section over every section's, then its engine over every engine's). JIANT's labels themselves
  * (TP / GP: the web editor reads them, editor.c) stay as they are. Each fits a knob's column in UF_LBL (tests/ui_test.c) */
-typedef char uxs_sec_edit_ok[SEC_EDIT == UXS_SEC_EDIT ? 1 : -1];   /* (ux_section.h's EDIT is ui_lens.c's) */
+typedef char uxs_sec_edit_ok[SEC_EDIT == UXS_SEC_EDIT && SEC_ENV == UXS_SEC_ENV && SEC_SCL == UXS_SEC_SCL &&
+                            SEC_ARP == UXS_SEC_ARP ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
 #define UXS_ALL 0xFFu
 typedef struct { uint8_t sec, eng, glo, id; const char *p; } uxs_name_t;   /* id: a P_* (glo 0) or G_* (glo 1), or a view */
 static const uxs_name_t UXS_NAME[] = {
@@ -44,6 +46,15 @@ static const uxs_name_t UXS_NAME[] = {
     {UXS_ALL, ENGI_FM6, 0, P_E7, "PATCH"},              /* .. SLOT: the patch, F1..F8 OWN B1..B32 */
     {UXS_ALL, ENGI_DRUM, 0, P_E5, "CLICK"},             /* .. DRUM-X's FM ENV: the hit's beater, click, metal edge */
     {UXS_ALL, ENGI_DRUM, 0, P_DXIMG, "STEREO"},         /* .. IMAGE: the kit across the stereo field */
+    /* (3b task 6) ARP's, SCL's */
+    {UXS_ALL, UXS_ALL, 0, P_AMODE, "ARP"},              /* ARP's MODE: ARP OFF / UP / DN .. (MODE names four things) */
+    {UXS_ALL, UXS_ALL, 0, P_AOCT, "OCTAVES"},           /* .. OCT: the octaves it runs over */
+    {UXS_ALL, UXS_ALL, 0, P_APROB, "CHANCE"},           /* .. PROB: each note's chance (SEQ's CHANCE's word) */
+    {UXS_ALL, UXS_ALL, 0, P_QUANT, "SNAP"},             /* SCL's QUANT: the keys onto the scale (OFF SNAP WHITE SEQ) */
+    {UXS_ALL, UXS_ALL, 0, ID_ALLTR, "ALL TRACKS"},      /* .. ALL TR: every sequence a number of scale steps up / down */
+    {UXS_ALL, UXS_ALL, 1, G_STRN, "ALL TRACKS"},        /* .. (the same global, where a page names it as one) */
+    {UXS_ALL, UXS_ALL, 0, P_POFS, "SEQ PITCH"},         /* .. SEQ > TRACK's PITCH: the sequence's notes, semitones */
+    {UXS_ALL, UXS_ALL, 0, P_TRANS, "TRANSPOSE"},        /* .. TRANS: every note the track plays, semitones */
 };
 static const char *uxs_name_in(const uxs_name_t *t, uint32_t n, uint32_t sec, uint32_t eng, uint32_t glo, uint32_t id)
 {
@@ -114,8 +125,27 @@ static void uxs_val(const param_desc_t *d, int32_t v, char *b, uint32_t nb)
 static const char *const UXS_ALGP[] = {"P "};
 #define UXS_ALGP_SAY " (THE PATCH'S)"
 static int uxs_algp(uint32_t glo, uint32_t id, int32_t v) { return !glo && id == P_E0 && !v && trk_eng(TSEL) == ENGI_FM6; }
+/* (3b task 6) the ARP's pattern on the knob where JIANT's word is wider than its column (REPEAT, THUMB) or the same as another
+ * (ORD plays as UP: ui_input.c param_knob steps over it); the status line says each in full (uxs_vfull), and SCALE's */
+static const char *const UXS_AMODE_K[16] = {0, 0, 0, 0, 0, "UP", "REPT", 0, 0, 0, 0, 0, "THMB", 0, 0, 0};
+static const char *const UXS_AMODE_FULL[16] = {"OFF", "UP", "DOWN", "UP-DOWN", "RANDOM", "UP", "REPEAT", "DOWN-UP",
+                                               "UP + OCTAVE", "CONVERGE", "DIVERGE", "PINKY", "THUMB", "WALK", "CHORD",
+                                               "KEYS MOVE THE SEQUENCE"};
+static const char *const UXS_SCALE_FULL[16] = {"CHROMATIC", "MAJOR", "MINOR", "DORIAN", "MIXOLYDIAN", "PENTATONIC",
+                                               "MINOR PENT", "HARMONIC MINOR", "PHRYGIAN", "LYDIAN", "LOCRIAN",
+                                               "MELODIC MINOR", "BLUES", "WHOLE TONE", "DIMINISHED H-W", "DIMINISHED W-H"};
+static const char *uxs_vfull(uint32_t glo, uint32_t id, int32_t v)   /* value v of setting id in full (0: as the knob's) */
+{
+    if (glo || v < 0 || v > 15)
+        return 0;
+    return id == P_AMODE ? UXS_AMODE_FULL[v] : id == P_SCALE ? UXS_SCALE_FULL[v] : 0;
+}
 static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t id, char *b, uint32_t nb)
 {
+    if (!glo && id == P_AMODE && v >= 0 && v < 16 && UXS_AMODE_K[v]) {
+        str_cpy(b, UXS_AMODE_K[v], nb);
+        return;
+    }
     if (!uxs_algp(glo, id, v)) {
         uxs_val(d, v, b, nb);
         return;
@@ -267,6 +297,8 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
             if (d && vp && d->label && d->label[0] != '-') {
                 uint32_t id = page_id(pg, (uint32_t)h);
                 uxs_vtext(d, *vp, pg->scope == SC_GLOBAL, id, v, sizeof v);
+                if (uxs_vfull(pg->scope == SC_GLOBAL, id, *vp))   /* (3b task 6: "ARP . REPEAT", "SCALE . MINOR") */
+                    str_cpy(v, uxs_vfull(pg->scope == SC_GLOBAL, id, *vp), sizeof v);
                 nm = uxs_label(sec, pg->scope == SC_GLOBAL, id, d->label);
                 if (uxs_algp(pg->scope == SC_GLOBAL, id, *vp))
                     str_cpy(v + str_len(v), UXS_ALGP_SAY, sizeof v - str_len(v));
@@ -1156,8 +1188,331 @@ static void uxs_drum_draw(const track_t *t, const char *name)
     }
 }
 
-/* the page's picture: MORE its list; EDIT's its engine's (above); the others (until Tasks 6..8 give each its own) the page's
- * title over its four values as bars in the knobs' colours */
+/* -------------------------------------------------------------------------- ENV's, ARP's and SCL's pictures --- */
+/* (3b task 6) Each drawn from the track's stored settings, a turn redrawing it once (the panel's signature: ux_section_draw),
+ * nothing a frame while idle, nothing in the audio path; the four knobs' colours mark what each moves.
+ * ENV  AMP: the envelope as it sounds, a stage the colour of its knob (ATTACK ACID, DECAY SLIDE, SUSTAIN VIOLET, RELEASE
+ *      ACCENT; voice.c env_tick: the attack straight, decay and release falling as the engine's do), a stage as wide as its
+ *      time (the knob's place: its times run 1 ms .. 10 s), LOOP on: the attack and decay again while the key is held.
+ *      MOD ENV: that envelope again (dim), what it does to FILTER, PITCH and SHAPE: each one's amount times it, up or
+ *      down from the middle, in its knob's colour (LOOP's the dim one's: ACCENT when on)
+ * ARP  the notes it plays from C G E held (played in that order) over one bar (a longer RATE: the step), the keys let go at
+ *      three quarters (HOLD on: it plays on): each note a bar as long as its GATE at its RATE, SWING moving the even ones,
+ *      CHANCE's misses hollow, the pitch up the panel (OCTAVES, ORDER, the ARP's pattern: seq.c arp_step / arp_pick, its
+ *      random ones from a fixed seed); OFF: the chord as played; TRNS: the keys move the sequence
+ * SCL  KEY: an octave of keys, the scale's lit (SLIDE), ROOT's in ACID, a key that plays another note (SNAP: seq.c kb_map)
+ *      in VIOLET with that note's name on it ("-" silent), the line under them saying what SNAP does, ALL TRACKS' move
+ *      (every sequence that many scale steps: a mark under the note the ROOT goes to, the line under) in ACCENT. CHORD: the chord the root key plays (seq.c chord_build: CHORD, VOICING) on three octaves, STRUM's notes one
+ *      after another in time, ROTATE: the sequence's sixteen steps as they play, its first step marked */
+#define UXS_EX0 14               /* the envelope's left, its width */
+#define UXS_EW 212
+static void uxs_env_shape(const track_t *t, int16_t *e, uint8_t *st)   /* its level a column (0..1000), its stage (0..3) */
+{
+    const int16_t *p = t->p;
+    int32_t a = 4 + p[P_ATK] * 46 / 127, d = 6 + p[P_DEC] * 46 / 127, r = 6 + p[P_REL] * 46 / 127, off = UXS_EW - r;
+    int32_t sus = p[P_SUS] * 1000 / 127, kd = 32768 - 150733 / d, kr = 32768 - 150733 / r, lv = 0, x, stage = 0;
+    int loop = p[P_ELOOP] > 0 && sus < 984;             /* (LOOP: at the sustain, held, the attack again; voice.c env_tick) */
+    for (x = 0; x < UXS_EW; x++) {
+        if (x >= off)
+            stage = 3;
+        if (stage == 0) {                               /* (straight up, at the attack's rate: from the sustain too) */
+            lv += (1000 + a - 1) / a;
+            if (lv >= 1000)
+                lv = 1000, stage = 1;
+        } else if (stage == 3)
+            lv = (int32_t)(((int64_t)lv * kr) >> 15);
+        else {
+            lv = sus + (int32_t)(((int64_t)(lv - sus) * kd) >> 15);
+            if (loop && lv - sus < 16)
+                stage = 0;
+            else if (!loop && x >= a + d)
+                stage = 2;
+        }
+        e[x] = (int16_t)clamp(lv, 0, 1000);
+        st[x] = (uint8_t)stage;
+    }
+}
+static void uxs_env_draw(const track_t *t, const page_t *pg, const char *name)
+{
+    int16_t e[UXS_EW];
+    uint8_t st[UXS_EW];
+    int32_t x, k, y0 = 132, y1 = 34, mid = 82, amp = 44;
+    int mod = pg->id[0] == P_ED_FLT;
+    uxs_env_shape(t, e, st);
+    if (!mod) {
+        uint16_t fill = ux_mix(UX_BG, UX_ACID, 18);
+        for (x = 0; x < UXS_EW; x++) {
+            int32_t y = y0 - e[x] * (y0 - y1) / 1000;
+            if (y < y0)
+                cv_rect(UXS_EX0 + x, y, 1, y0 - y, fill);
+        }
+        cv_rect(UXS_EX0, y0, UXS_EW, 1, UX_LINE);
+        for (x = 1; x < UXS_EW; x++)
+            cv_line_t(UXS_EX0 + x - 1, y0 - e[x - 1] * (y0 - y1) / 1000, UXS_EX0 + x, y0 - e[x] * (y0 - y1) / 1000,
+                      ux_knob_col(st[x]), 2);
+    } else {
+        uint16_t gc = t->p[P_ELOOP] > 0 ? ux_mix(UX_BG, UX_ACCENT, 45) : UX_LINE;
+        cv_rect(UXS_EX0, mid, UXS_EW, 1, UX_LINE);
+        for (x = 1; x < UXS_EW; x++)                    /* the envelope itself, dim */
+            cv_line_t(UXS_EX0 + x - 1, mid - e[x - 1] * amp / 1000, UXS_EX0 + x, mid - e[x] * amp / 1000, gc, 1);
+        for (k = 0; k < 3; k++) {                       /* FILTER PITCH SHAPE: its amount times the envelope */
+            int32_t am = t->p[P_ED_FLT + (uint32_t)k];
+            if (!am)
+                continue;
+            for (x = 1; x < UXS_EW; x++)
+                cv_line_t(UXS_EX0 + x - 1, mid - e[x - 1] * am * amp / 64000, UXS_EX0 + x, mid - e[x] * am * amp / 64000,
+                          ux_knob_col((uint32_t)k), 2);
+        }
+    }
+    uxs_pic_head(t, name);
+}
+
+/* ARP: the notes over the window (960 a bar) */
+static const uint16_t UXS_ADIV[10] = {240, 120, 60, 30, 80, 40, 480, 960, 1920, 3840};   /* (params.c N_DIV: 1/4 .. 4BAR, in
+                                                         * 960ths of a bar) */
+static const char *const UXS_ARP_SAY[] = {"C G E HELD", "KEYS PLAY AS PLAYED", "KEYS MOVE THE SEQUENCE"};   /* (the top right:
+                                                         * the keys the picture holds, the bar along its foot) */
+static uint32_t uxs_arp_list(const track_t *t, int32_t *list)   /* the note list arp_step builds from C G E held */
+{
+    static const uint8_t HELD[3] = {60, 67, 64};
+    int32_t h[3];
+    uint32_t i, j, len = 0, o, oc = (uint32_t)clamp(t->p[P_AOCT], 1, 4);
+    for (i = 0; i < 3u; i++)
+        h[i] = HELD[i];
+    if (!t->p[P_AORDER])                              /* NOTE: low to high; PLAY: as played */
+        for (i = 1; i < 3u; i++)
+            for (j = i; j > 0 && h[j - 1] > h[j]; j--) {
+                int32_t x = h[j]; h[j] = h[j - 1]; h[j - 1] = x;
+            }
+    for (o = 0; o < oc; o++)
+        for (i = 0; i < 3u; i++)
+            list[len++] = h[i] + 12 * (int32_t)o;
+    if (t->p[P_AMODE] == 6)                           /* REPEAT: the last played */
+        list[0] = HELD[2], len = 1;
+    if (t->p[P_AMODE] == 8)                           /* UP+8: the first again over the top */
+        list[len] = list[0] + 12 * (int32_t)oc, len++;
+    return len;
+}
+static uint32_t uxs_arp_pick(uint32_t m, uint32_t i, uint32_t len, uint32_t *walk, uint32_t *rnd)   /* seq.c arp_pick's */
+{
+    uint32_t cyc = len > 1u ? 2u * len - 2u : 1u, k = i % cyc, w;
+    switch (m) {
+    case 2: return len - 1u - i % len;
+    case 3: return k < len ? k : cyc - k;
+    case 7: return k < len ? len - 1u - k : k - (len - 1u);
+    case 4: return uxs_rnd(rnd) % len;
+    case 9: case 10:
+        k = i % len;
+        if (m == 10) k = len - 1u - k;
+        return (k & 1u) ? len - 1u - k / 2u : k / 2u;
+    case 11: return len < 2u ? 0u : (k & 1u) ? len - 1u : k / 2u;
+    case 12: return len < 2u ? 0u : (k & 1u) ? 1u + k / 2u : 0u;
+    case 13:
+        w = *walk;
+        w = !i ? 0u : len < 2u ? 0u : !w ? 1u : w >= len - 1u ? len - 2u : (uxs_rnd(rnd) >> 7) & 1u ? w + 1u : w - 1u;
+        *walk = w;
+        return w;
+    default: return i % len;
+    }
+}
+static void uxs_arp_draw(const track_t *t, const char *name)
+{
+    int32_t list[16], lo = 127, hi = 0, x0 = 14, w = 212, yb = 118, yh = 76, i, n, per, win, sw, gate, up, x;
+    uint32_t m = (uint32_t)clamp(t->p[P_AMODE], 0, 15), len, walk = 0, rnd = 0x2545F491u, oc = (uint32_t)clamp(t->p[P_AOCT], 1, 4);
+    uint16_t fill = ux_mix(UX_BG, UX_ACID, 30);
+    len = uxs_arp_list(t, list);
+    for (i = 0; i < (int32_t)len; i++) {
+        lo = list[i] < lo ? list[i] : lo;
+        hi = list[i] > hi ? list[i] : hi;
+    }
+    if (m == 14)                                        /* (CHORD: an octave up each step) */
+        hi = 67 + 12 * ((int32_t)oc - 1), lo = 60;
+    if (hi - lo < 12)
+        hi = lo + 12;
+    per = UXS_ADIV[clamp(t->p[P_ARATE], 0, 9)];
+    win = per > 960 ? per : 960;
+    up = t->p[P_AHOLD] ? win : win * 3 / 4;             /* (the keys let go: HOLD plays on) */
+    sw = t->p[P_ASWING] * per / 250;
+    gate = per * clamp(t->p[P_AGATE], 1, 127) / 128;
+    cv_rect(x0, yb + 6, w, 1, UX_LINE);
+    for (i = 0; i <= win; i += 240)                     /* the beats, the bars taller */
+        cv_rect(x0 + i * w / win, yb + (i % 960 ? 4 : 2), 1, i % 960 ? 2 : 4, UX_LINE);
+    cv_rect(x0, yb + 10, win * 3 / 4 * w / win, 3, UX_MID);   /* the keys held */
+    if (!m || m == 15) {                                /* OFF: the chord as played; TRNS: no notes of its own */
+        for (i = 0; i < 3; i++) {
+            int32_t y = yb - (list[i] - lo) * yh / (hi - lo);
+            cv_rect(x0, y - 2, win * 3 / 4 * w / win, 5, m ? UX_LINE : fill);
+        }
+    } else {
+        n = win / per;
+        for (i = 0; i < n; i++) {
+            int32_t t0 = i * per + ((i & 1) ? sw : 0), xs, xe, on, nn = m == 14 ? 3 : 1, c;
+            uint32_t j = m == 14 ? 0u : uxs_arp_pick(m, (uint32_t)i, len, &walk, &rnd);
+            if (t0 >= up)
+                break;
+            on = (int32_t)(((uint32_t)i * 2654435761u >> 9) & 127u) <= t->p[P_APROB];
+            xs = x0 + t0 * w / win;
+            xe = x0 + (t0 + gate) * w / win;
+            if (xe > x0 + w)
+                xe = x0 + w;
+            if (xe < xs + 2)
+                xe = xs + 2;
+            for (c = 0; c < nn; c++) {
+                int32_t note = m == 14 ? list[c] + 12 * (int32_t)((uint32_t)i % oc) : list[j % len], y;
+                y = yb - (note - lo) * yh / (hi - lo);
+                if (on)
+                    cv_rect(xs, y - 2, xe - xs, 5, UX_ACID);
+                else {                                  /* (CHANCE: this one left out) */
+                    cv_rect(xs, y - 2, xe - xs, 1, UX_MID);
+                    cv_rect(xs, y + 2, xe - xs, 1, UX_MID);
+                    cv_rect(xs, y - 2, 1, 5, UX_MID);
+                    cv_rect(xe - 1, y - 2, 1, 5, UX_MID);
+                }
+            }
+        }
+    }
+    uxs_pic_head(t, name);
+    x = 228 - text_w(&UF_LBL, UXS_ARP_SAY[!m ? 1 : m == 15 ? 2 : 0]);
+    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "ARP picture's word");
+    cv_text_on(x, 8, &UF_LBL, UXS_ARP_SAY[!m ? 1 : m == 15 ? 2 : 0], UX_TEXT, ux_under(x, 12));
+}
+
+/* SCL */
+static const uint8_t UXS_BLK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+static const uint8_t UXS_WX[12] = {0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6};   /* a note's white key (a black one's: left of it) */
+static const char *const UXS_SNAP_SAY[] = {"KEYS PLAY AS MARKED", "KEYS SNAP TO THE SCALE", "WHITE KEYS PLAY THE SCALE",
+                                           "KEYS AND SEQUENCE SNAP"};
+static const char *const UXS_STRN_SAY[] = {"ALL TRACKS AS WRITTEN", "ALL TRACKS ", " STEPS"};
+static const char *const UXS_CHORD_SAY[] = {"ONE NOTE A KEY", "ONE NOTE: VOICE NOT POLY", "ROTATE"};
+/* one key of an octave drawn as a piano's: x0 its white keys' left, kw their width, y, h the white keys' (a black key 2/3
+ * as wide, 0.6 as tall); its fill, its label (0: none) in ink */
+static void uxs_key(int32_t x0, int32_t kw, int32_t y, int32_t h, uint32_t n, uint16_t fill, const char *lab, uint16_t ink)
+{
+    int32_t x, w, hh;
+    if (UXS_BLK[n % 12u]) {
+        w = kw * 2 / 3;
+        x = x0 + (int32_t)(UXS_WX[n % 12u] + 1u) * kw - w / 2;
+        hh = h * 3 / 5;
+    } else {
+        w = kw - 1;
+        x = x0 + (int32_t)UXS_WX[n % 12u] * kw;
+        hh = h;
+    }
+    cv_rect(x, y, w, hh, fill);
+    if (lab && lab[0]) {
+        int32_t tw = text_w(&UF_LBL, lab);
+        cv_text_on(x + (w - tw) / 2, y + hh - 12, &UF_LBL, lab, ink, fill);
+    }
+}
+static void uxs_scl_key(const track_t *t, const char *name)
+{
+    uint32_t mask = scale_mask(t), rt = (uint32_t)clamp(t->p[P_ROOT], 0, 11), q = (uint32_t)clamp(t->p[P_QUANT], 0, 3), n, pass;
+    int32_t x0 = 15, kw = 30, y = 30, h = 62, s = song.g[G_STRN], tgt = -1;
+    char b[32];
+    if (s && (mask & 0xFFFu)) {                         /* ALL TRACKS: the root s scale steps on (seq.c scale_steps) */
+        int32_t m = (int32_t)rt, d = s;
+        for (; d > 0; d--)
+            do m++; while (!((mask >> (uint32_t)((m - (int32_t)rt + 120) % 12)) & 1u));
+        for (; d < 0; d++)
+            do m--; while (!((mask >> (uint32_t)((m - (int32_t)rt + 120) % 12)) & 1u));
+        tgt = (m % 12 + 12) % 12;
+    }
+    for (pass = 0; pass < 2u; pass++)                   /* the white keys, then the black over them */
+        for (n = 0; n < 12u; n++) {
+            uint32_t deg = (n + 12u - rt) % 12u, in = (mask >> deg) & 1u, k = 7u + n, pl;
+            uint16_t fill, ink;
+            const char *lab = 0;
+            if (UXS_BLK[n] != pass)
+                continue;
+            fill = !deg ? UX_ACID : in ? (pass ? ux_mix(UX_BG, UX_SLIDE, 75) : UX_SLIDE) : pass ? UX_BG2 : UX_LINE;
+            ink = in ? UX_BG : UX_MID;
+            pl = kb_map(t, k);                          /* (what this key plays: SNAP's, the octave's) */
+            if (pl == KB_SILENT)
+                lab = "-", ink = in ? UX_BG : UX_MID;
+            else if (pl % 12u != n) {
+                lab = N_NOTE[pl % 12u];                 /* (it plays another note: that one, in VIOLET) */
+                fill = pass ? ux_mix(UX_BG, UX_VIOLET, 55) : UX_VIOLET;
+                ink = UX_TEXT;
+            } else if (in)
+                lab = N_NOTE[n];
+            uxs_key(x0, kw, y, h, n, fill, lab, ink);
+            if ((int32_t)n == tgt)                      /* (ALL TRACKS: where the root moves) */
+                cv_rect(x0 + (int32_t)UXS_WX[n] * kw + (UXS_BLK[n] ? kw - 4 : kw / 2 - 4), y + h + 3, 8, 3, UX_ACCENT);
+        }
+    uxs_pic_head(t, name);
+    str_cpy(b, N_NOTE[rt], sizeof b);
+    str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
+    str_cpy(b + str_len(b), UXS_SCALE_FULL[clamp(t->p[P_SCALE], 0, 15)], sizeof b - str_len(b));
+    n = (uint32_t)(228 - text_w(&UF_LBL, b));
+    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "SCL picture's word");
+    cv_text_on((int32_t)n, 8, &UF_LBL, b, UX_TEXT, ux_under((int32_t)n, 12));
+    cv_text_on(15, 104, &UF_LBL, UXS_SNAP_SAY[q], q ? UX_VIOLET_LT : UX_MID, ux_under(15, 108));
+    if (s) {                                            /* ("ALL TRACKS +2 STEPS") */
+        str_cpy(b, UXS_STRN_SAY[1], sizeof b);
+        str_cpy(b + str_len(b), s > 0 ? "+" : "-", sizeof b - str_len(b));
+        fmt_int(b + str_len(b), s > 0 ? s : -s);
+        str_cpy(b + str_len(b), UXS_STRN_SAY[2], sizeof b - str_len(b));
+    } else
+        str_cpy(b, UXS_STRN_SAY[0], sizeof b);
+    cv_text_on(15, 122, &UF_LBL, b, s ? UX_ACCENT : UX_MID, ux_under(15, 126));
+}
+static void uxs_scl_chord(track_t *t, const char *name)
+{
+    uint8_t nt[KB_CH], last[KB_CH], nl;
+    uint32_t rt = (uint32_t)clamp(t->p[P_ROOT], 0, 11), ti = trk_index(t) % NTRK, n, i, base, len;
+    int32_t x0 = 15, kw = 10, y = 28, h = 46, gap = t->p[P_CSTR], k;
+    char b[32];
+    const char *u = "";
+    memcpy(last, chord_last[ti], KB_CH);                /* (LEAD's memory as it was: the picture plays nothing) */
+    nl = chord_nlast[ti];
+    n = chord_build(t, 60u + rt, nt);
+    memcpy(chord_last[ti], last, KB_CH);
+    chord_nlast[ti] = nl;
+    base = nt[0] / 12u * 12u;
+    if (nt[n - 1u] >= base + 36u)
+        base += 12u;
+    {                                                   /* three octaves, the white keys then the black */
+        uint32_t pass, o;
+        for (pass = 0; pass < 2u; pass++)
+            for (o = 0; o < 3u; o++)
+                for (i = 0; i < 12u; i++) {
+                    uint32_t note = base + o * 12u + i, c, on = 0;
+                    if (UXS_BLK[i] != pass)
+                        continue;
+                    for (c = 0; c < n; c++)
+                        on |= nt[c] == note;
+                    uxs_key(x0 + (int32_t)o * 7 * kw, kw, y, h, i, on ? UX_ACID : pass ? UX_BG2 : UX_LINE, 0, UX_BG);
+                }
+    }
+    for (i = 0; i < n; i++) {                           /* STRUM: the notes one after another, low to high */
+        int32_t xs = x0 + (int32_t)i * gap * 36 / 127, yy = 84 + (int32_t)i * 6;
+        cv_rect(xs, yy, 100, 4, i ? ux_mix(UX_BG, UX_VIOLET, 80) : UX_VIOLET);
+    }
+    len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP);
+    for (i = 0; i < 16u; i++) {                         /* ROTATE: the steps as they play (seq.c seq_src), the first marked */
+        int32_t ln = (int32_t)(len < 16u ? len : 16u), o = t->p[P_SOFS] % (int32_t)len;
+        uint32_t src = (uint32_t)((((int32_t)(i % len) - o) % (int32_t)len + (int32_t)len) % (int32_t)len);
+        int32_t cx = x0 + (int32_t)i * 13, on = step_on(&t->step[src]);
+        if ((int32_t)i >= ln)
+            break;
+        cv_rect(cx, 116, 12, 14, on ? UX_MID : UX_EMPTY);
+        if (src == 0u)
+            cv_rect(cx, 132, 12, 3, UX_ACCENT);
+    }
+    uxs_pic_head(t, name);
+    if (t->p[P_CHRD] && n > 1u) {
+        str_cpy(b, N_NOTE[rt], sizeof b);
+        str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
+        param_format(&CHORD_DESC[0], t->p[P_CHRD], b + str_len(b), &u);
+    } else
+        str_cpy(b, UXS_CHORD_SAY[t->p[P_CHRD] ? 1 : 0], sizeof b);
+    k = 228 - text_w(&UF_LBL, b);
+    GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "SCL picture's word");
+    cv_text_on(k, 8, &UF_LBL, b, UX_TEXT, ux_under(k, 12));
+}
+
+/* the page's picture: MORE its list; EDIT's its engine's, ENV's, ARP's, SCL's (above); the others (until Tasks 7 and 8 give
+ * each its own) the page's title over its four values as bars in the knobs' colours */
 static void uxs_picture(const page_t *pg, const ux_knob_t k[4])
 {
     const aafont_t *f = &UF_TTL;
@@ -1172,6 +1527,21 @@ static void uxs_picture(const page_t *pg, const ux_knob_t k[4])
     }
     if (pg->fam == FAM_EDIT && edit_kind() == 2u) {     /* .. DRUM-X: the drum's hit, the eight drums */
         uxs_drum_draw(TSEL, nav_page_name());
+        return;
+    }
+    if (pg->fam == FAM_ENV) {                           /* (3b task 6) ENV: the envelope; MOD ENV what it moves */
+        uxs_env_draw(TSEL, pg, nav_page_name());
+        return;
+    }
+    if (pg->fam == FAM_ARP) {                           /* .. ARP: the notes it plays */
+        uxs_arp_draw(TSEL, nav_page_name());
+        return;
+    }
+    if (pg->fam == FAM_SCL) {                           /* .. SCL: the keys (KEY), the chord a key plays (CHORD) */
+        if (pg->id[0] == P_CHRD)
+            uxs_scl_chord(TSEL, nav_page_name());
+        else
+            uxs_scl_key(TSEL, nav_page_name());
         return;
     }
     if (pg->fam == FAM_EDIT && !edit_kind()) {          /* (a synth: its wave; the filter's page its response) */
@@ -1269,6 +1639,24 @@ static void ux_section_draw(void)
         sig = sig * 31u + trk_eng(TSEL);
         uxs_word(TSEL, wd, sizeof wd);                  /* (VOICE singing: the word, when it changes) */
         sig = str_hash(sig, wd);
+    }
+    if ((pg->fam == FAM_ENV || pg->fam == FAM_ARP || pg->fam == FAM_SCL) && pg->graph != GR_MORE) {   /* (3b task 6: the
+                                                         * settings their pictures are drawn from, the keys' octave, SCL's
+                                                         * steps as they play and LEAD's last chord) */
+        static const uint8_t S[] = {P_ATK, P_DEC, P_SUS, P_REL, P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP, P_AMODE, P_ARATE, P_AOCT,
+                                    P_AGATE, P_ASWING, P_APROB, P_AHOLD, P_AORDER, P_ROOT, P_SCALE, P_QUANT, P_CHRD, P_CVOI,
+                                    P_CSTR, P_SOFS, P_SLEN, P_VOICE};
+        for (c = 0; c < sizeof S; c++)
+            sig = sig * 31u + (uint16_t)TSEL->p[S[c]];
+        sig = sig * 31u + (uint16_t)song.g[G_STRN] + TSEL->eng_req * 7u + (uint32_t)(song.octave + 8) * 131u;
+        if (pg->fam == FAM_SCL) {
+            uint32_t ti = song.sel % NTRK;
+            for (c = 0; c < NSTEP; c++)
+                sig = sig * 3u + (uint32_t)step_on(&TSEL->step[c]);
+            for (c = 0; c < KB_CH; c++)
+                sig = sig * 131u + chord_last[ti][c];
+            sig = sig * 7u + chord_nlast[ti];
+        }
     }
     if (all || sig != panel_sig) {
         panel_sig = sig;

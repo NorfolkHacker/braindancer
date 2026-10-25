@@ -51,7 +51,7 @@ big = [('home', 'HOME · six living tracks'), ('gen_explore', 'GEN · EXPLORE, a
        ('save_arrange', 'ARRANGE · the song in sections')]
 for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
-strips = [[('lente_step_note', 'NOTE · MICRO in 64ths'), ('lente_bar', 'SEQ › STEP · THE ROLL'), ('key_chord', 'CHORD'),
+strips = [[('lente_step_note', 'NOTE · MICRO in 64ths'), ('lente_bar', 'SEQ › STEP · THE ROLL'), ('scl_2', 'CHORD'),
            ('fx_buses', 'FX › BUSES'), ('mixer', 'MIXER · DJ FILTER'), ('layer_glo_active', 'GLO held · MAP')],
           [('edit_analog_1', 'ACID ANALOG'), ('drumx', 'DRUM-X'), ('words', 'VOICE · WORDS'), ('ed_operator', 'FM6 OPERATOR'),
            ('reverb_reso', 'RESO REVERB'), (('home', 'JIANT'), 'COLORS skin')]]

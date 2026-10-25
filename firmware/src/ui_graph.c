@@ -81,24 +81,8 @@ static void graph_adsr(const track_t *t, uint16_t c)
         px = x3 + i;
         py = EGY(sus * e >> 15);
     }
-    if (pg->id[0] == P_ATK) {                           /* (JIANT 0.5) the track's envelope now: the loudest voice's */
-        const voice_t *bv = 0;                          /* level as a dot on the curve, a line down to the axis */
-        int32_t lvl, x;
-        for (i = 0; i < NVOICE; i++)
-            if (t->v[i].stage && t->v[i].stage < 4u && (!bv || t->v[i].env > bv->env))
-                bv = &t->v[i];
-        if (bv) {
-            lvl = (int32_t)(((int64_t)bv->env * 1000) >> 24);
-            if (bv->stage == 1u)
-                x = x0 + a * lvl / 1000;
-            else if (bv->stage == 2u)
-                x = x1 + (sus < 1000 ? clamp((1000 - lvl) * d / (1000 - sus), 0, d) : 0);
-            else
-                x = x3 + (sus > 0 ? clamp((sus - lvl) * r / sus, 0, r) : r);
-            cv_rect(x, EGY(lvl), 1, bot + 2 - EGY(lvl), T_MID);
-            cv_rrect(x - 3, EGY(lvl) - 3, 7, 7, 3, T_TEXT, T_SURF);
-        }
-    }
+    /* (ACID FM 3b task 6) ENV's own page is ux_section.c's: JIANT's dot of the envelope now (ENV's page only) gone with it;
+     * this draws DIGITAL's OP ENV pages (FELUCCA_FM4) and MENU > LARGE's strip */
 #undef EGY
 }
 
@@ -920,15 +904,12 @@ static uint32_t graph_signature(void)
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number) */
         return h ^ 0x5A17u;
-    if ((pg->graph == GR_NONE && !fx_on()) || pg->graph == GR_ARP || (pg->graph == GR_MOTION && !lens_on())) h ^= ui.frame / 2u;   /* (0.8.5:
+    if ((pg->graph == GR_NONE && !fx_on()) || (pg->graph == GR_MOTION && !lens_on())) h ^= ui.frame / 2u;   /* (0.8.5:
                                                          * FX's lens pictures change with their values, */
     if (fx_on() && (song.playing || bg_energy() > 2))   /* .. and with the sound while it sounds: FX live) */
         h ^= ui.frame / 2u * 2246822519u;
     if (pg->graph == GR_LFO)                         /* (JIANT 0.5) the LFO runs: its phase, its level */
         h ^= (t->lfo_ph >> 23) * 2654435761u ^ (uint32_t)(t->lfo_val * t->lfo_fade >> 22);
-    if (pg->graph == GR_ADSR)                        /* the envelope's dot: every voice's stage and level */
-        for (i = 0; i < NVOICE; i++)
-            h = (h ^ ((uint32_t)t->v[i].stage << 24 | (uint32_t)t->v[i].env >> 16)) * 16777619u;
     for (i = 0; i < P_COUNT; i++)
         h = (h ^ (uint32_t)t->p[i]) * 16777619u;
     h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u +
@@ -948,11 +929,9 @@ static uint32_t graph_signature(void)
     }
     if (pg->graph == GR_MOD)
         h ^= (mod_ui_slot + 1u) * 40503u;
-    if (pg->graph == GR_STAGE)                       /* .. ENV > STAGE: the stage */
-        h ^= (ui.stage + 1u) * 3266489917u;
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
         h ^= (pd_level() + 1u) * 668265263u;
-        if ((pd_cur() == PD_ENV && pd_level() == 0u) || (pd_cur() == PD_MOD && pg->graph != GR_MSEQ))   /* (MOD's pulse,
+        if (pd_cur() == PD_MOD && pg->graph != GR_MSEQ)   /* (MOD's pulse,
                                                          * LFO DEST's LFO) */
             h ^= ui.frame / 2u * 2654435761u;
     }
@@ -1633,9 +1612,7 @@ static void draw_graph(void)
         cv_oy = 0;
         graph_fx_lz(t, pg);
     } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
-    } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
     } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
-    } else if (lz_on() && lz_fam() == LZ_KEY && (cv_oy = 0, graph_key_lz(t, pg))) {     /* .. SCL . ARP's */
     } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
         cv_oy = 0;
         graph_system();

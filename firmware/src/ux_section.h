@@ -9,10 +9,13 @@
 #define UX_SECTION_H
 
 /* the sections drawn by ux_section_draw, a bit per SEC_* (ui_lens.c; ux_section.c checks the numbers): EDIT (1) on a synth,
- * FM6 or DRUM-X track (ui_lens.c edit_kind 0..2: 3b tasks 4 and 5; DIGITAL, FELUCCA_FM4's, keeps JIANT's pages). Tasks 6..8 of
- * 3b add theirs */
-#define UXS_OWN (1u << 1)
+ * FM6 or DRUM-X track (ui_lens.c edit_kind 0..2: 3b tasks 4 and 5; DIGITAL, FELUCCA_FM4's, keeps JIANT's pages); (task 6) ENV (5),
+ * SCL (7), ARP (8). Tasks 7 and 8 of 3b add theirs */
 #define UXS_SEC_EDIT 1u
+#define UXS_SEC_ENV 5u
+#define UXS_SEC_SCL 7u
+#define UXS_SEC_ARP 8u
+#define UXS_OWN (1u << UXS_SEC_EDIT | 1u << UXS_SEC_ENV | 1u << UXS_SEC_SCL | 1u << UXS_SEC_ARP)
 static uint32_t edit_kind(void);  /* (ui_lens.c) 0 a synth, 1 FM6, 2 DRUM, 3 DIGITAL */
 static int ux_section_owns(uint32_t sec)
 {

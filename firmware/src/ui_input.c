@@ -1049,6 +1049,8 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
     if (!d || !vp || d->max == d->min)
         return;
     v = param_turn(d, *vp, accel(EN_K1 + (knob & 3u), steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
+    if (t && id == P_AMODE && v == AM_ORD && *vp != AM_ORD)   /* (ACID FM 3b task 6) the ARP's ORD plays as UP (seq.c): a turn */
+        v += v > *vp ? 1 : -1;                          /* steps over it (a stored ORD still plays, shown as UP) */
     *vp = (int16_t)v;
     if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
         trks_put(v);
@@ -1111,16 +1113,6 @@ static void edit_param(uint32_t slot, int32_t steps)
                 step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
             else                                      /* RATCH x1..x4 */
                 step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + steps, 1, 4));
-        }
-        return;
-    }
-    if (pg->graph == GR_STAGE && slot < 2u) {             /* (0.8.5) ENV > STAGE: the stage, its value */
-        if (slot == 0u)
-            ui.stage = (uint8_t)clamp((int32_t)(ui.stage & 3u) + (steps > 0 ? 1 : -1), 0, 3);
-        else {
-            uint32_t id = P_ATK + (ui.stage & 3u);
-            TSEL->p[id] = (int16_t)param_turn(&TP[id], TSEL->p[id], accel(EN_K1 + 1u, steps, 127));
-            knob_cap(TSEL, id);
         }
         return;
     }
@@ -1405,11 +1397,18 @@ static void rec_clear_auto(uint32_t b)
         for (f = FAM_HOME + 1u; f < FAM_COUNT && FAM_BTN[f] != b; f++)
             ;
         for (i = 0; i < NPAGES; i++)
-            if (PAGES[i].fam == f && (PAGES[i].scope == SC_TRACK || PAGES[i].scope == SC_ENGINE))
+            if (PAGES[i].fam == f && (PAGES[i].scope == SC_TRACK || PAGES[i].scope == SC_ENGINE)) {
                 for (k = 0; k < 4u; k++)
                     if (PAGES[i].id[k] < P_COUNT && !(f == FAM_EDIT && PAGES[i].id[k] == P_DIST))   /* (EDIT > FILTER's
                                                          * DRV is the part's DIST: FX's) */
                         m[PAGES[i].id[k] / 32u] |= 1u << (PAGES[i].id[k] % 32u);
+                for (k = 0; PAGES[i].graph == GR_MORE && PAGES[i].more && k < PAGES[i].more->n; k++) {   /* (ACID FM 3b
+                                                         * task 6) its MORE's rows too: SCL's SEQ PITCH, TRANSPOSE */
+                    const ux_row_t *r = &PAGES[i].more->rows[k];
+                    if (r->kind == UXR_TRACK && r->id < P_COUNT && !(f == FAM_EDIT && r->id == P_DIST))
+                        m[r->id / 32u] |= 1u << (r->id % 32u);
+                }
+            }
         if (f == FAM_EDIT)                              /* (3b task 5 fix) every drum's LEVEL: DRUM-X's SOUND names P_LN0 */
             for (k = P_LN0; k <= P_LN7; k++)            /* and turns the drum picked's (params.c page_id), as JIANT's */
                 m[k / 32u] |= 1u << (k % 32u);          /* LEVELS pages held all eight */
@@ -2518,7 +2517,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_STAGE ||
+            || pg->graph == GR_SONG ||
             pg->graph == GR_LIVE || pg->graph == GR_MORE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;

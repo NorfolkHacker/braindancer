@@ -526,7 +526,7 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACKS page (ui_input.c tracks_edit) */
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_MSEQ, GR_SLPIT,
-       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
+       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES,
        GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP };   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
                                                          * (task 5) GR_FM6P FM6's OPERATOR, OP ENV; GR_DXP DRUM-X's SOUND, SOUND 2 */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
                                                          * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone) */
@@ -687,6 +687,12 @@ static const ux_row_t UXM_DRM_ROWS[] = {
     {UXM_H_FILTER, UXR_HEAD, 0}, {P_FTYPE, UXR_TRACK, 0}, {P_FCUT, UXR_TRACK, 0}, {P_FRES, UXR_TRACK, 0},
 };
 static const ux_more_t UXM_DRM = {UXM_DRM_ROWS, (uint8_t)(sizeof UXM_DRM_ROWS / sizeof UXM_DRM_ROWS[0])};
+/* (3b task 6) SCL's MORE: the track's two pitch moves in semitones (spec 2.5); ALL TRACKS (scale steps, every sequence) is
+ * the KEY page's KNOB 4. ARP and ENV have none (their eight settings on two pages each) */
+static const ux_row_t UXM_SCL_ROWS[] = {
+    {P_POFS, UXR_TRACK, 0}, {P_TRANS, UXR_TRACK, 0},
+};
+static const ux_more_t UXM_SCL = {UXM_SCL_ROWS, (uint8_t)(sizeof UXM_SCL_ROWS / sizeof UXM_SCL_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -716,7 +722,8 @@ static const page_t PAGES[] = {
     {"PUNCH", FAM_FX, SC_GLOBAL, GR_PUNCH, {G_PFXLEN, G_PFXRES, 0xFF, 0xFF}},   /* (0.6.99) the punch-in lane: LEN RES, REC, CLEAR */
     {"SCL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_QUANT, ID_ALLTR}},   /* (JIANT: ROOT, SCALE every melodic track's;
                                                          * 0.7.6: ALL TR, the global, where TRANS was: SCL 2 gone) */
-    {"CHORD", FAM_SCL, SC_TRACK, GR_NONE, {P_CHRD, P_CVOI, P_CSTR, 0xFF}},   /* (0.6.81) a key plays a chord (seq.c) */
+    {"CHORD", FAM_SCL, SC_TRACK, GR_NONE, {P_CHRD, P_CVOI, P_CSTR, P_SOFS}},   /* (0.6.81) a key plays a chord (seq.c); (ACID FM 3b
+                                                         * task 6) KNOB 4 ROTATE, the SCL layer's, reached without it (spec 2.5) */
     {"EDIT 1", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E0, P_E1, P_E2, P_E3}},
     {"EDIT 2", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E4, P_E5, P_E6, P_E7}},
     {"WORDS", FAM_EDIT, SC_TRACK, GR_LYRIC, {P_VLANG, P_VLYR, P_E0, 0xFF}},   /* (0.8.5) VOICE: LANG LYRIC POS, OCT+ TYPE
@@ -779,8 +786,7 @@ static const page_t PAGES[] = {
     {"VOICE 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_ALLOC, P_DETUNE, 0xFF, 0xFF}},   /* EDIT > TONE: ALLOC, UNISON's DETUNE (in
                                                          * TP since Felucca, on no page until now) */
     /* (ACID FM 3b) EDIT > FOCUS gone (a view into the LFO's MOD matrix for one setting: the matrix keeps it all) */
-    {"STAGE", FAM_ENV, SC_TRACK, GR_STAGE, {0xFF, 0xFF, P_ELOOP, 0xFF}},   /* ENV's detail: STAGE (ATK DEC SUS REL), its
-                                                         * value, LOOP (ui_input.c stage_knob) */
+    /* (ACID FM 3b task 6) ENV > STAGE gone: it turned the four values ENV's AMP page turns (spec 2.2) */
     {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),
                                                          * the six tracks' as bars (ui_graph.c track_col6) */
     /* (0.9.18) SEQ > BAR gone (0.9.2 .. 0.9.17: KNOB 1 the bar, KNOB 2 LEN): the bar is the roll's cursor / strip and
@@ -804,6 +810,9 @@ static const page_t PAGES[] = {
     {"DRUM SOUND", FAM_EDIT, SC_TRACK, GR_DXP, {ID_DX_LANE, P_LN0, ID_DX_PITCH, ID_DX_DECAY}},
     {"DRUM SOUND 2", FAM_EDIT, SC_TRACK, GR_DXP, {ID_DX_LANE, ID_DX_NOISE, ID_DX_COLOR, ID_DX_WAVE}},
     {"DRUM MORE", FAM_EDIT, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_DRM},
+    /* (ACID FM 3b task 6) SCL's MORE (ui_lens.c CE_SCL: KEY, CHORD, MORE): the sequence's PITCH (SEQ > TRACK's, the SCL layer's
+     * KNOB 4), TRANSPOSE (every note the track plays, on no page since 0.7.6) */
+    {"SCL MORE", FAM_SCL, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SCL},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */

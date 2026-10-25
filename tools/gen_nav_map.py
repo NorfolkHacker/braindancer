@@ -93,8 +93,9 @@ L = {
          'EDIT': 'Synths: page 3 is VOICE on ANALOG, FILTER on the others; MORE lists the rest (KNOB 1 picks, KNOB 2 sets). FM6: KNOB 1 picks the operator on OPERATOR and OP ENV. DRUM-X: KNOB 1 picks the drum on SOUND and SOUND 2 (a key struck picks it too).',
          'FX': 'CHORUS and SLICER are hidden with LOAD ECO; the chain skips them.',
          'SAVE': 'From outside, USER and SECTIONS come with SAVE armed: SAVE · OCT+ · OCT+.',
-         'ARP': 'One group: ARP inside goes back to ARP.', 'SCL': 'KNOB 1 sets ROOT.',
-         'ENV': 'ALGORITHM picks the track on TRACKS.', 'GLO': 'LIVE: MANO plays the modifiers on the keys. MIXER KNOB 4: the DJ FILTER.',
+         'ARP': 'ARP again: the other page. The picture: the notes it plays from C G E held.',
+         'SCL': 'ROTATE (CHORD) and SEQ PITCH (MORE) without the layer. The picture: what each key plays.',
+         'ENV': 'AMP: the envelope as it sounds; MOD ENV: what it moves (FILTER, PITCH, SHAPE).', 'GLO': 'LIVE: MANO plays the modifiers on the keys. MIXER KNOB 4: the DJ FILTER.',
          'LFO': 'KNOB 1: the slot on MOD, the step on MSEQ.'},
   layers=[('HOME', 'the MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (SELECT the pages, ALGORITHM the tabs, KNOB 1–4 the settings)'),
           ('EDIT', 'F3 INIT · G3 RECALL · DRUM: black keys 1–8 mute each sound'),
@@ -138,8 +139,9 @@ L = {
          'EDIT': 'Sintes: la página 3 es VOICE en ANALOG, FILTER en los demás; MORE lista el resto (KNOB 1 elige, KNOB 2 cambia). FM6: KNOB 1 elige el operador en OPERATOR y OP ENV. DRUM-X: KNOB 1 elige el tambor en SOUND y SOUND 2 (una tecla tocada también).',
          'FX': 'CHORUS y SLICER se ocultan con LOAD ECO; la cadena los saltea.',
          'SAVE': 'Desde afuera, USER y SECTIONS llegan con SAVE elegido: SAVE · OCT+ · OCT+.',
-         'ARP': 'Un grupo: ARP adentro vuelve a ARP.', 'SCL': 'KNOB 1 fija ROOT.',
-         'ENV': 'ALGORITHM elige la pista en TRACKS.', 'GLO': 'LIVE: en MANO las teclas tocan los modificadores. MIXER KNOB 4: el DJ FILTER.',
+         'ARP': 'ARP otra vez: la otra página. El dibujo: las notas que toca con C G E apretadas.',
+         'SCL': 'ROTATE (CHORD) y SEQ PITCH (MORE) sin la capa. El dibujo: qué toca cada tecla.',
+         'ENV': 'AMP: la envolvente como suena; MOD ENV: qué mueve (FILTER, PITCH, SHAPE).', 'GLO': 'LIVE: en MANO las teclas tocan los modificadores. MIXER KNOB 4: el DJ FILTER.',
          'LFO': 'KNOB 1: el slot en MOD, el paso en MSEQ.'},
   layers=[('HOME', 'el MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (SELECT las páginas, ALGORITHM las pestañas, KNOB 1–4 los ajustes)'),
           ('EDIT', 'F3 INIT · G3 RECALL · DRUM: negras 1–8 silencian cada sonido'),
@@ -172,7 +174,7 @@ def is_cond(sec, ce, name):
     return (sec, name) in COND or (ce, name) in COND
 
 # the map's rows: the sections in each (EDIT: its three chains side by side) and their accent (KNOB 1..4 colours)
-ROWS = [['HOME', 'SEQ', 'SCL'], ['EDIT'], ['FX', 'GLO'], ['ENV', 'LFO', 'ARP', 'SAVE']]
+ROWS = [['HOME', 'SEQ', 'ARP'], ['EDIT'], ['FX', 'GLO'], ['ENV', 'LFO', 'SCL', 'SAVE']]   # (3b task 6: SCL 3 pages, ARP 2)
 ACCENT = {'HOME': K[0], 'SEQ': K[2], 'SCL': K[3], 'EDIT': K[1], 'FX': K[3], 'GLO': K[0], 'ENV': K[1], 'LFO': K[2],
           'ARP': K[0], 'SAVE': K[1]}
 
