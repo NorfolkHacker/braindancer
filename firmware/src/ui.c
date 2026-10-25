@@ -1453,14 +1453,15 @@ static void init_sound_of(track_t *t, uint32_t ei)
 /* (0.9.9) the power-on, INIT SYSTEM and NEW PROJECT: part i (engines.c TRK_DEF) its engine with its preset's sound
  * (the EDIT values, the envelope, MONO / POLY, VOICE's words, FM6's patch), over the engine's defaults as INIT SOUND
  * leaves them, and dry: no DIST CHOR DLY REV send (the effects are the player's to add). Was INIT SOUND's alone */
-static void power_sound_of(track_t *t, uint32_t i)
+static void power_sound_pre(track_t *t, uint32_t i, uint32_t pre)
 {
     uint32_t k;
     init_sound_of(t, TRK_DEF[i % NPART][0]);
-    apply_preset_to(t, TRK_DEF[i % NPART][1]);
+    apply_preset_to(t, pre);
     for (k = 0; k < 4u; k++)
         t->p[P_DIST + k] = 0;
 }
+static void power_sound_of(track_t *t, uint32_t i) { power_sound_pre(t, i, TRK_DEF[i % NPART][1]); }
 
 static void track_defaults(track_t *t)
 {
@@ -1469,22 +1470,79 @@ static void track_defaults(track_t *t)
         t->p[i] = TP[i].def;
     track_defaults_steps(t);
 }
+/* (ACID FM 3b) the demo's T6 sound: FM6's first factory preset whose sound type is PAD, else its first KEYS (the type is
+ * in the preset's tag, core.h TAG), else the first preset */
+static uint32_t demo_fm6_pad(void)
+{
+    const engine_t *e = ENGINES[ENGI_FM6];
+    uint32_t i, keys = e->npresets;
+    for (i = 0; i < e->npresets; i++) {
+        if (PR_TAG(&e->presets[i]) == PT_PAD)
+            return i;
+        if (keys == e->npresets && PR_TAG(&e->presets[i]) == PT_KEYS)
+            keys = i;
+    }
+    return keys < e->npresets ? keys : 0u;
+}
+static uint32_t demo_preset(uint32_t i)
+{
+    return i == 4u ? TRK_PR_ACID : i == 5u ? demo_fm6_pad() : TRK_DEF[i][1];
+}
+/* the demo is on from the power-on until its first edit (demo_sig0: every track's parameters, steps, engine and preset, and
+ * the tempo, hashed at the first frame and compared each frame after; a knob turn too) or a PLAY -> STOP cycle: HOME's status line says
+ * what to do with it (ux_home.c UX_DEMO) */
+static uint8_t demo_on, demo_played, demo_fresh;
+static uint32_t demo_sig0;
+static uint32_t demo_hash(void)
+{
+    uint32_t i, h = 2166136261u;
+    for (i = 0; i < NTRK; i++) {
+        const track_t *t = &trk[i];
+        h = fnv(h, t->p, sizeof t->p);
+        h = fnv(h, t->step, sizeof t->step);
+        h = fnv(h, &t->eng_req, 1);
+        h = fnv(h, &t->preset, 1);
+    }
+    return fnv(h, &song.g[G_BPM], sizeof song.g[G_BPM]);
+}
+static void demo_end(void) { demo_on = 0; }
+static void demo_watch(void)                    /* each frame (ui_input) */
+{
+    if (!demo_on)
+        return;
+    if (demo_fresh) {                           /* (the boot goes on after power_on_parts: session_dice's macro routes, the scale
+                                                 * link: the first frame's state is the demo's) */
+        demo_fresh = 0;
+        demo_sig0 = demo_hash();
+        return;
+    }
+    if (song.playing)
+        demo_played = 1;
+    else if (demo_played)
+        demo_on = 0;
+    if (demo_hash() != demo_sig0)
+        demo_on = 0;
+}
 /* (0.9.9) the power-on's parts (main.c felucca_init, inside its load): each track at its defaults with its power-on
- * sound (power_sound_of), the sequencers empty (or TRK_DEF's pattern: none has one) */
+ * sound (power_sound_of), (ACID FM 3b) the demo: T1's beat, T5's acid line, T6's pad, tempo 124; the others empty */
 static void power_on_parts(void)
 {
     uint32_t i;
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
+        uint32_t pat = TRK_DEMO_PAT[i % NPART];
         track_defaults(t);
-        power_sound_of(t, i);
+        power_sound_pre(t, i, demo_preset(i));
         t->engine = t->eng_req;
         track_defaults_steps(t);              /* (a sound load never touches them) */
-        if (TRK_DEF[i][2])
-            load_pat16(t, PATTERNS[TRK_DEF[i][2] - 1u].note, PATTERNS[TRK_DEF[i][2] - 1u].flags);
+        if (pat)
+            load_pat16(t, PATTERNS[pat - 1u].note, PATTERNS[pat - 1u].flags);
         pat_sig[i] = steps_sig(t);            /* a default pattern, not the user's */
-        pat_last[i] = TRK_DEF[i][2];
+        pat_last[i] = (uint8_t)pat;
     }
+    song.g[G_BPM] = DEMO_BPM;
+    demo_on = demo_fresh = 1;
+    demo_played = 0;
 }
 
 /* switch engine (its defaults + first preset) and say so */

@@ -611,7 +611,7 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
  * OP LEVEL pages and the algorithm charts, exist only there: fm4_screen) */
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
 
-enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HOME_T5, S_HOME_TURN, S_HOME_REC, S_HOME_BATT0, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
+enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HOME_DEMO, S_HOME_T5, S_HOME_TURN, S_HOME_REC, S_HOME_BATT0, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
        S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
        S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT, S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM,
        S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_SAMPLE, S_EDIT_GRAIN,
@@ -649,7 +649,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_MIXER_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
        S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_GEN_BEAT, S_GEN_DNB, S_GEN_RETRO, S_COUNT };
-static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
+static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_voice",
@@ -1051,12 +1051,18 @@ static void setup(int s)
         song.playing = 0; break;                  /* (ACID FM 3a task 6: stopped, the ridgelines flat) */
     }
     case S_HOME_PLAY:                             /* (ACID FM 3a task 6) TRACKS playing: ~2 s of levels behind each line, */
+    case S_HOME_DEMO:                             /* (3b) the power-on demo (power_on_parts), playing mid-bar, its hint */
     case S_HOME_T5:                               /* T1's acid line on its 5th step (an accent, a slide); T5: T3..T6 lit */
     case S_HOME_TURN: {                           /* .. T5's LEVEL just turned (KNOB 3): its column, line and readout */
         uint32_t i, c;
         static const uint8_t AN[16] = {36, 0, 48, 39, 43, 0, 36, 1, 46, 41, 0, 48, 36, 0, 43, 39};   /* (0 rest, 1 tie) */
         for (i = 0; i < NTRK; i++) trk[i].seq_idx = 4;
-        for (i = 0; i < 16u; i++) {               /* an acid line: accents on 5 and 12, slides into 4 and 10 */
+        if (s == S_HOME_DEMO) {
+            load_depth++; power_on_parts(); load_depth--;
+            trks_put(1);
+            song.playing = 1;
+        }
+        for (i = 0; i < 16u && s != S_HOME_DEMO; i++) {   /* an acid line: accents on 5 and 12, slides into 4 and 10 */
             step_t *st = &trk[0].step[i];
             memset(st, 0, sizeof *st);
             st->time = AN[i] == 0u ? ST_REST : AN[i] == 1u ? ST_TIE : ST_NOTE;
@@ -1074,7 +1080,7 @@ static void setup(int s)
             fm1_ms += UXR_MS;
             ux_levels_tick();
         }
-        if (s != S_HOME_PLAY) track_select(4);
+        if (s != S_HOME_PLAY && s != S_HOME_DEMO) track_select(4);
         if (s == S_HOME_TURN) { trk[4].p[P_LEVEL] = 92; ux_knob_touch(2); }
         break;
     }

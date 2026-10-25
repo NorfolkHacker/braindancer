@@ -162,6 +162,12 @@ static const struct {
 static const uint8_t TRK_DEF[NPART][3] = {{ENGI_DRUM, 0, 0}, {ENGI_VOICE, TRK_PR_VOICE, 0}, {ENGI_PHASE, 0, 0},
                                           {ENGI_LOFI, 0, 0}, {ENGI_ANALOG, TRK_PR_ANALOG, 0}, {ENGI_FM6, 0, 0}};
 /* DRUM-X (DRUM's first, the factory kit), SINGER EN, PHASE's first, BYTEBEAT, FAT BASS, TINE EP */
+/* (ACID FM 3b) the power-on demo (ui.c power_on_parts, only when nothing is restored; NEW PROJECT / INIT SYSTEM stay TRK_DEF's
+ * empty parts): T1 DRUM-X plays PATTERNS BEAT (12), T5 ANALOG's ACID (preset 4) PATTERNS ACID (1), T6 FM6's first PAD-typed
+ * preset (ui.c demo_fm6_pad: else the first KEYS) PATTERNS PAD (5); the others as TRK_DEF, no pattern. Tempo 124 */
+#define TRK_PR_ACID 4u           /* ACID (eng_analog.c: ui_test.c checks the name) */
+#define DEMO_BPM 124
+static const uint8_t TRK_DEMO_PAT[NPART] = {12, 0, 0, 0, 1, 5};
 /* the parts at power-on through 0.9.8 (the same columns): what an old project's tracks it had no room for load as
  * (project.c proj_new_tracks, PROJ_DEF_SOUND: format 1's tracks 2..4, a 4-track format's T5 / T6): never change it.
  * ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (JIANT 0.6) PHASE's first, WHEEL's first

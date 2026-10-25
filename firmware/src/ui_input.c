@@ -2018,6 +2018,7 @@ static void ui_input_frame(void);
 static void ui_input(void)
 {
     cpt_poll();                                         /* (0.9.14) CPU TEST measured as it plays (ui_menu.c) */
+    demo_watch();                                       /* (ACID FM 3b) the power-on demo ends at the first edit or PLAY -> STOP */
     ui_input_frame();
     scale_link();                                       /* (JIANT 0.4) one scale for every melodic track (after the
                                                          * frame's edits) */
@@ -2535,6 +2536,7 @@ static void ui_input_frame(void)
         uint64_t held;
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
+        demo_end();                                     /* (ACID FM 3b) any knob turn is an edit */
         if (gen_on()) {                                 /* GEN: its settings */
             gen_knob(k, s);
             continue;

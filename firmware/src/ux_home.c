@@ -258,6 +258,7 @@ static uint32_t ux_home_head(uint32_t p, int draw, int32_t *left)
 static const char *ux_vis_legend(void);                 /* (VISUAL's) */
 /* the status line: a message (a refusal in UX_ACCENT), a turned knob's track and level, else what HOME does next */
 #define UX_STOP "STOP TO EDIT"
+#define UX_DEMO "DEMO: EDIT ANYTHING, OR HOME \x86 GENERATE"   /* (ACID FM 3b: the power-on demo, ui.c demo_on; UF_HDR's arrow) */
 static const char *ux_home_status(uint16_t *col)
 {
     static char b[40];
@@ -292,7 +293,7 @@ static const char *ux_home_status(uint16_t *col)
         return b;
     }
     *col = UX_MID;
-    return ux_home_hint();
+    return demo_on ? UX_DEMO : ux_home_hint();
 }
 
 static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])

@@ -60,6 +60,12 @@ static int startup_case(int saved, int restore, int noprefs)
         ok &= st_load(OBJ_SONGIDX, &got, sizeof got) == (int)sizeof got && !memcmp(&got, &want, sizeof got);
     else
         ok &= st_load(OBJ_SONGIDX, &got, sizeof got) < 0;
+    {   /* (ACID FM 3b) no autosave in any case: the power-on demo (T1 BEAT, T5 ACID line, T6 pad, 124 BPM, six tracks) */
+        int okd = !seq_is_empty(&trk[0]) && !seq_is_empty(&trk[4]) && !seq_is_empty(&trk[5]) && seq_is_empty(&trk[1]) &&
+                  song.g[G_BPM] == 124 && demo_on && trk_live == NTRK;
+        printf("startup: no autosave: the demo is loaded %s\n", okd ? "ok" : "FAIL");
+        ok &= okd;
+    }
     printf("startup: %s, RESTORE LAST %s: rows, bars, END, scenes and flash %s\n",
            saved ? "saved project 3" : "empty flash", restore ? "ON" : "OFF", ok ? "ok" : "FAIL");
     return !ok;

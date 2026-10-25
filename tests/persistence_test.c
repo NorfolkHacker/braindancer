@@ -344,6 +344,11 @@ static int autosave_test(void)
     as_run(300000u);
     bad += check("autosave: power-on restores it (steps, tempo, name; RESTORED); no write after (unchanged)",
                  ok && !as.writes && as_erases == b0);
+    as_power_on();                                       /* (ACID FM 3b) the demo at power-on, the autosave over it: the autosave */
+    load_depth++; power_on_parts(); load_depth--;
+    ok = demo_on && song.g[G_BPM] == 124;
+    ok &= autosave_boot(1) == 1 && !demo_on && song.g[G_BPM] == 97 && !memcmp(st, trk[0].step, sizeof st);
+    bad += check("autosave: RESTORE LAST over the power-on demo: the autosave's music, no demo", ok);
     as_power_on();
     ok = autosave_boot(0) == 0 && song.g[G_BPM] != 97;
     as_run(60000u);

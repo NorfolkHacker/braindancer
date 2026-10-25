@@ -12525,7 +12525,7 @@ static void ui_power_on_099(void)
 static int test_power_on_099(void)
 {
     static const char *const ENG[NPART] = {"DRUM", "VOICE", "PHASE", "LOFI", "ANALOG", "FM6"};
-    static const char *const PRE[NPART] = {"DRUM-X", "SINGER EN", "BRASS", "BYTEBEAT", "FAT BASS", "TINE EP"};
+    static const char *const PRE[NPART] = {"DRUM-X", "SINGER EN", "BRASS", "BYTEBEAT", "ACID", "PAD"};   /* (3b: the demo's) */
     int bad = 0, ok = 1;
     uint32_t i, k, b, drums = 0, live;
     int16_t p0[NTRK][P_COUNT];
@@ -12537,11 +12537,11 @@ static int test_power_on_099(void)
         const engine_t *e = ENGINES[trk[i].eng_req % NENGINES];
         ok &= trk[i].eng_req == trk[i].engine && str_eq(e->name, ENG[i]) && str_eq(e->presets[trk[i].preset].name, PRE[i]);
         ok &= !trk[i].p[P_DIST] && !trk[i].p[P_CHOR] && !trk[i].p[P_DLY] && !trk[i].p[P_REV] && !trk[i].p[P_MUTE];
-        ok &= seq_is_empty(&trk[i]) && !motion_count(&trk[i]) && trk_eng(&trk[i]) == TRK_DEF[i][0];
+        ok &= (seq_is_empty(&trk[i]) == !TRK_DEMO_PAT[i]) && !motion_count(&trk[i]) && trk_eng(&trk[i]) == TRK_DEF[i][0];
         drums += drum_track(&trk[i]);
     }
     ok &= load_depth == 0 && song.sel == 0u && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
-    bad += check("0.9.9 power-on: T1 DRUM-X, T2 VOICE SINGER EN, T3 PHASE BRASS, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP", ok);
+    bad += check("0.9.9 power-on: T1 DRUM-X, T2 VOICE SINGER EN, T3 PHASE BRASS, T4 LOFI BYTEBEAT, T5 ANALOG ACID, T6 FM6 PAD (3b demo)", ok);
     ok = drums == 1u && drum_track(&trk[0]) && drum_elsewhere(&trk[1]) == 1u && !drum_elsewhere(&trk[0]) && perc_kit(&trk[0]);
     ok &= trk[1].p[P_VLANG] == LG_EN && trk[1].p[P_VLYR] != 0;     /* (VOICE sings English words, its LYRIC's) */
     for (i = 0; i < NPART; i++)
@@ -12551,8 +12551,9 @@ static int test_power_on_099(void)
     trk[0].p[P_REV] = 90; trk[4].p[P_E0] = 3; set_engine_of(&trk[2], ENGI_PHASE);
     system_init();
     for (i = 0, ok = 1; i < NTRK; i++)
-        ok &= trk[i].eng_req == TRK_DEF[i][0] && trk[i].preset == TRK_DEF[i][1] && !memcmp(p0[i], trk[i].p, sizeof p0[i]);
-    bad += check("  INIT SYSTEM / NEW PROJECT: the same six sounds, value for value", ok);
+        ok &= trk[i].eng_req == TRK_DEF[i][0] && trk[i].preset == TRK_DEF[i][1] && seq_is_empty(&trk[i]) &&
+              (i >= 4u || !memcmp(p0[i], trk[i].p, sizeof p0[i]));   /* (T5 / T6 the demo's presets: TRK_DEF's own here) */
+    bad += check("  INIT SYSTEM / NEW PROJECT: TRK_DEF's six sounds, every pattern empty (the demo is power-on only)", ok);
     ui_power_on_099();
     song.master_q12 = 4096;
     live = trk_live;
@@ -12607,6 +12608,95 @@ static int test_power_on_099(void)
         printf("  power-on HOME: C4 key peak %d, MIDI E4 peak %d\n", pk1, pk2);
         bad += check("  HOME at power-on: a key (C4) and a MIDI note (E4, channel 1) sound on T1 DRUM-X", pk1 > 300 && pk2 > 300);
     }
+    ui_power_on();
+    return bad;
+}
+/* (ACID FM 3b) the power-on demo: T1 BEAT, T5 ACID with its ACID line, T6 FM6's first PAD with PATTERNS PAD, T2..T4 empty,
+ * 124 BPM; PLAY sounds T1 / T5 / T6 within a bar; HOME's status says DEMO until the first edit or a PLAY -> STOP;
+ * NEW PROJECT empty; RESTORE LAST's autosave is not the demo */
+static uint32_t demo_voices(uint32_t *mask, uint32_t bars)
+{
+    int32_t o[2u * CTL];
+    uint32_t b, n = bars * 4u * beat_samples() / CTL + 4u, p, i, mx = 0;
+    for (b = 0; b < n; b++) {
+        mix_block(o, CTL);
+        for (p = 0; p < NPART; p++)
+            for (i = 0; i < NVOICE; i++)
+                if (trk[p].v[i].active) { *mask |= 1u << p; mx++; }
+    }
+    return mx;
+}
+static int test_power_on_demo(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t i, m = 0;
+    uint16_t col;
+    const char *st;
+    const engine_t *f6 = ENGINES[ENGI_FM6];
+    ui_power_on_099();
+    ok &= song.g[G_BPM] == 124;
+    for (i = 0; i < NTRK; i++)
+        ok &= pat_last[i] == TRK_DEMO_PAT[i] && !pat_needs_confirm(&trk[i]);   /* (a SEQ load is not flagged dirty) */
+    ok &= !seq_is_empty(&trk[0]) && !seq_is_empty(&trk[4]) && !seq_is_empty(&trk[5]);
+    ok &= seq_is_empty(&trk[1]) && seq_is_empty(&trk[2]) && seq_is_empty(&trk[3]);
+    ok &= trk[0].step[0].hit && trk[0].step[0].time == ST_NOTE;             /* BEAT: the kick on 1 */
+    ok &= trk[4].step[0].note[0] == 45 && trk[4].step[2].note[0] == 57;     /* ACID: A1, A2 */
+    ok &= trk[5].step[0].note[0] == 60 && trk[5].step[8].note[0] == 57;     /* PAD */
+    ok &= str_eq(ENGINES[ENGI_ANALOG]->presets[trk[4].preset].name, "ACID") && trk[4].preset == TRK_PR_ACID;
+    ok &= trk[5].preset == demo_fm6_pad() && PR_TAG(&f6->presets[trk[5].preset]) == PT_PAD;
+    for (i = 0; i < trk[5].preset; i++) ok &= PR_TAG(&f6->presets[i]) != PT_PAD;   /* the first of its type */
+    ok &= !trk[4].p[P_DIST] && !trk[5].p[P_REV];                            /* (dry) */
+    bad += check("3b power-on demo: T1 BEAT, T5 ACID + ACID line, T6 first FM6 PAD + PAD line, T2..T4 empty, 124 BPM, not dirty", ok);
+    ui_rec_prefs &= (uint8_t)~(PREF_SIX >> 8);
+    rp_apply();
+    ok = trk_live == 4u;                                                    /* (the default: T5 / T6 asleep) .. */
+    autosave_boot(1);                                                       /* .. until the boot, nothing restored, wakes them */
+    ok &= trk_live == NTRK && (ui_rec_prefs & (PREF_SIX >> 8));
+    press(B_PLAY);
+    ok &= demo_voices(&m, 1) > 0u && (m & 1u) && (m & 16u) && (m & 32u) && song.playing == 1;
+    bad += check("  PLAY: voices on T1, T5 and T6 within a bar", ok);
+    song.playing = 0;
+    transport_req = 2;
+    ui_power_on_099();
+    ui.home = 1;
+    frame();
+    st = ux_home_status(&col);
+    ok = demo_on && str_eq(st, "DEMO: EDIT ANYTHING, OR HOME \x86 GENERATE");
+    for (i = 0; i < 40u; i++) frame();                                      /* (frames alone are no edit) */
+    ok &= demo_on;
+    turn(EN_K1, 1);
+    st = ux_home_status(&col);
+    ok &= !demo_on && !str_eq(st, "DEMO: EDIT ANYTHING, OR HOME \x86 GENERATE");
+    bad += check("  HOME shows the DEMO hint until a knob turn", ok);
+    ui_power_on_099();
+    frame();
+    song.playing = 1; frame(); frame();
+    ok = demo_on;
+    song.playing = 0; frame();
+    ok &= !demo_on;
+    bad += check("  .. and a PLAY -> STOP cycle ends it", ok);
+    ui_power_on_099();
+    frame();
+    ok = demo_on;
+    trk[1].step[3] = (step_t){.note = {60}, .n = 1, .time = ST_NOTE};
+    frame();
+    ok &= !demo_on;
+    ui_power_on_099();
+    frame();
+    pat_load(&trk[1], 3);
+    frame();
+    ok &= !demo_on;
+    ui_power_on_099();
+    frame();
+    set_engine(ENGI_LOFI);
+    frame();
+    ok &= !demo_on;
+    bad += check("  .. a step written, a pattern or a sound loaded ends it too", ok);
+    ui_power_on_099();
+    system_init();
+    for (i = 0, ok = !demo_on && song.g[G_BPM] == GP[G_BPM].def; i < NTRK; i++)
+        ok &= seq_is_empty(&trk[i]);
+    bad += check("  NEW PROJECT: no demo, every pattern empty, the default tempo", ok);
     ui_power_on();
     return bad;
 }
@@ -12797,6 +12887,7 @@ int main(void)
     bad += test_fm4_retired();
 #endif
     bad += test_power_on_099();
+    bad += test_power_on_demo();
     bad += test_engine_order_099();
 
     if (getenv("UI_SCREEN_DIR")) chain_screens(getenv("UI_SCREEN_DIR"));

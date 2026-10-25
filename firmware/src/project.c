@@ -1873,6 +1873,7 @@ static void system_init(void)
     static const uint8_t KEEP[5] = {G_CLOCK, G_TUNE, G_MIDI, G_ROUTE, G_SLOT};
     int16_t kept[5];
     uint32_t i;
+    demo_end();                                         /* (ACID FM 3b) NEW PROJECT is empty, no demo */
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
@@ -2503,6 +2504,7 @@ static int autosave_boot(int allowed)
             proj_bound(&proj_scratch);
             if (!project_restore_runtime(&proj_scratch)) {
                 ui_message("RESTORED");
+                demo_end();                           /* (ACID FM 3b) the autosave, not the demo */
                 rc = 1;
             }
         }
@@ -2510,6 +2512,9 @@ static int autosave_boot(int allowed)
 #else
     (void)allowed;
 #endif
+    if (demo_on)                                          /* (ACID FM 3b) nothing restored: the demo's T5 and T6 play, so MENU > TRACKS 6
+                                                           * (the default 4 puts them to sleep; a restored session keeps the player's) */
+        trks_put(1);
     as.saved = as.seen = autosave_sig();
     as.t = fm1_ms;
     return rc;
