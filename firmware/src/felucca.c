@@ -98,6 +98,8 @@
 #include "ui_layer.c"              /* the quick layers (FX GLO SCL EDIT REC held; SEQ TOOLS: ui_tools.c) */
 #include "ux_widgets.c"            /* ACID FM: header, knob row, glow panel, status, footer, step strip (ux_widgets.h) */
 #include "ux_home.c"               /* ACID FM: HOME's pages on the screen (ux_nav.c, included by ui.c: HOME's navigation) */
+#include "ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
+#include "ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
 
 /* --------------------------------------------- storage, update, editor --- */
 #if FELUCCA_FLASH

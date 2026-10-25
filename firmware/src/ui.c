@@ -539,8 +539,12 @@ static uint32_t layer_btn(void);
 
 /* FM operator pages belong to DIGITAL; they never appear on other instruments (without FELUCCA_FM4: never). LANES /
  * LANES 2 a DRUM track's (its lane levels); SOUND / SOUND 2 a DRUM track's (DRUM-X: ui_dx.c) */
+#include "ux_section.h"                                  /* (ACID FM 3b) the sections drawn by ux_section.c */
+static uint32_t sec_of_fam(uint32_t f);                 /* (ui_lens.c) */
 static int page_visible(uint32_t i)
 {
+    if (PAGES[i].graph == GR_MORE)                      /* (ACID FM 3b) MORE: its section's, once on the ux pages */
+        return ux_section_owns(sec_of_fam(PAGES[i].fam));
     if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
         return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
                                                          * was the same page twice; kept in the table: its index) */

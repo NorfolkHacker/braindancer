@@ -39,6 +39,7 @@
 #endif
 #include <stddef.h>
 #include <stdint.h>
+#define UXS_TEST 1                                       /* (ACID FM 3b) ARP's demo MORE page (params.c, ui_lens.c, ux_section.h) */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -141,8 +142,22 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/ui_layer.c"
 #include "../firmware/src/ux_widgets.c"
 #include "../firmware/src/ux_home.c"                     /* (ux_nav.c: by ui.c; ux_splash.c: by ui_draw.c) */
+#include "../firmware/src/ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
+#include "../firmware/src/ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
 #include "../firmware/src/upreset.c"
 #include "../firmware/src/project.c"
+
+/* (ACID FM 3b task 3) ARP's demo MORE page (host only, UXS_TEST: params.c's row "MORE", ui_lens.c's chain entry; shown while
+ * ARP is owned, uxs_test_own): 20 rows, four headings, the track's settings and two globals, rows a JIANT rule hides (the
+ * other engines' FILTER on ANALOG, MORPH on FM6, ALLOC on a kit, LOAD ECO's chorus rate) */
+static const ux_row_t UXS_DEMO_ROWS[20] = {
+    {UXM_H_ARP, UXR_HEAD}, {P_ASWING, UXR_TRACK}, {P_APROB, UXR_TRACK}, {P_AHOLD, UXR_TRACK}, {P_AORDER, UXR_TRACK},
+    {UXM_H_VOICE, UXR_HEAD}, {P_VOICE, UXR_TRACK}, {P_GLIDE, UXR_TRACK}, {P_GLMODE, UXR_TRACK}, {P_PRIO, UXR_TRACK},
+    {P_ALLOC, UXR_TRACK}, {P_DETUNE, UXR_TRACK},
+    {UXM_H_FILTER, UXR_HEAD}, {P_FTYPE, UXR_TRACK}, {P_FCUT, UXR_TRACK}, {P_FRES, UXR_TRACK}, {P_MORPH, UXR_TRACK},
+    {UXM_H_CHORUS, UXR_HEAD}, {G_CRATE, UXR_GLOBAL}, {G_CDEPTH, UXR_GLOBAL},
+};
+static const ux_more_t UXS_DEMO_MORE = {UXS_DEMO_ROWS, 20};
 
 static int check(const char *what, int ok)
 {
@@ -239,6 +254,10 @@ static void ui_power_on(void)
     kb_asleep = 0;
     panel_moved = 0;
     memset(&lv, 0, sizeof lv);                          /* (0.9.11) no LIVE modifier, no key on MANO (seq_live.c) */
+    uxs_test_own = 0;                                   /* (ACID FM 3b) no demo section; the hints unsaid, MORE at its top */
+    uxs_seen = 0;
+    memset(uxm_at, 0, sizeof uxm_at);
+    ux_hot_k = -1;                                      /* (no knob column lit from the test before) */
 }
 /* card slot drawn with MOTION's mark (ui_draw.c card_mot: its icon, or a long label in the theme colour) */
 static int card_motion(uint32_t slot) { return (card_mot >> slot) & 1u; }
@@ -12775,6 +12794,490 @@ static int test_engine_order_099(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3b task 3: the MORE list (ux_more.c) and the section renderer (ux_section.c), on ARP's demo MORE page (UXS_TEST).
+ * ------------------------------------------------------------------------------------------------------------------------- */
+/* JIANT's page knob before the refactor, verbatim (params.c page_desc, ui_input.c edit_param's last part, as of a5ae3f7):
+ * the reference param_knob and page_desc must equal on every PAGES knob */
+static const param_desc_t *old_page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
+{
+    uint32_t id = pg->id[slot];
+    if (id == 0xFFu) {
+        *valp = 0;
+        return 0;
+    }
+    if (id == ID_ALLTR) {
+        *valp = &song.g[G_STRN];
+        return &GP[G_STRN];
+    }
+    if (id == G_TRKS) {
+        *valp = &trks_ui;
+        return &TRKS_DESC;
+    }
+    if (id == ID_LMODE || id == ID_LPHS) {
+        int32_t ph = TSEL->p[P_LPHASE];
+        lmode_ui = (int16_t)(ph < 0);
+        lphase_ui = (int16_t)(ph < 0 ? lfo_ph_mem[song.sel % NTRK] : ph);
+        *valp = id == ID_LMODE ? &lmode_ui : &lphase_ui;
+        return id == ID_LMODE ? &LFO_MODE_DESC : &LFO_PHASE_DESC;
+    }
+    if (id == G_LOADP) {
+        *valp = &load_ui;
+        return &LOAD_DESC;
+    }
+    if (pg->scope == SC_STEP || pg->scope == SC_TRK) {
+        *valp = 0;
+        return 0;
+    }
+    if (pg->scope == SC_GLOBAL) {
+        if (pg->graph == GR_SLPIT && id == G_SLP0)
+            id += sl_ui_step & 15u;
+        *valp = &song.g[id];
+        if (song.g[G_RTYPE] == 3 && (id == G_RPRE || id == G_RDAMP))
+            return id == G_RPRE ? &RESO_PITCH : &RESO_FOLW;
+        if (id == G_RPRE)
+            return song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4 ? &REV_AIR : &REV_PRE;
+        return &GP[id];
+    }
+    if (pg->graph == GR_MOD)
+        id += 3u * mod_ui_slot;
+    if (pg->graph == GR_MSEQ && id == P_MS0)
+        id += ms_ui_step & 15u;
+    *valp = &TSEL->p[id];
+    if (id == P_APRATE && TSEL->p[P_APSYNC])
+        return &AP_BEAT;
+    return track_desc(TSEL, id);
+}
+static void old_edit_tail(const page_t *pg, uint32_t slot, int32_t steps)
+{
+    int16_t *vp;
+    int32_t v;
+    const param_desc_t *d = old_page_desc(pg, slot, &vp);
+    if (!d || !vp || d->max == d->min)
+        return;
+    v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
+    *vp = (int16_t)v;
+    if (vp == &trks_ui) {
+        trks_put(v);
+        ui_message(v ? "6 TRACKS: MORE CPU" : "4 TRACKS: T5-T6 ASLEEP");
+        settings_save();
+        return;
+    }
+    if (vp == &lmode_ui || vp == &lphase_ui) {
+        lfo_view_put(TSEL, vp == &lmode_ui, v);
+        knob_cap(TSEL, P_LPHASE);
+        return;
+    }
+    if (vp == &load_ui) {
+        load_put(v);
+        ui_message(v == 2 ? "LOAD FULL: ALL FX" : v ? "LOAD LITE: LIGHTER FX" : "LOAD ECO: NO SLICER/CHORUS");
+        settings_save();
+        return;
+    }
+    if (pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)
+        knob_cap(TSEL, (uint32_t)(vp - TSEL->p));
+}
+/* what a knob's write can touch: every track's settings, the song, the automation, the views, the message */
+typedef struct {
+    int16_t p[NTRK][P_COUNT];
+    int16_t g[G_COUNT];
+    motion_store_t mo;
+    int16_t mb[NTRK][P_COUNT];
+    uint32_t ma[NTRK][(P_COUNT + 31u) / 32u];
+    uint8_t mbv, lph[NTRK];
+    int16_t lm, lp;
+    char msg[sizeof ui.msg];
+} uxk_snap_t;
+static void uxk_take(uxk_snap_t *s)
+{
+    uint32_t k;
+    memset(s, 0, sizeof *s);
+    for (k = 0; k < NTRK; k++) memcpy(s->p[k], trk[k].p, sizeof s->p[k]);
+    memcpy(s->g, song.g, sizeof s->g);
+    memcpy(&s->mo, &motion, sizeof s->mo);
+    memcpy(s->mb, motion_base, sizeof s->mb);
+    memcpy(s->ma, motion_active, sizeof s->ma);
+    s->mbv = (uint8_t)motion_base_valid;
+    memcpy(s->lph, lfo_ph_mem, sizeof s->lph);
+    s->lm = lmode_ui; s->lp = lphase_ui;
+    memcpy(s->msg, ui.msg, sizeof s->msg);
+}
+static void uxk_put(const uxk_snap_t *s)
+{
+    uint32_t k;
+    for (k = 0; k < NTRK; k++) memcpy(trk[k].p, s->p[k], sizeof s->p[k]);
+    memcpy(song.g, s->g, sizeof s->g);
+    memcpy(&motion, &s->mo, sizeof s->mo);
+    memcpy(motion_base, s->mb, sizeof s->mb);
+    memcpy(motion_active, s->ma, sizeof s->ma);
+    motion_base_valid = s->mbv;
+    memcpy(lfo_ph_mem, s->lph, sizeof s->lph);
+    lmode_ui = s->lm; lphase_ui = s->lp;
+    memcpy(ui.msg, s->msg, sizeof ui.msg);
+}
+static const uint8_t UXK_ENG[7] = {ENGI_ANALOG, 2, 3, 5, ENGI_DRUM, ENGI_NOISE, ENGI_FM6};   /* (2 PHASE, 3 LOFI, 5 VOICE) */
+static void uxk_engine(uint32_t e)
+{
+    set_engine_of(TSEL, e);
+    TSEL->engine = TSEL->eng_req;
+}
+/* (refactor proof) params.c page_desc through param_ref / page_id, and ui_input.c param_knob, give what JIANT's code gave:
+ * the same descriptor and value for every knob of every PAGES row on every engine and view state, and the same writes
+ * (settings, song, automation recorded or not, the LFO's views) for every turn */
+static int test_param_knob_same(void)
+{
+    static uxk_snap_t a, b, base;
+    int bad = 0, ok_d = 1, ok_w = 1;
+    uint32_t e, i, sl, st, n = 0, nd = 0;
+    ui_power_on();
+    for (e = 0; e < NELEM(UXK_ENG); e++) {
+        uxk_engine(UXK_ENG[e]);
+        for (i = 0; i < NPAGES; i++)
+            for (sl = 0; sl < 4u; sl++)
+                for (st = 0; st < 64u; st++) {   /* the views' state: MOD's slot, MSEQ's and SL PITCH's step, the reverb's
+                                                  * type, AUTO PAN on the tempo, the LFO FREE / TRIG */
+                    int16_t *v0, *v1;
+                    const param_desc_t *d0, *d1;
+                    mod_ui_slot = (uint8_t)(st & 3u); ms_ui_step = (uint8_t)(st * 5u); sl_ui_step = (uint8_t)(st * 7u);
+                    song.g[G_RTYPE] = (int16_t)(st % 5u); TSEL->p[P_APSYNC] = (int16_t)((st >> 2) & 1u);
+                    TSEL->p[P_LPHASE] = (int16_t)((st >> 3) & 1u ? -1 : 20); lfo_ph_mem[song.sel] = (uint8_t)(st + 3u);
+                    d0 = old_page_desc(&PAGES[i], sl, &v0);
+                    d1 = page_desc(&PAGES[i], sl, &v1);
+                    nd++;
+                    if (d0 != d1 || v0 != v1) {
+                        if (ok_d) printf("  page %s slot %u engine %u: desc %p/%p value %p/%p\n", PAGES[i].title, (unsigned)sl,
+                                         (unsigned)UXK_ENG[e], (const void *)d0, (const void *)d1, (void *)v0, (void *)v1);
+                        ok_d = 0;
+                    }
+                }
+    }
+    for (e = 0; e < NELEM(UXK_ENG); e++) {
+        uxk_engine(UXK_ENG[e]);
+        for (i = 0; i < NPAGES; i++)
+            for (sl = 0; sl < 4u; sl++)
+                for (st = 0; st < 8u; st++) {
+                    static const int8_t S[4] = {1, -1, 3, -5};
+                    int32_t s = S[st & 3u];
+                    uint32_t id = PAGES[i].id[sl];
+                    if (id == G_TRKS || id == G_LOADP)
+                        continue;                       /* (the device's settings, saved: moved verbatim, not run here) */
+                    mod_ui_slot = (uint8_t)(n & 3u); ms_ui_step = (uint8_t)(n * 5u); sl_ui_step = (uint8_t)(n * 3u);
+                    song.g[G_RTYPE] = (int16_t)(n % 5u); TSEL->p[P_APSYNC] = (int16_t)((n >> 1) & 1u);
+                    TSEL->p[P_LPHASE] = (int16_t)(n % 3u == 0u ? -1 : (int16_t)(n % 100u));
+                    song.rec = (uint8_t)(st >= 4u ? 1u << song.sel : 0u);   /* (recording: AUTOMATION's events) */
+                    song.playing = (uint8_t)(st >= 4u);
+                    motion_base_valid = st >= 4u ? 0x3Fu : 0u;
+                    uxk_take(&base);
+                    old_edit_tail(&PAGES[i], sl, s);
+                    uxk_take(&a);
+                    uxk_put(&base);
+                    param_knob(page_trk(&PAGES[i]), page_id(&PAGES[i], sl), s, sl);
+                    uxk_take(&b);
+                    uxk_put(&base);
+                    n++;
+                    if (memcmp(&a, &b, sizeof a)) {
+                        if (ok_w) printf("  page %s slot %u engine %u steps %d rec %u: the write differs\n", PAGES[i].title,
+                                         (unsigned)sl, (unsigned)UXK_ENG[e], (int)s, (unsigned)(st >= 4u));
+                        ok_w = 0;
+                    }
+                }
+    }
+    song.rec = 0; song.playing = 0;
+    printf("  %u knobs' descriptors compared, %u turns\n", (unsigned)nd, (unsigned)n);
+    bad += check("ACID FM 3b: page_desc (param_ref, page_id) as JIANT's on every PAGES knob, engine and view state", ok_d && nd > 50000u);
+    bad += check("ACID FM 3b: param_knob writes as JIANT's edit_param on every PAGES knob (automation on and off)", ok_w && n > 5000u);
+    ui_power_on();
+    return bad;
+}
+
+/* ARP shown on the ux pages with its demo MORE page */
+static uint32_t uxs_more_page(void)
+{
+    uint32_t i;
+    for (i = 0; i < NPAGES && PAGES[i].graph != GR_MORE; i++)
+        ;
+    return i;
+}
+static void uxs_demo_on(void)
+{
+    ui_power_on(); frame();
+    uxs_test_own = 1u << SEC_ARP;
+    press(B_ARP); frame();
+}
+static void uxs_cur(uint32_t *s, uint32_t *t)           /* the demo's pick and scroll as drawn */
+{
+    *s = uxm_at[SEC_ARP].sel; *t = uxm_at[SEC_ARP].top;
+    uxm_fix(&UXS_DEMO_MORE, uxm_mask(&UXS_DEMO_MORE), s, t);
+}
+static int uxs_in_view(void)
+{
+    uint32_t s, t;
+    uint64_t m = uxm_mask(&UXS_DEMO_MORE);
+    uxs_cur(&s, &t);
+    return uxm_vis(m, s) >= uxm_vis(m, t) && uxm_vis(m, s) < uxm_vis(m, t) + UXM_ROWS;
+}
+/* SELECT walks ARP's chain with MORE last (the footer's n / N counting it), only while ARP is the ux pages'; on MORE: KNOB 1
+ * picks a setting (over the headings and the hidden rows, stopping at the ends), SELECT scrolls a row a detent (the pick
+ * dragged along, stopping at the end; before the first row: the page before), the rows JIANT's rules hide (the other
+ * engines' FILTER on ANALOG, MORPH on FM6, ALLOC on a kit, LOAD ECO's chorus rate) skipped */
+static int test_ux_more_nav(void)
+{
+    static const uint8_t WANT[] = {1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 19};
+    uint8_t v[16], got[32];
+    uint32_t s, t, k, ng = 0, mp = uxs_more_page();
+    uint64_t m;
+    int bad = 0, ok;
+    ui_power_on(); frame();
+    ok = mp < NPAGES && !page_visible(mp) && nav_list(SEC_ARP, v) == 2u;   /* (not owned: no MORE) */
+    uxs_demo_on();
+    ok &= nav_sec() == SEC_ARP && str_eq(cur_page()->title, "ARP") && nav_list(SEC_ARP, v) == 3u && page_visible(mp);
+    ok &= str_eq(uxs_count(), "1 / 3") && str_eq(uxs_where(), "ARP \xB7 ARP");
+    turn(EN_SELECT, 1);
+    ok &= str_eq(cur_page()->title, "ARP 2") && str_eq(uxs_count(), "2 / 3");
+    turn(EN_SELECT, 1);
+    ok &= cur_page()->graph == GR_MORE && str_eq(uxs_count(), "3 / 3") && str_eq(uxs_where(), "ARP \xB7 MORE");
+    bad += check("ACID FM 3b: MORE is the section's last page while it is on the ux pages; the footer counts it", ok);
+    uxs_cur(&s, &t);
+    ok = s == 1u && t == 0u;                            /* (the first setting picked, its heading on top) */
+    got[ng++] = (uint8_t)s;
+    for (k = 0; k < 20u; k++) {
+        turn(EN_K1, 1);
+        uxs_cur(&s, &t);
+        ok &= uxs_in_view();
+        if (s != got[ng - 1u] && ng < sizeof got) got[ng++] = (uint8_t)s;
+    }
+    ok &= ng == sizeof WANT && !memcmp(got, WANT, sizeof WANT);
+    turn(EN_K1, -100);
+    uxs_cur(&s, &t);
+    ok &= s == 1u && t == 0u;
+    bad += check("ACID FM 3b: MORE's KNOB 1 picks the settings in order, over headings and hidden rows, to the ends", ok);
+    turn(EN_SELECT, 1);
+    uxs_cur(&s, &t);
+    ok = t == 1u && s == 1u;
+    turn(EN_SELECT, 3);
+    uxs_cur(&s, &t);
+    ok &= t == 4u && s == 4u;                           /* (the pick dragged to the panel's first setting) */
+    turn(EN_SELECT, 100);
+    uxs_cur(&s, &t);
+    ok &= t == 10u && s == 10u && cur_page()->graph == GR_MORE;   /* (the last page of rows; MORE stays) */
+    turn(EN_SELECT, -100);
+    uxs_cur(&s, &t);
+    ok &= t == 0u && s == 7u && uxs_in_view() && cur_page()->graph == GR_MORE;   /* (the pick: the panel's last setting) */
+    turn(EN_SELECT, -1);
+    ok &= str_eq(cur_page()->title, "ARP 2");           /* (before the first row: the page before) */
+    bad += check("ACID FM 3b: MORE's SELECT scrolls a row a detent, the pick in sight; before its top the page before", ok);
+    m = uxm_mask(&UXS_DEMO_MORE);                       /* T1 ANALOG: the other engines' FILTER CUT / RES hidden */
+    ok = !uxm_on(m, 14) && !uxm_on(m, 15) && uxm_on(m, 13) && uxm_on(m, 16) && uxm_on(m, 18) && uxm_on(m, 10) &&
+         uxm_on(m, 0) && uxm_on(m, 12) && uxm_nvis(m) == 18u;
+    uxk_engine(ENGI_FM6);
+    m = uxm_mask(&UXS_DEMO_MORE);
+    ok &= uxm_on(m, 14) && uxm_on(m, 15) && !uxm_on(m, 16);   /* (FM6: CUT RES, no MORPH) */
+    uxk_engine(ENGI_DRUM);
+    m = uxm_mask(&UXS_DEMO_MORE);
+    ok &= !uxm_on(m, 10);                               /* (a kit: no ALLOC) */
+    uxk_engine(ENGI_ANALOG);
+    sys_load = LOAD_ECO;
+    m = uxm_mask(&UXS_DEMO_MORE);
+    ok &= !uxm_on(m, 18) && uxm_on(m, 19) && uxm_on(m, 17);   /* (LOAD ECO: no chorus RATE; DEPTH stays: BUSES') */
+    sys_load = 0;
+    {   /* a heading whose rows are all hidden goes with them */
+        static const ux_row_t R[4] = {{UXM_H_FILTER, UXR_HEAD}, {P_FCUT, UXR_TRACK}, {UXM_H_VOICE, UXR_HEAD}, {P_GLIDE, UXR_TRACK}};
+        static const ux_more_t M = {R, 4};
+        m = uxm_mask(&M);
+        ok &= m == 0xCu;
+    }
+    bad += check("ACID FM 3b: MORE skips the rows JIANT's rules hide (engine, kit, LOAD ECO), their headings too", ok);
+    {   /* an action row: VOICE's TYPE LYRIC (WORDS' OCT+ TYPE in JIANT, no dialog there): shown on VOICE only, KNOB 2 up does it */
+        static const ux_row_t R[2] = {{UXM_H_VOICE, UXR_HEAD}, {UXM_A_LYRIC, UXR_ACTION}};
+        static const ux_more_t M = {R, 2};
+        uint32_t s2 = 0, t2 = 0;
+        ok = uxm_mask(&M) == 0u;                        /* (ANALOG: none) */
+        uxk_engine(5u);                                 /* (VOICE) */
+        ok &= uxm_mask(&M) == 3u;
+        (void)ux_more_turn(&M, &s2, &t2, 1u, -1);
+        ok &= !name_on();
+        (void)ux_more_turn(&M, &s2, &t2, 1u, 1);
+        ok &= name_on() && nm.kind == NK_LYRIC;
+    }
+    bad += check("ACID FM 3b: a MORE action (TYPE LYRIC): its engine's only, KNOB 2 up does it", ok);
+    ui_power_on();
+    return bad;
+}
+/* the first JIANT page (not MORE) holding setting id (global: G_*) on this track now, its slot */
+static uint32_t uxs_page_of(uint32_t id, int glo, uint32_t *slot)
+{
+    uint32_t i, k;
+    for (i = 0; i < NPAGES; i++)
+        if (PAGES[i].graph != GR_MORE && (PAGES[i].scope == SC_GLOBAL) == glo && PAGES[i].scope != SC_STEP &&
+            PAGES[i].scope != SC_TRK && page_visible(i))
+            for (k = 0; k < 4u; k++)
+                if (PAGES[i].id[k] == id) {
+                    *slot = k;
+                    return i;
+                }
+    return NPAGES;
+}
+/* MORE's KNOB 2 writes what JIANT's page knob writes for the same setting and turn (the settings, the song, AUTOMATION
+ * recorded), through the real input; UNDO (an undo mark before) takes it back */
+static int test_ux_more_set(void)
+{
+    static const struct { uint8_t row; int8_t s; uint8_t rec; } C[] = {
+        {4, 1, 0}, {7, 5, 0}, {7, -2, 1}, {13, 1, 0}, {11, -3, 1}, {19, 4, 0}, {3, 1, 0}, {1, 7, 1}, {9, 1, 0}, {16, 9, 1}};
+    static uxk_snap_t base, a, b;
+    uint32_t c, mp, sl, pg;
+    int bad = 0, ok = 1;
+    uxs_demo_on();
+    mp = uxs_more_page();
+    for (c = 0; c < NELEM(C); c++) {
+        const ux_row_t *r = &UXS_DEMO_ROWS[C[c].row];
+        pg = uxs_page_of(r->id, r->kind == UXR_GLOBAL, &sl);
+        if (pg >= NPAGES) { printf("  row %u: on no page\n", (unsigned)C[c].row); ok = 0; continue; }
+        song.rec = (uint8_t)(C[c].rec ? 1u << song.sel : 0u);
+        song.playing = C[c].rec;
+        motion_base_valid = C[c].rec ? 0x3Fu : 0u;
+        uxk_take(&base);
+        ui.home = 0; ui.page = (uint8_t)pg; page_entered();
+        edit_param(sl, C[c].s);                         /* JIANT's page knob */
+        uxk_take(&a);
+        uxk_put(&base);
+        ui.page = (uint8_t)mp; page_entered();
+        uxm_at[SEC_ARP].sel = C[c].row; uxm_at[SEC_ARP].top = 0;
+        (void)ux_more_knob(1u, C[c].s);                 /* MORE's KNOB 2 */
+        uxk_take(&b);
+        uxk_put(&base);
+        if (memcmp(&a, &b, sizeof a)) { printf("  row %u (%s, %d): MORE wrote otherwise\n", (unsigned)C[c].row, PAGES[pg].title,
+                                               (int)C[c].s); ok = 0; }
+        if (!memcmp(&a, &base, sizeof a) && C[c].s) { printf("  row %u: nothing written\n", (unsigned)C[c].row); ok = 0; }
+    }
+    song.rec = 0; song.playing = 0;
+    bad += check("ACID FM 3b: MORE's KNOB 2 writes as JIANT's page knob (settings, song, AUTOMATION)", ok);
+    uxs_demo_on();                                      /* the real input: SELECT to MORE, KNOB 1 to GLIDE, KNOB 2 */
+    turn(EN_SELECT, 2);
+    {
+        int16_t g0 = TSEL->p[P_GLIDE];
+        ok = cur_page()->graph == GR_MORE;
+        undo_mark();
+        turn(EN_K1, 5);                                 /* (SWING PROB HOLD ORDER, then VOICE MODE, GLIDE) */
+        ok &= uxm_at[SEC_ARP].sel == 7u;
+        turn(EN_K2, 6);
+        ok &= TSEL->p[P_GLIDE] == clamp(g0 + 6, 0, 127) && TSEL->p[P_GLIDE] != g0;
+        ok &= !undo_do() && TSEL->p[P_GLIDE] == g0;
+    }
+    bad += check("ACID FM 3b: MORE edits through the knobs; UNDO restores the value", ok);
+    ui_power_on();
+    return bad;
+}
+/* the renderer: ARP's page drawn with the ux strips (header, the PAGES row's knobs in plain words, the panel, the status
+ * line, the footer ARP . page and n / 3 with JIANT's short names), its cells within DC_MAX; the status line's order (the
+ * section's first-time hint once, a turned knob's full name and value, a refusal in ACCENT, MORE's hint); MORE's knob row */
+static int test_ux_section_draw(void)
+{
+    ux_knob_t k[4];
+    const char *sh[4];
+    uint16_t col;
+    const char *st;
+    char v[16];
+    const char *u;
+    uint32_t i, cells;
+    int bad = 0, ok;
+    uxs_demo_on();
+    ui.force = 1; frame();
+    uxs_knobs(cur_page(), k, sh);
+    ok = str_eq(k[0].label, "MODE") && str_eq(k[1].label, "RATE") && str_eq(k[2].label, "OCT") && str_eq(k[3].label, "GATE");
+    param_format(&TP[P_ARATE], TSEL->p[P_ARATE], v, &u);
+    ok &= str_eq(k[1].value, v) && str_eq(sh[3], "GATE");
+    ok &= ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 200u &&
+          ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 2000u && ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 50u &&
+          ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 2000u;
+    for (i = cells = 0; i < dc_n; i++) cells += dc_st[i].n;
+    ok &= !dc_stale && cells <= DC_MAX && cells >= 1800u;
+    bad += check("ACID FM 3b: the section page: header, the PAGES row's knobs, panel, status, footer; cells within DC_MAX", ok);
+    ok = str_eq(uxs_label("ATK"), "ATTACK") && str_eq(uxs_label("RES"), "RESO") && str_eq(uxs_label("GATE"), "GATE");
+    for (i = 0; i < NELEM(UXS_LABEL); i++)
+        ok &= text_w(&UF_LBL, UXS_LABEL[i].p) <= UX_COL_W - 4;
+    bad += check("ACID FM 3b: the plain-word labels (ATK: ATTACK, RES: RESO), each fitting a knob's column", ok);
+    st = uxs_status(cur_page(), &col);
+    ok = st && str_eq(st, "ARP AGAIN: NEXT PAGE") && col == UX_MID;
+    if (!ok) printf("  status: \"%s\"\n", st ? st : "(none)");
+    turn(EN_K2, 1);
+    st = uxs_status(cur_page(), &col);
+    param_format(&TP[P_ARATE], TSEL->p[P_ARATE], v, &u);
+    {
+        char w[40];
+        str_cpy(w, "RATE \xB7 ", sizeof w);
+        str_cpy(w + str_len(w), v, sizeof w - str_len(w));
+        ok &= st && str_eq(st, w) && col == UX_TEXT;
+        if (!ok) printf("  status: \"%s\" wanted \"%s\"\n", st ? st : "(none)", w);
+    }
+    frames(UX_HOT_MS + 100u);
+    ok &= uxs_status(cur_page(), &col) == 0;           /* (the hint said once: gone after the turn) */
+    ui_message("STOP TO EDIT");
+    st = uxs_status(cur_page(), &col);
+    ok &= st && str_eq(st, "STOP TO EDIT") && col == UX_ACCENT;
+    ui.msg_t = 0;
+    turn(EN_SELECT, 2);
+    frames(UX_HOT_MS + 100u);
+    st = uxs_status(cur_page(), &col);
+    ok &= st && str_eq(st, UXM_HINT);
+    bad += check("ACID FM 3b: the status line: the hint once, a knob's full name and value, a refusal, MORE's hint", ok);
+    uxs_knobs(cur_page(), k, sh);
+    ok = str_eq(k[0].label, "SETTING") && str_eq(k[0].value, "1/14") && str_eq(k[1].label, "SWING") && !k[2].label[0];
+    turn(EN_K1, 5);                                     /* (GLIDE: the sixth) */
+    uxs_knobs(cur_page(), k, sh);
+    ok &= str_eq(k[0].value, "6/14") && str_eq(k[1].label, "GLIDE");
+    st = uxs_status(cur_page(), &col);
+    ok &= st && !memcmp(st, "GLIDE \xB7 ", 8);
+    ui.force = 1; frame();
+    ok &= ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) > 2000u;
+    bad += check("ACID FM 3b: MORE's knob row (SETTING n/N, the pick's value), its readout and list drawn", ok);
+    {   /* every name and value a MORE row can show has its glyphs: the list's UF_HDR, the knob row's UF_LBL / UF_VAL */
+        uint32_t e, p, r, nchk = 0;
+        ok = 1;
+        for (e = 0; e < NELEM(UXK_ENG); e++) {
+            uxk_engine(UXK_ENG[e]);
+            for (p = 0; p < NPAGES; p++) {
+                const ux_more_t *m = PAGES[p].more;
+                if (PAGES[p].graph != GR_MORE || !m) continue;
+                for (r = 0; r < m->n; r++) {
+                    const ux_row_t *rw = &m->rows[r];
+                    int16_t *vp, keep;
+                    const param_desc_t *d;
+                    int32_t x;
+                    uint8_t bar;
+                    char val[24];
+                    const char *nm = uxm_row_text(rw, val, sizeof val, 1, &bar), *q;
+                    for (q = nm; *q; q++)
+                        if (glyph_at(&UF_HDR, (uint8_t)*q) < 0 || glyph_at(&UF_LBL, (uint8_t)*q) < 0) {
+                            printf("  MORE row name \"%s\": no glyph 0x%02X\n", nm, (uint8_t)*q); ok = 0; break;
+                        }
+                    if (rw->kind != UXR_TRACK && rw->kind != UXR_GLOBAL) continue;
+                    d = param_ref(rw->kind == UXR_GLOBAL ? 0 : TSEL, rw->id, &vp);
+                    if (!d || !vp) continue;
+                    keep = *vp;
+                    for (x = d->min; x <= d->max; x++) {
+                        *vp = (int16_t)x;
+                        (void)uxm_row_text(rw, val, sizeof val, 1, &bar);
+                        nchk++;
+                        for (q = val; *q; q++)
+                            if (glyph_at(&UF_HDR, (uint8_t)*q) < 0) {
+                                printf("  MORE value \"%s\" (%s): no glyph 0x%02X\n", val, nm, (uint8_t)*q); ok = 0; break;
+                            }
+                        (void)uxm_row_text(rw, val, sizeof val, 0, &bar);
+                        for (q = val; *q; q++)
+                            if (glyph_at(&UF_VAL, (uint8_t)*q) < 0) {
+                                printf("  MORE knob value \"%s\" (%s): no glyph 0x%02X\n", val, nm, (uint8_t)*q); ok = 0; break;
+                            }
+                    }
+                    *vp = keep;
+                }
+            }
+        }
+        bad += check("ACID FM 3b: every MORE row's name and every value it can take have their glyphs", ok && nchk > 500u);
+    }
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -12902,6 +13405,10 @@ int main(void)
 #endif
     bad += test_power_on_099();
     bad += test_power_on_demo();
+    bad += test_param_knob_same();                     /* (ACID FM 3b task 3) */
+    bad += test_ux_more_nav();
+    bad += test_ux_more_set();
+    bad += test_ux_section_draw();
     bad += test_engine_order_099();
 
     if (getenv("UI_SCREEN_DIR")) chain_screens(getenv("UI_SCREEN_DIR"));

@@ -93,6 +93,12 @@ static const nv_t CE_SCL[] = {NV("SCL", 0, 0, 0), NV("CHORD", 0, 1, 1)};
 static const ng_t CG_SCL[] = {{"KEY", 0}, {"CHORD", 0}};
 static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2)};
 static const ng_t CG_ARP[] = {{"ARP", 0}};
+#ifdef UXS_TEST                                         /* (ACID FM 3b, host tests: ARP with the demo MORE page, shown while */
+static const nv_t CE_ARP_UXT[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2), NV("MORE", 0, 1, 2)};   /* ARP is owned: */
+static const ng_t CG_ARP_UXT[] = {{"ARP", 0}, {"MORE", 0}};                                         /* ux_section.h) */
+#define CE_ARP CE_ARP_UXT
+#define CG_ARP CG_ARP_UXT
+#endif
 enum { SV_LIB, SV_PROJ, SV_SOUND };
 static const nv_t CE_SAVE[] = {NV("USER", 0, 0, SV_SOUND), NV("PRESETS", 0, 0, SV_SOUND), NV("PROJECT", "SECTIONS", 1, SV_PROJ),
                                NV("ARRANGE", 0, 1, SV_PROJ), NV("PROJECT", "PROJECTS", 2, SV_LIB), NV("TOOLS", 0, 2, SV_LIB)};

@@ -648,7 +648,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS,
        S_MIXER_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
-       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_GEN_BEAT, S_GEN_DNB, S_GEN_RETRO, S_COUNT };
+       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_GEN_BEAT, S_GEN_DNB, S_GEN_RETRO, S_UX_SECTION, S_UX_MORE, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
@@ -686,7 +686,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys",
     "mixer_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
     "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
-    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2", "ux_theme", "ux_demo", "ux_demo_warn", "splash_mid", "gen_broken_beat", "gen_drill_n_bass", "gen_retroboc"};
+    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2", "ux_theme", "ux_demo", "ux_demo_warn", "splash_mid", "gen_broken_beat", "gen_drill_n_bass", "gen_retroboc", "ux_section", "ux_more"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1015,6 +1015,7 @@ static void seq_line(void)
 }
 static void setup(int s)
 {
+    uxs_test_own = 0;                             /* (ACID FM 3b) no section on the ux pages but the demo's */
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
     live.req = live.cur = -1; live.mode = live.srec = live.dirty = 0; lys.nqc = 0;   /* (the song layer: off) */
     trk_live = NTRK;                              /* (the six awake but on *_tracks4) */
@@ -1883,6 +1884,21 @@ static void setup(int s)
         cursor_set(s == S_COMP_JUMP ? 9 : 12);
         break;
     }
+    case S_UX_SECTION:                            /* (ACID FM 3b task 3) ux_section.c: ARP's page on the ux strips (the
+                                                   * demo section, UXS_TEST), its first opening: the section's hint */
+    case S_UX_MORE:                               /* .. its demo MORE list scrolled to the middle, VOICE's GLIDE picked,
+                                                   * KNOB 2 just turned (its column lit, the readout) */
+        uxs_test_own = 1u << SEC_ARP;
+        uxs_seen = 0;
+        ux_hot_k = -1;
+        trk[0].p[P_ASWING] = 20; trk[0].p[P_GLIDE] = 48; trk[0].p[P_DETUNE] = 64;
+        nav_scene(SEC_ARP, s == S_UX_SECTION ? "ARP" : "MORE");
+        if (s == S_UX_MORE) {
+            uxs_seen |= 1u << SEC_ARP;
+            uxm_at[SEC_ARP].sel = 7; uxm_at[SEC_ARP].top = 5;
+            ux_knob_touch(1);
+        }
+        break;
     case S_COMP_SEL_DRUM:
         drum(0);
         trk[3].step[2].comp = CP_ECHO; trk[3].step[2].carg = 1;

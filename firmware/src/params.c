@@ -528,13 +528,15 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_FOCUS, GR_STAGE,
-       GR_LYRIC, GR_LIVE };   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
+       GR_LYRIC, GR_LIVE, GR_MORE };   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
                                                          * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
 
+#include "ux_more.h"
 typedef struct {
     const char *title;
     uint8_t fam, scope, graph;
     uint8_t id[4];               /* param ids; 0xFF = empty slot */
+    const ux_more_t *more;       /* (ACID FM 3b) GR_MORE: its list (ux_more.c); else 0 */
 } page_t;
 
 /* (0.6.18) GLO > SYSTEM's TRKS: how many tracks play, the setting of MENU > AUDIO > TRACKS (ui.c ui_rec_prefs bit 7,
@@ -564,6 +566,9 @@ static const param_desc_t LFO_PHASE_DESC = PD("PHASE", F_INT, 0, 127, 0);
 static int16_t lmode_ui, lphase_ui;
 static uint8_t lfo_ph_mem[NTRK];
 static int lfo_mode_of(const track_t *t) { return t->p[P_LPHASE] < 0; }   /* 1 FREE */
+#ifdef UXS_TEST
+static const ux_more_t UXS_DEMO_MORE;                 /* (host tests: ARP's demo MORE list, tests/ui_test.c) */
+#endif
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -677,6 +682,10 @@ static const page_t PAGES[] = {
                                                          * modifiers (ui_live.c, seq_live.c) */
     {"RIELES", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* .. the six sequences as rails, four knobs */
     {"LFO 2", FAM_LFO, SC_TRACK, GR_LFO, {ID_LPHS, 0xFF, 0xFF, 0xFF}},   /* (0.9.18) PHASE: where TRIG starts (FREE: dimmed) */
+#ifdef UXS_TEST
+    {"MORE", FAM_ARP, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXS_DEMO_MORE},   /* (host tests: ux_section's demo
+                                                         * page, ARP's MORE; on the device no MORE page yet) */
+#endif
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */
@@ -690,10 +699,13 @@ static const param_desc_t REV_AIR = PD("AIR", F_SEMI, -24, 24, 0);    /* (0.6.12
 static const param_desc_t AP_BEAT = PE("RATE", N_APDIV, 2);          /* (0.6.9) AUTO PAN's RATE on the tempo (SYNC BEAT) */
 static uint8_t sl_ui_step;       /* (JIANT 0.6.3) the SL PITCH page: the step KNOB 2 edits */
 
-static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
+/* (ACID FM 3b) the setting id of track t (0: the globals, song.g) as a knob turns it: its descriptor and value (*valp; 0 and 0:
+ * none). The ids past both tables are views (ID_ALLTR, G_TRKS, ID_LMODE / ID_LPHS, G_LOADP), whatever t. page_desc (a page's
+ * knob) and ux_more.c (a MORE row) read through it, ui_input.c param_knob writes through it */
+#define ID_NONE 0xFFFFu
+static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
 {
-    uint32_t id = pg->id[slot];
-    if (id == 0xFFu) {
+    if (id == ID_NONE || id == 0xFFu) {
         *valp = 0;
         return 0;
     }
@@ -706,9 +718,10 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
         return &TRKS_DESC;
     }
     if (id == ID_LMODE || id == ID_LPHS) {           /* (0.9.18) the LFO's MODE and PHASE: views of P_LPHASE */
-        int32_t ph = TSEL->p[P_LPHASE];
+        track_t *lt = t ? t : TSEL;
+        int32_t ph = lt->p[P_LPHASE];
         lmode_ui = (int16_t)(ph < 0);
-        lphase_ui = (int16_t)(ph < 0 ? lfo_ph_mem[song.sel % NTRK] : ph);
+        lphase_ui = (int16_t)(ph < 0 ? lfo_ph_mem[(uint32_t)(lt - trk) % NTRK] : ph);
         *valp = id == ID_LMODE ? &lmode_ui : &lphase_ui;
         return id == ID_LMODE ? &LFO_MODE_DESC : &LFO_PHASE_DESC;
     }
@@ -716,13 +729,7 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
         *valp = &load_ui;
         return &LOAD_DESC;
     }
-    if (pg->scope == SC_STEP || pg->scope == SC_TRK) {
-        *valp = 0;
-        return 0;
-    }
-    if (pg->scope == SC_GLOBAL) {
-        if (pg->graph == GR_SLPIT && id == G_SLP0)    /* the pitch of the step shown */
-            id += sl_ui_step & 15u;
+    if (!t) {
         *valp = &song.g[id];
         if (song.g[G_RTYPE] == 3 && (id == G_RPRE || id == G_RDAMP))   /* (0.6.5) RESO: PITCH, FOLW in their slots */
             return id == G_RPRE ? &RESO_PITCH : &RESO_FOLW;
@@ -730,12 +737,31 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
             return song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4 ? &REV_AIR : &REV_PRE;
         return &GP[id];
     }
+    *valp = &t->p[id];
+    if (id == P_APRATE && t->p[P_APSYNC])            /* (0.6.9) AUTO PAN on the tempo: a division */
+        return &AP_BEAT;
+    return track_desc(t, id);
+}
+/* page pg's knob slot: the setting it turns (the step / slot shown on MSEQ, SL PITCH, MOD), ID_NONE none; whose (0: global) */
+static uint32_t page_id(const page_t *pg, uint32_t slot)
+{
+    uint32_t id = pg->id[slot];
+    if (id == 0xFFu)
+        return ID_NONE;
+    if (id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP)
+        return id;
+    if (pg->scope == SC_STEP || pg->scope == SC_TRK)
+        return ID_NONE;
+    if (pg->scope == SC_GLOBAL)
+        return pg->graph == GR_SLPIT && id == G_SLP0 ? id + (sl_ui_step & 15u) : id;   /* the pitch of the step shown */
     if (pg->graph == GR_MOD)                          /* SRC DST AMT of the slot shown */
         id += 3u * mod_ui_slot;
     if (pg->graph == GR_MSEQ && id == P_MS0)          /* the level of the step shown */
         id += ms_ui_step & 15u;
-    *valp = &TSEL->p[id];
-    if (id == P_APRATE && TSEL->p[P_APSYNC])         /* (0.6.9) AUTO PAN on the tempo: a division */
-        return &AP_BEAT;
-    return track_desc(TSEL, id);
+    return id;
+}
+static track_t *page_trk(const page_t *pg) { return pg->scope == SC_GLOBAL ? 0 : TSEL; }
+static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
+{
+    return param_ref(page_trk(pg), page_id(pg, slot), valp);
 }

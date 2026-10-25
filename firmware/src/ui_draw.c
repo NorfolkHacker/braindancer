@@ -2150,6 +2150,22 @@ static void ui_draw_body(uint32_t counting)
         ui.page = (uint8_t)page_first(FAM_EDIT);
         page_entered();
     }
+    if (ux_section_owns(nav_sec())) {                   /* (ACID FM 3b) a section moved to the ux pages (ux_section.c), its
+                                                         * own strips as HOME's */
+        ux_section_draw();
+        pf_on = 0;                                      /* (the footer names the page at once: no flash over it) */
+        if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {   /* the second message (ui_notices) */
+            str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
+            ui.msg2[0] = 0;
+            ui.msg_t = 60;
+        }
+        if (ui.bpm_t)
+            ui.bpm_t--;
+        if (ui.hot_t)
+            ui.hot_t--;
+        ui.force = 0;
+        return;
+    }
     cursor_fix();
     if (ui.force)                                       /* (ACID FM 3a: SKIN HUD's HOME, every strip on the beings, gone) */
         draw_frame();

@@ -23,7 +23,7 @@ SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "cpu_safe.c", "icons.c", "u
               "storage.c", "upreset.c", "project.c", "settings_persist.c",
               "editor.c", "editor_preferences.c", "editor_backup.c", "editor_menu.c", "console.c",
               "usb.c", "midi_uart.c", "midi_control.c", "midi_clock.c", "seq.c", "song_chain.c", "motion.c",
-              "panel.c", "lcd.c", "gfx.c", "ux_theme.c", "ux_widgets.c", "ux_nav.c", "ux_home.c", "ux_splash.c", "ota.c", "ota_hw.c", "up_fm6.c", "params.c", "editor_fm6.c",
+              "panel.c", "lcd.c", "gfx.c", "ux_theme.c", "ux_widgets.c", "ux_nav.c", "ux_home.c", "ux_more.c", "ux_section.c", "ux_splash.c", "ota.c", "ota_hw.c", "up_fm6.c", "params.c", "editor_fm6.c",
               "ui_layer.c", "ui_name.c", "ui_events.c", "song_main.c", "main.c", "libc.c", "storage_hw.c", "engines.c", "fm4_convert.c",
               # (0.9.0) the files the ones above include, missed until now (-16.7 KB): GEN, DICE, the lenses, the line
               # art, the beings, the tech graphs, the tools, the FM6 bank and VOICE's words (its sound side, reached

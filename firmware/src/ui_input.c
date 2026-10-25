@@ -1072,16 +1072,50 @@ static void focus_knob(uint32_t slot, int32_t steps)
     d = track_desc(TSEL, P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u));
     *p = (int16_t)param_turn(d, *p, slot == 2u ? (steps > 0 ? 1 : -1) : accel(EN_K1 + 3u, steps, d->max - d->min));
 }
-static void edit_param(uint32_t slot, int32_t steps)
+/* (ACID FM 3b, factored out of edit_param) setting id of track t (0: a global) turned steps detents of KNOB knob (0..3, its
+ * acceleration): the write every page's knob does (params.c param_ref), a MORE row's too (ux_more.c): the value, the views
+ * written back (TRACKS, LOAD, the LFO's MODE / PHASE), the turn recorded (AUTOMATION) and heard by MIDI LEARN (knob_cap) */
+static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
 {
     int16_t *vp;
+    int32_t v;
+    const param_desc_t *d = param_ref(t, id, &vp);
+    if (!d || !vp || d->max == d->min)
+        return;
+    v = param_turn(d, *vp, accel(EN_K1 + (knob & 3u), steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
+    *vp = (int16_t)v;
+    if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
+        trks_put(v);
+        ui_message(v ? "6 TRACKS: MORE CPU" : "4 TRACKS: T5-T6 ASLEEP");
+        settings_save();
+        return;
+    }
+    if (vp == &lmode_ui || vp == &lphase_ui) {          /* (0.9.18) LFO MODE / PHASE: P_LPHASE written back */
+        track_t *lt = t ? t : TSEL;
+        lfo_view_put(lt, vp == &lmode_ui, v);
+        knob_cap(lt, P_LPHASE);
+        return;
+    }
+    if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
+        load_put(v);
+        ui_message(v == 2 ? "LOAD FULL: ALL FX" : v ? "LOAD LITE: LIGHTER FX" : "LOAD ECO: NO SLICER/CHORUS");
+        settings_save();
+        return;
+    }
+    if (t && vp >= t->p && vp < t->p + P_COUNT)         /* (0.7.6: SCL's ALL TR is a global) */
+        knob_cap(t, (uint32_t)(vp - t->p));
+}
+static void edit_param(uint32_t slot, int32_t steps)
+{
     const page_t *pg = cur_page();
-    const param_desc_t *d;
+    if (pg->graph == GR_MORE) {                         /* (ACID FM 3b) MORE: KNOB 1 the row, KNOB 2 its value (ux_more.c) */
+        (void)ux_more_knob(slot, steps);
+        return;
+    }
     if (pg->graph == GR_LIVE) {                         /* (0.9.11) GLO > LIVE (ui_live.c) */
         live_knob(slot, steps);
         return;
     }
-    int32_t v;
     if (pg->graph == GR_COMP) {
         comp_knob(slot, steps);
         return;
@@ -1261,30 +1295,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;
     }
-    d = page_desc(pg, slot, &vp);
-    if (!d || !vp || d->max == d->min)
-        return;
-    v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
-    *vp = (int16_t)v;
-    if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
-        trks_put(v);
-        ui_message(v ? "6 TRACKS: MORE CPU" : "4 TRACKS: T5-T6 ASLEEP");
-        settings_save();
-        return;
-    }
-    if (vp == &lmode_ui || vp == &lphase_ui) {          /* (0.9.18) LFO MODE / PHASE: P_LPHASE written back */
-        lfo_view_put(TSEL, vp == &lmode_ui, v);
-        knob_cap(TSEL, P_LPHASE);
-        return;
-    }
-    if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
-        load_put(v);
-        ui_message(v == 2 ? "LOAD FULL: ALL FX" : v ? "LOAD LITE: LIGHTER FX" : "LOAD ECO: NO SLICER/CHORUS");
-        settings_save();
-        return;
-    }
-    if (pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)   /* (0.7.6: SCL's ALL TR is a global) */
-        knob_cap(TSEL, (uint32_t)(vp - TSEL->p));
+    param_knob(page_trk(pg), page_id(pg, slot), steps, slot);
 }
 
 /* OCT+ on an action page: the picked action. A load stays picked (browse and load again); the others
@@ -2527,8 +2538,8 @@ static void ui_input_frame(void)
                                                         * chain, a page a detent (HOME's: TRACKS VISUAL GEN 1..3) */
         if (lock_held())                                /* (0.9.12) a step held on STEP: the page its locks take */
             lock_select(s);
-        else
-            nav_select(s);
+        else if (ui.home || cur_page()->graph != GR_MORE || !ux_more_knob(UXM_SELECT, s))
+            nav_select(s);                              /* (ACID FM 3b: MORE scrolls; before its first row the page before) */
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();
@@ -2560,12 +2571,13 @@ static void ui_input_frame(void)
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) &&
              k == 0u)
             || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE ||
-            pg->graph == GR_LIVE) {   /* (not an empty column) */
+            pg->graph == GR_LIVE || pg->graph == GR_MORE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }
-        if (ui.home)
-            ux_knob_touch(k);                           /* (ACID FM 3a) its column (TRACKS: its line) lit UX_HOT_MS */
+        if (ui.home || ux_section_owns(nav_sec()))
+            ux_knob_touch(k);                           /* (ACID FM 3a) its column (TRACKS: its line) lit UX_HOT_MS; (3b) a
+                                                         * section page's too */
         if (home_macros()) {                            /* (ACID FM 3a) HOME's VISUAL: M1..M4 */
             macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);
         } else if (ui.home) {                           /* (3a task 6) TRACKS: the LEVELs of the four holding the selected
