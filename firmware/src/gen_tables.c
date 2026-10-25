@@ -591,6 +591,26 @@ static const ggenre_t GENRE[] = {
  * genre (the web emulator's web_gen, the tests, the tools) still names it; the knob shows it first (gen_knob) */
 #define GEN_EXPLORE ((uint32_t)NGENRE + 1u)
 #define GEN_NPOS ((uint32_t)NGENRE + 2u)                /* the knob's places: EXPLORE, RANDOM, the genres */
+/* (ACID FM 3b) Until the generator is rewritten, GENRE shows ten IDM-fitting genres: indices into GENRE[] in the order the
+ * knob walks them, their names on the GEN screen, EXPLORE and RANDOM before them. Stored values (1 + the GENRE index),
+ * GENRE[]'s order and the seed hashing are JIANT's, as they were: a stored hidden genre still generates, and its name
+ * shows as JIANT's. Only the walk, the name, the gauge and the random draws are filtered. */
+#define GEN_NSHOWN 10u
+#define GEN_NSPOS (GEN_NSHOWN + 2u)                     /* the knob's places now: EXPLORE, RANDOM, the ten */
+static const uint8_t GEN_SHOWN[GEN_NSHOWN] = {41 /* IDM */, 42 /* BROKEN */, 30 /* BREAKS */, 31 /* DRUM & BASS */, 4 /* ACID HOUSE */,
+                                              11 /* ELECTRO */, 2 /* MICRO HOUSE */, 26 /* BOOM BAP */, 37 /* AMBIENT */,
+                                              39 /* IMPRESSION */};
+/* (names as the spec's, three shortened to fit GEN's card, about seven letters: BROKEN BEAT, DRILL'N'BASS, RETROBOC) */
+static const char *const GEN_SHOWN_NAME[GEN_NSHOWN] = {"IDM", "BROKEN", "BREAKS", "D'N'BASS", "ACID", "ELECTRO",
+                                                       "MICRO", "RETRO", "AMBIENT", "DRIFT"};
+/* a stored genre's place among the ten, 255 if it is RANDOM, EXPLORE or hidden */
+static uint32_t gen_shown_index(uint32_t genre)
+{
+    uint32_t i;
+    for (i = 0; i < GEN_NSHOWN && genre; i++)
+        if (genre == 1u + GEN_SHOWN[i]) return i;
+    return 255u;
+}
 /* its keys: the SCALE page's modes of seven, the exotic ones likeliest (LOC too: its tonic chord a diminished one the
  * plan never takes, the other six degrees do) */
 static const uint8_t GX_SCALE[9] = {SC_MAJ, SC_MIN, SC_DOR, SC_MIX, SC_HARM, SC_PHRY, SC_LYD, 10u /* LOC */, SC_MEL};

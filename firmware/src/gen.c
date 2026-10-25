@@ -43,6 +43,7 @@ static struct {
 /* the generator's own random numbers: a stream a part, from the seed */
 static uint32_t gq = 1;
 static uint32_t gr(void) { gq ^= gq << 13; gq ^= gq >> 17; gq ^= gq << 5; return gq; }
+static uint32_t gen_random_genre(void) { return 1u + GEN_SHOWN[gr() % GEN_NSHOWN]; }   /* (3b) a RANDOM draw: one of the ten, as a stored value */
 static uint32_t gseed_mix(uint32_t part);
 static void gseed(uint32_t part)
 {
@@ -2316,13 +2317,13 @@ static void gen_make(void)
         memset(fg_set, 0, sizeof fg_set);
         g = gs.g = &gmut;
     } else {
-        gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gr() % NGENRE;
+        gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gen_random_genre() - 1u;
         g = gs.g = &GENRE[gs.gi];
         gmut = *g;
         gs.mutant = 0;
         if (!gp.genre && dice_force_style < 0 && gch(45)) {   /* (0.6.95) RANDOM: a mutant, the drums of one genre, the bass
                                                              * of another, the rest from either; a name of its own: "EBM+JAZZ" */
-            const ggenre_t *b = &GENRE[gr() % NGENRE], *c = &GENRE[gr() % NGENRE];
+            const ggenre_t *b = &GENRE[gen_random_genre() - 1u], *c = &GENRE[gen_random_genre() - 1u];
             uint32_t k2, n2 = 0;
             gmut.drum = b->drum; gmut.kit = b->kit; gmut.ghosts = b->ghosts; gmut.hats = b->hats; gmut.fills = b->fills;
             gmut.sd_micro = b->sd_micro; gmut.snd[GP_DRUMS] = b->snd[GP_DRUMS];
@@ -2536,7 +2537,8 @@ static void gen_go(void)
     char b[8];
     undo_mark();
     gen_make();
-    str_cpy(gp.last, gs.g->name, sizeof gp.last);
+    k = gs.gi < NGENRE && gs.g->name == GENRE[gs.gi].name ? gen_shown_index(gs.gi + 1u) : 255u;   /* (3b) a shown genre by its screen name */
+    str_cpy(gp.last, k != 255u ? GEN_SHOWN_NAME[k] : gs.g->name, sizeof gp.last);
     k = str_len(gp.last);
     b[0] = ' '; b[1] = (char)('0' + gp.seed / 1000u % 10u); b[2] = (char)('0' + gp.seed / 100u % 10u);
     b[3] = (char)('0' + gp.seed / 10u % 10u); b[4] = (char)('0' + gp.seed % 10u); b[5] = 0;
@@ -2613,7 +2615,7 @@ static const char *dice_seq(track_t *t)
     gp.seed = (uint16_t)(rng() % 10000u);
     if (!gs.g || gs.root != t->p[P_ROOT] || gs.scale != t->p[P_SCALE]) {   /* (no piece here: its choices made up) */
         uint32_t m = SCALE_MASK[(uint32_t)t->p[P_SCALE] % (sizeof SCALE_MASK / sizeof SCALE_MASK[0])], c, d;
-        gs.gi = gs.g && gs.gi < NGENRE ? gs.gi : rng() % NGENRE;
+        gs.gi = gs.g && gs.gi < NGENRE ? gs.gi : GEN_SHOWN[rng() % GEN_NSHOWN];
         gmut = GENRE[gs.gi]; gs.g = &gmut; gs.mutant = 0; gx.on = 0;
         gseed(GS_PICK);
         gen_pick();
@@ -2671,15 +2673,21 @@ static void gen_amt_turn(uint8_t *v, int32_t s)         /* OFF, 10 .. 100, AUTO 
     x = clamp(x + s * 10, 0, 110);
     *v = (uint8_t)(x > 100 ? GA_AUTO : x);
 }
+/* (3b) GENRE's place on the knob: EXPLORE 0, RANDOM 1, the ten 2..11; a stored hidden genre sits at RANDOM's place */
+static uint32_t gen_pos(void)
+{
+    uint32_t si = gen_shown_index(gp.genre);
+    return gp.genre == GEN_EXPLORE ? 0u : si == 255u ? 1u : si + 2u;
+}
 static void gen_knob(uint32_t k, int32_t s)
 {
     uint32_t p = gp.page;
     gp.hot = (uint8_t)k;
     if (p == 0u) {
         if (k == 0u) {                                  /* (0.8.6) EXPLORE first, then RANDOM, then the genres */
-            uint32_t pos = gp.genre == GEN_EXPLORE ? 0u : gp.genre + 1u;
-            pos = (pos + (s > 0 ? 1u : GEN_NPOS - 1u)) % GEN_NPOS;
-            gp.genre = (uint8_t)(pos ? pos - 1u : GEN_EXPLORE);
+            uint32_t pos = gen_pos();
+            pos = (pos + (s > 0 ? 1u : GEN_NSPOS - 1u)) % GEN_NSPOS;
+            gp.genre = (uint8_t)(!pos ? GEN_EXPLORE : pos == 1u ? 0u : 1u + GEN_SHOWN[pos - 2u]);
         }
         else if (k == 1u) gp.seed = (uint16_t)((gp.seed + 10000u + (uint32_t)clamp(accel(EN_K2, s, 9999), -9999, 9999)) % 10000u);
         else if (k == 2u) gp.energy = (uint8_t)clamp((int32_t)gp.energy + s * 5, 0, 100);
@@ -2707,7 +2715,7 @@ static void gen_value(uint32_t p, uint32_t k, char *b)
     uint32_t v;
     b[0] = 0;
     if (p == 0u) {
-        if (k == 0u) { str_cpy(b, gp.genre == GEN_EXPLORE ? "EXPLORE" : gp.genre ? GENRE[(gp.genre - 1u) % NGENRE].name : "RANDOM", 16); return; }
+        if (k == 0u) { str_cpy(b, gp.genre == GEN_EXPLORE ? "EXPLORE" : gp.genre ? gen_shown_index(gp.genre) != 255u ? GEN_SHOWN_NAME[gen_shown_index(gp.genre)] : GENRE[(gp.genre - 1u) % NGENRE].name : "RANDOM", 16); return; }
         if (k == 1u) { b[0] = (char)('0' + gp.seed / 1000u % 10u); b[1] = (char)('0' + gp.seed / 100u % 10u); b[2] = (char)('0' + gp.seed / 10u % 10u); b[3] = (char)('0' + gp.seed % 10u); b[4] = 0; return; }
         if (k == 3u) { str_cpy(b, GEN_FORM[gp.form % 3u], 16); return; }
         v = gp.energy;
@@ -2733,7 +2741,7 @@ static void gen_cards(void)
         int32_t r;
         gen_value(p, k, v);
         a = p == 1u ? gp.amt[k] : p == 2u && k == 0u ? gp.amt[GP_LEAD] : p == 2u && k == 2u ? gp.swing : 0u;
-        r = p == 0u ? (k == 0u ? (int32_t)(gp.genre == GEN_EXPLORE ? 0u : gp.genre + 1u) * 1000 / (int32_t)(GEN_NPOS - 1u) :   /* (0.8.7:
+        r = p == 0u ? (k == 0u ? (int32_t)gen_pos() * 1000 / (int32_t)(GEN_NSPOS - 1u) :   /* (0.8.7:
                                                          * KNOB 1's order, EXPLORE at the left) */ k == 1u ? gp.seed / 10 : k == 2u ? gp.energy * 10 :
                        gp.form * 500) :
             (p == 1u || (p == 2u && (k == 0u || k == 2u))) ? (a == GA_AUTO ? 1000 : (int32_t)a * 10) :

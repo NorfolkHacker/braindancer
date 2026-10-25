@@ -104,6 +104,7 @@ static uint32_t hits_all(const track_t *t)
     return c;
 }
 
+#define GEN_HOUSE_HASH 2027450874u   /* (all_sig of HOUSE 0421, energy 50, captured on the base commit a4fcac7) */
 int main(void)
 {
     int bad = 0;
@@ -961,14 +962,41 @@ int main(void)
             char v[16];
             uint8_t g0 = gp.genre;
             int ok = 1;
-            gen_value(0, 0, v); ok &= !strcmp(v, "EXPLORE");
-            gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == 0u && !strcmp(v, "RANDOM");
-            gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == 1u && !strcmp(v, "HOUSE");
-            gen_knob(0, -1); gen_knob(0, -1); ok &= gp.genre == GEN_EXPLORE;
-            gen_knob(0, -1); gen_value(0, 0, v); ok &= gp.genre == NGENRE && !strcmp(v, GENRE[NGENRE - 1u].name);
-            gen_knob(0, 1); ok &= gp.genre == GEN_EXPLORE;
+            static const char *const WALK[12] = {"EXPLORE", "RANDOM", "IDM", "BROKEN", "BREAKS", "D'N'BASS", "ACID",
+                                                 "ELECTRO", "MICRO", "RETRO", "AMBIENT", "DRIFT"};
+            uint32_t w;
+            gp.genre = GEN_EXPLORE;
+            for (w = 0; w < 24u; w++) {                 /* (3b) ten genres shown: forward twice round, then back twice */
+                gen_value(0, 0, v); ok &= !strcmp(v, WALK[w % 12u]);
+                ok &= w % 12u < 2u ? gp.genre == (w % 12u ? 0u : GEN_EXPLORE) : gp.genre == 1u + GEN_SHOWN[w % 12u - 2u];
+                gen_knob(0, 1);
+            }
+            ok &= gp.genre == GEN_EXPLORE;
+            for (w = 0; w < 24u; w++) {
+                gen_knob(0, -1);
+                gen_value(0, 0, v); ok &= !strcmp(v, WALK[(36u - 1u - w) % 12u]);
+            }
+            ok &= gp.genre == GEN_EXPLORE;
             gp.genre = g0; gp.hot = 0xFF;
-            bad += gcheck("  GENRE's order: EXPLORE, RANDOM, HOUSE .. (back from EXPLORE: the last genre)", ok);
+            bad += gcheck("  GENRE's order: EXPLORE, RANDOM, the ten (IDM .. DRIFT), wrapping both ways", ok);
+        }
+        {   /* (3b) the ten shown genres: no random draw reaches a hidden one; a stored hidden genre generates as before */
+            uint32_t sd, hid = 0, hh;
+            char v[16];
+            for (sd = 0; sd < 2500u; sd++) {
+                hid += gen_shown_index(gen_random_genre()) == 255u;
+                gen_with(0, sd, 50, 0);
+                hid += gen_shown_index(gs.gi + 1u) == 255u;
+            }
+            bad += gcheck("  (3b) RANDOM / mutant / dice draws over 2,500 seeds: only the ten genres", hid == 0u);
+            bad += gcheck("  (3b) gen_shown_index: the ten in order, hidden / RANDOM / EXPLORE 255", gen_shown_index(1u + GEN_SHOWN[0]) == 0u &&
+                          gen_shown_index(1u + GEN_SHOWN[9]) == 9u && gen_shown_index(1u) == 255u && gen_shown_index(0u) == 255u &&
+                          gen_shown_index(GEN_EXPLORE) == 255u);
+            gen_with(1, 421, 50, 0); hh = all_sig();
+            bad += gcheck("  (3b) a stored hidden genre (HOUSE 0421): the piece as at the base commit", hh == GEN_HOUSE_HASH);
+            gp.genre = 1; gen_value(0, 0, v);
+            bad += gcheck("  (3b) ... and its name shows as JIANT's", !strcmp(v, "HOUSE"));
+            gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF;
         }
         frames(800);
         press(B_PLAY); frames(4);
@@ -978,7 +1006,7 @@ int main(void)
         frames(8);
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
         turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K3, 2);
-        bad += gcheck("  KNOB 1 the genre (EXPLORE -> RANDOM -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);
+        bad += gcheck("  KNOB 1 the genre (EXPLORE -> RANDOM -> IDM), KNOB 3 the energy (+10)", gp.genre == 1u + GEN_SHOWN[0] && gp.energy == 60u);
         turn(EN_SELECT, 1); frames(800);                /* (0.9.2: SELECT GEN's next page, GEN 2; a HOME tap: on to ECO) */
         turn(EN_K1, -1); turn(EN_K2, 1);
         bad += gcheck("  SELECT: page 2 (PARTS); DRUMS AUTO -> 100 %, BASS AUTO stays AUTO above 100", gp.page == 1u && gp.amt[GP_DRUMS] == 100u && gp.amt[GP_BASS] == GA_AUTO);
@@ -988,7 +1016,7 @@ int main(void)
             press(B_OCTUP); frames(4);
             seed0 = gp.seed;
             sig1 = steps_sig(&trk[0]);
-            bad += gcheck("  OCT+: a piece (GEN: HOUSE nnnn), the screen stays", ui.confirm == CF_DICE_ALL && !strncmp(ui.msg, "GEN: HOUSE ", 11) && sig1 != sig0);
+            bad += gcheck("  OCT+: a piece (GEN: IDM nnnn), the screen stays", ui.confirm == CF_DICE_ALL && !strncmp(ui.msg, "GEN: IDM ", 9) && sig1 != sig0);
             press(B_OCTUP); frames(4);
             bad += gcheck("  OCT+ again with the same settings: a new seed, another piece", gp.seed != seed0 && steps_sig(&trk[0]) != sig1);
             press(B_OCTDN);

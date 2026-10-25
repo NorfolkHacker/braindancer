@@ -9,7 +9,7 @@ is checked too, no list to keep by hand):
 UX_MSG_HDR (drawn in UF_HDR by HOME's status line, ux_home.c ux_home_status): every string literal among the arguments of
 ui_message( / ui_say( / ux_status( (ternaries and concatenations too: the call's parentheses are matched) and of
 str_cpy(ui.msg / ui.msg2, ...) (msg2 becomes the message after msg), the ux_*.c #define NAME "..." texts (UXV_INTRO,
-UX_STOP) and HOME's hints (ux_nav.c UXH_PAGES). UX_MSG_LBL (UF_LBL, the footer's face): the literals of ux_footer( calls
+UX_STOP) HOME's hints (ux_nav.c UXH_PAGES) and the ten GEN genre names (gen_tables.c GEN_SHOWN_NAME, said by gen_go's "GEN: name seed"). UX_MSG_LBL (UF_LBL, the footer's face): the literals of ux_footer( calls
 and UXH_PAGES (the footer's HOME . page). tests/ux_font_test.c checks every byte of them has a glyph. Comments are blanked first; the script fails if it finds fewer
 calls than a plain grep for 'ui_message("' would (a pattern gone stale) or under 150 texts in all.
 """
@@ -58,6 +58,9 @@ def main(out):
             if m.group(1) == "ui_message" and a.lstrip().startswith('"'):
                 got_msg += 1
             (lbl if m.group(1) == "ux_footer" else hdr).extend(lits)
+        t = re.search(r'GEN_SHOWN_NAME\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S)
+        if t:                                         # (3b: GEN's genre names, said in the status line: "GEN: " + name + seed)
+            hdr.extend(LIT.findall(t.group(1)))
         if Path(f).name.startswith("ux_"):
             hdr.extend(LIT.findall("\n".join(re.findall(r'^#define\s+UX\w*\s+("(?:[^"\\\n]|\\.)*")', s, flags=re.M))))
             t = re.search(r'UXH_PAGES\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S)
