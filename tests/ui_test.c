@@ -11173,8 +11173,17 @@ static int test_ux_home_head(void)
     usb.config = 0; song.batt_raw = 600;
     ok = ux_bat_segs(&bc) == 4u && bc == UX_MID;
     song.batt_raw = 570; ok &= ux_bat_segs(&bc) == 3u && bc == UX_MID;
-    song.batt_raw = 540; ok &= ux_bat_segs(&bc) == 2u && bc == UX_ACCENT;   /* (JIANT's low third: the accent) */
-    song.batt_raw = 500; ok &= ux_bat_segs(&bc) == 0u;
+    song.batt_raw = 540; ok &= ux_bat_segs(&bc) == 1u && bc == UX_ACCENT;   /* (JIANT's low third: one, the accent) */
+    song.batt_raw = 500;                                            /* (nearly flat: that one blinking, 1 Hz) */
+    fm1_ms = (fm1_ms / 1000u + 1u) * 1000u; ok &= ux_bat_segs(&bc) == 1u && bc == UX_ACCENT;
+    fm1_ms += UXH_BLINK_MS; ok &= ux_bat_segs(&bc) == 1u && bc == UX_LINE;
+    fm1_ms += UXH_BLINK_MS - 16u; ui.force = 1; frame();            /* (drawn: the accent's ink in the gauge's cells) */
+    ok &= ux_home_at(UXH_TRACKS) && head_px(UX_ACCENT, 217u, 220u) > 0u;
+    {
+        uint32_t px = host_blit_px;
+        fm1_ms += UXH_BLINK_MS - 16u; frame();                      /* (off: only the gauge's cells resent) */
+        ok &= head_px(UX_ACCENT, 217u, 220u) == 0u && head_px(UX_LINE, 217u, 220u) > 0u && host_blit_px - px <= 240u * UX_H_STATUS + 32u * 8u;
+    }
     usb.config = 1; usb.suspended = 0; ok &= ux_bat_segs(&bc) == 4u && bc == UX_ACID;
     usb.config = 0;
     song.octave = 1; ux_home_left(b, sizeof b, UXH_TRACKS, 0);
@@ -11183,7 +11192,7 @@ static int test_ux_home_head(void)
     ok &= str_eq(b, "OCT-2 \xB7 ");
     song.octave = 0; ux_home_left(b, sizeof b, UXH_VISUAL, 0);
     ok &= str_eq(b, "");
-    bad += check("I3 HOME header: the battery gauge (JIANT's levels), OCT+1 / OCT-2 when shifted, nothing at 0", ok);
+    bad += check("I3 HOME header: the battery gauge (JIANT's levels; low one accent segment, nearly flat it blinks at 1 Hz, cheaply), OCT+1 / OCT-2 when shifted, nothing at 0", ok);
     song.rec = 1u << song.sel; song.octave = -3; ui_prefs |= PREF_BPM_LOCK; song.g[G_BPM] = 240; song.playing = 1;
     song.batt_raw = 540;
     chain.running = 1; chain.row = 0; chain.config.row[0].slot = 0; chain.config.row[0].bars = 64; chain.remaining = 2;
@@ -11195,8 +11204,8 @@ static int test_ux_home_head(void)
     ok &= lx >= lim && ux_head_drop == 0u;
     song.octave = -3;
     ui.force = 1; frame();
-    ok &= ux_home_at(UXH_TRACKS) && head_px(UX_ACCENT, 217u, 220u) > 0u && head_px(UX_LINE, 229u, 232u) > 0u &&   /* (low: */
-          head_px(UX_ACCENT, 120u, 200u) > 10u && head_px(UX_MID, 205u, 212u) > 20u;   /* 2 of 4 lit), the REC dot, the lock */
+    ok &= ux_home_at(UXH_TRACKS) && head_px(UX_ACCENT, 217u, 220u) > 0u && head_px(UX_LINE, 221u, 232u) > 0u &&   /* (low: */
+          head_px(UX_ACCENT, 120u, 200u) > 10u && head_px(UX_MID, 205u, 212u) > 20u;   /* 1 of 4 lit), the REC dot, the lock */
     song.rec = 0; ui_prefs &= ~PREF_BPM_LOCK; frame();              /* (unarmed: the header redrawn in the same frame) */
     ok &= head_px(UX_ACCENT, 120u, 200u) == 0u;
     press(B_HOME); frame();                                         /* VISUAL: the same marks */

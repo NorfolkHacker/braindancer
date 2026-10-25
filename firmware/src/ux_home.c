@@ -173,18 +173,22 @@ static void ux_where_bar(char *b, uint32_t n, int lng)
     }
 }
 /* the header's right, HOME's own (fix wave I3; spec 0 rules 5, 6: what is armed and set is in sight), right to left: the
- * battery (JIANT's level and thresholds, ui_draw.c batt_shown: a gauge of four segments, no glyph; low UX_ACCENT, USB power
- * all four in UX_ACID, as JIANT's full THEME), the BPM LOCK mark, "> 124 BPM", the REC dot (UX_ACCENT; filled: the
+ * battery (JIANT's level and thresholds, ui_draw.c batt_shown: a gauge of four segments, no glyph; low one in UX_ACCENT,
+ * nearly flat that one blinking; USB power all four in UX_ACID, as JIANT's full THEME), the BPM LOCK mark, "> 124 BPM", the REC dot (UX_ACCENT; filled: the
  * selected track armed, a ring: another), then "OCT+1 . " while the octave is shifted and, on TRACKS, where the music is
  * ("A . 3/8 . ", "BAR 1/2 . "): "BAR" goes first when it does not fit beside ACID FM, then where altogether */
 #define UXH_BAT_W 15                                    /* the gauge: 4 segments 3 px wide, 1 px apart */
 #define UXH_LOCK_W 7
 #define UXH_DOT 7
-static uint32_t ux_bat_segs(uint16_t *col)              /* the gauge's lit segments (0..4) and their colour */
+/* the gauge's lit segments (0..4) and their colour: the lower, the more it shows (spec 0 rules 5, 6: no surprises) - level 0
+ * (nearly flat) one segment in UX_ACCENT blinking at 1 Hz (the header's sig changes with it: only its cells resent), level 1
+ * (low) one segment in UX_ACCENT, 2 three, 3 four in UX_MID; USB power four in UX_ACID (as JIANT's full THEME) */
+#define UXH_BLINK_MS 500u
+static uint32_t ux_bat_segs(uint16_t *col)
 {
     int32_t l = batt_shown();                           /* (0 empty, 1 a third: low, 2, 3 full; 4 USB power) */
-    *col = l == 4 ? UX_ACID : l == 1 ? UX_ACCENT : UX_MID;
-    return l == 4 ? 4u : l ? (uint32_t)l + 1u : 0u;     /* (0: none lit, as JIANT's empty outline) */
+    *col = l == 4 ? UX_ACID : l >= 2 ? UX_MID : l == 1 || !((fm1_ms / UXH_BLINK_MS) & 1u) ? UX_ACCENT : UX_LINE;
+    return l >= 3 ? 4u : l == 2 ? 3u : 1u;
 }
 static void ux_home_left(char *b, uint32_t n, uint32_t p, uint32_t drop)   /* "OCT+1 . BAR 1/2 . " (drop 1: no BAR, 2: no where) */
 {

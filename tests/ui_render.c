@@ -611,7 +611,7 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
  * OP LEVEL pages and the algorithm charts, exist only there: fm4_screen) */
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
 
-enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HOME_T5, S_HOME_TURN, S_HOME_REC, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
+enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HOME_T5, S_HOME_TURN, S_HOME_REC, S_HOME_BATT0, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
        S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
        S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT, S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM,
        S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_SAMPLE, S_EDIT_GRAIN,
@@ -649,7 +649,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_MIXER_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
        S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_COUNT };
-static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_t5", "home_turn", "home_rec", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
+static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_voice",
@@ -1085,6 +1085,8 @@ static void setup(int s)
         chain.running = 1; chain.row = 0; chain.config.count = 1;
         chain.config.row[0].slot = 0; chain.config.row[0].bars = 16; chain.remaining = 5;
         break;
+    case S_HOME_BATT0:                            /* (fix wave) the battery nearly flat: its one segment in UX_ACCENT (the blink's on half) */
+        usb.config = 0; song.batt_raw = 500; fm1_ms = (fm1_ms / 1000u + 1u) * 1000u; break;
     case S_HOME_IDLE: song.playing = 0; song.batt_raw = 570; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_HOME_VISUAL:                          /* (ACID FM 3a) HOME's second page (HOME again), M1..M4, M2 just turned; */
     case S_HOME_VISUAL_IDLE: {                   /* (task 7) playing mid-bar, a song chain at B bar 3/8, a named project,
