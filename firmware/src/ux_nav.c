@@ -49,4 +49,10 @@ static const char *ux_home_count(void)
     b[5] = 0;
     return b;
 }
-static const char *ux_home_hint(void) { return UXH_PAGES[ux_home_page()].hint; }
+/* what HOME does next; VISUAL while a song plays (GEN refused then, ui_lens.c nav_go: STOP TO EDIT) says so first */
+#define UXH_HINT_BUSY "STOP, THEN HOME: GENERATE"
+static const char *ux_home_hint(void)
+{
+    uint32_t p = ux_home_page();
+    return p == UXH_VISUAL && chain_busy() ? UXH_HINT_BUSY : UXH_PAGES[p].hint;
+}

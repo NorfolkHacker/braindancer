@@ -11021,11 +11021,13 @@ static int test_ux_tracks(void)
     ok = ux_rows_ink(UX_Y_HEAD, UX_H_HEAD) > 50u && ux_rows_ink(UX_Y_KNOBS, UX_H_KNOBS) > 100u &&
          ux_rows_ink(UX_Y_STATUS, UX_H_STATUS) > 20u && ux_rows_ink(UX_Y_FOOT, UX_H_FOOT) > 240u * 8u;
     {   /* the header's right: the bar, the transport (stopped: the square), the tempo */
-        char r[32], w[32] = "BAR 1/1 \xB7 " UX_GL_STOP " ";
+        char r[40], w[32] = UX_GL_STOP " ";
         fmt_int(w + str_len(w), song.g[G_BPM]); str_cpy(w + str_len(w), " BPM", 8);
-        ux_trk_right(r);
+        ux_home_left(r, sizeof r, UXH_TRACKS, 0);
+        ok &= str_eq(r, "BAR 1/1 \xB7 ");
+        ux_transport(r, sizeof r);
         ok &= str_eq(r, w);
-        song.playing = 1; ux_trk_right(r); song.playing = 0;
+        song.playing = 1; ux_transport(r, sizeof r); song.playing = 0;
         ok &= strstr(r, UX_GL_PLAY) != 0 && strstr(r, UX_GL_STOP) == 0;   /* (S_HOME_PLAY's header: playing) */
         ok &= text_w(&UF_HDR, UX_GL_PLAY) > text_w(&UF_HDR, " ") && text_w(&UF_HDR, UX_GL_STOP) > text_w(&UF_HDR, " ");
     }
@@ -11047,13 +11049,17 @@ static int test_ux_tracks(void)
     fm1_ms += 1000u; frames(70);
     turn(EN_SELECT, 1); frame();
     ok &= ux_home_at(UXH_VISUAL) && msg_is("STOP TO EDIT");
+    frames(1200);                                                   /* (the message gone: VISUAL's hint says it first) */
+    st = ux_home_status(&col);
+    ok &= str_eq(st, "STOP, THEN HOME: GENERATE") && col == UX_MID && text_w(&UF_HDR, st) <= 224;
     press(B_SEQ); frame(); press(B_HOME); frame();                  /* from elsewhere: the page last shown, VISUAL */
     ok &= ux_home_at(UXH_VISUAL);
     chain.running = 0;
+    ok &= str_eq(ux_home_hint(), "HOME AGAIN: GENERATE");           /* (stopped: as before) */
     ui_power_on(); frame(); press(B_HOME); frame();
     press(B_HOME); frame();
     ok &= ux_home_at(UXH_GEN);                                      /* (stopped: GEN) */
-    bad += check("3a TRACKS: GEN refused while a song plays: VISUAL stays (HOME, SELECT), STOP TO EDIT in UX_ACCENT", ok);
+    bad += check("3a TRACKS: GEN refused while a song plays: VISUAL stays (HOME, SELECT), STOP TO EDIT in UX_ACCENT; then the hint STOP, THEN HOME: GENERATE", ok);
     ui_power_on();
     return bad;
 }
@@ -11137,7 +11143,69 @@ static int test_ux_tracks_pace(void)
     gov_lite = 0; trk_loud(1); fm1_ms += UX_TRK_MS; frame();
     ok &= ux_trk_draws == n + 2u;
     bad += check("I2 TRACKS: frozen 400 ms after the guard's last shed and while gov_lite (history sampled; knobs, status at once)", ok);
+    {   /* (fix wave) the caption's longest readout whole (b[40], was cut at 27) and clear of "T1 STEPS 49-64" */
+        const char *lr = "STEP 64 \xB7 C#3 \xB7 ACCENT \xB7 SLIDE", *ll = "T6 STEPS 49-64";
+        ok = str_len(lr) < 40u && 8 + text_w(&UF_LBL, ll) + 8 <= 232 - text_w(&UF_LBL, lr);
+        bad += check("fix wave TRACKS: the playing step's longest readout fits beside the caption", ok);
+    }
     song.playing = 0;
+    ui_power_on();
+    return bad;
+}
+
+/* HOME's header (fix wave I3; spec 0 rules 5, 6): REC armed (a dot in UX_ACCENT before the transport), the octave when
+ * shifted ("OCT+1"), the BPM LOCK mark, the battery (four segments: JIANT's levels; low UX_ACCENT, USB power UX_ACID), on
+ * TRACKS and VISUAL; the longest (REC, OCT-3, LOCK, a song at A 63/64, 240 BPM) still clear of ACID FM, "BAR" dropped first */
+static uint32_t head_px(uint16_t c, uint32_t x0, uint32_t x1)   /* pixels of colour c in the header's rows, x0..x1-1 */
+{
+    uint32_t x, y, n = 0;
+    for (y = UX_Y_HEAD; y < UX_Y_HEAD + UX_H_HEAD; y++)
+        for (x = x0; x < x1; x++) n += ux_px(x, y) == c;
+    return n;
+}
+static int test_ux_home_head(void)
+{
+    int bad = 0, ok;
+    int32_t lx, lim = 8 + text_w(&UF_HDR, "ACID FM") + 6;
+    char b[40];
+    uint16_t bc;
+    ui_power_on(); frame();
+    usb.config = 0; song.batt_raw = 600;
+    ok = ux_bat_segs(&bc) == 4u && bc == UX_MID;
+    song.batt_raw = 570; ok &= ux_bat_segs(&bc) == 3u && bc == UX_MID;
+    song.batt_raw = 540; ok &= ux_bat_segs(&bc) == 2u && bc == UX_ACCENT;   /* (JIANT's low third: the accent) */
+    song.batt_raw = 500; ok &= ux_bat_segs(&bc) == 0u;
+    usb.config = 1; usb.suspended = 0; ok &= ux_bat_segs(&bc) == 4u && bc == UX_ACID;
+    usb.config = 0;
+    song.octave = 1; ux_home_left(b, sizeof b, UXH_TRACKS, 0);
+    ok &= str_eq(b, "OCT+1 \xB7 BAR 1/1 \xB7 ");
+    song.octave = -2; ux_home_left(b, sizeof b, UXH_VISUAL, 0);
+    ok &= str_eq(b, "OCT-2 \xB7 ");
+    song.octave = 0; ux_home_left(b, sizeof b, UXH_VISUAL, 0);
+    ok &= str_eq(b, "");
+    bad += check("I3 HOME header: the battery gauge (JIANT's levels), OCT+1 / OCT-2 when shifted, nothing at 0", ok);
+    song.rec = 1u << song.sel; song.octave = -3; ui_prefs |= PREF_BPM_LOCK; song.g[G_BPM] = 240; song.playing = 1;
+    song.batt_raw = 540;
+    chain.running = 1; chain.row = 0; chain.config.row[0].slot = 0; chain.config.row[0].bars = 64; chain.remaining = 2;
+    (void)ux_home_head(UXH_TRACKS, 0, &lx);
+    ux_home_left(b, sizeof b, UXH_TRACKS, 0);
+    printf("ui:   (HOME header, the longest: \"%s\" + REC + transport + LOCK + battery from x %d; ACID FM ends at %d; left out: %u)\n", b, lx, lim - 6, ux_head_drop);
+    ok = lx >= lim && ux_head_drop == 0u && strstr(b, "63/64") != 0;   /* (all of it: nothing left out) */
+    song.octave = 1; (void)ux_home_head(UXH_TRACKS, 0, &lx);        /* (OCT+1: the widest octave) */
+    ok &= lx >= lim && ux_head_drop == 0u;
+    song.octave = -3;
+    ui.force = 1; frame();
+    ok &= ux_home_at(UXH_TRACKS) && head_px(UX_ACCENT, 217u, 220u) > 0u && head_px(UX_LINE, 229u, 232u) > 0u &&   /* (low: */
+          head_px(UX_ACCENT, 120u, 200u) > 10u && head_px(UX_MID, 205u, 212u) > 20u;   /* 2 of 4 lit), the REC dot, the lock */
+    song.rec = 0; ui_prefs &= ~PREF_BPM_LOCK; frame();              /* (unarmed: the header redrawn in the same frame) */
+    ok &= head_px(UX_ACCENT, 120u, 200u) == 0u;
+    press(B_HOME); frame();                                         /* VISUAL: the same marks */
+    song.rec = 2u; frame();
+    ok &= ux_home_at(UXH_VISUAL) && head_px(UX_ACCENT, 120u, 200u) > 6u;   /* (another track armed: the ring) */
+    (void)ux_home_head(UXH_VISUAL, 0, &lx);
+    ok &= lx >= lim && ux_head_drop == 0u;
+    bad += check("I3 HOME header: REC (dot / ring), LOCK, low battery drawn on TRACKS and VISUAL; the longest fits beside ACID FM", ok);
+    chain.running = 0; song.playing = 0; song.rec = 0; song.octave = 0; song.g[G_BPM] = 120;
     ui_power_on();
     return bad;
 }
@@ -11201,7 +11269,7 @@ static int test_ux_visual(void)
     ok &= ux_vis_draws == n;
     turn(EN_K2, 2); frame();                                        /* (frozen: the knob row still answers at once) */
     st = ux_home_status(&col);
-    ok &= ux_vis_draws == n && macro_v[1] == 2u && str_eq(st, "M2 \xB7 1%") && col == UX_TEXT;
+    ok &= ux_vis_draws == n && macro_v[1] == 2u && str_eq(st, "MACRO 2 \xB7 1%") && col == UX_TEXT;
     ui.force = 1; frame();                                          /* a page entered (drawn whole): drawn even frozen */
     ok &= ux_vis_draws == n + 1u;
     gov_lite = 0; fm1_ms += 100u; frame();
@@ -11279,7 +11347,15 @@ static int test_ux_visual(void)
     ok &= str_eq(st, "HOME AGAIN: GENERATE") && col == UX_MID;
     turn(EN_K4, 3); frame();
     st = ux_home_status(&col);
-    ok &= macro_v[3] == 3u && str_eq(st, "M4 \xB7 2%") && col == UX_TEXT;
+    ok &= macro_v[3] == 3u && str_eq(st, "MACRO 4 \xB7 2%") && col == UX_TEXT;
+    {   /* (fix wave) the knob row says MACRO 1..4 (the footer keeps M1..M4), each label inside its 52 px column */
+        ux_knob_t kk[4];
+        char kl[4][10];
+        uint32_t i;
+        ux_home_knobs(kk, kl);
+        for (i = 0; i < 4u; i++) ok &= kl[i][0] == 'M' && kl[i][6] == (char)('1' + i) && str_eq(kl[i] + 1, i == 0u ? "ACRO 1" :
+                                        i == 1u ? "ACRO 2" : i == 2u ? "ACRO 3" : "ACRO 4") && text_w(&UF_LBL, kl[i]) <= UX_COL_W - 4;
+    }
     press(B_HOME); press(B_HOME); frame();                          /* (GEN, then TRACKS: its footer as before) */
     ux_home_foot(ft, sizeof ft);
     ok &= ux_home_at(UXH_TRACKS) && str_eq(ft, "1 / 3 \xB7 LVL \xB7 LVL \xB7 LVL \xB7 LVL");
@@ -12595,6 +12671,7 @@ int main(void)
     bad += test_ux_nav_home();
     bad += test_ux_tracks();
     bad += test_ux_tracks_pace();
+    bad += test_ux_home_head();
     bad += test_ux_visual();
     bad += test_lz_edit();
     bad += test_lz_env();

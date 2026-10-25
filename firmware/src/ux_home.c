@@ -7,7 +7,7 @@
  * scrolling right to left, the nearer (lower) lines hiding the ones behind, pulsar-plot style; the four tracks the knobs
  * control in their knobs' colours, the other two dimmed; the name at the left, the level 0..99 at the right; under them the
  * selected track's 16 steps, the playing one outlined and spelled out. KNOB 1..4: the levels of the four.
- * VISUAL (task 7): the rings of the blend turning with the bar, the song's name over them; KNOB 1..4 M1..M4.
+ * VISUAL (task 7): the rings of the blend turning with the bar, the song's name over them; KNOB 1..4 MACRO 1..4.
  * Included after ux_widgets.c; ux_home_draw is called by ui_draw.c ui_draw_body,
  * ux_levels_tick by ui_draw every frame. */
 
@@ -172,11 +172,84 @@ static void ux_where_bar(char *b, uint32_t n, int lng)
         fmt_int(d, (int32_t)((len + 15u) / 16u)); str_cpy(b + str_len(b), d, n - str_len(b));
     }
 }
-static void ux_trk_right(char *b)                       /* the header's right: "A · 3/8 · ▶ 124 BPM", "BAR 1/2 · ■ 124 BPM" */
+/* the header's right, HOME's own (fix wave I3; spec 0 rules 5, 6: what is armed and set is in sight), right to left: the
+ * battery (JIANT's level and thresholds, ui_draw.c batt_shown: a gauge of four segments, no glyph; low UX_ACCENT, USB power
+ * all four in UX_ACID, as JIANT's full THEME), the BPM LOCK mark, "> 124 BPM", the REC dot (UX_ACCENT; filled: the
+ * selected track armed, a ring: another), then "OCT+1 . " while the octave is shifted and, on TRACKS, where the music is
+ * ("A . 3/8 . ", "BAR 1/2 . "): "BAR" goes first when it does not fit beside ACID FM, then where altogether */
+#define UXH_BAT_W 15                                    /* the gauge: 4 segments 3 px wide, 1 px apart */
+#define UXH_LOCK_W 7
+#define UXH_DOT 7
+static uint32_t ux_bat_segs(uint16_t *col)              /* the gauge's lit segments (0..4) and their colour */
 {
-    ux_where_bar(b, 32, 0);
-    str_cpy(b + str_len(b), " \xB7 ", 32 - str_len(b));
-    ux_transport(b + str_len(b), 32 - str_len(b));
+    int32_t l = batt_shown();                           /* (0 empty, 1 a third: low, 2, 3 full; 4 USB power) */
+    *col = l == 4 ? UX_ACID : l == 1 ? UX_ACCENT : UX_MID;
+    return l == 4 ? 4u : l ? (uint32_t)l + 1u : 0u;     /* (0: none lit, as JIANT's empty outline) */
+}
+static void ux_home_left(char *b, uint32_t n, uint32_t p, uint32_t drop)   /* "OCT+1 . BAR 1/2 . " (drop 1: no BAR, 2: no where) */
+{
+    char d[32];
+    b[0] = 0;
+    if (song.octave) {
+        str_cpy(b, song.octave > 0 ? "OCT+" : "OCT-", n);
+        fmt_int(b + str_len(b), song.octave > 0 ? song.octave : -song.octave);
+        str_cpy(b + str_len(b), " \xB7 ", n - str_len(b));
+    }
+    if (p == UXH_TRACKS && drop < 2u) {
+        ux_where_bar(d, sizeof d, 0);
+        str_cpy(b + str_len(b), drop && d[0] == 'B' ? d + 4 : d, n - str_len(b));   /* ("BAR 1/2" -> "1/2") */
+        str_cpy(b + str_len(b), " \xB7 ", n - str_len(b));
+    }
+}
+static uint8_t ux_head_drop;                            /* what the header last left out to fit (ux_home_left's drop) */
+/* the header (drawn when draw, else measured): its sig; *left the right part's left end */
+static uint32_t ux_home_head(uint32_t p, int draw, int32_t *left)
+{
+    char tr[16], lf[40];
+    uint16_t bc;
+    uint32_t k, segs = ux_bat_segs(&bc), drop, rec = (song.rec >> song.sel) & 1u ? 2u : song.rec != 0u;
+    int32_t ty = 3, y0 = ty + UF_HDR_CAP_Y, x = 232 - UXH_BAT_W - 4, lim = 8 + text_w(&UF_HDR, "ACID FM") + 6, xt, xl;
+    int lock = (ui_prefs & PREF_BPM_LOCK) != 0;
+    ux_transport(tr, sizeof tr);
+    if (lock) x -= UXH_LOCK_W + 2;
+    xt = x - text_w(&UF_HDR, tr);
+    xl = rec ? xt - 2 - UXH_DOT : xt;
+    for (drop = 0; drop < 3u; drop++) {
+        ux_home_left(lf, sizeof lf, p, drop);
+        if (xl - text_w(&UF_HDR, lf) >= lim) break;
+    }
+    *left = xl - text_w(&UF_HDR, lf);
+    ux_head_drop = (uint8_t)(drop < 2u ? drop : 2u);
+    if (draw) {
+        int32_t sx = 232 - UXH_BAT_W;
+        cv_begin(240, UX_H_LINE + UX_H_HEAD, UX_BG);
+        ux_topline();
+        GFX_HOOK_ALIGN(0, UX_H_LINE, 0, UX_H_LINE + UX_H_HEAD, AL_V, "header left");
+        ux_text_grad(8, ty, &UF_HDR, "ACID FM", UX_BG);
+        for (k = 0; k < 4u; k++)                        /* the battery */
+            cv_rect(sx + (int32_t)k * 4, y0, 3, UF_HDR_CAP_H, k < segs ? bc : UX_LINE);
+        if (lock) {                                     /* BPM LOCK: a shackle over a body, 7 x 8 */
+            int32_t lx = 232 - UXH_BAT_W - 4 - UXH_LOCK_W;
+            cv_rect(lx + 1, y0, 5, 1, UX_MID);
+            cv_rect(lx + 1, y0, 1, 3, UX_MID);
+            cv_rect(lx + 5, y0, 1, 3, UX_MID);
+            cv_rect(lx, y0 + 3, UXH_LOCK_W, UF_HDR_CAP_H - 3, UX_MID);
+        }
+        GFX_HOOK_ALIGN(0, UX_H_LINE, 0, UX_H_LINE + UX_H_HEAD, AL_V, "header right");
+        cv_text_r(x, ty, &UF_HDR, tr, UX_MID, UX_BG);
+        if (rec) {                                      /* REC armed: the dot, a ring when another track is */
+            int32_t dy = y0 + (UF_HDR_CAP_H - UXH_DOT) / 2;
+            cv_rrect(xt - 2 - UXH_DOT, dy, UXH_DOT, UXH_DOT, 3, UX_ACCENT, UX_BG);
+            if (rec == 1u)
+                cv_rrect(xt - 2 - UXH_DOT + 2, dy + 2, UXH_DOT - 4, UXH_DOT - 4, 1, UX_BG, UX_ACCENT);
+        }
+        if (lf[0]) {
+            GFX_HOOK_ALIGN(0, UX_H_LINE, 0, UX_H_LINE + UX_H_HEAD, AL_V, "header right");
+            cv_text_r(xl, ty, &UF_HDR, lf, UX_MID, UX_BG);
+        }
+        cv_blit_cells(0, UX_Y_LINE);
+    }
+    return str_hash(str_hash(p + 1u + rec * 8u + (uint32_t)lock * 32u + segs * 64u + bc * 512u, tr), lf);
 }
 static const char *ux_vis_legend(void);                 /* (VISUAL's) */
 /* the status line: a message (a refusal in UX_ACCENT), a turned knob's track and level, else what HOME does next */
@@ -189,9 +262,9 @@ static const char *ux_home_status(uint16_t *col)
         *col = str_eq(ui.msg, UX_STOP) ? UX_ACCENT : UX_TEXT;
         return ui.msg;
     }
-    if (ux_home_page() == UXH_VISUAL && (c = ux_knob_hot()) >= 0) {   /* "M2 · 71%": as the knob row shows it */
-        b[0] = 'M'; b[1] = (char)('1' + c);
-        str_cpy(b + 2, " \xB7 ", sizeof b - 2u);
+    if (ux_home_page() == UXH_VISUAL && (c = ux_knob_hot()) >= 0) {   /* "MACRO 2 · 71%": as the knob row names it */
+        str_cpy(b, "MACRO 1 \xB7 ", sizeof b);
+        b[6] = (char)('1' + c);
         fmt_int(b + str_len(b), macro_v[c] * 100 / 127);
         str_cpy(b + str_len(b), "%", sizeof b - str_len(b));
         *col = UX_TEXT;
@@ -222,8 +295,9 @@ static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])
 {
     uint32_t c, f = ux_trk_first();
     for (c = 0; c < 4u; c++) {
-        if (ux_home_page() == UXH_VISUAL) {             /* M1..M4, 0..100 % */
-            lbl[c][0] = 'M'; lbl[c][1] = (char)('1' + c); lbl[c][2] = 0;
+        if (ux_home_page() == UXH_VISUAL) {             /* MACRO 1..4, 0..100 % (the footer: M1..M4) */
+            str_cpy(lbl[c], "MACRO 1", 10);
+            lbl[c][6] = (char)('1' + c);
             fmt_int(k[c].value, macro_v[c] * 100 / 127);
             str_cpy(k[c].value + str_len(k[c].value), "%", sizeof k[c].value - str_len(k[c].value));
             k[c].bar = (uint8_t)(macro_v[c] * 255u / 127u);
@@ -267,7 +341,7 @@ static void ux_tracks_panel(void)
     uint32_t f = ux_trk_first(), r, i, n16, pg, len;
     int32_t hot = ux_trk_hot(), ph;
     step_t st[16];
-    char b[28];
+    char b[40];                                         /* ("STEP 64 \xB7 C#3 \xB7 ACCENT \xB7 SLIDE": 31 bytes) */
     const track_t *t = TSEL;
     memset(hz, UX_H_PANEL, sizeof hz);
     for (r = NTRK; r-- > 0u;) {                         /* the lines, the nearest (T6) first */
@@ -495,21 +569,17 @@ static void ux_home_draw(void)
 {
     static uint32_t head_sig, panel_sig, panel_p, foot_sig;   /* (panel_p: the page whose panel is shown, + 1) */
     ux_knob_t k[4];
-    char lbl[4][10], right[32];
+    char lbl[4][10];
+    int32_t hx;
     uint32_t p = ux_home_page(), all, sig, shed;
     uint16_t sc;
     const char *st = ux_home_status(&sc);
     dc_frame(ui.force);
     all = dc_all;
-    right[0] = 0;
-    if (p == UXH_TRACKS)
-        ux_trk_right(right);
-    else
-        ux_transport(right, sizeof right);              /* (VISUAL: where the music is over the rings) */
-    sig = str_hash(p + 1u, right);
+    sig = ux_home_head(p, 0, &hx);
     if (all || sig != head_sig) {
         head_sig = sig;
-        ux_header(0, "ACID FM", right);
+        (void)ux_home_head(p, 1, &hx);
     }
     ux_home_knobs(k, lbl);
     ux_knobs(k, -1);
