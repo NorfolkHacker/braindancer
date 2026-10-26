@@ -13,24 +13,24 @@ the Rephlex catalogue.
 0.4 is the sound sections in the ACID look (piece 3b), on top of 0.3:
 
 - EDIT, ENV, ARP, SCL, LFO and FX in the ACID look: a picture of the sound, four knobs, and MORE for the rest, with
-  names in plain words. JIANT's creatures are removed.
+  names in plain words. The old creatures are removed.
 - The held layers (EDIT, MACRO, FX, SCL) in the same look; with a step held, MORE's rows lock on that step too.
 - GEN shows ten IDM genres (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT),
-  plus EXPLORE and RANDOM; JIANT's techno and house are hidden (a song saved with one generates as before).
+  plus EXPLORE and RANDOM; techno and house are hidden (a song saved with one generates as before).
 - At power-on PLAY plays a short demo (beat, acid line, pad, 124 BPM); NEW PROJECT still starts empty.
 - The first time 0.4 starts, MENU › TRACKS switches to 6 once (the demo uses T5 and T6); a 4 picked after that stays.
 - HOME TRACKS: KNOB 1-3 are three tracks' levels, KNOB 4 the BPM.
 - Steadier timing: the screen draws more slowly when the audio is busy.
-- SEQ, GLO, SAVE, the MENU and the dialogs keep JIANT's layouts in ACID colours until 3c.
+- SEQ, GLO, SAVE, the MENU and the dialogs keep their inherited layouts in ACID colours until 3c.
 
 Before that, 0.3 was the new look (piece 3a, UI foundations), on top of 0.2:
 
-- One ACID palette (JIANT's palettes and skins are gone), Inter Tight lettering with gradient and glow, shared widgets.
+- One ACID palette (the inherited palettes and skins are gone), Inter Tight lettering with gradient and glow, shared widgets.
 - HOME is TRACKS, VISUAL and GEN (HOME again or SELECT cycles; HOME+SELECT goes to GEN): TRACKS is six ridgelines with
   each track's level in dB, the four knob-controlled tracks in the knobs' colours; VISUAL is six rings pulsing with hits.
-- The wordmark splash; JIANT's signature is removed.
+- The wordmark splash replaces the inherited one.
 
-Before that, 0.2 was the trim, on top of 0.1 (JIANT FM 0.9.18 under a new name, the pipeline proven end to end):
+Before that, 0.2 was the trim, on top of 0.1 (the build, install and rollback pipeline, proven end to end):
 
 - ANIMAL and WHEEL are retired: stored sounds that used them load as ANALOG, and T3 at power-on is PHASE.
 - 4 songs; 128 KiB of flash reserved for breaks (an 8 KiB gap may join later), for breakbeats coming in a later version.
@@ -45,13 +45,13 @@ The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-aci
 5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
 6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, RETROBOC, AMBIENT, GLITCH
 
-The manual still describes JIANT FM's features, which 0.1 keeps; it is rewritten as ACID FM's features land.
+Parts of the manual still describe inherited features; it is rewritten as ACID FM's features land.
 
 ## Built on
 
-ACID FM is a fork of **[JIANT FM](https://github.com/juanjiant-bit/JIANT)** by Juan Jiant, itself a fork of
-**[Felucca](https://github.com/hugelton/Felucca)** by Hügelton Instruments, with SLOOP's song system. JIANT's own
-README is kept in [docs/JIANT-README.md](docs/JIANT-README.md). Every third-party part and its licence is listed in
+ACID FM builds on open firmware for the FM-1: **[JIANT FM](https://github.com/juanjiant-bit/JIANT)** by Juan Jiant
+and **[Felucca](https://github.com/hugelton/Felucca)** by Hügelton Instruments, with SLOOP's song system. The
+upstream README is kept in [docs/JIANT-README.md](docs/JIANT-README.md). Every third-party part and its licence is listed in
 [LICENSING.md](LICENSING.md).
 
 ## Build
