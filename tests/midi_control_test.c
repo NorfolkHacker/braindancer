@@ -449,6 +449,46 @@ static int route_track_test(void)
     bad += check("  off: an unclaimed channel plays nothing", !mn_get(11, 60) && !gate_note(&trk[1], 60) && !midi_in_mask(11));
     queued(0x80, 62, 0, 1);
 
+    /* a sound change (preset, PROGRAM CHANGE) on tracks sharing a channel while its note is held: no note hangs after */
+    midi_test_reset(); song.g[G_MRCH1 + 1] = 10; song.g[G_MRCH1 + 2] = 10; events_block(CTL);
+    queued(0x99, 60, 100, 1);
+    midi_silence_track(1); midi_silence_track(2);
+    queued(0x99, 62, 100, 1); queued(0x89, 60, 0, 1); queued(0x89, 62, 0, 1);
+    for (i = 0; i < 4000u; i++) events_block(CTL);
+    bad += check("two tracks on one channel, both silenced while a note is held: the next note ends on both",
+                 !gate_note(&trk[1], 62) && !gate_note(&trk[2], 62) && !mn_get(9, 62) && !mn_get(9, 60) && !midi_owners[1] &&
+                 !midi_owners[2]);
+    midi_test_reset(); song.g[G_MRCH1 + 1] = 10; song.g[G_MRCH1 + 2] = 10; trk[2].p[P_VOICE] = V_POLY; trk[2].p[P_SUS] = 127;
+    events_block(CTL);
+    queued(0x99, 60, 100, 1);
+    midi_silence_track(1);
+    ok = mn_get(9, 60) == 3u && gate_note(&trk[2], 60) && midi_owners[2] == 1u;
+    queued(0x99, 62, 100, 1); queued(0x89, 60, 0, 1);
+    ok &= !gate_note(&trk[2], 60) && gate_note(&trk[2], 62);
+    queued(0x89, 62, 0, 1);
+    for (i = 0; i < 4000u; i++) events_block(CTL);
+    bad += check("  one silenced: the note stays the other's, and ends there with its note-off", ok && !gate_note(&trk[1], 62) &&
+                 !gate_note(&trk[2], 62) && !midi_owners[1] && !midi_owners[2]);
+
+    midi_test_reset(); for (i = 1; i < 4u; i++) song.g[G_MRCH1 + i] = 10;
+    events_block(CTL);
+    queued(0x99, 60, 100, 1); midi_silence_track(1);
+    ok = !mn_get(9, 60) && !midi_owners[2] && !midi_owners[3];
+    queued(0x99, 62, 100, 1); queued(0x89, 60, 0, 1); queued(0x89, 62, 0, 1);
+    for (i = 0; i < 4000u; i++) events_block(CTL);
+    for (i = 1; i < 4u; i++) ok &= !gate_note(&trk[i], 62) && !gate_note(&trk[i], 60) && !midi_owners[i];
+    bad += check("  three on one channel, one silenced: the note ends on the other two; the next one ends on all", ok);
+    song.g[G_MRCH1 + 3] = 4; events_block(CTL);
+
+    /* KEYBOARD PLAYS SELECTED: a routing change keeps the bend of the selected track playing through it */
+    midi_test_reset(); host_route_sel(1); song.sel = 2; events_block(CTL);
+    queued(0xEB, 127, 127, 1);
+    ok = midi_bend_target[2] == 512;
+    song.g[G_MRIN1 + 4] = 1; song.g[G_MRCH1 + 4] = 7; events_block(CTL);   /* (T5 now takes channel 7) */
+    bad += check("a routing change elsewhere keeps the bend of the selected track (KEYBOARD PLAYS SELECTED)",
+                 ok && midi_bend_target[2] == 512);
+    host_route_sel(0); events_block(CTL);
+
     /* MIDI OUT: a track's notes on its CHANNEL when its OUT and NOTES OUT are on */
     midi_test_reset(); usb.config = 1; mo_lvl = MO_ALL; events_block(CTL); mo_take();
     song.g[G_MRCH1 + 1] = 10; events_block(CTL); mo_take();
@@ -474,6 +514,19 @@ static int route_track_test(void)
     bad += check("  a CHANNEL change ends the notes sent on the old channel", mo_count(0x99) == 1u && mo_count(0x89) == 1u);
     seq_note_off(&trk[1], 61); mo_take();
     bad += check("  .. and its later note-off sends nothing more", !mo_notes());
+    song.g[G_MRCH1 + 1] = 2; song.g[G_MRCH1] = 1; song.sel = 0; mo_lvl = MO_KEYS; events_block(CTL); mo_take();
+    fm1_in.notes = 1u; events_block(CTL); mo_take(); ok = mo_count(0x90) == 1u;
+    song.g[G_MRCH1] = 2; events_block(CTL); fm1_in.notes = 0; events_block(CTL); mo_take();
+    bad += check("a key held while its track's CHANNEL changes 1 -> 2: its note-off on channel 1", ok && mo_count(0x80) == 1u &&
+                 !mo_count(0x81));
+    song.g[G_MRCH1] = 1; events_block(CTL);
+    fm1_in.notes = 1u; events_block(CTL); mo_take(); ok = mo_count(0x90) == 1u;
+    song.g[G_MROUT1] = 0; events_block(CTL); fm1_in.notes = 0; events_block(CTL); mo_take();
+    bad += check("  .. while its OUT goes off: its note-off still sent", ok && mo_count(0x80) == 1u);
+    song.g[G_MROUT1] = 1; events_block(CTL);
+    fm1_in.notes = 1u; song.g[G_MROUT1] = 0; events_block(CTL); fm1_in.notes = 0; events_block(CTL); mo_take();
+    bad += check("  a key struck with OUT off sends nothing, nor its note-off", !mo_notes());
+    song.g[G_MROUT1] = 1; events_block(CTL);
     mo_lvl = MO_CLOCK; song.g[G_CLOCK] = 0; events_block(CTL); mo_take();
     for (i = 0; i < 400u; i++) events_block(CTL);
     mo_take(); ok = mo_count(0xF8) > 4u;
@@ -535,11 +588,22 @@ static int route_store_test(void)
     bad += check("  .. every other global as stored, and it saves again byte for byte the same", ok);
     route_odd(); song.g[G_MRSEL] = 0; events_block(CTL);
     ok = store_load(&ssel);
-    bad += check("a project of before with ROUTE SEL loads with KEYBOARD PLAYS SELECTED on, the tracks at their defaults",
-                 ok && route_is_def() && song.g[G_MRSEL] == 1);
-    project_capture(&proj_scratch);
-    bad += check("  .. and saves again byte for byte the same (ROUTE kept as KEYBOARD PLAYS SELECTED)",
-                 proj_pack(&s1, &proj_scratch) && !memcmp(&ssel, &s1, sizeof s1));
+    for (i = 0; i < NTRK; i++)
+        ok &= !song.g[G_MRIN1 + i] && song.g[G_MROUT1 + i] == 1 && song.g[G_MRCH1 + i] == (int16_t)(i + 1u);
+    bad += check("a project of before with ROUTE SEL loads as before: no track's IN, KEYBOARD PLAYS SELECTED on",
+                 ok && song.g[G_MRSEL] == 1 && midi_in_mask(0) == 1u << song.sel && midi_in_mask(9) == 1u << song.sel);
+    project_capture(&proj_scratch); ok = proj_pack(&s1, &proj_scratch);
+    for (d = 0; d < PROJ_STORE_SIZE && s1.raw[d] == ssel.raw[d]; d++)
+        ;
+    ok &= d < PROJC_PFX_OFF && s1.raw[d] == 'M' && s1.raw[d + 1u] == 'R' && s1.raw[d + 2u + NTRK] == 1u &&
+          !memcmp(s1.raw + d + 9u, ssel.raw + d, PROJC_PFX_OFF - d - 9u) &&
+          !memcmp(s1.raw + PROJC_PFX_OFF, ssel.raw + PROJC_PFX_OFF, PROJ_STORE_SIZE - 4u - PROJC_PFX_OFF);
+    bad += check("  .. and gains an 'M' 'R' block on save (the rest as it was)", ok);
+    trk_midi_defaults(); song.g[G_MRSEL] = 1; events_block(CTL);
+    project_capture(&proj_scratch); ok = proj_pack(&s1, &proj_scratch);
+    song.g[G_MRSEL] = 0; events_block(CTL);
+    ok &= store_load(&s1) && route_is_def() && song.g[G_MRSEL] == 1;
+    bad += check("a 0.5 project of default tracks with KEYBOARD PLAYS SELECTED reloads as saved (its 'M' 'R' written)", ok);
 
     trk_midi_defaults(); route_odd(); events_block(CTL);
     project_capture(&proj_scratch); ok = proj_pack(&s2, &proj_scratch);

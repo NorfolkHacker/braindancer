@@ -626,13 +626,13 @@ static int proj_import(project_t *q, const void *b, int n)
         proj_sl_migrate(q);
         q->sum = proj_sum(q);
     }
-    if (!proj_mr_found) {                               /* (ACID FM 0.5) a project of before: the routing at its
-                                                         * defaults (every format's import), ROUTE SEL as KEYBOARD PLAYS
-                                                         * SELECTED */
-        uint32_t i;
+    if (!proj_mr_found) {                               /* (ACID FM 0.5) a project of before (every format's import)
+                                                         * plays as before: ROUTE CH1-6 the defaults; SEL (every channel
+                                                         * the selected track) no track's IN, KEYBOARD PLAYS SELECTED */
+        uint32_t i, sel = q->g[G_ROUTE] != 0;
         for (i = G_MRIN1; i < G_MRSEL; i++)
-            q->g[i] = GP[i].def;
-        q->g[G_MRSEL] = (int16_t)(q->g[G_ROUTE] != 0);
+            q->g[i] = i <= G_MRIN6 && sel ? 0 : GP[i].def;
+        q->g[G_MRSEL] = (int16_t)sel;
         q->sum = proj_sum(q);
     }
     proj_fm4(q);
@@ -842,10 +842,11 @@ static uint32_t proj_bits(uint32_t m)
     return n;
 }
 /* (ACID FM 0.5) the MIDI routing (seq.c midi_in_mask): FUNC's 'M' 'R' block, the very last (after 'S' 'X'; firmware
- * before stops reading there), written only when a track's IN, OUT or CHANNEL is not the default (T1..T6 on 1..6, IN
- * and OUT on): a byte a track, IN | OUT << 1 | (CHANNEL - 1) << 4, then KEYBOARD PLAYS SELECTED. Without it (every
- * project before): the defaults, and G_ROUTE's SEL (the header's) as KEYBOARD PLAYS SELECTED; the header's G_ROUTE
- * is written as KEYBOARD PLAYS SELECTED, so firmware before plays such a project as SEL */
+ * before stops reading there), written unless the routing is the default (T1..T6 on 1..6, IN and OUT on, KEYBOARD
+ * PLAYS SELECTED off): a byte a track, IN | OUT << 1 | (CHANNEL - 1) << 4, then KEYBOARD PLAYS SELECTED. Without it
+ * (every project before): G_ROUTE (the header's) as it played, CH1-6 the defaults, SEL no track's IN and KEYBOARD
+ * PLAYS SELECTED (proj_import); the header's G_ROUTE is written as KEYBOARD PLAYS SELECTED, so firmware before plays
+ * such a project as SEL */
 #define PROJ_MR_N (NTRK + 1u)
 static uint32_t proj_mr_byte(const project_t *q, uint32_t t)
 {
@@ -858,7 +859,7 @@ static int proj_mr_used(const project_t *q)
     for (t = 0; t < NTRK; t++)
         if (proj_mr_byte(q, t) != (3u | t << 4))
             return 1;
-    return 0;
+    return q->g[G_MRSEL] != 0;
 }
 static uint32_t proj_packed_size(const project_t *q)
 {

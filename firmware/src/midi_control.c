@@ -175,15 +175,35 @@ static void midi_pedal_up(uint32_t ch)
 
 /* Preset/project panic and CC120 must discard ownership so a later pedal-up
  * or note-off cannot release notes subsequently started on another patch. */
+/* (ACID FM 0.5) a note on two tracks or more (MN_MULTI) is no longer the forgotten track's: it becomes the one other
+ * track's (its id, the pedal bit kept), or with more than one other it ends on them (released: the nibble can name one
+ * track or the channel's claims, never "the claims but one") */
 static void __attribute__((noinline)) midi_forget_track(uint32_t track)
 {
     uint32_t ch, note;
     for (ch = 0; ch < 16u; ch++) {
+        uint32_t rest, k;
         if (!(midi_ch[ch].targets & (1u << track)))
             continue;
-        for (note = 0; note < 128u; note++)
-            if ((mn_get(ch, note) & 0x7u) == track + 1u)
+        rest = midi_claims(ch) & ~(1u << track);
+        for (k = 0; k < NTRK; k++)
+            if (!midi_ch[ch].owned[k])
+                rest &= ~(1u << k);
+        for (note = 0; note < 128u; note++) {
+            uint32_t v = mn_get(ch, note);
+            if ((v & 0x7u) == track + 1u)
                 mn_set(ch, note, 0);
+            else if ((v & 0x7u) == MN_MULTI && ((midi_claims(ch) >> track) & 1u)) {
+                if (!rest)
+                    mn_set(ch, note, 0);
+                else if (!(rest & (rest - 1u))) {
+                    for (k = 0; !((rest >> k) & 1u); k++)
+                        ;
+                    mn_set(ch, note, (v & MIDI_PEDAL_NOTE) | (k + 1u));
+                } else
+                    midi_release_m(ch, note, rest);
+            }
+        }
         midi_ch[ch].targets &= (uint8_t)~(1u << track);
         midi_ch[ch].owned[track] = 0;
     }
@@ -414,7 +434,8 @@ static void __attribute__((noinline)) midi_reroute(void)
     for (i = 0; i < NTRK; i++)
         if (song.g[G_MRIN1 + i])
             midi_expression(&trk[i], midi_channel(trk_midi_ch(i)));
-        else
+        else if (!song.g[G_MRSEL] || i != song.sel % NTRK)   /* (the selected track through KEYBOARD PLAYS SELECTED:
+                                                         * its bend as its channels left it) */
             midi_bend_target[i] = 0;
 }
 

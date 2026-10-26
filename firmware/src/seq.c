@@ -41,6 +41,9 @@ static volatile uint32_t kb_tog;         /* (ACID FM 3b task 10) a bit a key, fl
 static volatile uint8_t kb_boot_hold;    /* #137: set from power-on to the end of the splash (main.c): the keys sound nothing,
                                           * and one held across its end stays silent until it is let go and pressed again */
 static uint8_t kb_note[27], kb_trk[27];  /* per key: the note it started and on which track */
+static uint8_t kb_mch[27];               /* (ACID FM 0.5) .. MIDI OUT: the channel its notes went out on, | 16 sent (its
+                                          * note-offs go there, whatever the track's CHANNEL or OUT since: key_on) */
+static uint8_t lt_mch[NTRK];             /* .. a track's latched notes' (LATCH: latch_release) */
 static int8_t kb_oct[27];                /* (0.8.5) .. on a DRUM track, the kit's octave it plays (OCT then: seq.c dxo_on) */
 static volatile uint8_t kb_asleep;       /* MENU > SCREEN OFF (ui.c): the screen dark or waking, a key pressed now only
                                           * wakes it (silent, no layer, its release nothing) */
@@ -124,11 +127,17 @@ static __attribute__((noinline)) void mo_flush_of(uint32_t mask)   /* the notes 
                 }
 }
 #define mo_flush() mo_flush_of(0xFFu)
-static void mo_key(const track_t *t, uint32_t pkt)   /* a key's note: not with OFF (nor the track's OUT off: ACID FM
-                                                     * 0.5); with ALL, an arp sends its own */
+/* a key's notes go out (on the track's CHANNEL | 16, else 0): not with OFF (nor the track's OUT off: ACID FM 0.5); with
+ * ALL, an arp sends its own. Taken at the key's note-on (kb_mch): its note-offs go where its notes went */
+static uint32_t mo_key_ch(const track_t *t)
 {
-    if (trk_midi_out(trk_index(t)) && !(mo_lvl == MO_ALL && t->p[P_AMODE]))
-        midi_out_event(pkt);
+    uint32_t i = trk_index(t);
+    return trk_midi_out(i) && !(mo_lvl == MO_ALL && t->p[P_AMODE]) ? 16u | trk_midi_ch(i) : 0u;
+}
+static void mo_key(uint32_t mch, uint32_t st, uint32_t note, uint32_t vel)   /* (mch: as mo_key_ch gave it) */
+{
+    if (mch & 16u)
+        midi_out_event((st >> 4) | (st | (mch & 15u)) << 8 | note << 16 | vel << 24);
 }
 static int mo_clock_on(void) { return (mo_lvl == MO_CLOCK || mo_lvl == MO_ALL) && !song.g[G_CLOCK]; }
 static __attribute__((noinline)) void mo_block(uint32_t n)   /* events_block: the setting changed; the clock */
@@ -1046,7 +1055,7 @@ static void latch_release(track_t *t)
     uint32_t i;
     for (i = 0; i < t->nheld; i++) {
         trk_note_off(t, t->held[i]);
-        mo_key(t, 0x08u | (0x80u | trk_midi_ch(trk_index(t))) << 8 | (uint32_t)t->held[i] << 16);
+        mo_key(lt_mch[trk_index(t) % NTRK], 0x80u, t->held[i], 0);
     }
     t->nheld = 0;
 }
@@ -1070,22 +1079,24 @@ static void latch_drop(track_t *t)
 /* (0.6.81) the next note of key k's chord in (a note another key holds already sounds: not started again) */
 static void key_next(uint32_t k, track_t *t)
 {
-    uint32_t x = kb_snd[k][kb_on[k]], mc = trk_midi_ch(trk_index(t));
+    uint32_t x = kb_snd[k][kb_on[k]];
     if (!midi_local_held(t, x)) {
         in_norec = kb_sn[k] > 1u;                   /* (0.6.84: the chord's notes recorded at once, key_on) */
         dxo_on(t, x, kb_oct[k], 100, DXO_KEY + k);  /* (0.8.5: a kit's octave; else input_on) */
         in_norec = 0;
-        mo_key(t, 0x09u | (0x90u | mc) << 8 | drum_oct_note(x, kb_oct[k]) << 16 | 100u << 24);
+        mo_key(kb_mch[k], 0x90u, drum_oct_note(x, kb_oct[k]), 100u);
     }
     kb_on[k]++;
 }
 static void key_on(uint32_t k, track_t *t)
 {
     uint32_t n = chord_build(t, kb_note[k], kb_snd[k]), gap = n > 1u ? chord_gap(t) : 0u, i;
+    kb_mch[k] = (uint8_t)mo_key_ch(t);              /* (ACID FM 0.5) where its notes go out, and their note-offs */
     if (key_latch(t)) {                             /* LATCH: a new chord lets the last one go */
         uint32_t j;
         if (!t->arp_phys)
             latch_release(t);
+        lt_mch[trk_index(t) % NTRK] = kb_mch[k];
         t->arp_phys++;
         for (j = 0; j < n; j++) {
             for (i = 0; i < t->nheld && t->held[i] != kb_snd[k][j]; i++)
@@ -1125,7 +1136,7 @@ static void keys_strum(uint32_t n)
 /* key k is up: the note it started ends, unless another key still holds it */
 static void key_off(uint32_t k, track_t *t)
 {
-    uint32_t n = kb_on[k], i, mc = trk_midi_ch(trk_index(t));
+    uint32_t n = kb_on[k], i;
     if (!n)
         return;
     if (kb_oct[k] > 0)
@@ -1144,7 +1155,7 @@ static void key_off(uint32_t k, track_t *t)
         if (midi_local_held(t, x))
             continue;
         input_off(t, x);
-        mo_key(t, 0x08u | (0x80u | mc) << 8 | drum_oct_note(x, kb_oct[k]) << 16);
+        mo_key(kb_mch[k], 0x80u, drum_oct_note(x, kb_oct[k]), 0);
     }
 }
 
