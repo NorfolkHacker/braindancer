@@ -56,6 +56,7 @@ static const uxs_name_t UXS_NAME[] = {
     {UXS_ALL, UXS_ALL, 0, P_QUANT, "SNAP"},             /* SCL's QUANT: the keys onto the scale (OFF SNAP WHITE SEQ) */
     {UXS_ALL, UXS_ALL, 0, ID_ALLTR, "ALL TRACKS"},      /* .. ALL TR: every sequence a number of scale steps up / down */
     {UXS_ALL, UXS_ALL, 1, G_STRN, "ALL TRACKS"},        /* .. (the same global, where a page names it as one) */
+    {UXS_ALL, UXS_ALL, 0, P_SDIV, "DIVISION"},          /* (3c-1 task 3) SEQ > PATTERN's DIV: a step's length */
     {UXS_ALL, UXS_ALL, 0, P_POFS, "SEQ PITCH"},         /* .. SEQ > TRACK's PITCH: the sequence's notes, semitones */
     {UXS_ALL, UXS_ALL, 0, P_TRANS, "TRANSPOSE"},        /* .. TRANS: every note the track plays, semitones */
     /* (3b task 7) LFO's: MOD MATRIX's SRC1 DEST1 AMT1 .. are SOURCE DEST AMOUNT, the STEPS' LEVELs STEP 1 .. 16 (uxs_label) */
@@ -864,10 +865,9 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         k[c].bar = 0;
         k[c].off = 0;
     }
-    if (pg->fam == FAM_SEQ && pg->graph != GR_MORE) {   /* (3c-1 task 2) SEQ's: ux_seq.c (STEPS: STEP NOTE ACC/SLD GATE, the grid's) */
-        uxq_knobs(pg, k);
+    if (pg->fam == FAM_SEQ && pg->graph != GR_MORE && uxq_knobs(pg, k))   /* (3c-1 task 2) SEQ's: ux_seq.c (STEPS: STEP NOTE
+                                                         * ACC/SLD GATE, the grid's; task 3: STEP EXTRAS'; PATTERN its settings', below) */
         return;
-    }
     if (pg->graph == GR_MORE) {
         uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, n;
         uint64_t m;

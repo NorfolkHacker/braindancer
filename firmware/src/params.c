@@ -818,7 +818,8 @@ static const page_t PAGES[] = {
     {"PHRASES", FAM_SEQ, SC_GLOBAL, GR_PATS, {0xFF, 0xFF, 0xFF, 0xFF}},    /* pattern loader (ui.c pat_load); 0.6.37: hidden */
     {"MIXER", FAM_TRK, SC_TRK, GR_TRK, {0, 1, 2, 3}},   /* GLO button; LEVEL PAN REV, (0.9.1) the DJ FILTER (was MUTE) */
     {"SONG", FAM_SEQ, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},
-    {"CHANCE", FAM_SEQ, SC_STEP, GR_CHANCE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* a step's CHANCE RATCH; 0.6.37: hidden */
+    {"STEP EXTRAS", FAM_SEQ, SC_STEP, GR_CHANCE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (ACID FM 3c-1 task 3: was CHANCE, hidden since
+                                                         * 0.6.37) the picked step's RATCHET CHANCE CONDITION MICRO (ux_seq.c) */
     {"AUTOMATION", FAM_SEQ, SC_TRACK, GR_MOTION, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"AUTO LIST", FAM_SEQ, SC_TRACK, GR_EVENTS, {0xFF, 0xFF, 0xFF, 0xFF}},   /* 1.1.5: the locks and events, edited */
     {"MUTATE", FAM_SEQ, SC_TRACK, GR_MUTATE, {P_MSND, P_MPAT, P_MAMT, P_MMODE}},   /* (0.6.43) project.c mutate_poll */

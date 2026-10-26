@@ -209,8 +209,10 @@ static void uxc_dump(void)
 /* (fix round 1, M2) MORE pages too: KNOB 1's "n/m" (every count of rows one can pick, each engine) and KNOB 2's value (each
  * row's whole range through uxm_row_text, "GO" for an action), as ux_section.c's knob row draws them */
 static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",   /* (page title, then the label's start) */
-                                       "MORE DIST TYPE", "MORE DLY TYPE", "MORE SLICE MODE"};   /* (fix round 1, M2: MORE's
+                                       "MORE DIST TYPE", "MORE DLY TYPE", "MORE SLICE MODE",   /* (fix round 1, M2: MORE's
                                                          * KNOB 2, JIANT's words kept: RECTIFY, ANALOG, DIGITAL, STUTTER) */
+                                       "EXTRAS CONDITION"};   /* (ACID FM 3c-1 task 3: the conditions in plain words, 3c-1 spec
+                                                         * 2.2: EVERY 2ND, 1ST OF 4 .., none fits UF_VAL's 48 px) */
 static uint32_t uxc_wn, uxc_wbad, uxc_whdr, uxc_wmore;
 static void uxc_wfit(const char *where, const char *v)
 {
@@ -360,12 +362,16 @@ static int uxc_widths(void)
         track_t keep = *TSEL;
         ux_knob_t k[4];
         uint32_t len, st, nt, f, g, l, h;
+        const page_t *stp = &PAGES[0];
+        for (i = 0; i < NPAGES; i++)                    /* (task 3: uxq_knobs by the page given: STEPS') */
+            if (PAGES[i].fam == FAM_SEQ && str_eq(PAGES[i].title, "STEP"))
+                stp = &PAGES[i];
         set_engine_of(TSEL, ENGI_ANALOG); TSEL->engine = TSEL->eng_req;
         for (len = 1; len <= NSTEP; len++) {
             TSEL->p[P_SLEN] = (int16_t)len;
             for (st = 0; st < len; st++) {
                 ui.cursor = (uint8_t)st;
-                uxq_knobs(&PAGES[0], k);
+                uxq_knobs(stp, k);
                 uxc_wfit("STEPS STEP", k[0].value);
             }
         }
@@ -380,17 +386,17 @@ static int uxc_widths(void)
                         ux_knob_t kk[4];
                         uint32_t c;
                         for (c = 0; c < 4u; c++) { kk[c].label = ""; kk[c].value[0] = 0; kk[c].bar = 0; kk[c].off = 0; }
-                        uxq_knobs(&PAGES[0], kk);
+                        uxq_knobs(stp, kk);
                         uxc_wfit(l == 0u ? "STEPS NOTE" : l == 1u ? "STEPS ACC/SLD" : "STEPS GATE", kk[l == 0u ? 1u : l == 1u ? 2u : 3u].value);
                     }
                 }
         for (g = 0; g < 16u; g++) {                     /* GATE: a NOTE g + 1 steps long; a TIE; a REST */
             for (i = 1; i < 16u; i++) TSEL->step[i].time = i <= g ? ST_TIE : ST_REST;
-            uxq_knobs(&PAGES[0], k);
+            uxq_knobs(stp, k);
             uxc_wfit("STEPS GATE", k[3].value);
         }
-        TSEL->step[0].time = ST_TIE; uxq_knobs(&PAGES[0], k); uxc_wfit("STEPS GATE", k[3].value);
-        TSEL->step[0].time = ST_REST; uxq_knobs(&PAGES[0], k); uxc_wfit("STEPS GATE", k[3].value); uxc_wfit("STEPS NOTE", k[1].value);
+        TSEL->step[0].time = ST_TIE; uxq_knobs(stp, k); uxc_wfit("STEPS GATE", k[3].value);
+        TSEL->step[0].time = ST_REST; uxq_knobs(stp, k); uxc_wfit("STEPS GATE", k[3].value); uxc_wfit("STEPS NOTE", k[1].value);
         set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req;
         for (i = 0; i < NSTEP; i++) step_clear(&TSEL->step[i]);
         for (l = 0; l < NLANE; l++)
@@ -398,13 +404,57 @@ static int uxc_widths(void)
                 ui.lane = (uint8_t)l;
                 grid_hit_set(TSEL, 0, l, h);
                 grid_acc(TSEL, 0, l, (int)(h & 1u));
-                uxq_knobs(&PAGES[0], k);
+                uxq_knobs(stp, k);
                 uxc_wfit("STEPS LANE", k[1].value);
                 uxc_wfit("STEPS HIT", k[2].value);
                 uxc_wfit("STEPS ACC", k[3].value);
             }
         *TSEL = keep;
         ui.lane = 0; ui.cursor = 0;
+    }
+    {   /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS: RATCHET (X1 .. X4), CHANCE (0 .. 100%), CONDITION (each), MICRO (-32 .. +31, GRID,
+         * --); PATTERN: LENGTH, DIVISION, SWING, GATE over their ranges (ux_seq.c uxq_knobs, ux_section.c uxs_knobs) */
+        track_t keep = *TSEL;
+        ux_knob_t k[4];
+        const page_t *ex = 0, *pa = 0;
+        int32_t v;
+        for (i = 0; i < NPAGES; i++) {
+            if (str_eq(PAGES[i].title, "STEP EXTRAS")) ex = &PAGES[i];
+            if (PAGES[i].fam == FAM_SEQ && str_eq(PAGES[i].title, "PATTERN")) pa = &PAGES[i];
+        }
+        set_engine_of(TSEL, ENGI_ANALOG); TSEL->engine = TSEL->eng_req;
+        ui.cursor = 0;
+        step_clear(&TSEL->step[0]);
+        TSEL->step[0].time = ST_NOTE; TSEL->step[0].n = 1; TSEL->step[0].note[0] = 48;
+        for (v = 0; ex && v <= 100; v++) {
+            step_set_ratchet(&TSEL->step[0], 1u + (uint32_t)v % 4u);
+            step_set_chance(&TSEL->step[0], (uint32_t)v);
+            ST_EVERY_SET(&TSEL->step[0], (uint32_t)v % EV_N);
+            ST_MICRO_SET(&TSEL->step[0], MICRO_MIN + v % (MICRO_MAX - MICRO_MIN + 1));
+            uxs_knobs(ex, k);
+            uxc_wfit("EXTRAS RATCHET", k[0].value);
+            uxc_wfit("EXTRAS CHANCE", k[1].value);
+            uxc_wfit("EXTRAS CONDITION", k[2].value);
+            uxc_wfit("EXTRAS MICRO", k[3].value);
+        }
+        ST_MICRO_SET(&TSEL->step[0], MICRO_MAX);
+        uxs_knobs(ex, k); uxc_wfit("EXTRAS MICRO", k[3].value);
+        TSEL->step[0].time = ST_REST;
+        uxs_knobs(ex, k); uxc_wfit("EXTRAS MICRO", k[3].value);
+        for (v = 0; pa && v <= 127; v++) {
+            TSEL->p[P_SLEN] = (int16_t)clamp(v, 1, NSTEP);
+            TSEL->p[P_SDIV] = (int16_t)(v % 10);
+            TSEL->p[P_SSWING] = (int16_t)clamp(v, 0, 100);
+            TSEL->p[P_SGATE] = (int16_t)clamp(v, 1, 127);
+            uxs_knobs(pa, k);
+            for (i = 0; i < 4u; i++) uxc_wfit("PATTERN", k[i].value);
+        }
+        if (!ex || !pa) {
+            printf("  STEP EXTRAS / PATTERN: no page\n");
+            uxc_wbad++;
+        }
+        *TSEL = keep;
+        ui.cursor = 0;
     }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);

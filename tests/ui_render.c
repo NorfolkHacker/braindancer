@@ -615,7 +615,7 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
 
 enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HOME_DEMO, S_HOME_T5, S_HOME_TURN,
        S_HOME_REC, S_HOME_BATT0, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER,
-       S_PHRASES, S_PROJECT, S_TOOLS, S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG,
+       S_PHRASES, S_PROJECT, S_TOOLS, S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_COMP, S_COMP_TRIG,
        S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM,
        S_MIXER, S_MIXER_PAN, S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT,
        S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM, S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_SAMPLE, S_EDIT_GRAIN,
@@ -656,10 +656,11 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_VOICE_WORDS_1, S_EDIT_VOICE_MORE_END, S_EDIT_PHASE_MORE_K3, S_EDIT_ANALOG_TURN, S_EDIT_FM6_1, S_EDIT_FM6_2,
        S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_FM6_ALG4, S_EDIT_FM6_TURN, S_EDIT_DRUM_1, S_EDIT_DRUM_2, S_EDIT_DRUM_3,
        S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL,
-       S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS, S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM, S_COUNT };
+       S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS, S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM,
+       S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
-    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
+    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo",
     "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum", "drum_hand", "drum_cym",
     "mixer", "mixer_pan", "env_1", "env_2", "lfo_1", "lfo_3", "fx_1_eco", "fx_more_eco", "fx_3_quiet", "fx_more_end", "fx_2_free", "scl_1", "shift",
     "arp_off", "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env",
@@ -702,7 +703,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_voice_more_end", "edit_phase_more_k3", "edit_analog_turn", "edit_fm6_1", "edit_fm6_2", "edit_fm6_3",
     "edit_fm6_more", "edit_fm6_alg4", "edit_fm6_turn", "edit_drum_1", "edit_drum_2", "edit_drum_3", "edit_drum_more",
     "edit_drum_muted", "edit_drum_more_end", "layer_edit", "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state",
-    "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64", "seq_steps_drum"};
+    "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64", "seq_steps_drum",
+    "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1134,7 +1136,6 @@ static void setup(int s)
         trk[0].p[P_MSND] = 2; trk[0].p[P_MPAT] = 4; trk[1].p[P_MSND] = 3; trk[1].p[P_MMODE] = 1; trk[3].p[P_MPAT] = 1;
         seq_line(); bar_n = 5; go_page(GR_MUTATE);
         break;
-    case S_CHANCE: go_page(GR_CHANCE); step_set_chance(&TSEL->step[0], 65); break;
     case S_COMP:                                        /* (0.6.39) an ARP NOTES step: UP-DN x6 over two octaves */
     case S_COMP_TRIG:                                   /* .. a TRIG 3:4 */
     case S_COMP_ECHO:                                   /* (0.6.42) .. an ECHO x4, a JUMP, a PULSE */
@@ -1967,6 +1968,46 @@ static void setup(int s)
         song.playing = 1; trk[3].seq_idx = 22;
         nav_scene(SEC_SEQ, "STEPS");
         cursor_set(20); ui.lane = 1;
+        break;
+    /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS: the acid line with chances, ratchets (x2 .. x4), conditions and micro timing (step 5
+     * picked: 1ST OF 4, late; KNOB 3 just turned); a DRUM track's; PATTERN: 16 steps straight, 32 swung with a short gate */
+    case S_SEQ_EXTRAS:
+    case S_SEQ_PATTERN:
+    case S_SEQ_PATTERN_32: {
+        static const uint8_t LINE[16] = {36, 0, 48, 43, 43, 0, 46, 48, 41, 0, 53, 48, 36, 0, 39, 43};
+        static const uint8_t CHN[16] = {100, 0, 70, 100, 100, 0, 40, 100, 85, 0, 25, 100, 100, 0, 55, 100};
+        track_t *t = TSEL;
+        uint32_t i, n = s == S_SEQ_PATTERN_32 ? 32u : 16u;
+        eng(ENGI_ANALOG); t->engine = t->eng_req;
+        track_defaults_steps(t);
+        t->p[P_SLEN] = (int16_t)n;
+        for (i = 0; i < n; i++) {
+            uint8_t nt = LINE[i % 16u];
+            if (!nt)
+                step_put(&t->step[i], ST_REST, 0, 0, &nt);
+            else
+                step_put(&t->step[i], ST_NOTE, i % 16u == 4u || i % 16u == 11u ? SF_ACCENT : i % 16u == 7u ? SF_SLIDE : 0u, 1, &nt);
+            if (s == S_SEQ_EXTRAS) step_set_chance(&t->step[i], CHN[i]);
+        }
+        if (s == S_SEQ_EXTRAS) {
+            step_set_ratchet(&t->step[3], 2); step_set_ratchet(&t->step[8], 3); step_set_ratchet(&t->step[12], 4);
+            ST_EVERY_SET(&t->step[4], EV_1_4); ST_EVERY_SET(&t->step[10], EV_2_2);
+            ST_MICRO_SET(&t->step[4], 12); ST_MICRO_SET(&t->step[14], -20);
+        }
+        if (s == S_SEQ_PATTERN_32) { t->p[P_SSWING] = 60; t->p[P_SGATE] = 40; }
+        else { t->p[P_SSWING] = 0; t->p[P_SGATE] = 100; }
+        song.playing = 1; t->seq_idx = s == S_SEQ_PATTERN_32 ? 21u : 8u;
+        nav_scene(SEC_SEQ, s == S_SEQ_EXTRAS ? "STEP EXTRAS" : "PATTERN");
+        cursor_set(4);
+        if (s == S_SEQ_EXTRAS) ux_knob_touch(2);
+        break;
+    }
+    case S_SEQ_EXTRAS_DRUM:
+        drum(0);
+        step_set_chance(&trk[3].step[2], 50); step_set_ratchet(&trk[3].step[6], 3);
+        ST_EVERY_SET(&trk[3].step[4], EV_NOT1); ST_MICRO_SET(&trk[3].step[4], -8);
+        nav_scene(SEC_SEQ, "STEP EXTRAS");
+        cursor_set(4);
         break;
     case S_COMP_SEL_DRUM:
         drum(0);

@@ -423,33 +423,35 @@ static int screens(void)
     uint32_t x, y;
     ui_power_on();
     t = TSEL;
-    go_page(GR_CHANCE);
+    go_page(GR_CHANCE);                              /* (ACID FM 3c-1 task 3: SEQ > STEP EXTRAS, the row CHANCE was: RATCHET
+                                                         * its KNOB 1, the ux knob row's) */
     ui.cursor = 0;
-    turn(EN_K3, 2);
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    turn(EN_K1, 2);
     ok = step_ratchet(&t->step[0]) == 3u && step_ratchet(&t->step[1]) == 1u;
-    turn(EN_K3, 100);
+    turn(EN_K1, 100);
     ok &= step_ratchet(&t->step[0]) == 4u;
-    turn(EN_K3, -100);
-    bad += check("SEQ > CHANCE KNOB 3: RATCH of the cursor step, x1..x4", ok && step_ratchet(&t->step[0]) == 1u &&
+    turn(EN_K1, -100);
+    bad += check("SEQ > STEP EXTRAS KNOB 1: RATCHET of the picked step, x1..x4", ok && step_ratchet(&t->step[0]) == 1u &&
                  step_chance(&t->step[0]) == 100u);
-    {                                                /* RATCH dimmed where it does nothing: REST, TIE, empty */
-        uint32_t dim[4], thm[4], k;
+    {                                                /* RATCHET dimmed where it does nothing: REST, TIE, empty */
+        uint32_t off[4], k;
+        ux_knob_t kn[4];
         static const step_t kind[4] = {
             {{60}, 1, ST_NOTE, 0, 100}, {{0}, 0, ST_REST, 0, 0}, {{0}, 0, ST_TIE, 0, 0}, {{0}, 0, ST_NOTE, 0, 0}};
         for (k = 0; k < 4u; k++) {
             t->step[0] = kind[k];
             step_set_ratchet(&t->step[0], 2);
-            memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-            dim[k] = card_px(2, T_DIM); thm[k] = card_px(2, T_K(2));   /* (ACID FM 0.3, the one skin: a lens card's value
-                                                         * in its knob's colour; 0.8.5 COLORS: TEXT) */
+            uxs_knobs(cur_page(), kn);
+            off[k] = kn[0].off;
         }
         t->step[0] = kind[3]; t->step[0].hit = 1u;   /* a NOTE step of lane hits only: it plays */
         step_set_ratchet(&t->step[0], 2);
-        memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-        ok = card_px(2, T_DIM) == dim[0] && card_px(2, T_K(2)) == thm[0];
+        uxs_knobs(cur_page(), kn);
+        ok = !kn[0].off && !off[0] && str_eq(kn[0].value, "X2");
         for (k = 1; k < 4u; k++)
-            ok &= dim[k] > dim[0] && thm[k] < thm[0];
-        bad += check("  RATCH shows dimmed on a REST, a TIE or an empty step (a note or a hit: not)", ok);
+            ok &= off[k] != 0u;
+        bad += check("  RATCHET shows dimmed on a REST, a TIE or an empty step (a note or a hit: not)", ok);
         t->step[0] = (step_t){{0}, 0, ST_REST, 0, 0};
     }
     ui_power_on();                                   /* the piano roll: x2 in two bars, the middle column empty */

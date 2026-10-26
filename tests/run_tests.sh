@@ -44,7 +44,7 @@
 #                   COMMIT + UNDO, recording at the ghost, MANO's keys, RIELES' PISTAS, the GLO chain.
 # RATCH (tests/ratchet_test.c): a step's ratchet (x1..x4): its parts in the sequencer (equal, gated, chords and drum
 #                   hits whole, one chance roll, swing, no slide or tie out, STOP), FUN8 round trip and older projects x1,
-#                   user preset patterns, SEQ > CHANCE KNOB 3 and the roll / grid drawing.
+#                   user preset patterns, SEQ > STEP EXTRAS KNOB 1 and the roll / grid drawing.
 # MOD (tests/mod_test.c): the modulation matrix: slots that do nothing are bit-identical, every source on each
 #                   kind of destination, clamping, MIDI CC1 / CC11 / aftertouch routing, the cost of 4 active
 #                   slots (at most +5 %), demos in build/mod_demo/.
@@ -229,7 +229,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/stems_test" tests/stems_test.c -lm
     run "STEMS (0.9.8): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
-    run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, CHANCE page" "$OUT/ratchet_test"
+    run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, STEP EXTRAS page" "$OUT/ratchet_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/live_test" tests/live_test.c -lm
     run "LIVE (0.9.11, GLO > LIVE MANO / RIELES): RATE on the beat, CORTE / LOOP / RATCH / THIN / REV / PING on the 1/16, the ghost, RETURN, BYPASS, COMMIT + UNDO, REC at the ghost, PISTAS ALL..T6, MANO's keys only there, the chain" "$OUT/live_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumx_oct_test" tests/drumx_oct_test.c -lm

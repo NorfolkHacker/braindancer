@@ -249,7 +249,6 @@ static uint32_t page_icon(const page_t *pg)
     case GR_TRK: return ICON_X_MIXER;         /* MIXER (GLO): vertical faders */
     case GR_PATS: return ICON_X_PATTERN;      /* SEQ > PHRASES: the pattern loader */
     case GR_SONG: return ICON_X_SONG;         /* SONG: the disc */
-    case GR_CHANCE: return ICON_PROB;         /* CHANCE: the die */
     case GR_COMP: return ICON_ARP;            /* (0.6.39) COMP: the step components */
     case GR_MUTATE: return ICON_PROB;         /* (0.6.43) MUTATE */
     case GR_FUGUE: return ICON_X_PATTERN;     /* (0.6.52) FUGUE */

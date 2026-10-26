@@ -35,7 +35,7 @@ for f in sorted((out / "ppm").glob("*.ppm")):
     if pal in ("ACID",) and (name.startswith("layer_") or name.startswith("perform_")):   # the quick layers
         (out.parent / "ui_layers").mkdir(parents=True, exist_ok=True)
         img.save(out.parent / "ui_layers" / f"{pal}_{name}.png")
-    if name.startswith("roll_") or name in ("step", "chance", "drum"):   # the STEP page's piano roll (and the grid)
+    if name.startswith("roll_") or name in ("step", "drum"):   # the STEP page's piano roll (and the grid)
         (out.parent / "ui_roll").mkdir(parents=True, exist_ok=True)
         img.save(out.parent / "ui_roll" / f"{pal}_{name}.png")
     if pal in ("ACID",) and (name.startswith("name_") or name in ("project_named", "song_named", "user_foot")):

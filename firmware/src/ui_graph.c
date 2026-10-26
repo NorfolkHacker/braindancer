@@ -785,7 +785,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !(ui_prefs & PREF_ANIM_OFF) && strip_kind() == SK_NONE && !roll_view(cur_page()) && !lens_on() &&
            g != GR_ROLL && g != GR_SHAPE && g != GR_COMP && g != GR_FUGUE && g < GR_LIVE &&   /* (0.8.3: LENTE's step, the heads;
                                                          * 0.9.11: LIVE's rails, the enum's last) */
-           g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
+           g != GR_STEPS && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
            g != GR_SONG && g != GR_TOOLS && g != GR_PATS;
 }
 static void graph_drift(void)
@@ -919,7 +919,6 @@ static uint32_t graph_signature(void)
                       (uint16_t)motion.event[idx[i]].value)) * 16777619u;
         h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
     }
-    if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
     if (pg->graph == GR_LIVE)                        /* (0.9.11) GLO > LIVE: the playheads, the ghosts, the keys */
         h = live_sig(h);
     if (pg->graph == GR_FUGUE) {                     /* (0.6.52) the heads, their settings, where they are */
@@ -973,8 +972,8 @@ static uint32_t graph_signature(void)
                                                          * playing: its number lit in the bars */
         h = (h ^ (ui.pr_focus + 1u) * 40503u) * 16777619u;
     }
-    if (pg->graph == GR_STEPS || pg->graph == GR_ROLL || pg->graph == GR_CHANCE || pg->graph == GR_SHAPE || seq_roll_view(pg)) {
-        uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu, rl = roll_view(pg) || seq_roll_view(pg) || pg->graph == GR_CHANCE;
+    if (pg->graph == GR_STEPS || pg->graph == GR_ROLL || pg->graph == GR_SHAPE || seq_roll_view(pg)) {
+        uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu, rl = roll_view(pg) || seq_roll_view(pg);
         if (rl && ph / 16u != ui.bank)
             ph = 0xFFFFu;                            /* the roll shows the cursor's bank only */
         h ^= steps_hash(t) + ph * 31u + ui.cursor * 7919u + ui.lane * 104723u + ui.bank * 613u + (uint32_t)song.g[G_SWING] * 3u;
@@ -1552,7 +1551,6 @@ static void draw_graph(void)
             break;
 #endif
         case GR_ROLL:
-        case GR_CHANCE:
         case GR_SHAPE:                               /* (0.6.85) STRETCH: the whole sequence, as the roll shows it */
             cv_oy = 0;
             if (drum_track(t))

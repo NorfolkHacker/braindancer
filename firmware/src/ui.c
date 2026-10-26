@@ -505,7 +505,7 @@ static uint32_t large_kind(void)
         return LK_TALL;
     g = cur_page()->graph;
     return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
-           g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS || g == GR_LIVE ? LK_LABEL : LK_TALL;
+           g == GR_COMP || g == GR_EVENTS || g == GR_LIVE ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
@@ -578,8 +578,8 @@ static int page_jiant(uint32_t i)
     }
     if (PAGES[i].graph == GR_LYRIC)                     /* (0.8.5) WORDS: VOICE's */
         return trk_engp(TSEL) == &ENG_FORMANT;
-    if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
-        return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
+    if (PAGES[i].graph == GR_PATS)                      /* (0.6.37) PHRASES: out of the SEQ pages' cycle (only where code put */
+        return !ui.home && ui.page == i;               /* the screen; ACID FM 3c-1 task 3: CHANCE's row is STEP EXTRAS, shown) */
     if (PAGES[i].graph == GR_DXIMG)                     /* (0.6.48: IMAGE) */
         return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
@@ -640,7 +640,7 @@ static int name_on(void);                               /* (ui_name.c: NAME keep
 static uint32_t lens_level(void)                        /* SEQ: the level the page is drawn as */
 {
     uint32_t g = PAGES[ui.page].graph;
-    return g == GR_PATS || g == GR_SONG ? LV_PAT : g == GR_CHANCE ? LV_STEP : nav_lv();
+    return g == GR_PATS || g == GR_SONG ? LV_PAT : nav_lv();
 }
 static int home_lz(void) { return (ui.home && !ui.menu && !dlg_on()) || gen_on(); }   /* (GEN: HOME's) */
 static uint32_t lz_on(void) { return ((lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on()) || ui.menu == 1u || (ui.layer && !ui.menu); }
