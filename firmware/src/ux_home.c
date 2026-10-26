@@ -316,6 +316,7 @@ static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])
             k[c].bar = (uint8_t)((uint32_t)clamp(trk[f + c].p[P_LEVEL], 0, 127) * 255u / 127u);
         }
         k[c].label = lbl[c];
+        k[c].off = 0;
     }
 }
 

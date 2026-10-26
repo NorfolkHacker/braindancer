@@ -275,7 +275,10 @@ static struct {
     uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
     uint8_t menu_sel;            /* MENU: the setting turned last (menu_items.c MI_*; its page MPAGE), kept while it runs */
     uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
-    uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held) */
+    uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held); GLO, SEQ
+                                  * TOOLS, REC, SAVE (JIANT's overlay) */
+    uint16_t uxlv;               /* (3b task 9 fix) the ACID layers' (EDIT MACRO FX SCL, ux_layer.c) own: a bit a layer
+                                  * (1 << LAYER_*), STATE; clear MAP */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */
     uint32_t menu_sig, home_t0;  /* HOME press time (btn_hold) */
     uint8_t force;               /* full redraw pending */
@@ -649,6 +652,9 @@ static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
 /* the tab lit: the section's group shown, the menu's tab, a layer's view */
 static uint32_t menu_tab(void);
 static uint32_t menu_page(void);                        /* (0.9.18) the MENU's page (ui_menu.c) */
+static int ux_layer_owns(uint32_t l);                  /* (ux_layer.c) */
+/* the layer held's view: 0 MAP, 1 KNOBS, 2 STATE (the ACID layers: MAP or STATE, their own, uxlv) */
+static uint32_t layer_lv(void) { return ux_layer_owns(ui.layer) ? ((ui.uxlv >> ui.layer) & 1u) * 2u : ui.lylv % 3u; }
 static uint32_t lz_level(void)
 {
     uint8_t cnt[8], gi[8];
@@ -656,7 +662,7 @@ static uint32_t lz_level(void)
     if (f == LZ_MENU)
         return menu_tab();
     if (f == LZ_LAYER)
-        return ui.lylv % 3u;
+        return layer_lv();
     (void)nav_groups(cnt, gi, &g, &p, &i, &m);
     return g;
 }

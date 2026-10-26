@@ -32,8 +32,8 @@ static const char *const UXL_KEYP[16] = {"REPEAT 1/8", "REPEAT 1/16", "REPEAT 1/
 /* the status line's words when nothing else is said: the layer, what its keys and OCT do */
 enum { UXL_S_FX, UXL_S_LATCH, UXL_S_LOCK, UXL_S_EDIT, UXL_S_EDRM, UXL_S_SCL, UXL_S_MAC, UXL_S_MLAT, UXL_S_N };
 static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK KEYS MUTE", "FX LATCH: KEYS ON / OFF \xB7 OCT- ALL OFF",
-                                             "FX LOCKED: PRESS FX TO UNLOCK", "EDIT: F3 INIT \xB7 G3 RECALL \xB7 NO OCTAVE",
-                                             "EDIT: F3 INIT \xB7 G3 RECALL \xB7 BLACK KEYS MUTE",
+                                             "FX LOCKED: PRESS FX TO UNLOCK", "EDIT: F3 INIT \xB7 G3 RECALL \xB7 SELECT DICE",
+                                             "EDIT: SELECT DICE \xB7 BLACK KEYS MUTE",
                                              "SCL: A KEY SETS THE ROOT \xB7 NO OCTAVE", "LFO: F3 DICE \xB7 G3 CLEAR \xB7 SELECT DICE",
                                              "MACROS LATCHED: PRESS LFO TO CLOSE"};
 static const char *const UXL_GXSAY[4] = {"GLITCH HELD: ITS FOUR KNOBS", "TAPE STOP HELD: KNOB 1 SCRATCHES",
@@ -43,6 +43,8 @@ enum { UXL_W_FX, UXL_W_LATCH, UXL_W_LOCK, UXL_W_EDIT, UXL_W_SCL, UXL_W_MAC, UXL_
 static const char *const UXL_WHERE[7] = {"FX \xB7 HOLD", "FX \xB7 LATCH", "FX \xB7 LOCKED", "EDIT \xB7 HELD", "SCL \xB7 HELD",
                                          "LFO \xB7 MACROS", "LFO \xB7 LATCHED"};
 static const char *const UXL_ALGO[2] = {"1 / 2 \xB7 ALGORITHM: STATE", "2 / 2 \xB7 ALGORITHM: MAP"};
+/* (3b task 9 fix) layer l's view: 1 STATE, 0 MAP (its own: ui.uxlv; GLO SEQ TOOLS REC SAVE keep ui.lylv) */
+static uint32_t uxl_state(uint32_t l) { return (ui.uxlv >> l) & 1u; }
 static uint32_t uxl_panels;                             /* the panels drawn (tests/ui_test.c: one a change, none idle) */
 
 /* KNOB 1..4 of layer l as the knob row shows them */
@@ -53,6 +55,7 @@ static void uxl_knobs(uint32_t l, ux_knob_t k[4])
         k[c].label = "";
         k[c].value[0] = 0;
         k[c].bar = 0;
+        k[c].off = 0;
     }
     if (l == LAYER_FX && perf_gfocus() != PF_N) {       /* a glitcher's key down: its four */
         uint32_t x = perf_gx(perf_gfocus());
@@ -74,6 +77,7 @@ static void uxl_knobs(uint32_t l, ux_knob_t k[4])
             uint32_t m = perf_m[c];
             k[c].label = UXL_PM[c];
             k[c].bar = (uint8_t)(m * 255u / PM_MAX[c]);
+            k[c].off = (uint8_t)(c == 1u ? !(pm_trn() % 8u) : !m);   /* (3b task 9 fix: OFF dim, as JIANT's cards) */
             if (!c)
                 str_cpy(k[c].value, UXL_LOOP[(m + 2u) / 3u % 5u], sizeof k[c].value);
             else if (c == 1u)
@@ -289,14 +293,14 @@ static void ux_layer_draw(void)
         str_cpy(ly_card[c].l, k[c].label, sizeof ly_card[c].l);
         str_cpy(ly_card[c].v, k[c].value, sizeof ly_card[c].v);
     }
-    sig = layer_sig(l) * 31u + ux_glow_eff(1) * 977u + (ui.lylv ? 7u : 0u);
+    sig = layer_sig(l) * 31u + ux_glow_eff(1) * 977u + (uxl_state(l) ? 7u : 0u);
     for (c = 0; c < 4u; c++)
         sig = str_hash(sig * 31u + k[c].bar, k[c].value);
     if (all || sig != panel_sig) {
         panel_sig = sig;
         uxl_panels++;
         ux_panel_begin(1);
-        if (ui.lylv) {                                  /* STATE (ALGORITHM: MAP <-> STATE) */
+        if (uxl_state(l)) {                                  /* STATE (ALGORITHM: MAP <-> STATE) */
             lst_ux = 1;
             layer_state(l);
             lst_ux = 0;
@@ -305,10 +309,10 @@ static void ux_layer_draw(void)
         ux_panel_end();
     }
     w = uxl_where(l);
-    sig = str_hash(str_hash(3u, w), UXL_ALGO[ui.lylv ? 1 : 0]);
+    sig = str_hash(str_hash(3u, w), UXL_ALGO[uxl_state(l)]);
     if (all || sig != foot_sig) {
         foot_sig = sig;
-        ux_footer(w, UXL_ALGO[ui.lylv ? 1 : 0]);
+        ux_footer(w, UXL_ALGO[uxl_state(l)]);
     }
     st = uxl_status(l, k, &sc);
     ux_status(st, sc);

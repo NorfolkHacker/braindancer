@@ -675,6 +675,8 @@ static void lock_turn(uint32_t k, int32_t s, uint64_t held)
         ui_message("STOP TO EDIT");
         return;
     }
+    ui.plk_rm &= ~held;                                 /* (held for a lock: its hit stays; 3b task 9 fix: also a MORE pick, a
+                                                         * refusal, an empty card's turn) */
     if (id == 0xFFu) {                                  /* (an empty card: nothing to lock) */
         const page_t *lp = ui.plk_src && ui.plk_src <= NPAGES ? &PAGES[ui.plk_src - 1u] : 0;
         uint32_t v = lp ? page_id(lp, k & 3u) : 0xFFu;
@@ -694,7 +696,6 @@ static void lock_turn(uint32_t k, int32_t s, uint64_t held)
             ui_message("KIT SOUND: NO STEP LOCK");
         return;
     }
-    ui.plk_rm &= ~held;                                 /* (held for a lock: its hit stays) */
     d = track_desc(t, id);
     s = accel(EN_K1 + k, s, d->fmt == F_ENUM ? 0 : d->max - d->min);
     for (i = 0; i < NSTEP; i++) {
@@ -2163,9 +2164,11 @@ static void ui_input_frame(void)
              * OCT- put back the layer's track only) */
             int32_t a = panel_enc(EN_ALGO);
             if (a && ui.layer) {
-                int ux = ux_layer_owns(ui.layer);       /* (3b task 9: the ACID layers' MAP, STATE, their knob row always shown;
-                                                         * GLO's STATE, 2, is their STATE) */
-                ui.lylv = (uint8_t)clamp((int32_t)(ux && ui.lylv ? 1u : ui.lylv) + a, 0, ux ? 1 : 2);
+                if (ux_layer_owns(ui.layer))            /* (3b task 9: the ACID layers' MAP, STATE, their knob row always shown;
+                                                         * fix: each its own, uxlv, not GLO's lens) */
+                    ui.uxlv = (uint16_t)(a > 0 ? ui.uxlv | 1u << ui.layer : ui.uxlv & ~(1u << ui.layer));
+                else
+                    ui.lylv = (uint8_t)clamp((int32_t)ui.lylv + a, 0, 2);
                 ui.force = 1;
                 combo = 1;
             }
@@ -2522,6 +2525,7 @@ static void ui_input_frame(void)
         }
         if (mac_latch && !ui.menu && !ui.confirm) {     /* (JIANT 0.4) the MACRO layer latched: M1..M4 */
             macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);
+            ux_knob_touch(k);                           /* (3b task 9 fix: as held, its column lit, its readout) */
             continue;
         }
         if (ui.entry_open && !ui.home && cur_page()->graph == GR_ROLL && !grid_on() && lock_held() &&

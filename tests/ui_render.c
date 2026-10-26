@@ -1265,7 +1265,7 @@ static void setup(int s)
         break;
     }
     case S_LY_FX_KNOBS: case S_LY_FX_STATE:            /* (0.8.5) a layer's lens: FX's KNOBS, STATE */
-        go_home(); ui.layer = LAYER_FX; ui.lylv = s == S_LY_FX_KNOBS ? 1 : 2;
+        go_home(); ui.layer = LAYER_FX; ui.uxlv = 1u << LAYER_FX;   /* (3b task 9: the ACID FX has MAP and STATE, its own) */
         perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
         perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[0] = 1u << 23;   /* (0.9.14: the macros) */
         break;
@@ -1504,11 +1504,11 @@ static void setup(int s)
         perf_held = perf_act = perf_down = PF_BIT(PF_TAPE); pf.mode = BM_TAPE; pf.state = 1; perf_gp[GX_TAPE][2] = -100;
         break;
     case S_FX_SHUF:
-        song.playing = 1; ui.layer = LAYER_FX; ui.lylv = 1;
+        song.playing = 1; ui.layer = LAYER_FX; ui.uxlv = 1u << LAYER_FX;
         perf_held = perf_act = perf_down = PF_BIT(PF_SHUF) | PF_BIT(PF_R8); perf_gp[GX_SHUF][0] = 100; perf_gp[GX_SHUF][2] = 100;
         break;
     case S_FX_FRZ:
-        song.playing = 1; ui.layer = LAYER_FX; ui.lylv = 1;
+        song.playing = 1; ui.layer = LAYER_FX; ui.uxlv = 1u << LAYER_FX;
         perf_held = perf_act = perf_down = PF_BIT(PF_FRZ); perf_gp[GX_FRZ][1] = 12; perf_gp[GX_FRZ][3] = 0;
         break;
     case S_REVERB:                                      /* (3b task 8) SPACE: SHIMMER at LOAD LITE (plays as ROOM: said), REV TYPE
@@ -1896,7 +1896,7 @@ static void setup(int s)
      * turned: its readout), FX held (REPEAT 1/16, GLITCH, CRUSH, T2's mute; the macros up), SCL (D# MINOR), FX's STATE (EDIT on a
      * DRUM-X track: layer_edit_drum, S_EDIT_DRUM); a step held on STEP with EDIT's MORE the locks' page (MORPH locked on it) */
     case S_LAYER_EDIT: case S_LAYER_MACRO: case S_LAYER_FX: case S_LAYER_SCL: case S_LAYER_FX_STATE:
-        go_title("ENV"); ui.lylv = 0; ux_hot_k = -1;
+        go_title("ENV"); ui.lylv = 0; ui.uxlv = 0; ux_hot_k = -1;
         ui.layer = (uint8_t)(s == S_LAYER_EDIT ? LAYER_EDIT : s == S_LAYER_MACRO ? LAYER_MACRO :
                              s == S_LAYER_SCL ? LAYER_SCL : LAYER_FX);
         if (s == S_LAYER_MACRO) {
@@ -1908,7 +1908,7 @@ static void setup(int s)
         if (s == S_LAYER_FX || s == S_LAYER_FX_STATE) {
             perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
             perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30;
-            ui.lylv = (uint8_t)(s == S_LAYER_FX_STATE);
+            ui.uxlv = (uint16_t)(s == S_LAYER_FX_STATE ? 1u << LAYER_FX : 0u);
         }
         if (s == S_LAYER_SCL) { TSEL->p[P_ROOT] = 3; TSEL->p[P_SCALE] = 2; }
         break;

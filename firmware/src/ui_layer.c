@@ -1010,7 +1010,7 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             return !ui.home && (cur_page()->graph == GR_USER || cur_page()->graph == GR_SLOTS) ? LS_OFF : LS_DIM;
         return p == SK_MODE && live.mode ? LS_SEL : p == SK_REC ? (live.srec == 2u ? LS_HELD : live.srec ? LS_WAIT : LS_OFF) : LS_OFF;
     }
-    if (l == LAYER_MACRO && !blk && p < 2u) {            /* F3 DICE, G3 CLEAR */
+    if (l == LAYER_MACRO && !blk && p < 2u && layer_open()) {   /* F3 DICE, G3 CLEAR (held; latched the keys play: 3b task 9 fix) */
         str_cpy(nm, p ? "CLEAR" : "DICE", 12);
         return busy;
     }

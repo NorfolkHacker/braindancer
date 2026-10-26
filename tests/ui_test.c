@@ -17097,15 +17097,16 @@ static int test_t9_knobs(void)
         ok &= perf_m[0] != 0 && uxl_panels == n0 + 1u && str_eq(uxl_status(LAYER_FX, k, &col), "STEP LOOP \xB7 1/2") && col == UX_TEXT;
         if (!ok) printf("  FX status \"%s\", %u panels\n", uxl_status(LAYER_FX, k, &col), (unsigned)(uxl_panels - n0));
         turn(EN_ALGO, 1); frame();
-        ok &= ui.lylv == 1u && uxl_panels == n0 + 2u;
+        ok &= uxl_state(LAYER_FX) == 1u && uxl_panels == n0 + 2u;
         turn(EN_ALGO, 3); frame();
-        ok &= ui.lylv == 1u;                             /* (no further: two views) */
+        ok &= uxl_state(LAYER_FX) == 1u;                 /* (no further: two views) */
         n0 = uxl_panels;
         turn(EN_ALGO, -1); frame();
-        ok &= ui.lylv == 0u && uxl_panels == n0 + 1u;
-        ui.lylv = 2;                                     /* (GLO's STATE left over: STATE here, one detent back MAP) */
+        ok &= uxl_state(LAYER_FX) == 0u && uxl_panels == n0 + 1u;
+        ui.lylv = 2;                                     /* (GLO's STATE left over: not FX's, 3b task 9 fix; still MAP) */
         turn(EN_ALGO, -1); frame();
-        ok &= ui.lylv == 0u;
+        ok &= uxl_state(LAYER_FX) == 0u && ui.lylv == 2u;
+        ui.lylv = 0;
     }
     uxt9_close(2);
     pm_off();
@@ -17283,6 +17284,105 @@ static int test_t9_lock(void)
     return bad;
 }
 
+/* (3b task 9 fix) DRUM-X's grid, DRUM MORE shown last, a hit on step 5 held: mode 0 KNOB 1 picks a row, 1 KNOB 2 on a
+ * kit byte (refused), 2 KNOB 3 (the hint), 3 nothing turned (a tap: the hit goes). 1: the hit there after the key is let go */
+static int uxt9f_hit(int mode)
+{
+    track_t *t;
+    uint32_t kn;
+    ui_power_on(); frame();
+    song.sel = 3; t = &trk[3];
+    track_defaults_steps(t); t->p[P_SLEN] = 16;
+    motion_clear(t);
+    press(B_EDIT); frame();
+    turn(EN_SELECT, 3); frame();
+    uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_DRM, P_E7);
+    nav_put(SEC_SEQ, "STEP"); frame();
+    grid_hit(t, 4, ui.lane, 1);
+    if (!((step_lanes(&t->step[4]) >> ui.lane) & 1u))
+        return -1;
+    kn = key_at(0, 4);
+    fm1_in.notes |= 1u << kn; host_notes |= 1u << kn; frame();
+    if (mode == 0) { turn(EN_K1, 1); frame(); }
+    if (mode == 1) { turn(EN_K1, 1); frame(); turn(EN_K2, 1); frame(); }
+    if (mode == 2) { turn(EN_K3, 1); frame(); }
+    fm1_in.notes &= ~(1u << kn); host_notes &= ~(1u << kn); frame(); frame();
+    return (int)((step_lanes(&t->step[4]) >> ui.lane) & 1u);
+}
+static int test_t9_fix(void)
+{
+    int bad = 0, ok, h[4], m;
+    ux_knob_t k[4];
+    uint16_t col;
+    char nm[16];
+    uint32_t c;
+    /* 1. a MORE pick, a refusal or KNOB 3 with a hit held on the grid: the hit stays (a tap alone still takes it) */
+    for (m = 0; m < 4; m++)
+        h[m] = uxt9f_hit(m);
+    ok = h[0] == 1 && h[1] == 1 && h[2] == 1 && h[3] == 0;
+    if (!ok) printf("  hit after: pick %d, refused %d, KNOB 3 %d, tap %d\n", h[0], h[1], h[2], h[3]);
+    bad += check("3b task 9 fix: DRUM grid, MORE: a hit held for a KNOB 1 pick, a refused KNOB 2, KNOB 3 stays when let go", ok);
+    /* 3. MACRO latched: a turn lights its column and says MACRO 1 . its value */
+    ui_power_on(); frame();
+    go_title("ENV"); frame();
+    btn_down(B_LFO); frames(800); btn_up(B_LFO); frames(400);
+    ok = mac_latch && !layer_open();
+    turn(EN_K1, 4); frame();
+    uxl_knobs(LAYER_MACRO, k);
+    ok &= ux_knob_hot() == 0 && !strncmp(uxl_status(LAYER_MACRO, k, &col), "MACRO 1 \xB7 ", 10) && col == UX_TEXT;
+    if (!ok) printf("  latched: hot %d \"%s\"\n", (int)ux_knob_hot(), uxl_status(LAYER_MACRO, k, &col));
+    /* 5. .. its keys do nothing while latched: F3 and G3 not named on its MAP (held: DICE, CLEAR) */
+    ok &= ly_keyname(LAYER_MACRO, 0, 0, nm) == LS_OFF && !nm[0];
+    (void)ly_keyname(LAYER_MACRO, 0, 1, nm);
+    ok &= !nm[0];
+    press(B_LFO); frames(100);
+    btn_down(B_LFO); frames(800);
+    (void)ly_keyname(LAYER_MACRO, 0, 0, nm);
+    ok &= layer_open() == LAYER_MACRO && str_eq(nm, "DICE");
+    btn_up(B_LFO); frames(400);
+    if (mac_latch) { press(B_LFO); frames(100); }
+    bad += check("  MACRO latched: a turn lights the column, MACRO 1 . value on the status line; F3 / G3 unnamed (held: DICE)", ok);
+    /* 4. a view chosen in one layer: not what another opens (FX STATE: GLO still MAP; GLO KNOBS: FX still STATE, EDIT MAP) */
+    ui_power_on(); frame();
+    go_title("ENV"); frame();
+    btn_down(B_FX); frames(800);
+    turn(EN_ALGO, 1); frame();
+    ok = uxl_state(LAYER_FX) == 1u;
+    btn_up(B_FX); frames(400);
+    if (fx_lock) { press(B_FX); frames(100); }
+    btn_down(B_GLO); frames(800);
+    ok &= ui.layer == LAYER_GLO && ui.lylv == 0u;
+    turn(EN_ALGO, 1); frame();
+    ok &= ui.lylv == 1u;
+    btn_up(B_GLO); frames(400);
+    btn_down(B_FX); frames(800);
+    ok &= ui.layer == LAYER_FX && uxl_state(LAYER_FX) == 1u && ui.lylv == 1u;
+    btn_up(B_FX); frames(400);
+    if (fx_lock) { press(B_FX); frames(100); }
+    btn_down(B_EDIT); frames(800);
+    ok &= ui.layer == LAYER_EDIT && uxl_state(LAYER_EDIT) == 0u;
+    btn_up(B_EDIT); frames(400);
+    if (!ok) printf("  views: FX %u EDIT %u GLO %u\n", (unsigned)uxl_state(LAYER_FX), (unsigned)uxl_state(LAYER_EDIT), ui.lylv);
+    bad += check("  a layer's view (ALGORITHM) its own: FX's STATE not GLO's, GLO's KNOBS not FX's, EDIT still MAP", ok);
+    /* 5. EDIT's status line says SELECT dices (a synth and DRUM) */
+    ok = strstr(UXL_SAY[UXL_S_EDIT], "SELECT DICE") && strstr(UXL_SAY[UXL_S_EDRM], "SELECT DICE");
+    bad += check("  EDIT's status line: SELECT DICE (synth, DRUM)", ok);
+    /* 6. FX's macros at OFF: dim; one in use: not */
+    ui_power_on(); frame();
+    for (c = 0; c < 4u; c++) perf_m[c] = 0;
+    uxl_knobs(LAYER_FX, k);
+    ok = k[0].off && k[1].off && k[2].off && k[3].off && str_eq(k[2].value, "OFF");
+    perf_m[2] = 40;
+    uxl_knobs(LAYER_FX, k);
+    ok &= k[0].off && !k[2].off;
+    perf_m[2] = 0;
+    uxl_knobs(LAYER_MACRO, k);
+    ok &= !k[0].off;
+    bad += check("  FX's macros at OFF dim on the knob row (in use: not)", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -17447,6 +17547,7 @@ int main(void)
     bad += test_t9_knobs();
     bad += test_t9_names();
     bad += test_t9_lock();
+    bad += test_t9_fix();                               /* (3b task 9 fix) */
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

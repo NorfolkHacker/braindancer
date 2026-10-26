@@ -77,7 +77,8 @@ static void ux_knobs(const ux_knob_t k[4], int32_t hot)
         {
             int32_t dy;
             const aafont_t *vf = ux_val_face(k[i].value, &dy);
-            cv_text_on(x + 2, 14 + dy, vf, k[i].value, on ? UX_TEXT : ux_mix(UX_BG, UX_TEXT, 78), bg);
+            cv_text_on(x + 2, 14 + dy, vf, k[i].value, on ? UX_TEXT : k[i].off ? ux_mix(UX_BG, UX_MID, 55) :   /* (off: not in */
+                       ux_mix(UX_BG, UX_TEXT, 78), bg);                                            /* use, dim) */
         }
         fw = (int32_t)k[i].bar * (UX_COL_W - 4) / 255;
         cv_rect(x + 2, 32, UX_COL_W - 4, 3, UX_LINE);

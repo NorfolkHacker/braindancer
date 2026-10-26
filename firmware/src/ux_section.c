@@ -860,6 +860,7 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         k[c].label = "";
         k[c].value[0] = 0;
         k[c].bar = 0;
+        k[c].off = 0;
     }
     if (pg->graph == GR_MORE) {
         uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, n;

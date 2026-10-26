@@ -902,7 +902,7 @@ static uint32_t tabs_now(const char **nm, const char **tab, uint8_t *cnt, uint32
             tab[k] = 0;
             cnt[k] = 0;
         }
-        *lv = ui.lylv % 3u;
+        *lv = layer_lv();
         *at = 0;
         return 3;
     }
@@ -979,7 +979,7 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
         static const char *const LLV[3] = {"MAP", "KNOBS", "STATE"};
         str_cpy(b, LN[ui.layer % LAYER_N], n);
         str_cpy(b + str_len(b), " \xB7 ", 4);
-        str_cpy(b + str_len(b), LLV[ui.lylv % 3u], 8);
+        str_cpy(b + str_len(b), LLV[layer_lv()], 8);
         return;
     }
     {
@@ -1009,7 +1009,7 @@ static int32_t crumb_count(char *b)
         k = menu_page();                                /* (0.9.18: the page among the eight (ACID FM 0.3; nine), was the row) */
         n = MP_COUNT;
     } else if (lz_fam() == LZ_LAYER) {
-        k = ui.lylv % 3u;
+        k = layer_lv();
         n = 3;
     } else if (gen_on() && lz_fam() == LZ_HOME) {      /* (ACID FM 3a) GEN: "GEN 2/3" */
         str_cpy(b, "GEN ", 5);
