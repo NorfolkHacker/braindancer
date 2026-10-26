@@ -211,9 +211,13 @@ def hot_sections(ir):
 # changed) and the owner's FM-1 went from fine to 94 % load and crackling on every output; the host counts were the
 # same. Now a change in the UI cannot move the sound's code or tables
 def audio_sections(ir, reach):
-    """reach's definitions and constants in the optimised IR given sections .text.a.<name> / .rodata.a.<name> (those
-    with a section of their own, the RAM code and .noinit, keep it); (the IR, functions, constants)"""
-    nf = nc = 0
+    """reach's definitions, constants and variables in the optimised IR given sections .text.a.<name> / .rodata.a.<name>
+    / .data.a.<name> / .bss.a.<name> (those with a section of their own - the RAM code, .noinit, .pool - keep it); (the
+    IR, functions, constants, variables)"""
+    nf = nc = nv = 0
+
+    def reached(name):                                  # (the optimiser splits a struct into name.0, name.1 ..: the parts too)
+        return name in reach or (re.fullmatch(r"(.+)\.\d+", name) is not None and name.rsplit(".", 1)[0] in reach)
 
     def fn(m):
         nonlocal nf
@@ -224,13 +228,27 @@ def audio_sections(ir, reach):
 
     def const(m):
         nonlocal nc
-        if m.group(2) not in reach or m.group(2).startswith(".") or ' section "' in m.group(0):
+        if not reached(m.group(2)) or m.group(2).startswith(".") or ' section "' in m.group(0):
             return m.group(0)                           # (a string literal stays merged with the others)
         nc += 1
         return f'{m.group(1)}, section ".rodata.a.{m.group(2)}"{m.group(3)}'
+    # (ACID FM 3b) the variables they reach too, .data.a.<name> / .bss.a.<name> (app.ld: first, in name order). A global
+    # with a section of its own is not merged by the code generator's GlobalMerge (this clang, 4.0), so how the sound's
+    # code addresses its variables no longer depends on which UI statics share a merged block with them: before, a new
+    # UI static moved the ISR's and the SLICER's static cost by up to 37 instructions (tests/target_budget.py) with no
+    # change to the sound; now the sound's code is the same whatever the UI adds
+    def var(m):
+        nonlocal nv
+        if not reached(m.group(2)) or ' section "' in m.group(0):
+            return m.group(0)
+        nv += 1
+        k = "bss" if re.search(r" (zeroinitializer|0|null|0\.0+e\+00)$", m.group(1)) else "data"
+        return f'{m.group(1)}, section ".{k}.a.{m.group(2)}"{m.group(3)}'
     ir = re.sub(r'^(define [^\n]*?@"?([\w.]+)"?\([^\n]*?)\s*\{$', fn, ir, flags=re.M)
     ir = re.sub(r'^(@"?([\w.]+)"? = [^\n]*? constant [^\n]*?)(, align \d+)$', const, ir, flags=re.M)
-    return ir, nf, nc
+    ir = re.sub(r'^(@"?([\w.]+)"? = (?:internal )?(?:local_unnamed_addr |unnamed_addr )?global [^\n]*?)(, align \d+)$', var, ir,
+                flags=re.M)
+    return ir, nf, nc, nv
 
 
 def build_app():
@@ -277,8 +295,8 @@ def build_app():
             ir, n = hot_sections((OUT / "felucca_opt.ll").read_text())
             if n != len(HOT_FNS):
                 raise SystemExit(f"hot RAM code: {n} of the {len(HOT_FNS)} functions found in the IR ({HOT_FNS})")
-            ir, nf, nc = audio_sections(ir, size_fns.isr_reach((OUT / "felucca_size.ll").read_text(), True))
-            print(f"layout: {nf} functions and {nc} constant tables an interrupt reaches first in the image")
+            ir, nf, nc, nv = audio_sections(ir, size_fns.isr_reach((OUT / "felucca_size.ll").read_text(), True))
+            print(f"layout: {nf} functions and {nc} constant tables an interrupt reaches first in the image, {nv} variables first in RAM")
             (OUT / "felucca_hot.ll").write_text(ir)
             tc("cc", *cf, "-Xclang", "-disable-llvm-optzns", "-c", OUT / "felucca_hot.ll", "-o", OUT / "felucca.o")
         else:

@@ -46,9 +46,11 @@ SECTIONS
         _hot_end = .;
     } > RAMTEXT AT > XIP
     _hot_load = LOADADDR(.hot_text);
-    .data : { . = ALIGN(4); _data_start = .; *(.data*) *(.sdata*) . = ALIGN(4); _data_end = .; } > RAM AT > XIP
+    .data : { . = ALIGN(4); _data_start = .; *(SORT_BY_NAME(.data.a.*)) *(.data*) *(.sdata*) . = ALIGN(4); _data_end = .; } > RAM AT > XIP
     _data_load = LOADADDR(.data);
-    .bss (NOLOAD) : { _bss_start = .; *(.bss*) *(.sbss*) *(COMMON) . = ALIGN(4); _bss_end = .; } > RAM
+    /* (ACID FM 3b) .data.a.* / .bss.a.*: the variables an interrupt reaches, first, in name order (tools/build.py
+     * audio_sections): the UI's cannot move them nor change how the sound's code addresses them */
+    .bss (NOLOAD) : { _bss_start = .; *(SORT_BY_NAME(.bss.a.*)) *(.bss*) *(.sbss*) *(COMMON) . = ALIGN(4); _bss_end = .; } > RAM
     .pool (NOLOAD) : { _pool_start = .; *(.pool*) . = ALIGN(4); _pool_end = .; } > POOL
     /* (JIANT 0.6.71) the second core's stacks (hal/fm1_multicore.h): 6 KiB for the render, 1 KiB for an exception */
     .c1_stacks (NOLOAD) : { . = ALIGN(32); _c1_stack_lo = .; . += 7168; _c1_stack_hi = .; } > POOL

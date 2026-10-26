@@ -39,6 +39,15 @@ OPTIONAL = {"digital_render": 12, "digital_render_legacy": 333, "digital_render_
             "uac_rs_run": 558}          # (absent from a FELUCCA_UAC_48K=0 or FELUCCA_UAC=0 build; 0.8.9: four taps a pass, so
                                         # the static count is up, ~185 instructions an output frame run against ~230)
 TOL = 0.10                      # exact (no noise): small edits pass, a grown render loop does not
+# (ACID FM 3b, rebaselined) the budgets were last set at 0.6.45 (fm1_alnk0_irq 270) and 0.6.16 (TIMER5 33439). The ISR
+# grew by code: JIANT's USB merges #164 / #172 (270 -> 280) and the on-device profiler's timing of each block (0.9.14:
+# prf_block, the timer reads round mix_block; 280 -> 297, exactly the +10 % limit). The rest moved with the layout:
+# GlobalMerge (clang 4.0) merged the sound's variables with the UI's statics, so a new UI static changed how 138 audio
+# functions address them (slicer_bus 788 .. 825 with no change to the sound). tools/build.py now gives every variable an
+# interrupt reaches a section of its own (.data.a / .bss.a: not merged, first in RAM), the sound's code no longer
+# changes with the UI (two UI probes: the 444 audio functions identical but for addresses), and the budgets are that
+# build's: fm1_alnk0_irq 300 (+3 for the variables' own addresses), TIMER5 2170 (its static count follows where the
+# compiler puts a long backward branch: 766 .. 2170 for the same code)
 DIV_W = 8                       # a divide weighs 1 + 8 instructions
 NEST = 4                        # an instruction in a loop inside a loop weighs 4, two deep 16, ...
 MAXD = 4
