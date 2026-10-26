@@ -166,7 +166,9 @@ REVERT ALL, K1–K4 levels, PLAY RESTART: drawn by `ux_layer.c`. Every key keeps
 - Website pages still naming JIANT in visible text (installer `index_pkg.html`, `404.html`, the manual's `data.js`
   and `index.html`, `editor.html`, `fm1backup.js` / `fm1diag.js` / `fm1ota.js` messages): ACID FM in headings and
   messages, "built on JIANT FM and Felucca" where provenance matters. Code comments and LICENSING.md are unchanged.
-- The 0.5 news entry (ES + EN) in plain words, no band names.
+- The 0.5 news entry in English, plain words, no band names.
+- The manual is English only and does not present ACID FM through JIANT: Spanish strings, the language switch and
+  `MANUAL.es.md` go; JIANT appears only in one credits line (user, 2026-10-26).
 
 ## 6. Other 3c-1 items
 

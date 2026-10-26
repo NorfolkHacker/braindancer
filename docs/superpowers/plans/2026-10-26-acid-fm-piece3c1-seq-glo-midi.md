@@ -312,10 +312,36 @@ Spec §5 and §6.
 
 ---
 
+### Task 10b: The manual in English only, without the inherited naming
+
+User (2026-10-26): "manual is english only and shouldnt mention jiant the way it does".
+
+**Files:** `web/manual/data.js`, `web/manual/manual.js`, `web/manual/index.html`, `web/manual/sw.js`, `docs/MANUAL.md`,
+`docs/MANUAL.es.md` (deleted), `docs/cheatsheet/*` (sources and generator), `tools/gen_manual*.py` / `tools/gen_nav_map*`
+(whatever generates or checks the manual), their tests (`tests/` manual checks, `web/test_web.mjs`).
+
+- The web manual shows English only: no language switch, no Spanish strings shipped; `data.js` entries become plain
+  English (drop the `[es, en]` pairs) and `manual.js`'s `L()` / emulator hints follow; `docs/MANUAL.es.md` is deleted
+  and nothing links to it; the cheat sheets are English only.
+- The manual presents ACID FM: no "JIANT" / "JIANT's" in its text, page titles, news or captions; features are
+  described as ACID FM's (no "inherited from", "as in JIANT", version histories of JIANT). The single place that names
+  the origin is a short credits line "Built on JIANT FM (Juan Jiant) and Felucca (Hügelton Instruments)" plus the
+  licence; LICENSING.md and copyright lines are unchanged.
+- Old news entries that describe JIANT releases are removed from the manual's news; ACID FM's own entries (0.1–0.4)
+  stay, reworded where they lean on JIANT.
+
+- [ ] Step 1 — failing tests: a manual check (extend the existing `gen_manual --check` / `web/test_web.mjs` or add a
+  grep test) that fails while any Spanish string, the language switch, `MANUAL.es.md`, or "JIANT" outside the credits
+  line remains in the manual, the cheat sheets or their generated files. RED.
+- [ ] Step 2 — implement; regenerate what the checks pin; GREEN; suite; commit
+  `docs(manual): English only; ACID FM's own manual, credits line for its origins`.
+
+---
+
 ### Task 11: Version 0.5, docs, device
 
 **Files:** `firmware/src/felucca.c` (`v0.5`), README Status, `web/landing/index.html`, `web/manual/data.js` (0.5 news
-entry ES + EN; SEQ / GLO / MIDI manual entries corrected briefly — full rewrite is 3d), regenerate what tests pin
+entry in English; SEQ / GLO / MIDI manual entries corrected briefly — full rewrite is 3d), regenerate what tests pin
 (manual shots, nav maps, cheat sheets where the generator runs), `docs/acid-fm/device-log.md`,
 `docs/superpowers/plans/2026-10-26-acid-fm-piece3c1-deferred.txt` (everything flagged for later in the task reports).
 
