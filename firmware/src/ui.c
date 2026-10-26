@@ -540,6 +540,7 @@ static uint32_t layer_btn(void);
 /* FM operator pages belong to DIGITAL; they never appear on other instruments (without FELUCCA_FM4: never). LANES /
  * LANES 2 a DRUM track's (its lane levels); SOUND / SOUND 2 a DRUM track's (DRUM-X: ui_dx.c) */
 #include "ux_section.h"                                  /* (ACID FM 3b) the sections drawn by ux_section.c */
+#include "ux_layer.h"                                    /* (ACID FM 3b task 9) the held layers drawn by ux_layer.c */
 static uint32_t sec_of_fam(uint32_t f);                 /* (ui_lens.c) */
 /* JIANT's rules: the pages a track shows by its engine, LOAD, .. (ux_more.c: the rows a MORE lists follow them); page_visible
  * below: what the sections show now */
@@ -712,6 +713,8 @@ static void chain_play_ui(void)
 static int lock_page_ok(uint32_t i)
 {
     uint32_t k;
+    if (i < NPAGES && PAGES[i].graph == GR_MORE)        /* (3b task 9, the user: every MORE row) its rows: KNOB 2 locks the */
+        return PAGES[i].more != 0;                      /* one picked when the lock store holds it (ux_more.c uxm_lock_why) */
     if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD)
         return 0;
     for (k = 0; k < 4u; k++)
@@ -719,11 +722,17 @@ static int lock_page_ok(uint32_t i)
             return 1;
     return 0;
 }
+static const page_t *lock_src(void) { return ui.plk_src && lock_page_ok(ui.plk_src - 1u) ? &PAGES[ui.plk_src - 1u] : 0; }
 static uint32_t lock_id(uint32_t k)
 {
-    uint32_t id = ui.plk_src && lock_page_ok(ui.plk_src - 1u) ? page_id(&PAGES[ui.plk_src - 1u], k & 3u)   /* (3b task 5: */
-                                                               : trk_engp(TSEL)->knob[k & 3u];   /* what the knob turns:
-                                                         * DRUM-X's SOUND its drum's LEVEL, LOFI's TONE KNOB 1 its MORPH) */
+    const page_t *lp = lock_src();
+    uint32_t id;
+    if (lp && lp->graph == GR_MORE) {                   /* (3b task 9) MORE: KNOB 2 the row picked (KNOB 1 picks it) */
+        const ux_row_t *r = (k & 3u) == 1u ? uxm_lock_row(lp) : 0;
+        return r && !uxm_lock_why(r) ? r->id : 0xFFu;
+    }
+    id = lp ? page_id(lp, k & 3u) : trk_engp(TSEL)->knob[k & 3u];   /* (3b task 5: what the knob turns: DRUM-X's SOUND its
+                                                         * drum's LEVEL, LOFI's TONE KNOB 1 its MORPH) */
     return id < P_COUNT && motion_param(id) ? id : 0xFFu;
 }
 /* (0.9.12) the pages a step held walks with SELECT (ui_input.c lock_select): the track's EDIT chain (ui_lens.c, as SELECT

@@ -12,8 +12,8 @@
  *              row shows while a track plays DRUM; C4 unmutes them too);
  *              GLO + PLAY: from the top without stopping
  *   SCL  SET   any key: its note name is ROOT; KNOB 1..4 ROOT SCALE ROTATE PITCH (LY_SCL: P_ROOT P_SCALE, the SCL page's
- *              first two, then P_SOFS P_POFS, SCL > CHORD's ROTATE and SCL > MORE's SEQ PITCH; its labels JIANT's until
- *              3b task 9); the LEDs show the root lit and the scale's notes breathing
+ *              first two, then P_SOFS P_POFS, SCL > CHORD's ROTATE and SCL > MORE's SEQ PITCH; 3b task 9: named as SCL
+ *              names them, ux_layer.c); the LEDs show the root lit and the scale's notes breathing
  *   EDIT SET   (JIANT: Felucca's engine keys are gone, PRESETS picks engines and sounds) F3 INIT: the track's sound
  *              to its engine's first preset, a DRUM track's DRUM-X kit to the factory one; G3 RECALL: the track's
  *              sound (and a DRUM track's kit) as the section playing stored it, the safe state (project.c
@@ -75,8 +75,6 @@ static const page_t *ly_page(uint32_t l) { return l == LAYER_SCL ? &LY_SCL : l =
 #define LY_COMBO 4u                    /* .. by a combo */
 #define LY_DEAD 8u                     /* .. pressed where there is no layer: does nothing */
 enum { LY_INIT, LY_RECALL };          /* EDIT: the white keys F3 G3 */
-static const khint_t FX_LATCH_FOOT[3] = {{KC_KEYS, "ON / OFF"}, {KC_K14, "MACROS"}, {KC_OCTDN, "ALL OFF"}};
-static const khint_t MAC_LATCH_FOOT[3] = {{KC_K14, "M1-M4"}, {KC_SELECT, "DICE"}, {KC_LFO, "DONE"}};   /* (MACRO latched) */
 
 static struct {
     uint8_t l, oct;                    /* the layer open; OCT- / OCT+ pressed in a SET layer (bits) */
@@ -676,8 +674,6 @@ static param_desc_t gx_desc(uint32_t x, uint32_t k)    /* (as a page's parameter
     param_desc_t d = {GX_K[x][k].lab, GX_K[x][k].fmt, GX_K[x][k].min, GX_K[x][k].max, 0, GX_NAMES[GX_K[x][k].nm], 0};
     return d;
 }
-static const uint8_t GX_IC[4][4] = {{ICON_PROB, ICON_PITCH, ICON_LENGTH, ICON_SHAPE}, {ICON_SWEEP, ICON_TIME, ICON_SHAPE, ICON_NONE},
-                                    {ICON_PROB, ICON_SLICE, ICON_RATE, ICON_SHAPE}, {ICON_GRAIN, ICON_PITCH, ICON_NOISE, ICON_SIZE}};
 static void gx_knob(uint32_t x, uint32_t k, int32_t s)
 {
     int32_t lo = GX_K[x][k].min, hi = GX_K[x][k].max;
@@ -691,6 +687,8 @@ static void layer_knob(uint32_t k, int32_t s)
 {
     uint32_t l = layer_open();
     lys.used = 1;
+    if (ux_layer_owns(l))
+        ux_knob_touch(k);                               /* (3b task 9: its column lit, its readout on the status line) */
     if (l == LAYER_FX) {                                /* (0.9.14) the performance macros (perform.c perf_m), not recorded; */
         uint32_t g = perf_gfocus();                     /* (0.9.17) a glitcher's key down: its own */
         if (g == PF_N)
@@ -842,7 +840,8 @@ static uint32_t layer_leds(uint32_t *br)
  * does there (none: an empty key): a key that can be pressed RAISE (white) or tinted (black), the value now THEME, held
  * the accent, a muted track KEY, unavailable its name DIM, its note under it; KNOBS the four as gauges in their knobs'
  * colours over the layer's keys (the keycaps' words); STATE what is on, as chips. (Until 0.8.8: cells with note names,
- * the Felucca map.) The keys and knobs do what they did: only the drawing is new */
+ * the Felucca map.) The keys and knobs do what they did: only the drawing is new. (ACID FM 3b task 9: EDIT, MACRO, FX and SCL
+ * are drawn by ux_layer.c in the ACID look from ly_keyname and layer_state; this overlay is GLO's, SEQ TOOLS', REC's, SAVE's) */
 static const char *const PF_NAME[PF_M1] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "GLITCH", "TAPE STOP",   /* the audio ones */
     "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+", "STUT 1/8", "STUT 1/16", "ATK+", "ARP", "RANDOM",   /* the MIDI ones (pfx.c) */
     "SHUFFLE", "CRUSH", "THROW", "FREEZE"};             /* (0.9.17) C#5 SHUFFLE, (0.9.14) the sweeps D#5 F#5, G#4 FREEZE */
@@ -1056,31 +1055,7 @@ static void layer_cards(uint32_t l)
     char val[12];
     const char *unit;
     uint32_t c;
-    if (l == LAYER_FX && perf_gfocus() != PF_N) {       /* (0.9.17) a glitcher's key down: its four */
-        uint32_t x = perf_gx(perf_gfocus());
-        for (c = 0; c < 4u; c++) {
-            param_desc_t d = gx_desc(x, c);
-            int32_t v = perf_gp[x][c];
-            if (!d.max) {                               /* (TAPE: SCRATCH, once stopped; the empty card) */
-                draw_column(c, d.label, !d.label[0] ? "" : pf.mode == BM_TAPE && pf.state ? "TURN" : "-", "",
-                            d.label[0] && pf.mode == BM_TAPE && pf.state ? VAL(c) : T_DIM, -1, GX_IC[x][c]);
-                continue;
-            }
-            param_format(&d, v, val, &unit);
-            draw_column(c, d.label, val, unit, VAL(c), RATIO(&d, v), GX_IC[x][c]);
-        }
-    } else if (l == LAYER_FX) {                         /* (0.9.14) STEPS TRANSPOSE MUTATE FILTER: OFF dim at the left */
-        static const char *const ST[5] = {"OFF", "1/2", "1/4", "1/8", "1 STEP"};
-        static const char *const TR[8] = {"OFF", "+2ND", "+3RD", "+4TH", "+5TH", "+6TH", "+OCT", "-OCT"};
-        static const char *const NM[4] = {"STEPS", "TRANSP", "MUTATE", "FILTER"};
-        static const uint8_t IC[4] = {ICON_LENGTH, ICON_TRANSPOSE, ICON_MIX, ICON_CUTOFF};
-        for (c = 0; c < 4u; c++) {
-            uint32_t m = perf_m[c];
-            fmt_int(val, (int32_t)m);
-            draw_column(c, NM[c], !c ? ST[(m + 2u) / 3u] : c == 1u ? TR[pm_trn()] : m ? val : "OFF",
-                        m && c > 1u ? "%" : "", m ? VAL(c) : T_DIM, (int32_t)(m * 1000u / PM_MAX[c]), IC[c]);
-        }
-    } else if (l == LAYER_GLO) {                        /* T1..T4 LEVEL (T5, T6 selected: T3..T6; the icon; muted: dim) */
+    if (l == LAYER_GLO) {                               /* T1..T4 LEVEL (T5, T6 selected: T3..T6; the icon; muted: dim) */
         for (c = 0; c < 4u; c++) {
             uint32_t t = c + trk_base4();
             param_format(&TP[P_LEVEL], trk[t].p[P_LEVEL], val, &unit);
@@ -1097,12 +1072,6 @@ static void layer_cards(uint32_t l)
         draw_column(2, "PLAY", live.mode ? "SONG" : "LOOP", "", VAL(2u), -1, ICON_LOOP);
         draw_column(3, "REC", live.srec == 2u ? "ON" : live.srec ? "ARM" : "OFF", "", live.srec ? VAL(3u) : T_DIM, -1,
                     ICON_X_REC);
-    } else if (l == LAYER_MACRO) {                      /* M1..M4, 0..100 % */
-        static const char *const M[4] = {"M1", "M2", "M3", "M4"};
-        for (c = 0; c < 4u; c++) {
-            fmt_int(val, macro_v[c] * 100 / 127);
-            draw_column(c, M[c], val, "%", macro_routes(c, 0, 0) ? VAL(c) : T_DIM, macro_v[c] * 1000 / 127, ICON_MIX);
-        }
     } else if (l == LAYER_REC) {                        /* CLICK, then empty cards */
         for (c = 0; c < 4u; c++) {
             uint32_t v = c < RL_N ? rp_get(RL_F[c]) : 0u;
@@ -1111,7 +1080,7 @@ static void layer_cards(uint32_t l)
             else
                 draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
         }
-    } else {                                            /* the page's four (SCL: LY_SCL) */
+    } else {                                            /* the page's four (SEQ TOOLS: LY_SEQ) */
         uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
         memcpy(nm, ui.nmem, sizeof nm);
         ui.home = 0;
@@ -1128,19 +1097,8 @@ static void layer_cards(uint32_t l)
 /* (0.8.5) a layer as a lens, as the approved mock-up (MAP . KNOBS . STATE; ALGORITHM while it is held): MAP the keys'
  * map (the cells, no icons), KNOBS the four cards as gauges, STATE the key hints (the footer's until 0.8.4) and what is
  * on. The header "[FX] HELD"; the breadcrumb "LENTE . MAP . FX" */
-static const khint_t *layer_foot(uint32_t l)
-{
-    static const char *const GX_FOOT[4] = {"GLITCH", "TAPE STOP", "SHUFFLE", "FREEZE"};
-    static khint_t gf[3];
-    const khint_t *f = l == LAYER_FX && perf_latch_on ? FX_LATCH_FOOT : l == LAYER_MACRO && !layer_open() ? MAC_LATCH_FOOT
-                     : LAYERS[l].foot;
-    if (l == LAYER_FX && perf_gfocus() != PF_N) {       /* (0.9.17) a glitcher's key down: K1-4 are its knobs */
-        memcpy(gf, f, sizeof gf);
-        gf[1].act = GX_FOOT[perf_gx(perf_gfocus())];
-        return gf;
-    }
-    return f;
-}
+static const khint_t *layer_foot(uint32_t l) { return LAYERS[l].foot; }   /* (3b task 9: FX's and MACRO's latches, the
+                                                         * glitcher's: ux_layer.c's status line) */
 static void layer_knobs(uint32_t l)                     /* the four as gauges in their knobs' colours, the keys' words */
 {
     const khint_t *ft = layer_foot(l);
@@ -1172,6 +1130,7 @@ static void layer_knobs(uint32_t l)                     /* the four as gauges in
 }
 /* STATE: "GLO . HELD", then what is on as chips, two a row (on: a THEME stripe, TEXT; off: DIM) */
 static uint32_t lst_n __attribute__((section(".pool")));
+static uint8_t lst_ux;                                  /* (3b task 9) STATE drawn for ux_layer.c: its chips (uxl_chip) */
 static void lst_chip(const char *a, const char *v, int on)
 {
     int32_t x = 4 + (int32_t)(lst_n & 1u) * 117, y = 16 + (int32_t)(lst_n >> 1) * 15;
@@ -1185,6 +1144,10 @@ static void lst_chip(const char *a, const char *v, int on)
         str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
         str_cpy(b + str_len(b), v, sizeof b - str_len(b));
     }
+    if (lst_ux) {
+        uxl_chip(lst_n - 1u, b, on);
+        return;
+    }
     if (on)
         cv_rect(x, y + 2, 2, 9, T_THEME);
     cv_clip_text(x + 6, y + 3 - AF_X_CAP_Y, &AF_X, b, on ? T_TEXT : T_DIM, bg, 104);
@@ -1194,11 +1157,11 @@ static void layer_state(uint32_t l)
     static const char *const LN[LAYER_N] = {"", "FX", "GLO", "SCL", "EDIT", "SEQ", "REC", "SAVE", "LFO"};
     uint32_t k, e;
     char b[48], v[8];
-    str_cpy(b, LN[l], sizeof b);
-    str_cpy(b + str_len(b), l == LAYER_MACRO && !layer_open() ? " \xB7 LATCHED" : " \xB7 HELD", sizeof b - str_len(b));
-    cv_text(6, 5 - AF_X_CAP_Y, &AF_X, b, T_THEME);
-    if (l == LAYER_FX && fx_lock)
-        cv_text_r(234, 5 - AF_X_CAP_Y, &AF_X, "[FX] LOCKED", T_ACCENT, T_SURF);
+    if (!lst_ux) {                                      /* (ux_layer.c: its footer says it) */
+        str_cpy(b, LN[l], sizeof b);
+        str_cpy(b + str_len(b), " \xB7 HELD", sizeof b - str_len(b));
+        cv_text(6, 5 - AF_X_CAP_Y, &AF_X, b, T_THEME);
+    }
     lst_n = 0;
     if (l == LAYER_FX) {                                /* the lock, the tracks, the latch, the effects held */
         uint32_t held = perf_kill ? 0u : perf_held | perf_latched;
@@ -1264,10 +1227,10 @@ static void layer_state(uint32_t l)
                      l == LAYER_SEQ ? k == ui.lane % NLANE : !dx_lane_muted(k));
     }
 }
-static void draw_layer(void)
+/* what layer l's panel is drawn from (it is redrawn when this changes) */
+static uint32_t layer_sig(uint32_t l)
 {
-    uint32_t l = ui.layer % LAYER_N, sig = l * 7919u + ux.gen * 977u;
-    layer_cards(l);
+    uint32_t sig = l * 7919u + ux.gen * 977u;
     if (l == LAYER_FX) {
         uint32_t k;
         sig += (perf_kill ? 0u : perf_held | perf_latched) * 31u + perf_latch_on * 11u + perf_act * 131u + perf_avail() * 7u +
@@ -1296,6 +1259,13 @@ static void draw_layer(void)
     else
         sig += snd_id() * 31u + (uint32_t)chain_busy() * 3u + (uint32_t)(project_recall_slot() + 1) * 5u + dx_mute * 7919u +
                (uint32_t)drum_track(TSEL) * 11u + up_gen * 101u;
+    return sig;
+}
+static void draw_layer(void)
+{
+    uint32_t l = ui.layer % LAYER_N, sig;
+    layer_cards(l);
+    sig = layer_sig(l);
     sig += ui.lylv * 0x9E3779B1u + (ui.lylv == 1u ? str_hash(7u, ly_card[0].v) + str_hash(9u, ly_card[1].v) * 3u +
                                      str_hash(11u, ly_card[2].v) * 5u + str_hash(13u, ly_card[3].v) * 7u : 0u);
     if (ui.force || sig != ui.layer_sig) {

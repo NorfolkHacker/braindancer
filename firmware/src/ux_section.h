@@ -33,6 +33,15 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top);
  * pick kept in sight). 1: taken; 0: not (SELECT before the first row: the page before, ui_input.c nav_select) */
 static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32_t knob, int32_t steps);
 static int ux_more_knob(uint32_t knob, int32_t steps);   /* .. on the MORE page shown (its section's sel / top) */
+/* (3b task 9) a MORE page pg as the step locks' page (ui.plk_src: ui.c lock_id, ui_input.c lock_turn, ui_draw.c's cards while a
+ * step is held on STEP): the row its section's pick names now (0: none); KNOB 1 with a step held, that pick moved steps rows;
+ * row r takes a lock (UXM_LOCKS) or why not (UXM_NL_*: UXM_WHY says it, nothing changes); card c of the step held's four (KNOB 1 the pick,
+ * KNOB 2 the row: its lock's value, *on, else the sound's), its label (0: an empty card), *ratio 0..1000 (-1: none) */
+static const ux_row_t *uxm_lock_row(const page_t *pg);
+static void uxm_lock_pick(const page_t *pg, int32_t steps);
+static uint32_t uxm_lock_why(const ux_row_t *r);
+static void uxm_lock_say(const ux_row_t *r);   /* .. why not, said (ui_message) */
+static const char *uxm_lock_card(const page_t *pg, uint32_t c, uint32_t step, char *val, uint32_t nv, int *on, int32_t *ratio);
 /* setting id (a G_* when glo, else a P_* or a view) as section sec shows it: its plain name (ux_section.c UXS_NAME by section,
  * engine and id, else UXS_LABEL by JIANT's label l: "RES": "RESO"), else l */
 static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char *l);

@@ -165,6 +165,7 @@ static void lcd_init(void) {}
 #include "../../firmware/src/ux_home.c"
 #include "../../firmware/src/ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
 #include "../../firmware/src/ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
+#include "../../firmware/src/ux_layer.c"               /* (ACID FM 3b task 9) the held layers (ux_layer.h) */
 
 /* ------------------------------------------------------------ the flash --- */
 static uint32_t web_flash_writes;

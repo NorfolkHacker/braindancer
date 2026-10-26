@@ -28,5 +28,9 @@ enum { UXM_A_LYRIC, UXM_A_LANE, UXM_A_N };   /* (3b task 8: FX's CLEAR LANE, the
 #define UXM_PITCH 18             /* .. a row's height (8 x 18 = 144 of the panel's 150) */
 #define UXM_SELECT 4u            /* ux_more_turn's knob for SELECT (0..3: KNOB 1..4) */
 #define UXM_K34 "KNOB 1 PICKS \xB7 KNOB 2 SETS"   /* KNOB 3 or 4 turned on MORE: what the knobs do (ui_input.c) */
+#define UXS_PICK "SETTING"                              /* MORE's KNOB 1 (the knob row, a step held's cards) */
+/* (3b task 9) why a MORE row takes no step lock (ux_more.c uxm_lock_why, UXM_WHY its words): it does (UXM_LOCKS), a global, an FM6
+ * patch byte, a DRUM-X kit byte, an action, a track setting the lock store does not hold (motion.c motion_param: "NAME" + its words) */
+enum { UXM_LOCKS, UXM_NL_GLOBAL, UXM_NL_PATCH, UXM_NL_KIT, UXM_NL_ACTION, UXM_NL_SET, UXM_NL_N };
 
 #endif

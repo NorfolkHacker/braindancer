@@ -100,6 +100,7 @@
 #include "ux_home.c"               /* ACID FM: HOME's pages on the screen (ux_nav.c, included by ui.c: HOME's navigation) */
 #include "ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
 #include "ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
+#include "ux_layer.c"               /* (ACID FM 3b task 9) the held layers EDIT, MACRO, FX, SCL (ux_layer.h) */
 
 /* --------------------------------------------- storage, update, editor --- */
 #if FELUCCA_FLASH

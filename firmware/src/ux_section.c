@@ -820,7 +820,6 @@ static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t i
 
 #define UXS_HINT " AGAIN: NEXT PAGE"                    /* (after the section's name: what its button does next) */
 #define UXM_HINT "SELECT SCROLLS \xB7 KNOB 2 SETS"      /* MORE: what its controls do (KNOB 1 picks: its column says so) */
-#define UXS_PICK "SETTING"                              /* MORE's KNOB 1 */
 #define UXS_LANE_SAY "REC + PLAY, HOLD FX + A KEY"      /* (3b task 8) FX > MORE's PUNCH LANE rows: how a lane is recorded (was
                                                          * PUNCH's hint, ui_layer.c hint_tick) */
 static uint16_t uxs_seen;        /* the sections opened since power-on (a bit per SEC_*): their hint said */

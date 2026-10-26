@@ -655,7 +655,8 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_VOICE_3, S_EDIT_VOICE_MORE, S_EDIT_LOFI_BYTE_1, S_EDIT_LOFI_BYTE_MORE, S_EDIT_NOISE_LFSR_2,
        S_EDIT_VOICE_WORDS_1, S_EDIT_VOICE_MORE_END, S_EDIT_PHASE_MORE_K3, S_EDIT_ANALOG_TURN, S_EDIT_FM6_1, S_EDIT_FM6_2,
        S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_FM6_ALG4, S_EDIT_FM6_TURN, S_EDIT_DRUM_1, S_EDIT_DRUM_2, S_EDIT_DRUM_3,
-       S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_COUNT };
+       S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL,
+       S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
@@ -700,7 +701,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_voice_more", "edit_lofi_byte_1", "edit_lofi_byte_more", "edit_noise_lfsr_2", "edit_voice_words_1",
     "edit_voice_more_end", "edit_phase_more_k3", "edit_analog_turn", "edit_fm6_1", "edit_fm6_2", "edit_fm6_3",
     "edit_fm6_more", "edit_fm6_alg4", "edit_fm6_turn", "edit_drum_1", "edit_drum_2", "edit_drum_3", "edit_drum_more",
-    "edit_drum_muted", "edit_drum_more_end"};
+    "edit_drum_muted", "edit_drum_more_end", "layer_edit", "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state",
+    "roll_lock_more"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1888,6 +1890,42 @@ static void setup(int s)
         if (s == S_EDIT_FM6_TURN) { edit_param(2, 12); ux_knob_touch(2); }   /* (MOD LEVEL turned: the modulators larger) */
         if (s == S_EDIT_DRUM_MORE_END) { (void)ux_more_knob(UXM_SELECT, 30); (void)ux_more_knob(0, 40); ux_knob_touch(1); }
         if (s == S_EDIT_FM6_MORE) { (void)ux_more_knob(0, 9); ux_knob_touch(1); }   /* (OP 3's DETUNE picked: its rows in view) */
+        break;
+    }
+    /* (ACID FM 3b task 9) the held layers in the ACID look (ux_layer.c): EDIT (KNOB 1..4 EDIT's SOUND), MACRO (two routed, M1 just
+     * turned: its readout), FX held (REPEAT 1/16, GLITCH, CRUSH, T2's mute; the macros up), SCL (D# MINOR), FX's STATE (EDIT on a
+     * DRUM-X track: layer_edit_drum, S_EDIT_DRUM); a step held on STEP with EDIT's MORE the locks' page (MORPH locked on it) */
+    case S_LAYER_EDIT: case S_LAYER_MACRO: case S_LAYER_FX: case S_LAYER_SCL: case S_LAYER_FX_STATE:
+        go_title("ENV"); ui.lylv = 0; ux_hot_k = -1;
+        ui.layer = (uint8_t)(s == S_LAYER_EDIT ? LAYER_EDIT : s == S_LAYER_MACRO ? LAYER_MACRO :
+                             s == S_LAYER_SCL ? LAYER_SCL : LAYER_FX);
+        if (s == S_LAYER_MACRO) {
+            macro_v[0] = 90; macro_v[1] = 40; macro_v[3] = 127;
+            trk[0].p[P_M1SRC] = MS_M1; trk[0].p[P_M1DST] = MD_CUT; trk[0].p[P_M1AMT] = 40;
+            trk[1].p[P_M1SRC] = MS_M1 + 1; trk[1].p[P_M1DST] = MD_CLIP; trk[1].p[P_M1AMT] = 63;
+            ux_knob_touch(0);
+        }
+        if (s == S_LAYER_FX || s == S_LAYER_FX_STATE) {
+            perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
+            perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30;
+            ui.lylv = (uint8_t)(s == S_LAYER_FX_STATE);
+        }
+        if (s == S_LAYER_SCL) { TSEL->p[P_ROOT] = 3; TSEL->p[P_SCALE] = 2; }
+        break;
+    case S_ROLL_LOCK_MORE: {                            /* (MORPH picked in EDIT's MORE, locked on the step held) */
+        uint32_t r, i;
+        roll_scene(S_ROLL_ACID);
+        for (i = 0; i < NPAGES && PAGES[i].more != &UXM_SYN; i++)
+            ;
+        for (r = 0; r < UXM_SYN.n && UXM_SYN.rows[r].id != P_MORPH; r++)
+            ;
+        memset(uxm_at, 0, sizeof uxm_at);
+        uxm_at[nav_key(SEC_EDIT) % NAV_KEYS].sel = (uint8_t)r;
+        ui.plk_src = (uint8_t)(i + 1u);
+        motion_set_lock(TSEL, ui.cursor, P_MORPH, 90);
+        ui.entry_open = 1;
+        fm1_in.notes = 1u << 10;
+        ui.hot_col = 1; ui.hot_t = 30;
         break;
     }
     case S_COMP_SEL_DRUM:

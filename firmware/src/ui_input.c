@@ -678,6 +678,16 @@ static void lock_turn(uint32_t k, int32_t s, uint64_t held)
     if (id == 0xFFu) {                                  /* (an empty card: nothing to lock) */
         const page_t *lp = ui.plk_src && ui.plk_src <= NPAGES ? &PAGES[ui.plk_src - 1u] : 0;
         uint32_t v = lp ? page_id(lp, k & 3u) : 0xFFu;
+        if (lp && lp->graph == GR_MORE && lp->more) {   /* (3b task 9) MORE: KNOB 1 picks the row KNOB 2 locks; a row no */
+            const ux_row_t *r = uxm_lock_row(lp);       /* lock holds says why (a global: GLOBAL: NOT PER STEP), its value */
+            if (k == 0u)                                /* unchanged; KNOB 3 and 4 what the knobs do */
+                uxm_lock_pick(lp, s);
+            else if (k > 1u)
+                ui_message(UXM_K34);
+            else
+                uxm_lock_say(r);
+            return;
+        }
         if (v == ID_DX_LANE)                            /* (3b task 5 fix) DRUM-X's SOUND, a step held: the drum is the */
             ui_message("LANE KEYS PICK THE DRUM");      /* grid's lane (ui_dx.c dx_follow); the kit's sound is the */
         else if (fld_is(v) && v >= ID_DX_LANE)        /* section's, no step's (spec 0 rule 6: said why) */
@@ -2153,7 +2163,9 @@ static void ui_input_frame(void)
              * OCT- put back the layer's track only) */
             int32_t a = panel_enc(EN_ALGO);
             if (a && ui.layer) {
-                ui.lylv = (uint8_t)clamp((int32_t)ui.lylv + a, 0, 2);
+                int ux = ux_layer_owns(ui.layer);       /* (3b task 9: the ACID layers' MAP, STATE, their knob row always shown;
+                                                         * GLO's STATE, 2, is their STATE) */
+                ui.lylv = (uint8_t)clamp((int32_t)(ux && ui.lylv ? 1u : ui.lylv) + a, 0, ux ? 1 : 2);
                 ui.force = 1;
                 combo = 1;
             }

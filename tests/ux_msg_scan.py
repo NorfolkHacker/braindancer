@@ -9,7 +9,8 @@ is checked too, no list to keep by hand):
 UX_MSG_HDR (drawn in UF_HDR by HOME's status line, ux_home.c ux_home_status): every string literal among the arguments of
 ui_message( / ui_say( / ux_status( (ternaries and concatenations too: the call's parentheses are matched) and of
 str_cpy(ui.msg / ui.msg2, ...) (msg2 becomes the message after msg), the ux_*.c #define NAME "..." texts (UXV_INTRO,
-UX_STOP) HOME's hints (ux_nav.c UXH_PAGES) and the ten GEN genre names (gen_tables.c GEN_SHOWN_NAME, said by gen_go's "GEN: name seed"). UX_MSG_LBL (UF_LBL, the footer's face): the literals of ux_footer( calls
+UX_STOP) HOME's hints (ux_nav.c UXH_PAGES) and the ten GEN genre names (gen_tables.c GEN_SHOWN_NAME, said by gen_go's "GEN: name seed"). UX_MSG_LBL (UF_LBL, the footer's face): the literals of ux_footer( calls; (3b task 9) the held layers' key names (ui_layer.c
+ly_keyname's str_cpy(nm, .., PF_NAME: ux_layer.c's MAP) and STATE's chips (lst_chip(: UF_HDR)
 and UXH_PAGES (the footer's HOME . page); (3b) both: the literals of the ux_*.c tables named UX*_* (ux_section.c UXS_NAME and UXS_LABEL's
 plain words, ux_more.c UXM_HEAD / UXM_ACT: knob labels, MORE rows; the values a MORE row can take: tests/ui_test.c); (3b task 4)
 both: ui_lens.c SEC_NAME and the chains' CE_* / CG_* names (the footer's SECTION . PAGE, the hint "EDIT AGAIN: .."), the settings'
@@ -23,7 +24,7 @@ import sys
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[1] / "firmware" / "src"
-CALL = re.compile(r'\b(ui_message|ui_say|ux_status|ux_footer)\s*\(|\bstr_cpy\s*\(\s*ui\.msg2?\s*,')
+CALL = re.compile(r'\b(ui_message|ui_say|ux_status|ux_footer|lst_chip)\s*\(|\bstr_cpy\s*\(\s*ui\.msg2?\s*,')
 LIT = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
 
 
@@ -79,6 +80,12 @@ def main(out):
                     tables += 1                       # label, a MORE row, the status line: both faces)
                     hdr.extend(LIT.findall(t.group(2)))
                     lbl.extend(LIT.findall(t.group(2)))
+        if Path(f).name == "ui_layer.c":              # (3b task 9: the held layers' MAP, ux_layer.c's list in UF_LBL: the keys'
+            t = re.search(r'PF_NAME\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S)   # names, ly_keyname's str_cpy(nm, ..) and
+            if t:                                     # the effects' PF_NAME; STATE's chips, lst_chip(, in UF_HDR: above)
+                lbl.extend(LIT.findall(t.group(1)))
+            for m in re.finditer(r'\bstr_cpy\s*\(\s*nm\s*,', s):
+                lbl.extend(LIT.findall(call_args(s, m.end()).rsplit(",", 1)[0]))
         if Path(f).name == "ui_lens.c":               # (3b task 4: the footer's SECTION . PAGE, the status line's hint
             for t in re.finditer(r'\b(SEC_NAME|C[EG]_[A-Z0-9_]+)\s*\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S):
                 chains += 1                           # "EDIT AGAIN: NEXT PAGE": the sections' and the chains' names)

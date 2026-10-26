@@ -1464,8 +1464,18 @@ static void draw_columns(void)
     if (cur_page()->graph == GR_ROLL && lock_held()) {   /* a step held: what KNOB 1..4 lock (ui_input.c lock_turn) */
         uint64_t held = lock_held();
         uint32_t st = 0;
+        const page_t *lp = lock_src();
         while (!((held >> st) & 1u))
             st++;                                       /* (the first step held: its values) */
+        if (lp && lp->graph == GR_MORE) {               /* (3b task 9) a MORE list's: KNOB 1 the row picked, KNOB 2 it (its */
+            for (c = 0; c < 4u; c++) {                  /* lock bright; none, or a row no lock holds: DIM) */
+                int on;
+                int32_t r;
+                const char *nm = uxm_lock_card(lp, c, st, val, sizeof val, &on, &r);
+                draw_column(c, nm, val, "", nm[0] && on ? VAL(c) : T_DIM, r, ICON_AUTO);
+            }
+            return;
+        }
         for (c = 0; c < 4u; c++) {
             uint32_t id = lock_id(c);
             const param_desc_t *d;
@@ -2002,10 +2012,15 @@ static void ui_draw_body(uint32_t counting)
             ui.force = 1, hm_was = hm;
         if (hm)
             ui.layer = LAYER_MACRO;
-        if (ui.force)
-            draw_frame();
-        draw_head();
-        draw_layer();
+        if (ux_layer_owns(ui.layer)) {                  /* (ACID FM 3b task 9) EDIT, MACRO, FX, SCL: ux_layer.c, its own strips */
+            ux_layer_draw();
+            pf_on = 0;
+        } else {
+            if (ui.force)
+                draw_frame();
+            draw_head();
+            draw_layer();
+        }
         if (hm)
             ui.layer = 0;
         if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {

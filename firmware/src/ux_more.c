@@ -297,6 +297,96 @@ static int ux_more_knob(uint32_t knob, int32_t steps)
     return r;
 }
 
+/* (3b task 9, the user: every row) a MORE page as the step locks' page (ux_section.h): its section's pick, KNOB 1 moving it, which
+ * rows a lock holds (a track setting motion.c keeps per step), the cards a step held shows (ui_draw.c) */
+static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8_t *bar);   /* (below) */
+static uint32_t uxm_key_of(const page_t *pg) { return nav_key(sec_of_fam(pg->fam)) % NAV_KEYS; }
+static const ux_row_t *uxm_lock_row(const page_t *pg)
+{
+    uint32_t key, s, t;
+    if (!pg || pg->graph != GR_MORE || !pg->more)
+        return 0;
+    key = uxm_key_of(pg);
+    s = uxm_at[key].sel;
+    t = uxm_at[key].top;
+    uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
+    return s < uxm_n(pg->more) ? &pg->more->rows[s] : 0;
+}
+static void uxm_lock_pick(const page_t *pg, int32_t steps)
+{
+    uint32_t key, s, t;
+    if (!pg || pg->graph != GR_MORE || !pg->more)
+        return;
+    key = uxm_key_of(pg);
+    s = uxm_at[key].sel;
+    t = uxm_at[key].top;
+    (void)ux_more_turn(pg->more, &s, &t, 0u, steps);
+    uxm_at[key].sel = (uint8_t)s;
+    uxm_at[key].top = (uint8_t)t;
+}
+static const char *const UXM_WHY[UXM_NL_N] = {"", "GLOBAL: NOT PER STEP", "PATCH: NOT PER STEP", "KIT SOUND: NO STEP LOCK",
+                                              "ACTION: NOT PER STEP", ": NOT PER STEP"};   /* (UXM_NL_SET: after the row's name) */
+static uint32_t uxm_lock_why(const ux_row_t *r)
+{
+    if (!r)
+        return UXM_NL_SET;
+    if (r->kind == UXR_GLOBAL)
+        return UXM_NL_GLOBAL;
+    if (r->kind == UXR_ACTION)
+        return UXM_NL_ACTION;
+    if (r->kind == UXR_TRACK && r->id >= ID_FO_OP && r->id < ID_FO_END)
+        return UXM_NL_PATCH;
+    if (r->kind == UXR_TRACK && fld_is(r->id))
+        return UXM_NL_KIT;
+    return r->kind == UXR_TRACK && r->id < P_COUNT && motion_param(r->id) ? UXM_LOCKS : UXM_NL_SET;
+}
+static void uxm_lock_say(const ux_row_t *r)
+{
+    uint32_t why = uxm_lock_why(r);
+    char v[24];
+    uint8_t bar;
+    if (why != UXM_LOCKS)
+        ui_say(why == UXM_NL_SET && r ? uxm_row_text(r, v, sizeof v, &bar) : "", UXM_WHY[why]);
+}
+static const char *uxm_lock_card(const page_t *pg, uint32_t c, uint32_t step, char *val, uint32_t nv, int *on, int32_t *ratio)
+{
+    const ux_row_t *r = uxm_lock_row(pg);
+    const char *nm;
+    uint8_t bar;
+    val[0] = 0;
+    *on = 0;
+    *ratio = -1;
+    if (!r || c > 1u)
+        return "";
+    if (c == 0u) {                                      /* KNOB 1: the pick, "3/12" (as MORE's knob row) */
+        uint64_t m = uxm_mask(pg->more);
+        uint32_t i, a = 0, b = 0;
+        for (i = 0; i < uxm_n(pg->more); i++)
+            if (uxm_pick_ok(pg->more, m, i)) {
+                b++;
+                if (&pg->more->rows[i] <= r)
+                    a = b;
+            }
+        fmt_int(val, (int32_t)a);
+        str_cpy(val + str_len(val), "/", nv - str_len(val));
+        fmt_int(val + str_len(val), (int32_t)b);
+        *on = 1;
+        return UXS_PICK;
+    }
+    nm = uxm_row_text(r, val, nv, &bar);                /* KNOB 2: the row, the sound's value (DIM) or the step's lock */
+    if (!uxm_lock_why(r)) {
+        const param_desc_t *d = track_desc(TSEL, r->id);
+        int16_t v;
+        *on = motion_lock_get(TSEL, step, r->id, &v);
+        if (!*on)
+            v = motion_base_value(TSEL, r->id);
+        uxs_vtext(d, v, 0, r->id, val, nv);
+        if (d->max > d->min)
+            *ratio = clamp(((int32_t)v - d->min) * 1000 / (d->max - d->min), 0, 1000);
+    }
+    return nm;
+}
+
 /* row r's words: its name (plain, as its section names it: ux_section.c uxs_label), its value into val (as the knob row
  * shows it, its unit with it: "420MS"), its place 0..255 into *bar (0: none) */
 static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8_t *bar)

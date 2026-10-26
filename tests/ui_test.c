@@ -143,6 +143,7 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/ux_home.c"                     /* (ux_nav.c: by ui.c; ux_splash.c: by ui_draw.c) */
 #include "../firmware/src/ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
 #include "../firmware/src/ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
+#include "../firmware/src/ux_layer.c"               /* (ACID FM 3b task 9) the held layers (ux_layer.h) */
 #include "../firmware/src/upreset.c"
 #include "../firmware/src/project.c"
 
@@ -9598,12 +9599,13 @@ static int test_lock_pages(void)
     track_defaults_steps(t); t->p[P_SLEN] = 16;
     go_home(); open_family(FAM_SEQ); frame();
     stp = ui.page;
-    n = lock_chain(ch, &at);                             /* (3b task 5: KIT, SOUND: its LEVEL the drum picked's; KIT 2's */
-    ok = grid_on() && n == 2u && at == 0xFFu && str_eq(PAGES[nv_page(SEC_EDIT, ch[0])].title, "EDIT 1") &&   /* four MORE's */
-         str_eq(PAGES[nv_page(SEC_EDIT, ch[1])].title, "DRUM SOUND");                                       /* rows) */
+    n = lock_chain(ch, &at);                             /* (3b task 5: KIT, SOUND: its LEVEL the drum picked's; 3b task 9: */
+    ok = grid_on() && n == 3u && at == 0xFFu && str_eq(PAGES[nv_page(SEC_EDIT, ch[0])].title, "EDIT 1") &&   /* MORE, its */
+         str_eq(PAGES[nv_page(SEC_EDIT, ch[1])].title, "DRUM SOUND") &&                                     /* rows) */
+         str_eq(PAGES[nv_page(SEC_EDIT, ch[2])].title, "DRUM MORE");
     for (k = 0; k < n; k++)
-        ok &= lock_page_ok(nv_page(SEC_EDIT, ch[k])) && PAGES[nv_page(SEC_EDIT, ch[k])].graph != GR_MORE;
-    bad += check("DRUM: the locks' walk is EDIT's chain less what cannot lock (KIT, SOUND; not SOUND 2, MORE)", ok);
+        ok &= lock_page_ok(nv_page(SEC_EDIT, ch[k]));
+    bad += check("DRUM: the locks' walk is EDIT's chain less what cannot lock (KIT, SOUND, MORE; not SOUND 2)", ok);
     tap_key(key_at(1, 2));                               /* lane 3 (CP) */
     k4 = key_at(0, 4);
     fm1_in.notes |= 1u << k4; host_notes |= 1u << k4; frame();
@@ -16958,6 +16960,329 @@ static int test_t8_fix(void)
     return bad;
 }
 
+/* ---------------------------------------------- (ACID FM 3b task 9) the held layers in the ACID look, MORE's step locks --- */
+static const uint8_t UXT9_L[4] = {LAYER_EDIT, LAYER_MACRO, LAYER_FX, LAYER_SCL};
+static const uint8_t UXT9_B[4] = {B_EDIT, B_LFO, B_FX, B_SCL};
+static void uxt9_open(uint32_t i)                        /* T1 ANALOG, ENV shown; layer i's button held open */
+{
+    ui_power_on(); frame();
+    go_title("ENV"); frame();
+    btn_down(UXT9_B[i]); frames(800);
+}
+static void uxt9_close(uint32_t i)                       /* let go (a layer held open and let go unused locks / latches: undone) */
+{
+    btn_up(UXT9_B[i]); frames(400);
+    if (fx_lock) { press(B_FX); frames(100); }
+    if (mac_latch) { press(B_LFO); frames(100); }
+}
+static int uxt9_blend(uint16_t c)                        /* c is one of the blend's colours */
+{
+    uint32_t i;
+    for (i = 0; i < 256u; i++)
+        if (UX_BLEND[i] == c) return 1;
+    return 0;
+}
+static const char *uxt9_knobs(uint32_t l, int val)       /* layer l's knob row: its names (val: its values), "|" between */
+{
+    static char b[80];
+    ux_knob_t k[4];
+    uint32_t c;
+    uxl_knobs(l, k);
+    b[0] = 0;
+    for (c = 0; c < 4u; c++) {
+        if (c) str_cpy(b + str_len(b), "|", sizeof b - str_len(b));
+        str_cpy(b + str_len(b), val ? k[c].value : k[c].label, sizeof b - str_len(b));
+    }
+    return b;
+}
+static int test_t9_look(void)
+{
+    int bad = 0, ok = 1, cells = 1;
+    uint32_t i, c;
+    char nm[12];
+    for (i = 0; i < 4u; i++) {
+        uint32_t l = UXT9_L[i], st;
+        ux_knob_t k[4];
+        uint16_t f;
+        uxt9_open(i);
+        memset(macro_v, 0, sizeof macro_v);
+        macro_v[0] = 64; macro_v[1] = 20; macro_v[3] = 127;
+        if (l == LAYER_FX) { perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; }
+        TSEL->p[P_ROOT] = 2;
+        ui.force = 1; frame();
+        if (ui.layer != l || !ux_layer_owns(l)) { printf("  layer %u not open (%u)\n", (unsigned)l, (unsigned)ui.layer); ok = 0; }
+        if (!uxt9_blend(ux_px(120, 0)) || !uxt9_blend(ux_px(120, 1))) { printf("  layer %u: no blend line on top\n", (unsigned)l); ok = 0; }
+        if (!uxt9_blend(ux_px(2, 238)) || !uxt9_blend(ux_px(237, 228))) { printf("  layer %u: no blend band footer\n", (unsigned)l); ok = 0; }
+        if (ux_px(236, UX_Y_STATUS + 10u) != UX_BG) { printf("  layer %u: status line not on BG\n", (unsigned)l); ok = 0; }
+        uxl_knobs(l, k);
+        for (c = 0; c < 4u; c++) {
+            uint32_t x = UX_COL_X0 + c * UX_COL_PITCH;
+            uint16_t r = ux_px(x + 20u, UX_Y_KNOBS), b = ux_px(x + 2u, UX_Y_KNOBS + 33u), kc = ux_knob_col(c);
+            if (r != UX_LINE && r != kc) { printf("  layer %u knob %u: rule %04x\n", (unsigned)l, (unsigned)c, r); ok = 0; }
+            if (k[c].bar >= 12u && b != kc && b != UX_DIM(kc, 35)) { printf("  layer %u knob %u: bar %04x not its colour\n", (unsigned)l, (unsigned)c, b); ok = 0; }
+        }
+        if (l == LAYER_SCL) {                            /* the keyboard large: F3 its key's colour (D the root: ACID) */
+            st = ly_keyname(l, 0, 5u, nm);               /* (white key 5: D4) */
+            f = ux_px(4u + 5u * 232u / 16u + 3u, UX_Y_PANEL + 110u);
+            if (st != LS_SEL || f != UX_ACID) { printf("  SCL: the root D %04x\n", f); ok = 0; }
+        } else {                                         /* the small keyboard: F3 in its state's colour */
+            st = ly_keyname(l, 0, 0u, nm);
+            f = ux_px(11u, UX_Y_PANEL + UXL_KB_Y + 25u);
+            if (f != uxl_fill(st, nm[0] != 0, 0)) { printf("  layer %u: F3 %04x, not %04x\n", (unsigned)l, f, uxl_fill(st, nm[0] != 0, 0)); ok = 0; }
+        }
+        cells &= uxe_cells_ok();
+        uxt9_close(i);
+    }
+    bad += check("ACID FM 3b task 9: EDIT, MACRO, FX, SCL held: the blend line, the knob row in K1-K4's colours, the keys in theirs, the band", ok);
+    bad += check("  .. a forced redraw within DC_MAX cells", cells);
+    return bad;
+}
+static int test_t9_knobs(void)
+{
+    static const uint8_t E[3] = {ENGI_ANALOG, ENGI_FM6, ENGI_DRUM};
+    int bad = 0, ok = 1;
+    uint32_t i, c, n0;
+    char pl[80], pv[80];
+    int16_t v;
+    for (i = 0; i < 3u; i++) {                           /* EDIT: the engine's first page, as EDIT shows it */
+        uxs_syn_on(E[i]);
+        str_cpy(pl, uxe_labels(), sizeof pl);
+        for (pv[0] = 0, c = 0; c < 4u; c++) {
+            if (c) str_cpy(pv + str_len(pv), "|", sizeof pv - str_len(pv));
+            str_cpy(pv + str_len(pv), uxe_value(c), sizeof pv - str_len(pv));
+        }
+        go_title("ENV"); frame();
+        btn_down(B_EDIT); frames(800);
+        if (!str_eq(uxt9_knobs(LAYER_EDIT, 0), pl) || !str_eq(uxt9_knobs(LAYER_EDIT, 1), pv)) {
+            printf("  EDIT layer on %s: %s / %s, the page %s / %s\n", ENGINES[E[i]]->name, uxt9_knobs(LAYER_EDIT, 0),
+                   uxt9_knobs(LAYER_EDIT, 1), pl, pv);
+            ok = 0;
+        }
+        v = TSEL->p[P_E1];
+        turn(EN_K2, 1); frame();
+        ok &= TSEL->p[P_E1] != v && ux_knob_hot() == 1;
+        btn_up(B_EDIT); frames(400);
+    }
+    bad += check("ACID FM 3b task 9: the EDIT layer's KNOB 1..4 are EDIT's first page (names, values; a turn lit) on a synth, FM6, DRUM-X", ok);
+    uxt9_open(3);
+    ok = str_eq(uxt9_knobs(LAYER_SCL, 0), "ROOT|SCALE|ROTATE|SEQ PITCH");
+    if (!ok) printf("  SCL: %s\n", uxt9_knobs(LAYER_SCL, 0));
+    uxt9_close(3);
+    uxt9_open(1);
+    memset(macro_v, 0, sizeof macro_v); macro_v[0] = 64;
+    ok &= str_eq(uxt9_knobs(LAYER_MACRO, 0), "MACRO 1|MACRO 2|MACRO 3|MACRO 4") && str_eq(uxt9_knobs(LAYER_MACRO, 1), "50%|0%|0%|0%");
+    if (!ok) printf("  MACRO: %s %s\n", uxt9_knobs(LAYER_MACRO, 0), uxt9_knobs(LAYER_MACRO, 1));
+    uxt9_close(1);
+    uxt9_open(2);
+    perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 0;
+    ok &= str_eq(uxt9_knobs(LAYER_FX, 0), "STEP LOOP|INTERVAL|MUTATE|DJ FILTER") && str_eq(uxt9_knobs(LAYER_FX, 1), "1/4|+4TH|40%|OFF");
+    if (!ok) printf("  FX: %s %s\n", uxt9_knobs(LAYER_FX, 0), uxt9_knobs(LAYER_FX, 1));
+    perf_held = perf_act = perf_down = PF_BIT(PF_GLT);
+    ok &= str_eq(uxt9_knobs(LAYER_FX, 0), "DENSITY|PITCH|SIZE|VARIANT");
+    if (!ok) printf("  GLITCH: %s\n", uxt9_knobs(LAYER_FX, 0));
+    perf_held = perf_act = perf_down = 0;
+    perf_m[0] = perf_m[1] = perf_m[2] = 0;
+    bad += check("  SCL: ROOT SCALE ROTATE SEQ PITCH; MACRO 1..4 in %; FX: STEP LOOP INTERVAL MUTATE DJ FILTER, a glitcher's own four", ok);
+    {   /* the status line: what the keys do; a turn's readout; the panel once a turn, none idle; ALGORITHM: MAP <-> STATE */
+        uint16_t col;
+        ux_knob_t k[4];
+        frames(UX_HOT_MS + 100u);
+        uxl_knobs(LAYER_FX, k);
+        ok = str_eq(uxl_status(LAYER_FX, k, &col), UXL_SAY[UXL_S_FX]) && col == UX_MID;
+        n0 = uxl_panels;
+        frames(400);
+        ok &= uxl_panels == n0;
+        turn(EN_K1, 3); frame();
+        uxl_knobs(LAYER_FX, k);
+        ok &= perf_m[0] != 0 && uxl_panels == n0 + 1u && str_eq(uxl_status(LAYER_FX, k, &col), "STEP LOOP \xB7 1/2") && col == UX_TEXT;
+        if (!ok) printf("  FX status \"%s\", %u panels\n", uxl_status(LAYER_FX, k, &col), (unsigned)(uxl_panels - n0));
+        turn(EN_ALGO, 1); frame();
+        ok &= ui.lylv == 1u && uxl_panels == n0 + 2u;
+        turn(EN_ALGO, 3); frame();
+        ok &= ui.lylv == 1u;                             /* (no further: two views) */
+        n0 = uxl_panels;
+        turn(EN_ALGO, -1); frame();
+        ok &= ui.lylv == 0u && uxl_panels == n0 + 1u;
+        ui.lylv = 2;                                     /* (GLO's STATE left over: STATE here, one detent back MAP) */
+        turn(EN_ALGO, -1); frame();
+        ok &= ui.lylv == 0u;
+    }
+    uxt9_close(2);
+    pm_off();
+    bad += check("  FX: the status line says its keys, a turn its readout (STEP LOOP . 1/2), one panel; ALGORITHM MAP <-> STATE", ok);
+    {   /* widths: knob names in their column, the status lines within 224 px, the list's names in their column, the footer */
+        int okw = 1;
+        uint32_t l, k, s;
+        for (k = 0; k < 4u; k++) okw &= text_w(&UF_LBL, UXL_PM[k]) <= UX_COL_W - 4 && text_w(&UF_LBL, UXL_MAC[k]) <= UX_COL_W - 4;
+        for (k = 0; k < 16u; k++) okw &= text_w(&UF_LBL, UXL_GX[k]) <= UX_COL_W - 4;
+        for (k = 0; k < 5u; k++) okw &= text_w(&UF_VAL, UXL_LOOP[k]) <= UX_COL_W - 4;
+        for (k = 0; k < 8u; k++) okw &= text_w(&UF_VAL, UXL_IVL[k]) <= UX_COL_W - 4;
+        for (k = 0; k < UXL_S_N; k++) if (text_w(&UF_HDR, UXL_SAY[k]) > 224) { printf("  \"%s\" %d px\n", UXL_SAY[k], (int)text_w(&UF_HDR, UXL_SAY[k])); okw = 0; }
+        for (k = 0; k < 4u; k++) if (text_w(&UF_HDR, UXL_GXSAY[k]) > 224) { printf("  \"%s\" %d px\n", UXL_GXSAY[k], (int)text_w(&UF_HDR, UXL_GXSAY[k])); okw = 0; }
+        for (k = 0; k < 7u; k++)
+            for (s = 0; s < 2u; s++) okw &= 8 + text_w(&UF_LBL, UXL_WHERE[k]) + 16 + text_w(&UF_LBL, UXL_ALGO[s]) <= 232;
+        for (l = 0; l < 4u; l++)                         /* every key's name a layer can show, in the list's column */
+            for (s = 0; s < 3u; s++) {
+                pfx_tgt = (uint8_t)s;
+                for (k = 0; k < 27u; k++) {
+                    char nm[12], nt[4];
+                    int blk;
+                    uint32_t p = uxl_key(k, &blk, nt);
+                    (void)ly_keyname(UXT9_L[l], blk, p, nm);
+                    if (nm[0] && UXL_LS_NM + text_w(&UF_LBL, uxl_word(nm)) > UXL_LS_W - 1) {
+                        printf("  key %s: \"%s\" %d px\n", nt, uxl_word(nm), (int)text_w(&UF_LBL, uxl_word(nm))); okw = 0;
+                    }
+                    okw &= text_w(&UF_LBL, nt) <= UXL_LS_NM - 3;
+                }
+            }
+        pfx_tgt = 0;
+        bad += check("  widths: knob names and values in their columns, status lines <= 224 px, the keys' names in the list", okw);
+    }
+    {   /* the list's order: F3 F#3 G3 .. G5, each note named as the keyboard is */
+        static const char *const N[27] = {"F3", "F#3", "G3", "G#3", "A3", "A#3", "B3", "C4", "C#4", "D4", "D#4", "E4", "F4",
+                                          "F#4", "G4", "G#4", "A4", "A#4", "B4", "C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5"};
+        int okk = 1, blk;
+        char nt[4];
+        uint32_t p;
+        for (c = 0; c < 27u; c++) {
+            p = uxl_key(c, &blk, nt);
+            okk &= str_eq(nt, N[c]) && (blk ? key_at(1, p) : key_at(0, p)) == c;
+        }
+        bad += check("  the MAP's list in keyboard order, F3 F#3 G3 .. F#5 G5 (each its key's)", okk);
+    }
+    return bad;
+}
+static int test_t9_names(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t i, j;
+    for (i = 0; i < 4u; i++) {                           /* the FX macros: one name a meaning (spec 0 rule 4) */
+        for (j = 0; j < NELEM(UXS_NAME); j++) ok &= !str_eq(UXL_PM[i], UXS_NAME[j].p);
+        for (j = 0; j < NELEM(UXS_MSRC_N); j++) ok &= !str_eq(UXL_PM[i], UXS_MSRC_N[j]);
+        for (j = 0; j < UXM_H_N; j++) ok &= !str_eq(UXL_PM[i], UXM_HEAD[j]);
+        if (!ok) { printf("  %s is another setting's name\n", UXL_PM[i]); break; }
+    }
+    ok &= !str_eq(UXL_PM[0], "STEPS") && !str_eq(UXL_PM[1], "TRANSPOSE");
+    bad += check("ACID FM 3b task 9: FX's macros STEP LOOP INTERVAL MUTATE DJ FILTER: no MORE row, matrix source or heading named so", ok);
+    return bad;
+}
+static uint32_t uxt9_hold_step(track_t *t)               /* SEQ > STEP, armed: a note held, step 1 the one held (its key) */
+{
+    uint32_t kn;
+    nav_put(SEC_SEQ, "STEP"); frame();
+    song.rec = 1;
+    for (kn = 0; kn < 27u && kb_map(t, kn) > 127u; kn++)
+        ;
+    fm1_in.notes |= 1u << kn; host_notes |= 1u << kn; frame();
+    return kn;
+}
+static void uxt9_let_go(uint32_t kn) { fm1_in.notes &= ~(1u << kn); frame(); song.rec = 0; }
+static int test_t9_lock(void)
+{
+    int bad = 0, ok, on;
+    uint32_t kn, r;
+    int32_t ratio;
+    int16_t v, base, g0;
+    char val[24];
+    track_t *t;
+    /* a synth (PHASE: its VOICE rows in MORE): MORE shown last, a step held on STEP: KNOB 2 locks the row picked */
+    uxs_syn_on(ENGI_PHASE);
+    t = TSEL;
+    track_defaults_steps(t);
+    motion_clear(t);
+    turn(EN_SELECT, 3); frame();
+    ok = str_eq(cur_page()->title, "SYN MORE") && lp_page_is("SYN MORE");
+    uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_SYN, P_GLIDE);
+    base = t->p[P_GLIDE];
+    kn = uxt9_hold_step(t);
+    ok &= lock_held() == 1u && lock_id(1) == P_GLIDE && lock_id(0) == 0xFFu && lock_id(2) == 0xFFu;
+    turn(EN_K2, 3); frame();
+    ok &= motion_lock_get(t, 0, P_GLIDE, &v) && v != base && t->p[P_GLIDE] == base && motion_lock_count(t) == 1u;
+    ok &= str_eq(uxm_lock_card(lock_src(), 1, 0, val, sizeof val, &on, &ratio), "GLIDE") && on && ratio >= 0;
+    if (!ok) printf("  GLIDE: lock %d base %d sound %d, %u locks\n", v, base, t->p[P_GLIDE], (unsigned)motion_lock_count(t));
+    bad += check("ACID FM 3b task 9: MORE shown last, a step held: KNOB 2 locks the row picked (GLIDE) on it, the sound's value kept", ok);
+    uxt9_let_go(kn);                                     /* (the roll: KNOB 1 is the chord's LEN; the grid's below) */
+    uxs_syn_on(ENGI_PHASE);
+    t = TSEL;
+    turn(EN_SELECT, 3); frame();
+    uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_SYN, P_GLMODE);
+    motion_clear(t);
+    v = t->p[P_GLMODE];
+    kn = uxt9_hold_step(t);
+    ok = lock_id(1) == 0xFFu;
+    turn(EN_K2, 1); frame();
+    ok &= str_eq(ui.msg, "GLIDE MODE: NOT PER STEP") && t->p[P_GLMODE] == v && motion_lock_count(t) == 0u;
+    if (!ok) printf("  GLIDE MODE: \"%s\"\n", ui.msg);
+    uxt9_let_go(kn);
+    bad += check("  a row the lock store holds not (GLIDE MODE): it says so (GLIDE MODE: NOT PER STEP), nothing changes", ok);
+    /* DRUM-X's MORE on the grid: a step held, KNOB 1 picks the next row, KNOB 2 locks it; a kit byte refused */
+    ui_power_on(); frame();
+    song.sel = 3; t = &trk[3];                           /* (T4: DRUM-X) */
+    track_defaults_steps(t); t->p[P_SLEN] = 16;
+    motion_clear(t);
+    press(B_EDIT); frame();
+    turn(EN_SELECT, 3); frame();
+    ok = lp_page_is("DRUM MORE");
+    uxm_at[uxm_key()].sel = (uint8_t)uxe_row(&UXM_DRM, P_E4);
+    nav_put(SEC_SEQ, "STEP"); frame();
+    kn = key_at(0, 4);
+    fm1_in.notes |= 1u << kn; host_notes |= 1u << kn; frame();
+    ok &= grid_on() && lock_held() == 1u << 4 && lock_id(1) == P_E4;
+    turn(EN_K1, 1); frame();
+    ok &= lock_id(1) == P_E5;
+    base = t->p[P_E5];
+    turn(EN_K2, 4); frame();
+    ok &= motion_lock_get(t, 4, P_E5, &v) && v != base && t->p[P_E5] == base;
+    turn(EN_K1, 3); frame();                             /* (E6, E7, then its drum's FEEDBACK: the kit's) */
+    ok &= uxm_lock_row(lock_src())->id == ID_DX_KFB && lock_id(1) == 0xFFu;
+    turn(EN_K2, 1); frame();
+    ok &= str_eq(ui.msg, "KIT SOUND: NO STEP LOCK") && motion_lock_count(t) == 1u;
+    turn(EN_K3, 1); frame();
+    ok &= str_eq(ui.msg, UXM_K34) && motion_lock_count(t) == 1u;
+    if (!ok) printf("  DRUM MORE: \"%s\", %u locks\n", ui.msg, (unsigned)motion_lock_count(t));
+    fm1_in.notes &= ~(1u << kn); frame();
+    bad += check("  DRUM-X's grid: KNOB 1 picks the next row (E5), KNOB 2 locks it on the step; a kit byte: KIT SOUND: NO STEP LOCK", ok);
+    /* FX's MORE: a global row refused (GLOBAL: NOT PER STEP), the global as it was */
+    uxt8_open(3);
+    t = TSEL;
+    motion_clear(t);
+    ok = lp_page_is("FX MORE");
+    uxm_at[uxm_key()].sel = (uint8_t)uxt8_row(UXR_GLOBAL, G_DCOLOR);
+    g0 = song.g[G_DCOLOR];
+    kn = uxt9_hold_step(t);
+    ok &= lock_held() == 1u && lock_id(1) == 0xFFu;
+    turn(EN_K2, 3); frame();
+    ok &= str_eq(ui.msg, "GLOBAL: NOT PER STEP") && song.g[G_DCOLOR] == g0 && motion_lock_count(t) == 0u;
+    if (!ok) printf("  DLY TONE: \"%s\" %d -> %d\n", ui.msg, g0, song.g[G_DCOLOR]);
+    uxt9_let_go(kn);
+    bad += check("  FX's MORE, a global (DLY TONE): GLOBAL: NOT PER STEP, the global unchanged, no lock", ok);
+    /* FM6's MORE: an operator's byte refused (PATCH: NOT PER STEP) */
+    uxs_syn_on(ENGI_FM6);
+    t = TSEL;
+    motion_clear(t);
+    turn(EN_SELECT, 3); frame();
+    for (r = 0; r < UXM_FM6.n && UXM_FM6.rows[r].id != ID_FO_DTUN; r++)
+        ;
+    uxm_at[uxm_key()].sel = (uint8_t)r;
+    kn = uxt9_hold_step(t);
+    turn(EN_K2, 1); frame();
+    ok = lp_page_is("FM6 MORE") && str_eq(ui.msg, "PATCH: NOT PER STEP") && motion_lock_count(t) == 0u;
+    if (!ok) printf("  OP DETUNE: \"%s\"\n", ui.msg);
+    uxt9_let_go(kn);
+    bad += check("  FM6's MORE, an operator's byte (OP DETUNE): PATCH: NOT PER STEP, no lock", ok);
+    /* no step held: KNOB 2 on MORE sets the track's value, no lock */
+    uxs_syn_on(ENGI_PHASE);
+    t = TSEL;
+    motion_clear(t);
+    turn(EN_SELECT, 3); frame();
+    base = t->p[P_GLIDE];
+    uxe_more_set(&UXM_SYN, P_GLIDE, 3);
+    ok = t->p[P_GLIDE] != base && motion_lock_count(t) == 0u && !lock_held();
+    bad += check("  no step held: KNOB 2 on MORE sets the track's GLIDE, no lock", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -17118,6 +17443,10 @@ int main(void)
     bad += test_t8_pace();
     bad += test_t8_names();
     bad += test_t8_fix();                               /* (ACID FM 3b task 8 fix) */
+    bad += test_t9_look();                              /* (ACID FM 3b task 9) */
+    bad += test_t9_knobs();
+    bad += test_t9_names();
+    bad += test_t9_lock();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();
