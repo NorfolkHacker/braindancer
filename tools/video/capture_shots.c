@@ -51,9 +51,9 @@ int main(int argc, char **argv)
     trk[T_PAD].p[P_CHRD] = 2; trk[T_PAD].p[P_CVOI] = 1; trk[T_PAD].p[P_CSTR] = 30;
     page(T_PAD, "CHORD"); shot("CHORD");
     song.g[G_DFDBK] = 108; song.g[G_DCOLOR] = 40; song.g[G_DMIX] = 90; trk[T_ARP].p[P_DLY] = 110;
-    page(T_ARP, "DLY"); shot("DLY");
+    page(T_ARP, "FX SPACE"); shot("DLY");
     song.g[G_DMOD] = 40; song.g[G_WIDTH] = 60;
-    page(T_ARP, "DLY 2"); shot("DLY 2");
+    page(T_ARP, "FX MORE"); shot("DLY 2");
     page(T_LEAD, "NOTE"); ui.cursor = (uint8_t)(i % 16u); shot("NOTE");
     fclose(rgb); fclose(names);
     printf("shots in %s\n", dir);

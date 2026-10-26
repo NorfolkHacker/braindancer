@@ -200,7 +200,7 @@ static void at_beat(uint32_t q)
     }
     if (q >= B(4, 0) && q < B(6, 0)) trk[T_DRUM].p[P_E0] = (int16_t)(16 + (q - B(4, 0)) * 6u);
     if (q == B(6, 0)) {
-        drums(MIN1); dx_ui_lane = 0; page(T_DRUM, "SOUND");
+        drums(MIN1); dx_ui_lane = 0; page(T_DRUM, "DRUM SOUND");
         caption(q, "DRUMS", "EVERY VOICE ITS OWN", "pitch · decay · noise|color · wave", 0);
     }
     if (q == B(7, 0)) dx_ui_lane = 4;
@@ -216,11 +216,11 @@ static void at_beat(uint32_t q)
     if (q >= B(10, 1) && q < B(11, 2)) trk[T_BASS].p[P_FTYPE] = (int16_t)((q - B(10, 1)) % 4u);   /* LP HP BP COMB */
     if (q == B(11, 2)) trk[T_BASS].p[P_FTYPE] = 0;
     if (q == B(12, 0)) {
-        mute(T_ARP, 0); page(T_PAD, "OPERATOR");
+        mute(T_ARP, 0); page(T_PAD, "FM6 OP");
         caption(q, "SYNTHESIS", "FM6 OPERATORS", "six operators on the device|ratio · level · envelopes", 0);
     }
     if (q >= B(12, 0) && q < B(13, 0)) enc_turn(EN_K1, 1);
-    if (q == B(13, 0)) page(T_PAD, "OP ENV");
+    if (q == B(13, 0)) page(T_PAD, "FM6 OP ENV");
     if (q >= B(13, 0) && q < B(14, 0)) enc_turn(EN_K2, 1);
     if (q == B(14, 0)) {
         page(T_ARP, "EDIT 1");
@@ -230,9 +230,9 @@ static void at_beat(uint32_t q)
     if (q == B(16, 0)) {
         drums(MIN2);
         dx_mot[XM_RATE] = 5; dx_mot[XM_DPTH] = 60; dx_mot[XM_SHPE] = 1; dx_mot[XM_RAND] = 25;
-        page(T_DRUM, "X-MOD"); caption(q, "DRUMS", "X-MOD", "the kit's own LFO on MORPH|a random push on every hit", 0);
+        page(T_DRUM, "DRUM MORE"); caption(q, "DRUMS", "X-MOD", "the kit's own LFO on MORPH|a random push on every hit", 0);
     }
-    if (q == B(18, 0)) { page(T_DRUM, "KIT 3"); caption(q, "DRUMS", "KIT 3", "band-pass on hats · rim · bell|feedback on every voice", 0); }
+    if (q == B(18, 0)) { page(T_DRUM, "DRUM MORE"); caption(q, "DRUMS", "KIT 3", "band-pass on hats · rim · bell|feedback on every voice", 0); }
     if (q >= B(18, 0) && q < B(20, 0)) dx_tone = (uint8_t)((q >= B(19, 0) ? 0x20u : 0u) | (2u + (q - B(18, 0)) * 3u / 2u));
     if (q == B(20, 0)) {
         dx_tone = 0x18u; mute(T_LEAD, 0); page(T_LEAD, "EDIT 1");
@@ -247,7 +247,7 @@ static void at_beat(uint32_t q)
         trk[T_BASS].p[P_M2SRC] = MS_STEP; trk[T_BASS].p[P_M2DST] = MD_CUT; trk[T_BASS].p[P_M2AMT] = 26;
         trk[T_BASS].p[P_MSLEN] = 8; trk[T_BASS].p[P_MSDIV] = 3;
         for (k = 0; k < 16u; k++) trk[T_BASS].p[P_MS0 + k] = (int16_t)((k * 53u + 10u) % 128u);
-        page(T_BASS, "MSEQ"); caption(q, "MODULATION", "MSEQ", "a 16-step modulation sequencer|here on the acid's cutoff", 0);
+        page(T_BASS, "LFO MORE"); caption(q, "MODULATION", "MSEQ", "a 16-step modulation sequencer|here on the acid's cutoff", 0);
     }
     if (q == B(26, 0)) {
         trk[T_PAD].p[P_ELOOP] = 1; trk[T_PAD].p[P_ED_FLT] = 30; page(T_PAD, "ENV DEST");
@@ -263,17 +263,17 @@ static void at_beat(uint32_t q)
     if (q == B(29, 2)) page(T_LEAD, "AUTOMATION");
     if (q == B(30, 0)) {
         song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 1; song.g[G_RPRE] = 2; trk[T_LEAD].p[P_REV] = 100;
-        page(T_LEAD, "REVERB"); caption(q, "EFFECTS", "FIVE REVERBS", "ROOM · SPRING · SHIMMER|RESO tuned to the scale · CLOUD", 0);
+        page(T_LEAD, "FX SPACE"); caption(q, "EFFECTS", "FIVE REVERBS", "ROOM · SPRING · SHIMMER|RESO tuned to the scale · CLOUD", 0);
     }
     if (q == B(31, 0)) song.g[G_RTYPE] = 2;
     if (q == B(31, 2)) song.g[G_RTYPE] = 4;
     if (q == B(32, 0)) {
-        song.g[G_RTYPE] = 3; song.g[G_DPIT] = 7; song.g[G_DFDBK] = 70; page(T_LEAD, "DLY 2");
+        song.g[G_RTYPE] = 3; song.g[G_DPIT] = 7; song.g[G_DFDBK] = 70; page(T_LEAD, "FX MORE");
         caption(q, "EFFECTS", "GRAIN DELAY", "repeats pitched ±12 semitones|a spray of grains", 0);
     }
     if (q == B(33, 0)) song.g[G_DPIT] = 12;
     if (q == B(34, 0)) {
-        song.g[G_DPIT] = 0; song.g[G_DFDBK] = 55; trk[T_BASS].p[P_DIST] = 50; page(T_BASS, "DIST");
+        song.g[G_DPIT] = 0; song.g[G_DFDBK] = 55; trk[T_BASS].p[P_DIST] = 50; page(T_BASS, "FX");
         caption(q, "EFFECTS", "FIVE DISTORTIONS", "SOFT · HARD · FOLD · CRUSH · RECT|on every track", 0);
     }
     if (q >= B(34, 0) && q < B(36, 0) && q % 2u == 0u) trk[T_BASS].p[P_DTYPE] = (int16_t)((q - B(34, 0)) / 2u % 5u);
@@ -283,9 +283,9 @@ static void at_beat(uint32_t q)
         drums(PEAK); chords(CHA); trk[T_DRUM].p[P_E0] = 40;
         slicer(2, (1u << T_DRUM) | (1u << T_BASS));
         song.g[G_SLPLEN] = 4; song.g[G_SLP0] = 0; song.g[G_SLP0 + 1] = 12; song.g[G_SLP0 + 2] = 7; song.g[G_SLP0 + 3] = -5;
-        page(T_DRUM, "SLICER"); caption(q, "PERFORMANCE", "SLICER BUS", "stutter and gate after the effects|on any of the 6 tracks", 0);
+        page(T_DRUM, "FX MORE"); caption(q, "PERFORMANCE", "SLICER BUS", "stutter and gate after the effects|on any of the 6 tracks", 0);
     }
-    if (q == B(37, 0)) page(T_DRUM, "SL PITCH");
+    if (q == B(37, 0)) page(T_DRUM, "FX MORE");
     if (q == B(38, 0)) { slicer(0, 0); home(T_LEAD); hold_btn(B_FX, 1); caption(q, "PERFORMANCE", "PUNCH-IN FX", "hold FX, play the keys|repeat · octave · stutter", 0); }
     if (bar == 38u && q % 4u == 3u) { perf_press(PF_R16, 1); lys.used = 1; }   /* (0.6.80: used, as the keys mark it:
                                                          * let go, FX does not lock open, 0.6.44) */

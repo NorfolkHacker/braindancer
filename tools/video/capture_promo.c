@@ -242,13 +242,13 @@ static void at_beat(uint32_t q)
     }
     if (q >= B(14, 0) && q < B(16, 0)) trk[T_DRUM].p[P_DXIMG] = (int16_t)(10 + (q - B(14, 0)) * 13u);
     if (q == B(16, 0)) {
-        page(T_BASS, "OPERATOR");
+        page(T_BASS, "FM6 OP");
         caption(q, "ENGINES", "FM6 · THE BASS", "six operators, mono and legato|a long release, a glide, a drive", 0,
                 "ALG · RATIO · LEVEL|VOICE LEGATO|REL long · GLIDE 30|DIST SOFT 34");
     }
     if (q >= B(16, 0) && q < B(17, 0)) enc_turn(EN_K1, 1);
     if (q == B(18, 0)) {
-        mute(T_LEAD, 0); page(T_LEAD, "DIST");
+        mute(T_LEAD, 0); page(T_LEAD, "FX");
         caption(q, "ENGINES", "THE PUNK LEAD", "a sync saw in octaves|folded by the distortion", 0,
                 "ANALOG · SYNC LEAD|two notes a step, an octave apart|DIST FOLD|delay · reverb");
     }
@@ -288,7 +288,7 @@ static void at_beat(uint32_t q)
         memset(fg_set, 0, sizeof fg_set); drums(IDM); bass(1);
         slicer(2, (1u << T_DRUM) | (1u << T_BLIP));
         song.g[G_SLPLEN] = 4; song.g[G_SLP0] = 0; song.g[G_SLP0 + 1] = 12; song.g[G_SLP0 + 2] = -5; song.g[G_SLP0 + 3] = 7;
-        page(T_DRUM, "SLICER");
+        page(T_DRUM, "FX MORE");
         caption(q, "IDM", "SLICER BUS", "stutters and gates after the effects|quantized, on any track", 0,
                 "drums + blips into the bus|pitch steps 0 · +12 · -5 · +7|ratchets x3 on the hats");
     }
@@ -305,7 +305,7 @@ static void at_beat(uint32_t q)
     /* ---- the mystery */
     if (q == B(36, 0)) {
         drums(MYST); mute(T_LEAD, 1); mute(T_BLIP, 1); choir(1); bass(0); trk[T_BASS].p[P_FCUT] = 70;
-        song.g[G_RSIZE] = 124; page(T_CHOIR, "REVERB");
+        song.g[G_RSIZE] = 124; page(T_CHOIR, "FX SPACE");
         caption(q, "MYSTERY", "A DRIFTING REVERB", "CLOUD: a granular reverb that moves|SHIMMER · RESO tuned to the scale", 0,
                 "TYPE CLOUD|SIZE 98 %|the choir inside it|the wind under it");
     }

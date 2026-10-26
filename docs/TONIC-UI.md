@@ -1,5 +1,9 @@
 # FELUCCA TONIC — Interfaz JIANT FM
 
+> **ACID FM 0.4:** documento histórico de JIANT. Las criaturas, las láminas (`assets/ui-shapes/`), su conversor
+> (`tools/gen_ui_shapes.py`) y `og_ill` ya no están en el repo (quedan en el historial de git); el firmware dibuja
+> el aspecto ACID (`ux_*.c`).
+
 El concepto ([jiant-fm-ui-concept.jpg](jiant-fm-ui-concept.jpg)) tiene 20 paneles. Cada uno corresponde a una
 página o capa del firmware. Las ilustraciones son el fondo; los valores (BPM, sección, MORPH, pasos, niveles)
 los dibuja el firmware encima, y algunas partes reaccionan a los knobs: arcos, pétalos, celdas, fila activa.
@@ -67,8 +71,8 @@ vez los gráficos funcionales (onda, envolvente, LFO, FX, algoritmo) y solo se a
   siguen el golpe y su caída; un sonido muteado queda tachado; arriba, la barra de MORPH de A a B. En EDIT > SOUND,
   el sonido editado en cyan.
 
-Las láminas (`assets/ui-shapes/plates.svg`), su conversor y `og_ill` siguen en el repo para retomarlas después; el
-firmware ya no las incluye (−11 KB de flash).
+Las láminas (`assets/ui-shapes/plates.svg`), su conversor y `og_ill` quedaron en el repo para retomarlas después (ACID
+FM 0.4 los quitó); el firmware ya no las incluía (−11 KB de flash).
 
 ## Cómo reemplazar los dibujos (vectores propios)
 

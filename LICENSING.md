@@ -27,7 +27,7 @@ Every file in this tree that carries an `SPDX-License-Identifier: GPL-3.0-only` 
 - the build script and tools: `build.sh`, `tools/`
 - the web pages (installer, editor, the browser emulator `web/emu/`) and their tests: `web/` (not the Fukiai and DotGothic16 fonts, below)
 - the host tests: `tests/`
-- JIANT FM's interface art: `assets/ui-art/`, `assets/ui-shapes/` and the concept image `docs/jiant-fm-ui-concept.jpg`
+- JIANT FM's interface art: `assets/ui-art/` and the concept image `docs/jiant-fm-ui-concept.jpg`
   (by JIANT's author, under GPL-3.0-only like the rest of JIANT)
 
 One source file is a port and keeps the licence of its original: `firmware/src/fm6_core.c`

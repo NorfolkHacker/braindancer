@@ -8,15 +8,26 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/acid-fm/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/acid-fm/manual/)**
 
-## Status: 0.3
+## Status: 0.4
 
-0.3 is the new look (piece 3a, UI foundations), on top of 0.2:
+0.4 is the sound sections in the ACID look (piece 3b), on top of 0.3:
+
+- EDIT, ENV, ARP, SCL, LFO and FX in the ACID look: a picture of the sound, four knobs, and MORE for the rest, with
+  names in plain words. JIANT's creatures are removed.
+- The held layers (EDIT, MACRO, FX, SCL) in the same look; with a step held, MORE's rows lock on that step too.
+- GEN shows ten IDM genres (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT),
+  plus EXPLORE and RANDOM; JIANT's techno and house are hidden (a song saved with one generates as before).
+- At power-on PLAY plays a short demo (beat, acid line, pad, 124 BPM); NEW PROJECT still starts empty.
+- HOME TRACKS: KNOB 1-3 are three tracks' levels, KNOB 4 the BPM.
+- Steadier timing: the screen draws more slowly when the audio is busy.
+- SEQ, GLO, SAVE, the MENU and the dialogs keep JIANT's layouts in ACID colours until 3c.
+
+Before that, 0.3 was the new look (piece 3a, UI foundations), on top of 0.2:
 
 - One ACID palette (JIANT's palettes and skins are gone), Inter Tight lettering with gradient and glow, shared widgets.
 - HOME is TRACKS, VISUAL and GEN (HOME again or SELECT cycles; HOME+SELECT goes to GEN): TRACKS is six ridgelines with
   each track's level in dB, the four knob-controlled tracks in the knobs' colours; VISUAL is six rings pulsing with hits.
 - The wordmark splash; JIANT's signature is removed.
-- The other screens keep JIANT's layouts in ACID colours until 0.4 and 0.5.
 
 Before that, 0.2 was the trim, on top of 0.1 (JIANT FM 0.9.18 under a new name, the pipeline proven end to end):
 
@@ -28,10 +39,10 @@ The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-aci
 
 1. Pipeline (0.1)
 2. Trim (0.2): engines for IDM, the voice ceiling measured, room made for samples
-3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b and 3c next)
+3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c next)
 4. BREAK: load breakbeats from the web page, chop and rearrange them
 5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
-6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, BOC, AMBIENT, GLITCH
+6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, RETROBOC, AMBIENT, GLITCH
 
 The manual still describes JIANT FM's features, which 0.1 keeps; it is rewritten as ACID FM's features land.
 

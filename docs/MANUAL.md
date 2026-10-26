@@ -55,7 +55,7 @@ files.
 2. Turn **ALGORITHM** to pick a track (T1–T6). With **TRACKS 4** (a setting; the default is 6 since the power-on demo) it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
-4. Turn **KNOB 1–4**: on HOME › TRACKS they are the LEVELs of the four tracks around the selected one; on **EDIT** the engine's controls.
+4. Turn **KNOB 1–4**: on HOME › TRACKS KNOB 1–3 are the LEVELs of three tracks (the selected one's group: T1–T3 or T4–T6) and KNOB 4 the BPM; on **EDIT** the engine's controls.
 5. Don't like it? Hold **EDIT** and turn **SELECT**: the sound is rolled into a new variation and you hear it at once.
    **OCT+ OK** keeps it, **OCT− CANCEL** brings the sound back.
 
@@ -98,11 +98,11 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | Button | Tap | Hold |
 | --- | --- | --- |
 | **HOME** | From another section the HOME page last shown; on HOME the next page, round: **TRACKS → VISUAL → GEN → TRACKS** (the status line says what the next tap does). | About 0.7 s: opens the **MENU**. HOME held + **SELECT**: straight to GEN. |
-| **ENV** | The ENV section: from elsewhere the page last shown (at power-on ENV); inside, the next group: **TRACKS → ENV → STAGE**, round. | (no layer) |
-| **LFO** | The LFO section: from elsewhere the page last shown (at power-on LFO); inside **MOD → LFO → MSEQ**, round. | **MACRO** layer: KNOB 1–4 are M1–M4. |
-| **FX** | The FX section: from elsewhere the page last shown; inside, the next module: **TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → MASTER → PUNCH**, round. | **Punch-in FX** layer. |
-| **SCL** | The SCL section (0.9.2: its own, ARP apart): **KEY ↔ CHORD**. | **SCL** layer: keys set the root. |
-| **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next group: **SOUND → TONE → FOCUS** (FM6: SOUND → TONE → OPERATOR; DRUM: KIT → SOUND → LEVELS → TONE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
+| **ENV** | The ENV section: from elsewhere the page last shown (at power-on ENV); inside, the other page: **AMP ↔ ENV TO**. | (no layer) |
+| **LFO** | The LFO section: from elsewhere the page last shown (at power-on LFO); inside **LFO → DEST → MOD MATRIX → MORE**, round. | **MACRO** layer: KNOB 1–4 are M1–M4. |
+| **FX** | The FX section: from elsewhere the page last shown; inside, the next page: **SENDS → SPACE → MASTER → MORE**, round. | **Punch-in FX** layer. |
+| **SCL** | The SCL section (0.9.2: its own, ARP apart): **KEY → CHORD → MORE**, round. | **SCL** layer: keys set the root. |
+| **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next page: **SOUND → TONE → VOICE or FILTER → MORE** (FM6: SOUND → OPERATOR → OP ENV → MORE; DRUM: KIT → SOUND → SOUND 2 → MORE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
 | **GLO** | The GLO section: from elsewhere the page last shown (at power-on MIXER); inside **LIVE → MIX → GLOBAL → SYSTEM**, round (0.9.11: LIVE, the live sequences, first). | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | The SAVE section: from elsewhere the page last shown, and USER or SECTIONS come with their **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SOUND → PROJECT → LIBRARY**, round. | **SAVE** layer: play/store sections live; C5 NAME. |
 | **ARP** | The ARP section (ARP · ARP 2, one group): from elsewhere the page last shown; inside, back to ARP. A chord held + ARP during step recording still arpeggiates it. | (no layer) |
@@ -272,15 +272,15 @@ it was in 0.9.1, with its knobs and its picture (the ones 0.8.5's lenses drew).
 | Section | Groups (the button) · pages (SELECT) | Pages |
 | --- | --- | --- |
 | **HOME** | **TRACKS**: TRACKS — **VISUAL**: VISUAL — **GEN**: GEN 1 · GEN 2 · GEN 3 | 5 |
-| **EDIT** (a synth) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (those the engine has) — **FOCUS**: FOCUS | up to 10 |
-| **EDIT** (FM6) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · VOICE · VOICE 2 — **OPERATOR**: OPERATOR · OP ENV · OPERATOR 2 | 8 |
-| **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER · STEREO · VOICE | 13 |
+| **EDIT** (a synth) | **SOUND**: SOUND — **TONE**: TONE — **PAGE 3**: VOICE or FILTER (by engine) — **MORE**: MORE | 4 |
+| **EDIT** (FM6) | **SOUND**: SOUND — **OPERATOR**: OPERATOR — **OP ENV**: OP ENV — **MORE**: MORE | 4 |
+| **EDIT** (DRUM) | **KIT**: KIT — **SOUND**: SOUND — **SOUND 2**: SOUND 2 — **MORE**: MORE | 4 |
 | **SEQ** | **PATTERN**: PATTERN · STRETCH · PLAYHEADS — **TRACK**: TRACK · MUTATE — **BAR**: BAR · STEP · NOTE — **STEP**: COMP · COMP 2 — **AUTO**: AUTOMATION · AUTO LIST | 12 |
-| **FX** | **TRACK**: SENDS · DIST · AUTO PAN — **BUSES**: BUSES — **DELAY**: DLY · DLY 2 · DLY 3 — **REVERB**: REVERB · REVERB 2 — **CHORUS**: CHORUS — **SLICER**: SLICER · SL BUS · SL BUS 2 · SL PITCH — **MASTER**: MASTER — **PUNCH**: PUNCH | 16 |
+| **FX** | **SENDS**: SENDS — **SPACE**: SPACE — **MASTER**: MASTER — **MORE**: MORE | 4 |
 | **GLO** | **LIVE**: MANO · RIELES — **MIX**: MIXER · SENDS — **GLOBAL**: GLOBAL — **SYSTEM**: SYSTEM | 6 |
-| **ENV** | **TRACKS**: TRACKS · TRACKS DEST — **ENV**: ENV · ENV DEST — **STAGE**: STAGE | 5 |
-| **LFO** | **MOD**: MOD — **LFO**: LFO · LFO DEST — **MSEQ**: MSEQ · MSEQ 2 | 5 |
-| **SCL** | **KEY**: SCL — **CHORD**: CHORD | 2 |
+| **ENV** | **AMP**: AMP — **ENV TO**: ENV TO | 2 |
+| **LFO** | **LFO**: LFO — **DEST**: DEST — **MOD MATRIX**: MOD MATRIX — **MORE**: MORE | 4 |
+| **SCL** | **KEY**: KEY — **CHORD**: CHORD — **MORE**: MORE | 3 |
 | **ARP** | **ARP**: ARP · ARP 2 | 2 |
 | **SAVE** | **SOUND**: USER · PRESETS — **PROJECT**: SECTIONS · ARRANGE — **LIBRARY**: PROJECTS · TOOLS | 6 |
 
@@ -291,38 +291,21 @@ LIBRARY level); the DRUM kit's EDIT 1 / EDIT 2 are **KIT** / **KIT 2**. The new 
 the bars with KNOB 1 the bar and KNOB 2 LEN.
 
 - **HOME › TRACKS**: six ridgelines, T1 at the top to T6 at the bottom, each its track's level over the last ~2 s; the
-  four tracks the knobs control in their knobs' colours, the name at the left and the level at the right; under them the
-  selected track's 16 steps, the playing one outlined and spelled out. **KNOB 1–4**: the LEVELs of those four tracks.
+  three tracks the knobs control in their knobs' colours, the name at the left and the level at the right; under them the
+  selected track's 16 steps, the playing one outlined and spelled out. **KNOB 1–3**: the LEVELs of the three tracks
+  in the selected one's group (T1–T3 or T4–T6), **KNOB 4**: the BPM (0.4).
 - **HOME › VISUAL**: six rings (T1 outside, T6 at the centre) of the blend, turning with the bar, each as bright as its
   track sounds; the song's name and where it is over them. **KNOB 1–4**: **MACRO 1–4** (as LFO held).
-- **ENV** › **TRACKS** / **TRACKS DEST**: the six tracks' envelopes as tiles (the selected one tinted with its level now a dot; DEST:
-  FILTER, PITCH and SHAPE as bars under each), the knobs the selected track's — **ALGORITHM** picks the
-  track. **ENV**: the envelope large / ENV DEST's columns, as before. **STAGE**: KNOB 1 picks the stage (ATK DEC
-  SUS REL), KNOB 2 sets it, KNOB 3 LOOP; the whole envelope with the stage shaded over the stage's own
-  curve, large, and its time.
+- **ENV, LFO, FX, SCL, ARP and EDIT** (0.4): every page in the ACID look: a picture of what the page sets (the
+  envelope, the LFO's wave, the sends, the key on a keyboard, the engine's sound …), the four knobs in their colours,
+  the status line and the footer ("2 / 4 · NEXT DEST"). **MORE** is a list of the section's other settings in groups:
+  KNOB 1 picks a row, KNOB 2 sets it. The web manual describes each page; this chapter's full rewrite comes later.
 - **GLO** › **LIVE** (0.9.11): MANO, the keys as a board of live modifiers over the six sequences, and RIELES, the six
   sequences as rails with their playheads and ghosts ([11](#live-sequences-glo--live-0911)).
 - **GLO** › **MIX**: the six tracks as strips (MIXER: LEVEL with the meter, PAN, REV; **SENDS**, new: each track's
   DIST, CHORUS, DLY and REV as four bars, the knobs the selected track's). **GLOBAL**: the bar of sixteenths, as before.
   **SYSTEM**: the tracks that play as chips, LOAD's three settings (the one set lit), MIDI's route, the CPU load over the
   last seconds as a line.
-- **SCL · ARP** › **KEY**: the twelve notes round a circle (C on top), the scale's lit and joined, ROOT in the accent
-  with the scale's name in the middle, QUANT and ALL TR at the right, the scale on a keyboard under it; KNOB 1 sets
-  ROOT. **CHORD**: the chord each degree of the key plays now (I–VII, as a key would play it: one note while CHORD is
-  OFF or the voice isn't POLY). **ARP** / **ARP 2**: "MODE · RATE · OCT" and the pattern it plays over a triad (GATE
-  the cells' length, SWING the off-beats late, PROB some left out); OFF says so.
-- **LFO · MOD** › **MOD**: the matrix as a net — the sources down the left (those a slot reads lit), a curve from each
-  slot's source to its box **D1–D4** on the right (DEST, AMT as a bar), the slot KNOB 1 picked framed with a pulse
-  running along its curve. **LFO**: the wave under "RATE · WAVE" / **LFO DEST**: the LFO small
-  on the left, the four amounts as rows lit by what the LFO sends now. **MSEQ** / **MSEQ 2**: the
-  sixteen steps under their caption; KNOB 1 the step.
-- **EDIT** › **SOUND**: the engine's creature on the left (0.9.4 / 0.9.6: each engine its own, see below; alive with the sound, the page's name over it, the sound's
-  under it), the scope in a well and all eight E parameters as chips on the right, the page's four lit. **TONE**:
-  **FILTER** draws TYPE's response at CUT with its RES peak (LP, HP, BP, COMB), CUT a line, DRIVE / DIST a row of
-  cells; **VOICE** / **VOICE 2** the voices one a row as full as they sound, VOICE and PRIO (VOICE 2: ALLOC), GLIDE's
-  curve; the others keep their pictures. **FOCUS** (new): one E parameter large as a gauge — KNOB 1 picks it (E1–E8),
-  KNOB 2 sets it, KNOB 3 the **source** of the MOD slot aimed at it (turned up from OFF a free slot takes it, its DEST
-  that parameter; back to OFF frees it), KNOB 4 that slot's **AMT**; E1–E8 as tabs under it.
 - **GEN 1–3** are the generator (as HOME held + SELECT, from any page): **SELECT** turns its page (left of GEN 1:
   VISUAL), **PRESETS** the GENRE, **OCT+** makes the piece, **OCT−** back to TRACKS, a **HOME** tap on to TRACKS.
 
@@ -330,76 +313,54 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
 
 "—" means an empty card. An "action" card, picked (turn the knob right), is tinted violet with its name violet and says **OCT+**; press OCT+ to do it.
 
-**ENV** (per track)
+**ENV** (per track; 0.4)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| ENV | ATK | DEC | SUS | REL |
-| ENV DEST | FILTER | PITCH | SHAPE | LOOP |
-| STAGE (0.8.5) | STAGE (ATK DEC SUS REL) | its value | LOOP | — |
+| AMP | ATTACK | DECAY | SUSTAIN | RELEASE |
+| ENV TO | FILTER | PITCH | SHAPE | LOOP |
 
-**LFO** (per track)
+**LFO** (per track; 0.4)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | LFO | RATE | WAVE | MODE (TRIG / FREE) | FADE |
-| LFO 2 (0.9.18) | PHASE (TRIG's; dimmed in FREE) | — | — | — |
-| LFO DEST | PITCH | FILTER | SHAPE | AMP |
-| MOD | SLOT (1–4) | SRC | DEST | AMT |
-| MSEQ | STEP (1–16) | LEVEL | LEN | SLEW |
-| MSEQ 2 | DIV | — | — | — |
+| DEST | PITCH | FILTER | SHAPE | AMP |
+| MOD MATRIX | SLOT (1–4) | SOURCE | DEST | AMOUNT |
+| MORE | the row (PHASE; STEPS: LENGTH, STEP RATE, SMOOTH, STEP 1–16) | its value | — | — |
 
-**FX** (TRACK pages are per track; the rest are global)
+**FX** (SENDS is per track; the rest are global; 0.4)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| FX | DIST | CHORUS (send) | DLY (send) | REV (send) |
-| DIST | DIST | TYPE | TONE | — |
-| AUTO PAN | DEPTH | RATE | SYNC | WAVE |
-| BUSES (0.8.5) | MIX (the delay's) | SIZE (the reverb's) | DEPTH (the chorus') | DEPTH (the SLICER's) |
-| SLICER | MODE | PAT | RATE | DEPTH |
-| SL BUS | T1 | T2 | T3 | T4 |
-| SL BUS 2 | T5 | T6 | FX | — |
-| SL PITCH | STEP | PITCH | LEN | QUANT |
-| DLY | TIME | FEEDBK | TONE | MIX |
-| DLY 2 | WIDE | PITCH | SPRAY | MOD |
-| DLY 3 | TYPE (ANALOG / DIGITAL) | PING (OFF / ON) | — | — |
-| REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
-| REVERB 2 | MOD | RATE | FILT | WIDE |
-| CHORUS | RATE | DEPTH | STEREO | — |
-| MASTER | CLIP | PUNCH | DUCK | REL |
+| SENDS | DISTORT | CHORUS | DELAY | REVERB |
+| SPACE | DLY TIME | DLY FDBK | REV TYPE | REV SIZE |
+| MASTER | CLIP | PUNCH | DUCK | DUCK TIME |
+| MORE | the row (DISTORT, AUTO PAN, DELAY, REVERB, CHORUS, SLICER, SLICE PITCH, PUNCH LANE) | its value | — | — |
 
-**SCL**
+**SCL** (0.4)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| SCL | ROOT | SCALE | QUANT | ALL TR (0.7.6; was TRANS, and SCL 2 held ALL TR alone) |
+| KEY | ROOT | SCALE | SNAP | ALL TRACKS |
+| CHORD | CHORD | VOICING | STRUM | ROTATE |
+| MORE | the row (SEQ PITCH, TRANSPOSE …) | its value | — | — |
 
-**EDIT** (per track; which pages appear depends on the engine)
+**EDIT** (per track; the pages depend on the engine; 0.4)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 | Shown on |
 | --- | --- | --- | --- | --- | --- |
-| EDIT 1 | E1 | E2 | E3 | E4 | every engine (see [4](#4-engines)) |
-| EDIT 2 | E5 | E6 | E7 | E8 | every engine |
-| WORDS | LANG | LYRIC | POS | (OCT+ TYPE: the lyric) | VOICE (0.8.5, [words](#voice-words-and-lyrics-085)) |
-| RETRIG | RTRG | — | — | — | LOFI with WAVE on BYTE or FLOAT |
-| MORPH | MORPH | — | — | — | ANALOG (SAW..SIN), PHASE, LOFI (up to WRAM) |
-| OPERATOR | OP | RATIO / FIXED | FINE | LEVEL | FM6 |
+| SOUND | E1 | E2 | E3 | E4 | the synths (see [4](#4-engines)) |
+| TONE | E5 | E6 | E7 | E8 | the synths |
+| VOICE | VOICE | GLIDE | PRIORITY | SPREAD | the synths (page 3: VOICE or FILTER, by engine) |
+| FILTER | FILTER | CUTOFF | RESO | DISTORT | the synths (page 3) |
+| SOUND | ALGORITHM | FEEDBACK | MOD LEVEL | MOD RATIO | FM6 |
+| OPERATOR | OP | RATIO (FIXED: FREQ) | FINE | LEVEL | FM6 |
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
-| OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
-| FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
-| KIT 3 | BP | FEEDBK | HANDS | — | DRUM (the whole kit) |
-| X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (the whole kit) |
-| STEREO | IMAGE | — | — | — | DRUM (the whole kit) |
-| SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (one sound) |
-| SOUND 2 | SOUND | DECAY | NOISE | COLOR | DRUM (one sound) |
-| SOUND 3 | SOUND | MODE | PM.TYPE | DRIVE | DRUM (one sound) |
-| SOUND 4 | SOUND | LAYER | FEEDBK | SEND | DRUM (one sound) |
-| LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
-| LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
-| VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
-| VOICE 2 (0.8.5) | ALLOC | DETUNE (UNI's spread) | — | — | every engine but DRUM |
-| FOCUS (0.8.5) | PARAM (E1–E8) | its value | SRC (the MOD slot on it) | AMT | the synths (not FM6, DRUM) |
+| KIT | MORPH | TUNE | TONE | DECAY | DRUM-X (the whole kit) |
+| SOUND | DRUM | LEVEL | PITCH | DECAY | DRUM-X (one drum) |
+| SOUND 2 | DRUM | NOISE | COLOR | WAVE | DRUM-X (one drum) |
+| MORE | the row (the engine's other settings, in groups) | its value | — | — | every engine |
 
 **GLO** (MANO and RIELES act on the tracks picked; MIXER is per track; GLOBAL and SYSTEM are global)
 
@@ -426,8 +387,8 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| ARP | MODE | RATE | OCT | GATE |
-| ARP 2 | SWING | PROB | HOLD | ORDER |
+| ARP | ARP (OFF, UP, DOWN …) | RATE | OCTAVES | GATE |
+| ARP 2 | SWING | CHANCE | HOLD | ORDER |
 
 **SEQ** (per track)
 
@@ -1696,8 +1657,8 @@ curve where the bar would be.
     (DELAY TIME, FDBK, TONE, MIX), **R.SIZ R.DMP** (REVERB SIZE, DAMP), **C.RAT C.DEP** (CHORUS RATE, DEPTH). AMT 64 at a
     full source = the parameter's whole range; every track's slots on the same bus add. A STEP source (the mod
     sequence) on D.TIM sequences the delay time.
-- **MSEQ**: a 16-step modulation sequencer per track, like a CV sequencer. KNOB 1 picks the step, KNOB 2 sets its
-  level, LEN and SLEW; DIV on MSEQ 2. Use it from MOD with SRC **STEP**.
+- **STEPS** (0.4; was MSEQ): a 16-step modulation sequencer per track, like a CV sequencer, in LFO › MORE: LENGTH,
+  STEP RATE, SMOOTH and STEP 1–16 (KNOB 1 picks the row, KNOB 2 sets it). Use it from MOD MATRIX with SOURCE **STEPS**.
 
 ### Macros M1–M4
 

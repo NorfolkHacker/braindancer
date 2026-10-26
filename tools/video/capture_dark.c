@@ -213,7 +213,7 @@ static void feat_beat(uint32_t q)
     /* DRUM-X */
     if (q == B(16, 0)) { mute(T_LEAD, 0); page(T_DRUM, "EDIT 1"); caption(q, "DRUMS", "DRUM-X", "8 synthesized voices, no samples|MORPH from kit A to kit B", 0); }
     if (q >= B(16, 0) && q < B(18, 0)) trk[T_DRUM].p[P_E0] = (int16_t)(20 + (q - B(16, 0)) * 11u);
-    if (q == B(18, 0)) { trk[T_DRUM].p[P_E0] = 30; dx_ui_lane = 1; page(T_DRUM, "SOUND"); caption(q, "DRUMS", "EVERY VOICE ITS OWN", "pitch · decay · noise · color · wave|layer · feedback · its own send", 0); }
+    if (q == B(18, 0)) { trk[T_DRUM].p[P_E0] = 30; dx_ui_lane = 1; page(T_DRUM, "DRUM SOUND"); caption(q, "DRUMS", "EVERY VOICE ITS OWN", "pitch · decay · noise · color · wave|layer · feedback · its own send", 0); }
     if (q == B(19, 0)) dx_ui_lane = 3;
     if (q == B(20, 0)) { page(T_DRUM, "STEREO"); caption(q, "DRUMS", "STEREO IMAGE", "one knob places the whole kit|each voice on its own orbit", 0); }
     if (q >= B(20, 0) && q < B(22, 0)) trk[T_DRUM].p[P_DXIMG] = (int16_t)(10 + (q - B(20, 0)) * 14u);
@@ -221,9 +221,9 @@ static void feat_beat(uint32_t q)
     if (q == B(22, 0)) { page(T_BASS, "EDIT 1"); caption(q, "ENGINES", "ANALOG", "saw · square · sync · ring|TRIO: three oscillators", 0); }
     if (q == B(24, 0)) { page(T_LEAD, "MORPH"); caption(q, "ENGINES", "WAVE MORPH", "ANALOG · PHASE · LOFI|the wave melts into the next", 0); }
     if (q >= B(24, 0) && q < B(26, 0)) trk[T_LEAD].p[P_MORPH] = (int16_t)((q - B(24, 0)) * 15u);
-    if (q == B(26, 0)) { trk[T_LEAD].p[P_MORPH] = 0; page(T_ARP, "OPERATOR"); caption(q, "ENGINES", "FM6", "six operators on the device|32 classic voices in a bank", 0); }
+    if (q == B(26, 0)) { trk[T_LEAD].p[P_MORPH] = 0; page(T_ARP, "FM6 OP"); caption(q, "ENGINES", "FM6", "six operators on the device|32 classic voices in a bank", 0); }
     if (q >= B(26, 0) && q < B(27, 0)) enc_turn(EN_K1, 1);
-    if (q == B(27, 0)) page(T_ARP, "OP ENV");
+    if (q == B(27, 0)) page(T_ARP, "FM6 OP ENV");
     if (q == B(28, 0)) { page(T_CHOIR, "EDIT 1"); caption(q, "ENGINES", "VOICE", "a formant choir|vowels you can play", 0); }
     if (q == B(30, 0)) { page(T_BASS, "FILTER"); caption(q, "ENGINES", "FILTERS", "LP · HP · BP · COMB|resonance and drive, on every engine", 0); }
     if (q >= B(30, 1) && q < B(31, 2)) trk[T_BASS].p[P_FTYPE] = (int16_t)((q - B(30, 1)) % 4u);
@@ -238,16 +238,16 @@ static void feat_beat(uint32_t q)
         trk[T_BASS].p[P_M2SRC] = MS_STEP; trk[T_BASS].p[P_M2DST] = MD_CUT; trk[T_BASS].p[P_M2AMT] = 26;
         trk[T_BASS].p[P_MSLEN] = 8; trk[T_BASS].p[P_MSDIV] = 3;
         for (k = 0; k < 16u; k++) trk[T_BASS].p[P_MS0 + k] = (int16_t)((k * 53u + 10u) % 128u);
-        page(T_BASS, "MSEQ"); caption(q, "MODULATION", "MSEQ", "a 16-step modulation sequencer|here on the bass's cutoff", 0);
+        page(T_BASS, "LFO MORE"); caption(q, "MODULATION", "MSEQ", "a 16-step modulation sequencer|here on the bass's cutoff", 0);
     }
     if (q == B(36, 0)) { page(T_PAD, "LFO"); caption(q, "MODULATION", "FREE LFO", "synced or free running|its own rate, as the delay", 0); }
     /* the effects */
-    if (q == B(38, 0)) { song.g[G_RTYPE] = 3; trk[T_LEAD].p[P_REV] = 100; page(T_LEAD, "REVERB"); caption(q, "EFFECTS", "FIVE REVERBS", "ROOM · SPRING · SHIMMER|RESO tuned to the scale · CLOUD", 0); }
+    if (q == B(38, 0)) { song.g[G_RTYPE] = 3; trk[T_LEAD].p[P_REV] = 100; page(T_LEAD, "FX SPACE"); caption(q, "EFFECTS", "FIVE REVERBS", "ROOM · SPRING · SHIMMER|RESO tuned to the scale · CLOUD", 0); }
     if (q == B(39, 0)) song.g[G_RTYPE] = 4;
-    if (q == B(40, 0)) { song.g[G_RTYPE] = 0; song.g[G_DPIT] = 7; page(T_LEAD, "DLY 2"); caption(q, "EFFECTS", "GRAIN DELAY", "repeats pitched ±12 semitones|a spray of grains", 0); }
-    if (q == B(42, 0)) { song.g[G_DPIT] = 0; trk[T_BASS].p[P_DIST] = 40; page(T_BASS, "DIST"); caption(q, "EFFECTS", "FIVE DISTORTIONS", "SOFT · HARD · FOLD · CRUSH · RECT|on every track", 0); }
+    if (q == B(40, 0)) { song.g[G_RTYPE] = 0; song.g[G_DPIT] = 7; page(T_LEAD, "FX MORE"); caption(q, "EFFECTS", "GRAIN DELAY", "repeats pitched ±12 semitones|a spray of grains", 0); }
+    if (q == B(42, 0)) { song.g[G_DPIT] = 0; trk[T_BASS].p[P_DIST] = 40; page(T_BASS, "FX"); caption(q, "EFFECTS", "FIVE DISTORTIONS", "SOFT · HARD · FOLD · CRUSH · RECT|on every track", 0); }
     if (q >= B(42, 0) && q < B(44, 0) && q % 2u == 0u) trk[T_BASS].p[P_DTYPE] = (int16_t)((q - B(42, 0)) / 2u % 5u);
-    if (q == B(44, 0)) { trk[T_BASS].p[P_DIST] = 0; song.g[G_CSTER] = 60; page(T_ARP, "CHORUS"); caption(q, "EFFECTS", "STEREO CHORUS", "from mono to twice as wide|and AUTOPAN on every track", 0); }
+    if (q == B(44, 0)) { trk[T_BASS].p[P_DIST] = 0; song.g[G_CSTER] = 60; page(T_ARP, "FX MORE"); caption(q, "EFFECTS", "STEREO CHORUS", "from mono to twice as wide|and AUTOPAN on every track", 0); }
     /* performance */
     if (q == B(46, 0)) {
         section(0); drums(DRIVE); home(T_LEAD); hold_btn(B_FX, 1);
@@ -394,7 +394,7 @@ static void seq_beat(uint32_t q)
         trk[T_BASS].p[P_M2SRC] = MS_STEP; trk[T_BASS].p[P_M2DST] = MD_CUT; trk[T_BASS].p[P_M2AMT] = 26;
         trk[T_BASS].p[P_MSLEN] = 8; trk[T_BASS].p[P_MSDIV] = 3;
         for (k = 0; k < 16u; k++) trk[T_BASS].p[P_MS0 + k] = (int16_t)((k * 53u + 10u) % 128u);
-        page(T_BASS, "MSEQ"); caption(q, "SEQUENCER", "MSEQ", "a modulation sequencer on every track|steps to any destination", 0);
+        page(T_BASS, "LFO MORE"); caption(q, "SEQUENCER", "MSEQ", "a modulation sequencer on every track|steps to any destination", 0);
     }
     /* MUTATE, FUGUE */
     if (q == B(32, 0)) {
@@ -418,7 +418,7 @@ static void seq_beat(uint32_t q)
     if (q == B(42, 0)) { drums(DRIVE); page(T_DRUM, "EDIT 1"); caption(q, "DETAILS", "DRUM-X MORPH", "two kits in one|MORPH glides from A to B", 0); }
     if (q >= B(42, 0) && q < B(44, 0)) trk[T_DRUM].p[P_E0] = (int16_t)(20 + (q - B(42, 0)) * 12u);
     if (q == B(44, 0)) {
-        trk[T_DRUM].p[P_E0] = 30; dx_ui_lane = 1; dx_snd[1] = (uint8_t)(3u << 6 | 63u); page(T_DRUM, "SOUND 4");
+        trk[T_DRUM].p[P_E0] = 30; dx_ui_lane = 1; dx_snd[1] = (uint8_t)(3u << 6 | 63u); page(T_DRUM, "DRUM SOUND 2");
         caption(q, "DETAILS", "DRUM SENDS", "each drum voice to CHORUS · DELAY · REVERB|its own amount: the snare to the hall", 0);
     }
     if (q == B(45, 0)) { dx_ui_lane = 3; dx_snd[3] = (uint8_t)(2u << 6 | 40u); }

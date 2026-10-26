@@ -321,13 +321,13 @@ static void act(const char *c, int cue)
     } else if (is(c, "engines")) {
         static const uint32_t K[5] = {T_BASS, T_ARP, T_LEAD, T_METAL, T_PAD};
         if (cue == 4) { pad_pre = 1; page(T_PAD, "PRESETS"); }
-        else page(K[cue], cue == 1 ? "OPERATOR" : "EDIT 1");
+        else page(K[cue], cue == 1 ? "FM6 OP" : "EDIT 1");
     } else if (is(c, "signal")) {
-        static const char *const P[5] = {"EDIT 1", "FILTER", "DIST", "FX", "MASTER"};
+        static const char *const P[5] = {"EDIT 1", "SYN FILTER", "FX", "FX SPACE", "MASTER"};
         page(T_LEAD, P[cue]);
     } else if (is(c, "drumx")) {
         if (cue == 0) page(T_DRUM, "EDIT 1");
-        if (cue == 2) { page(T_DRUM, "SOUND"); dx_ui_lane = 1; }
+        if (cue == 2) { page(T_DRUM, "DRUM SOUND"); dx_ui_lane = 1; }
     } else if (is(c, "seq")) {
         static const char *const P[5] = {"PATTERN", "STEP", "STEP", "COMP", "PLAYHEADS"};
         page(cue == 2 ? T_DRUM : cue == 0 ? T_ARP : T_LEAD, P[cue]);
@@ -342,10 +342,10 @@ static void act(const char *c, int cue)
         }
         if (cue == 2) { home(T_LEAD); hold_layer(B_LFO); }
     } else if (is(c, "fx")) {
-        if (cue == 0) page(T_LEAD, "DLY");
-        if (cue == 1) page(T_LEAD, "SLICER");
+        if (cue == 0) page(T_LEAD, "FX SPACE");
+        if (cue == 1) page(T_LEAD, "FX MORE");
         if (cue == 2) { home(T_DRUM); hold_layer(B_FX); }
-        if (cue == 3) page(T_DRUM, "PUNCH");
+        if (cue == 3) page(T_DRUM, "FX MORE");
     } else if (is(c, "gen")) {
         if (cue == 0) { home(T_LEAD); confirm_open(CF_DICE_ALL, song.sel); gen_open(); }
         if (cue == 1) { ui.confirm = 0; page(T_ARP, "STEP"); }
@@ -366,7 +366,7 @@ static void act(const char *c, int cue)
         if (cue == 0) { menu_open(MI_SERIAL); menu_put(MI_SERIAL, 2u); ui.force = 1; }
         else { tut_menu_close(); home(T_DRUM); }
     } else if (is(c, "editor")) {
-        static const char *const P[3] = {"EDIT 1", "OPERATOR", "PRESETS"};
+        static const char *const P[3] = {"EDIT 1", "FM6 OP", "PRESETS"};
         page(cue == 1 ? T_ARP : T_LEAD, P[cue % 3]);
     } else if (is(c, "micin")) {
         if (cue == 0 || cue == 2) { menu_open(MI_SERIAL); menu_put(MI_SERIAL, 4u); ui.force = 1; }

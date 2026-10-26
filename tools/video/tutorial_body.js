@@ -205,7 +205,7 @@ Gr.layers = (A, t, f) => {
     const on = A.cue === 0, ph = (t % 1.4) / 1.4; X.globalAlpha = on ? 1 : .35;
     rr(GX, GY + 70, 120, 56, 8, C.orange, 'rgba(255,122,0,.1)', 2); T('EDIT', GX + 60, GY + 106, 20, 600, C.text, 'center');
     if (on) { X.globalAlpha = (1 - ph) * .8; X.strokeStyle = C.orange; X.lineWidth = 2; X.beginPath(); X.roundRect(GX - ph * 30, GY + 70 - ph * 30, 120 + ph * 60, 56 + ph * 60, 12); X.stroke(); X.globalAlpha = 1; }
-    const pages = ['EDIT 1', 'EDIT 2', 'FILTER', 'VOICE'], k = on ? Math.floor(t / 1.4) % 4 : 0;
+    const pages = ['SOUND', 'TONE', 'VOICE', 'MORE'], k = on ? Math.floor(t / 1.4) % 4 : 0;
     pages.forEach((p, i) => { const d = (i - k + 4) % 4; X.globalAlpha = (on ? 1 : .35) * (1 - d * .28); rr(GX + d * 18, GY + 170 + d * 18, 300, 190, 8, d ? C.faint : C.orange, '#07060a', d ? 1 : 2); if (!d) T(p, GX + 24, GY + 214, 24, 600, C.text); });
     X.globalAlpha = 1;
   }
@@ -353,7 +353,7 @@ Gr.seq = (A, t, f) => {
   }
 };
 Gr.mod = (A, t, f) => {
-  const S = ['ENV', 'LFO', 'VELOCIDAD', 'MSEQ', 'RUIDO'], Dd = ['AFINACIÓN', 'FILTRO', 'FORMA', 'AMPLITUD', 'DELAY', 'REVERB'];
+  const S = ['ENV', 'LFO', 'VELOCIDAD', 'STEPS', 'RUIDO'], Dd = ['AFINACIÓN', 'FILTRO', 'FORMA', 'AMPLITUD', 'DELAY', 'REVERB'];
   if (A.cue < 2) {
     const routes = A.cue === 0 ? [[0, 1], [1, 0], [1, 1], [0, 3], [1, 2]] : [[0, 1], [1, 0], [2, 3], [3, 4], [4, 5], [1, 2]];
     S.forEach((s, i) => { const on = routes.some((r) => r[0] === i); node(GX, GY + 30 + i * 100, 190, 60, s, on); });

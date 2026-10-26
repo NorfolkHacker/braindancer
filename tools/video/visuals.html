@@ -73,7 +73,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const TAU = Math.PI * 2;
 const hash = (n) => { n = Math.imul(n ^ 0x9e3779b9, 2654435761); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
 
-/* ---------------------------------------------------------------- the beings: ui_being.c, ported, + organelles --- */
+/* ---------------------------------------------------------- the beings: JIANT's ui_being.c, ported, + organelles --- */
 const G = {
   rad: [6, 18, 16, 3, 22, 0, 6], amo: [3, 5, 14, 2, 26, 3, 2], dia: [4, 6, 10, 4, 18, 0, 1], cil: [10, 30, 8, 5, 20, 1, 10],
   spo: [5, 9, 12, 3, 19, 2, 4], wor: [2, 4, 16, 2, 30, 1, 3], pol: [8, 12, 12, 6, 17, 0, 8], hyd: [3, 7, 15, 3, 21, 4, 5],

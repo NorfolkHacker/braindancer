@@ -1,0 +1,49 @@
+ACID FM piece 3b (sound sections) — deferred items, each tagged with the piece that should pick it up.
+Read this when writing the plan for that piece. [3c] the remaining sections (SEQ, GLO, SAVE), the MENU and the
+dialogs, [3d] docs, pictures and tools, [device] the device check, [backlog] when convenient.
+
+[3c]      Roll: KNOB 1 with a step held is the chord LEN, so the MORE row is picked on MORE first (Task 9).
+[3c]      Roll during ARP chord entry: ent_knob takes KNOB 1-3, so KNOB 2 sets ORDER and a MORE row can't be locked
+          there (Task 9 review #2, ui_input.c ~2525).
+[3c]      SEQ › STEP lock cards are still JIANT's (Task 9).
+[3c]      Held MACRO's status "SELECT DICE" dices the LFO, next to F3 DICE: the wording could mislead (Task 9 fix).
+[3c]      GLO+SELECT (ui_input.c ~2512) and TAP (ui_layer.c ~338) write BPM under an external clock (the header flashes
+          the new BPM, midi_clock.c overwrites it on the next beat): make them follow the knob rule "CLOCK: USB/TRS"
+          (Task 10 review N1; spec §0 "no silent no-ops").
+[3c]      SCL keeps two moves that SEQ also has: ROTATE (SCL › CHORD = SEQ › STRETCH) and SEQ PITCH (SCL › MORE =
+          SEQ › TRACK). Keep both or drop one when SEQ moves to the ux layer (Task 6 question 5).
+[3c]      Automation or a step lock redraws a section's picture unpaced (every section); mod_begin flicker (Task 7
+          review, can wait).
+[3c]      Changing the engine on EDIT's page 3 lands on SOUND (Task 4 review, can wait).
+[3d]      docs/MANUAL.md / MANUAL.es.md: 0.4 pass only (the buttons table, the chains table, the knob tables, STEPS, a
+          pointer to the web manual for the sound pages). The chapters 4 (engines: creatures, ANIMAL, WHEEL), 9 (FX's
+          old chain and pages), 10 (MOD, MSEQ) and MANUAL.es.md's HOME (ECO / BEING) still describe JIANT's pages.
+[3d]      Cheat sheets: tools/gen_cheatsheets.py's page map and knob tables are 0.4's, but the sound sheet's prose
+          (OPERATOR 2, KIT 3, X-MOD, DLY 2, MSEQ, SL PITCH, the creatures) and the controls sheet's HOME (ECO / BEING)
+          are JIANT's; docs/cheatsheet-*.png / .pdf not re-rendered (tools/render_cheatsheets.mjs needs Playwright,
+          not installed here).
+[3d]      tools/gen_nav_map.py: the map's title still says "JIANT FM" (piece 1 list) and the SYNTHS label lists
+          WHEEL and ANIMAL. docs/navigation-map*.png re-rendered with /usr/bin/chromium headless (same flags as the
+          script's Playwright path), not with Playwright.
+[3d]      tools/video: the 3b page titles are fixed (go_title), but capture_shots.c's "TIMING" / "HUMAN" and
+          capture_dark.c's "SHIFT" pages and P_CLEN are older JIANT renames (they exit or do not compile); the films'
+          captions still name JIANT's pages (X-MOD, KIT 3, MSEQ, DLY 2 …); beings.js / visuals.html keep JIANT's
+          beings for the films only.
+[3d]      VOICE's EDIT picture is its own glottal-pulse model, not a port of formant_render (it shares formant_nz and
+          the singer state) (Task 4 fix).
+[backlog] Build pin guard (tools/build.py VAR_DEF) matches only [\w.] names; a quoted asm-label name would slip past
+          (Task 10 review N2; nothing in the tree uses one).
+[backlog] NOTE RAND and CHO DEPTH fall to UF_LBL, the smallest face; MOD's source / destination names and FX SPACE
+          TYPE are on the UXC_WIDE list (Task 10 question 3): shorten if a plainer word fits.
+[backlog] NOISE's DRIFT and the track's P_DRIFT share a word; distinct FM6 and DRUM MORE titles; moving ed_resp; the
+          GR_LYRIC and MORPH rule holders (Task 4 review, can wait).
+[backlog] MORE's sel / top are per section, not per EDIT engine kind (uxm_fix clamps); the first-time hint is skipped
+          when a knob was turned < 600 ms before the section opened (Task 3 notes).
+[backlog] FM6 shows the filter's DRIVE while DRUM-X hides it; drum-name styles in the picture corner; FIXED operator
+          FREQ cycling is JIANT's (Task 5 review, can wait).
+[backlog] ENV's source on FM6 does nothing (could be dimmed) (Task 7 review).
+[backlog] The spacing in ARP's "C G E HELD" (Task 6 review).
+[device]  CPU figures for the DUST / DRUM pictures are host-only: check on the device, with a fast NOISE DUST knob
+          turn while a song plays (Task 10).
+[device]  CPU TEST late blocks/s on MENU, TRACKS, an EDIT page and the LFO page (the 200 ms pace under load, Task 10);
+          the power-on demo heard (T2-T4 silent, Task 2).

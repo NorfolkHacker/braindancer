@@ -97,9 +97,10 @@ def tc_all(*cmds):
 
 
 def generate():
-    """generated headers (UI fonts, icons, keycaps, palettes, line art shapes, tables, samples)"""
+    """generated headers (UI fonts, icons, keycaps, palettes, tables, samples)"""
     GEN.mkdir(parents=True, exist_ok=True)
-    for old in ("felucca_font.h", "felucca_icons.h"):     # headers of the bitmap font and icon atlas
+    for old in ("felucca_font.h", "felucca_icons.h", "ui_shapes.h"):   # the bitmap font, the icon atlas; (ACID FM 0.4)
+                                                                       # JIANT's line art, unused since its creatures went
         (GEN / old).unlink(missing_ok=True)
     tools = SRC / "tools"
     cmds = [[tools / "gen_aa_font.py", GEN / "ui_fonts.h", "--preset", "jiant-lab"],   # (gen_aa_font.UI_PRESET),
@@ -108,7 +109,6 @@ def generate():
             [tools / "gen_aa_icons.py", GEN / "ui_icons.h"],
             [tools / "gen_aa_keycaps.py", GEN / "ui_keycaps.h"],
             [tools / "gen_ui_palettes.py", GEN / "ui_palettes.h"],
-            [tools / "gen_ui_shapes.py", GEN / "ui_shapes.h"],
             [tools / "gen_tables.py", GEN / "felucca_tables.h"],
             [tools / "gen_lyrics.py", GEN / "felucca_lyrics.h"],   # (0.8.5) VOICE's words (sing.c)
             [tools / "gen_fm6_patches.py", GEN / "felucca_fm6.h"],

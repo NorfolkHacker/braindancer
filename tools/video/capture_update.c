@@ -113,7 +113,7 @@ static void at_beat(uint32_t q)
         uint32_t i;
         song.g[G_PFXLEN] = 16; song.g[G_PFXRES] = 1;
         for (i = 0; i < 16u; i++) pfx_lane_put(i, i % 8u == 6u || i % 8u == 7u ? 6u : i == 12u ? 2u : 0u);
-        page(T_DRUM_K, "PUNCH");
+        page(T_DRUM_K, "FX MORE");
         caption(q, "FX", "SEQUENCED|PUNCH-IN", "record your FX performance in real time|LEN 1..64 steps · RES 1/8 1/16 1/32 · CLEAR|the lane repeats with the song", 0,
                 "REC + PLAY records|hold FX + a key|STUTTER on 7 and 8, OCT+ on 13");
     }

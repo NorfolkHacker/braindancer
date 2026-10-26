@@ -116,7 +116,7 @@ controls: {
   "EDIT": {kind: "button", sec: "edit", shot: 'edit_analog_1', layer: "EDIT",
     alone: ["Sección EDIT: en un sinte SOUND → TONE → VOICE (ANALOG) o FILTER → MORE (FM6: SOUND → OPERATOR → OP ENV → MORE; DRUM-X: KIT → SOUND → SOUND 2 → MORE). El pie dice adónde va el próximo EDIT: 1 / 4 · NEXT OPERATOR. Siempre EDIT: ya no borra pasos.",
             "The EDIT section: on a synth SOUND → TONE → VOICE (ANALOG) or FILTER → MORE (FM6: SOUND → OPERATOR → OP ENV → MORE; DRUM-X: KIT → SOUND → SOUND 2 → MORE). The footer says where the next EDIT goes: 1 / 4 · NEXT OPERATOR. Always EDIT: it no longer clears steps."],
-    held: ["Capa EDIT: F3 INIT, G3 RECALL; en DRUM las negras 1–8 silencian cada sonido; perillas: las cuatro de EDIT 1.", "EDIT layer: F3 INIT, G3 RECALL; on DRUM black keys 1–8 mute each sound; knobs: EDIT 1's four."],
+    held: ["Capa EDIT: F3 INIT, G3 RECALL; en DRUM las negras 1–8 silencian cada sonido; perillas: las cuatro de SOUND (DRUM-X: las de KIT).", "EDIT layer: F3 INIT, G3 RECALL; on DRUM black keys 1–8 mute each sound; knobs: SOUND's four (DRUM-X: KIT's)."],
     combos: [
       {k: "EDIT+SELECT", t: ["dados del sonido (DRUM: un kit nuevo)", "sound dice (DRUM: a new kit)"]},
       {k: "STEP+EDIT", t: ["con un paso mantenido: borra solo sus locks", "with a step held: clears only its locks"]},
@@ -217,9 +217,9 @@ keyAlone: ["Toca la nota en la pista elegida (27 teclas, F3 a G5). En una pista 
 
 // ------------------------------------------------------------------------------------------- every page's four knobs
 pages: {
-  "HOME/TRACKS": ["(4 del motor)", "", "", ""], "HOME/VISUAL": ["M1", "M2", "M3", "M4"],
+  "HOME/TRACKS": ["LEVEL", "LEVEL", "LEVEL", "BPM"], "HOME/VISUAL": ["M1", "M2", "M3", "M4"],
   "HOME/GEN 1": ["GENRE", "SEED", "ENERGY", "FORM"], "HOME/GEN 2": ["DRUMS", "BASS", "CHORDS", "ARP"], "HOME/GEN 3": ["LEAD", "COMPLEX", "SWING", "HUMAN"],
-  "EDIT/EDIT 1": ["E1", "E2", "E3", "E4"], "EDIT/EDIT 2": ["E5", "E6", "E7", "E8"], "EDIT/FILTER": ["TYPE", "CUT", "RES", "DRIVE / DIST"],
+  "EDIT/EDIT 1": ["E1", "E2", "E3", "E4"], "EDIT/EDIT 2": ["E5", "E6", "E7", "E8"], "EDIT/FILTER": ["TYPE", "CUT", "RES", "DISTORT"],
   "EDIT/VOICE": ["VOICE", "GLIDE", "MODE", "PRIO"], "EDIT/VOICE 2": ["ALLOC", "DETUNE", "—", "—"],
   "CE_SYN/SOUND": ["E1", "E2", "E3", "E4"], "CE_SYN/TONE": ["E5", "E6", "E7", "E8"], "CE_SYN/VOICE": ["VOICE", "GLIDE", "PRIORITY", "SPREAD"],
   "CE_SYN/FILTER": ["FILTER", "CUTOFF", "RESO", "DISTORT"], "CE_SYN/MORE": ["SETTING", "(its value)", "—", "—"],
@@ -270,7 +270,7 @@ commands: [
 
   // HOME
   {s: "home", k: "HOME", shot: 'home', t: ["HOME: TRACKS y VISUAL", "HOME: TRACKS and VISUAL"],
-   d: ["Tres páginas: TRACKS → VISUAL → GEN. Desde otra sección, HOME vuelve a la última que viste; en HOME, HOME otra vez pasa a la siguiente (en ronda) y SELECT las recorre. La línea de estado dice qué hace el próximo HOME. KNOB 1–4 en TRACKS: el nivel (LEVEL) de las cuatro pistas alrededor de la elegida.", "Three pages: TRACKS → VISUAL → GEN. From another section HOME comes back to the one you saw last; on HOME, HOME again goes to the next (round) and SELECT walks them. The status line says what the next HOME does. KNOB 1–4 on TRACKS: the LEVEL of the four tracks around the selected one."]},
+   d: ["Tres páginas: TRACKS → VISUAL → GEN. Desde otra sección, HOME vuelve a la última que viste; en HOME, HOME otra vez pasa a la siguiente (en ronda) y SELECT las recorre. La línea de estado dice qué hace el próximo HOME. KNOB 1–3 en TRACKS: el nivel (LEVEL) de las tres pistas del grupo de la elegida (T1–T3 o T4–T6); KNOB 4: el BPM (con reloj externo no cambia y dice CLOCK: USB o TRS).", "Three pages: TRACKS → VISUAL → GEN. From another section HOME comes back to the one you saw last; on HOME, HOME again goes to the next (round) and SELECT walks them. The status line says what the next HOME does. KNOB 1–3 on TRACKS: the LEVEL of the three tracks in the selected one's group (T1–T3 or T4–T6); KNOB 4: the BPM (under an external clock it does not change and says CLOCK: USB or TRS)."]},
   {s: "home", k: "HOME", shot: 'home_visual', t: ["VISUAL: los macros", "VISUAL: the macros"],
    d: ["HOME › VISUAL: KNOB 1–4 son MACRO 1–4 (M1–M4, como LFO mantenido).", "HOME › VISUAL: KNOB 1–4 are MACRO 1–4 (M1–M4, as LFO held)."]},
   {s: "home", k: "HOME", shot: 'menu', t: ["Abrir el MENU", "Open the MENU"],
@@ -524,7 +524,7 @@ recipes: [
   {id: "first", s: "basic", shots: ['home', 'dlg_dice_sound'], t: ["Tu primer sonido (1 minuto)", "Your first sound (1 minute)"], steps: [
     ["Encendé: aparece el nombre ACID FM y caés en HOME › TRACKS, una línea por pista (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI…). HOME otra vez: VISUAL (anillos), después GEN. Sin nada que restaurar, PLAY toca una demo corta a 124 BPM (ritmo, línea ácida, pad): la línea de estado dice DEMO hasta tu primer cambio. NUEVO PROYECTO arranca vacío.", "Power on: the ACID FM wordmark, then HOME › TRACKS, a ridgeline per track (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI…). HOME again: VISUAL (rings), then GEN. With nothing to restore, PLAY plays a short demo at 124 BPM (beat, acid line, pad): the status line says DEMO until your first edit. NEW PROJECT starts empty."],
     ["ALGORITHM elige la pista; PRESETS recorre sonidos; tocá las teclas.", "ALGORITHM picks the track; PRESETS browses sounds; play the keys."],
-    ["KNOB 1–4 en EDIT: los controles del motor (en HOME › TRACKS son los niveles de las pistas).", "KNOB 1–4 on EDIT: the engine's controls (on HOME › TRACKS they are the tracks' levels)."],
+    ["KNOB 1–4 en EDIT: los controles del motor (en HOME › TRACKS: tres niveles de pista y el BPM).", "KNOB 1–4 on EDIT: the engine's controls (on HOME › TRACKS: three track levels and the BPM)."],
     ["¿No te gusta? EDIT mantenido + SELECT: dados del sonido. OCT+ lo deja, OCT− vuelve.", "Don't like it? EDIT held + SELECT: the sound dice. OCT+ keeps it, OCT− goes back."]]},
   {id: "live", s: "seq", shots: ['countin', 'lente_bar'], t: ["Grabar una secuencia en vivo", "Record a sequence live"], steps: [
     ["Elegí la pista con ALGORITHM. Si querés click: REC + G3 (CLICK REC/ON) y MENU › AUDIO › CLICK › COUNT-IN.", "Pick the track with ALGORITHM. For a click: REC + G3 (CLICK REC/ON) and MENU › AUDIO › CLICK › COUNT-IN."],
@@ -544,7 +544,7 @@ recipes: [
   {id: "locks", s: "seq", shots: ['roll_lock_held', 'drum_lock_page'], t: ["Parameter locks", "Parameter locks"], steps: [
     ["Visitá la página de sonido cuyas perillas querés bloquear (EDIT, ENV, FX…), o elegila después con SELECT.", "Visit the sound page whose knobs you want to lock (EDIT, ENV, FX…), or pick it later with SELECT."],
     ["SEQ › STEP: mantené un paso (tecla de la grilla o la nota que entrás).", "SEQ › STEP: hold a step (a grid key, or the note being entered)."],
-    ["Sin soltar, girá KNOB 1–4: ese paso guarda su valor. SELECT mientras lo mantenés recorre las páginas EDIT de la pista (LOCK · KIT 2 2/7).", "Still holding, turn KNOB 1–4: that step keeps its value. SELECT while holding walks the track's EDIT pages (LOCK · KIT 2 2/7)."],
+    ["Sin soltar, girá KNOB 1–4: ese paso guarda su valor. SELECT mientras lo mantenés recorre las páginas EDIT de la pista (LOCK · SOUND 2).", "Still holding, turn KNOB 1–4: that step keeps its value. SELECT while holding walks the track's EDIT pages (LOCK · SOUND 2)."],
     ["Paso mantenido + EDIT borra sus locks; SEQ › AUTO LIST los muestra y edita uno por uno.", "A step held + EDIT clears its locks; SEQ › AUTO LIST shows and edits them one by one."]]},
   {id: "clear", s: "seq", shots: ['layer_seq_tools', 'confirm_seq'], t: ["Borrar un paso, una pista o todo", "Clear a step, a track or everything"], steps: [
     ["Un paso: SEQ mantenido + G5 (CLR STEP) borra el del cursor y sus locks. O KNOB 3 TIME hasta REST.", "A step: SEQ held + G5 (CLR STEP) clears the cursor's and its locks. Or KNOB 3 TIME down to REST."],
@@ -612,6 +612,13 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.4", items: [
+    ["0.4: las secciones de sonido con el aspecto ACID: EDIT (un dibujo del sonido, cuatro perillas y MORE con el resto), ENV, ARP, SCL, LFO y FX. Nombres en palabras simples; las criaturas de JIANT se retiran.", "0.4: the sound sections in the ACID look: EDIT (a picture of the sound, four knobs and MORE for the rest), ENV, ARP, SCL, LFO and FX. Names in plain words; JIANT's creatures are removed."],
+    ["Las capas mantenidas (EDIT, MACRO, FX, SCL) con el mismo aspecto: las teclas y las perillas dicen qué hacen. Con un paso mantenido, también las filas de MORE guardan su valor en ese paso.", "The held layers (EDIT, MACRO, FX, SCL) in the same look: the keys and knobs say what they do. With a step held, MORE's rows also keep their value on that step."],
+    ["GEN: diez géneros IDM (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT), más EXPLORE y RANDOM. El techno y el house de JIANT quedan ocultos; un tema guardado con ellos se genera igual que antes.", "GEN: ten IDM genres (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT), plus EXPLORE and RANDOM. JIANT's techno and house are hidden; a song saved with one still generates as before."],
+    ["Al encender, PLAY toca una demo corta (ritmo, línea ácida, pad, a 124 BPM); NEW PROJECT sigue arrancando vacío.", "At power-on, PLAY plays a short demo (beat, acid line, pad, at 124 BPM); NEW PROJECT still starts empty."],
+    ["HOME › TRACKS: KNOB 1–3 son los niveles de tres pistas (las del grupo de la elegida) y KNOB 4 el BPM.", "HOME › TRACKS: KNOB 1–3 are three tracks' levels (the selected one's group) and KNOB 4 the BPM."],
+    ["Tiempo más firme: la pantalla dibuja más despacio cuando el audio va justo, para que no se atrase.", "Steadier timing: the screen draws more slowly when the audio is busy, so the audio is not late."]]},
   {v: "0.3", items: [
     ["0.3: una cara nueva: una sola paleta ACID, letras Inter Tight con degradé y brillo, y piezas compartidas (cabecera, fila de perillas con color, panel con brillo, línea de estado, pie).", "0.3: a new look: one ACID palette, Inter Tight lettering with gradient and glow, and shared pieces (header, colour-coded knob row, glow panel, status line, footer)."],
     ["HOME ahora es TRACKS, VISUAL y GEN: HOME otra vez (o SELECT) los recorre; HOME + SELECT va directo a GEN. TRACKS muestra seis crestas con el nivel de cada pista, en dB como el mezclador; VISUAL, seis anillos que laten con los golpes de cada pista.", "HOME is now TRACKS, VISUAL and GEN: HOME again (or SELECT) walks them; HOME + SELECT goes straight to GEN. TRACKS shows six ridgelines with each track's level, in dB like the mixer; VISUAL shows six rings pulsing with each track's hits."],

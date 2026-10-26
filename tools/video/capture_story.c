@@ -222,7 +222,7 @@ static void yt_beat(uint32_t q)
                 "hardware · M-Vave FM1|base · Felucca|author · JIANT, one person|license · free, open source");
     }
     if (q == B(6, 0)) {
-        mute(T_LEAD, 0); mute(T_ANVIL, 0); page(T_BRASS, "OPERATOR");
+        mute(T_LEAD, 0); mute(T_ANVIL, 0); page(T_BRASS, "FM6 OP");
         caption(q, "WHY IT EXISTS", "MORE INSIDE", "the FM1 is small and cheap|and holds far more than it shows", 0,
                 "play whole songs|bend them live|sequence every change");
     }
@@ -237,7 +237,7 @@ static void yt_beat(uint32_t q)
     if (q == B(14, 0)) caption(q, "FIELD NOTE 02 · YOUTUBE", "The level of destruction|through the FX alone|is amazing.", "", 4, "");
     if (q == B(16, 0)) caption(q, "FIELD NOTE 03 · YOUTUBE", "My FM-1 is in the mail and|I'm not sure I'm even gonna|try the default firmware|before installing this.", "", 4, "");
     if (q == B(19, 0)) {
-        drums(STOMP2); mute(T_BRASS, 0); page(T_DRUM, "SOUND"); dx_ui_lane = 1;
+        drums(STOMP2); mute(T_BRASS, 0); page(T_DRUM, "DRUM SOUND"); dx_ui_lane = 1;
         caption(q, "ANATOMY · A", "DRUM-X", "eight synthesized voices, no samples|MORPH from kit A to kit B", 0,
                 "per-voice send to the reverb|stereo image on one knob");
     }
@@ -385,8 +385,8 @@ static void project_beat(uint32_t q)
                               es ? "Mi FM-1 está en camino|y no sé si voy a probar|el firmware original|antes de instalar esto." :
                                    "My FM-1 is in the mail and|I'm not sure I'm even gonna|try the default firmware|before installing this.", "", 4, "");
     if (q == B(11, 0)) { home(T_LEAD); caption(q, "QUÉ TIENE", "6 PISTAS · 6 MOTORES", "cada una con su ser|que reacciona al sonido", 0, "ANALOG · FM6 · PHASE|LOFI · VOICE · DRUM-X"); }
-    if (q == B(12, 0)) { page(T_DRUM, "SOUND"); dx_ui_lane = 1; caption(q, "QUÉ TIENE", "DRUM-X", "8 voces sintetizadas|MORPH del kit A al B", 0, "sin samples|cada voz a su efecto"); }
-    if (q == B(13, 0)) { page(T_LEAD, "OPERATOR"); caption(q, "QUÉ TIENE", "FM6", "seis operadores en el aparato|32 voces clásicas", 0, ""); }
+    if (q == B(12, 0)) { page(T_DRUM, "DRUM SOUND"); dx_ui_lane = 1; caption(q, "QUÉ TIENE", "DRUM-X", "8 voces sintetizadas|MORPH del kit A al B", 0, "sin samples|cada voz a su efecto"); }
+    if (q == B(13, 0)) { page(T_LEAD, "FM6 OP"); caption(q, "QUÉ TIENE", "FM6", "seis operadores en el aparato|32 voces clásicas", 0, ""); }
     if (q == B(14, 0)) {
         trk[T_LEAD].step[0].comp = CP_RAND; trk[T_LEAD].step[0].carg = 4; trk[T_LEAD].step[16].comp = CP_ECHO; trk[T_LEAD].step[16].carg = 1;
         page(T_LEAD, "COMP"); ui.cursor = 16; ui.bank = 1;
@@ -400,7 +400,7 @@ static void project_beat(uint32_t q)
     if (q == B(16, 2)) hold_btn(B_FX, 0);
     if (q >= B(16, 3) && q < B(17, 0)) perf_press(PF_R16, 1);
     if (q == B(17, 0)) { perf_press(PF_R16, 0); hold_btn(B_FX, 1); }
-    if (q == B(17, 1)) { hold_btn(B_FX, 0); song.g[G_RTYPE] = 4; page(T_CHOIR, "REVERB"); caption(q, "QUÉ TIENE", "5 REVERBS", "ROOM · SPRING · SHIMMER|RESO afinado · CLOUD granular", 0, ""); }
+    if (q == B(17, 1)) { hold_btn(B_FX, 0); song.g[G_RTYPE] = 4; page(T_CHOIR, "FX SPACE"); caption(q, "QUÉ TIENE", "5 REVERBS", "ROOM · SPRING · SHIMMER|RESO afinado · CLOUD granular", 0, ""); }
     if (q == B(18, 0)) {
         song.g[G_RTYPE] = 2; chain_config.count = 4;
         chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};

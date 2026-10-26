@@ -5,4 +5,4 @@ recortadas a 240 × 240. **Son solo referencia visual**: el firmware dibuja todo
 (`firmware/src/ui_organic.c`), sin imágenes guardadas, para no gastar flash. Plan en
 [docs/TONIC-UI.md](../../docs/TONIC-UI.md).
 
-Las formas que dibuja el firmware están en [assets/ui-shapes/](../ui-shapes/) (SVG).
+Las formas SVG de JIANT (`assets/ui-shapes/`) se quitaron en ACID FM 0.4 junto con sus criaturas; siguen en el historial de git.

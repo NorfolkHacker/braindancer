@@ -127,17 +127,17 @@ def controls():
     b.append(sec('NAVIGATION · SIX RULES'))
     rules = [
         ('1', 'SELECT WALKS THE PAGES', 'Every page of the section in one chain, a page a detent, stopping at both ends. '
-         'No levels, no zoom.', 'FX: SENDS → DIST → AUTO PAN → BUSES → DLY → DLY 2 → … → PUNCH'),
+         'No levels, no zoom.', 'FX: SENDS → SPACE → MASTER → MORE'),
         ('2', 'THE BUTTON: IN, OR ON', 'From another section: the page you were last on there. Already inside: the '
-         'first page of the next group (round).', 'FX › DLY 2: FX → REVERB · EDIT › FILTER: EDIT → FOCUS'),
+         'first page of the next group (round).', 'FX › SPACE: FX → MASTER · EDIT › TONE: EDIT → VOICE'),
         ('3', 'PRESETS LOADS PRESETS', 'Always: the track\'s sounds; SEQ the patterns (PHRASES, OCT+ loads); GEN the '
-         'genre. Never a page, a track or a module.', 'FX › DLY: PRESETS ▶ the next sound'),
+         'genre. Never a page, a track or a module.', 'FX › SPACE: PRESETS ▶ the next sound'),
         ('4', 'KNOB 1 PICKS', 'The step, the bar, the slot, the stage, the operator, the kit\'s sound, the row. The track: '
          'always ALGORITHM.', 'SEQ › STEP: K1 = all 64 steps · SEQ › BAR: K1 = the bar'),
         ('5', 'HOLD = THE LAYER', 'Held + SELECT: HOME GEN · EDIT SEQ LFO FX their dice · GLO the tempo · ENV SCL ARP '
          'SAVE their chain.', 'SEQ + G5 CLR STEP · SAVE + C5 NAME'),
         ('6', 'THE SCREEN SAYS WHERE', 'Tabs on top: the section\'s groups, the one shown lit, a dot a page. Footer: '
-         'SECTION · GROUP · page and n/N.', 'FX · DELAY · DLY 2   6/16'),
+         'SECTION · GROUP · page and n/N.', 'FX · SPACE   2/4'),
     ]
     b.append('<div class="grid g3">' + ''.join(
         card(f'{n} · {t}', HEAT[int(n) + 1], f'<p>{e(d)}</p><p class="dim">{e(x)}</p>') for n, t, d, x in rules) + '</div>')
@@ -160,14 +160,14 @@ def controls():
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
         ('HOME', 'ECO: ECO · MACROS  |  BEING: BEING · ROUTES  |  GEN: GEN 1 · GEN 2 · GEN 3', 'MENU'),
-        ('EDIT', 'SOUND: EDIT 1 · EDIT 2  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS  |  FOCUS (FM6: … OPERATOR: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT: KIT · KIT 2 · KIT 3  |  SOUND: SOUND 1–4  |  LEVELS 1–2  |  TONE: X-MOD · FILTER · STEREO · VOICE)', 'INIT · RECALL · sound mutes'),
+        ('EDIT', 'SOUND  |  TONE  |  VOICE or FILTER  |  MORE (FM6: SOUND · OPERATOR · OP ENV · MORE; DRUM: KIT · SOUND · SOUND 2 · MORE)', 'INIT · RECALL · sound mutes'),
         ('SEQ', 'PATTERN: PATTERN · STRETCH · PLAYHEADS  |  TRACK: TRACK · MUTATE  |  BAR: BAR · STEP · NOTE  |  STEP: COMP · COMP 2  |  AUTO: AUTOMATION · AUTO LIST', 'SEQ TOOLS'),
-        ('FX', 'TRACK: SENDS · DIST · AUTO PAN  |  BUSES  |  DELAY: DLY 1–3  |  REVERB 1–2  |  CHORUS  |  SLICER: SLICER · SL BUS 1–2 · SL PITCH  |  MASTER  |  PUNCH',
+        ('FX', 'SENDS  |  SPACE  |  MASTER  |  MORE (DISTORT · AUTO PAN · DELAY · REVERB · CHORUS · SLICER · SLICE PITCH · PUNCH LANE)',
          'PUNCH-IN FX'),
         ('GLO', 'LIVE: MANO · RIELES  |  MIX: MIXER · SENDS  |  GLOBAL  |  SYSTEM (at power-on GLO opens MIXER)', 'MUTE · SOLO · LEVEL · TAP'),
-        ('ENV', 'TRACKS: TRACKS · TRACKS DEST  |  ENV: ENV · ENV DEST  |  STAGE', '—'),
-        ('LFO', 'MOD  |  LFO: LFO · LFO DEST  |  MSEQ: MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
-        ('SCL', 'KEY  |  CHORD', 'ROOT by key'),
+        ('ENV', 'AMP  |  ENV TO', '—'),
+        ('LFO', 'LFO  |  DEST  |  MOD MATRIX  |  MORE (PHASE · STEPS)', 'MACROS M1–M4 (stay latched)'),
+        ('SCL', 'KEY  |  CHORD  |  MORE', 'ROOT by key'),
         ('ARP', 'ARP: ARP · ARP 2', '—'),
         ('SAVE', 'SOUND: USER · PRESETS  |  PROJECT: SECTIONS · ARRANGE  |  LIBRARY: PROJECTS · TOOLS (from outside, USER / SECTIONS come armed)', 'SONG layer · C5 NAME'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
@@ -249,23 +249,20 @@ def controls():
 
     b.append(sec('EVERY PAGE · KNOB 1 – 4'))
     fams = [
-        ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FILTER PITCH SHAPE LOOP'), ('STAGE', 'STAGE VALUE LOOP -')]),
-        ('LFO', HEAT[1], [('LFO', 'RATE WAVE PHASE FADE'), ('LFO DEST', 'PITCH FILTER SHAPE AMP'), ('MOD', 'SLOT SRC DEST AMT'),
-                          ('MSEQ', 'STEP LEVEL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
-        ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTO PAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),
-                         ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PITCH LEN QUANT'),
-                         ('DLY', 'TIME FEEDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRAY MOD'), ('DLY 3', 'TYPE PING - -'),
-                         ('REVERB', 'TYPE SIZE DAMP PRE/AIR'), ('REVERB 2', 'MOD RATE FILT WIDE'),
-                         ('CHORUS', 'RATE DEPTH STEREO -'), ('MASTER', 'CLIP PUNCH DUCK REL'), ('PUNCH', 'LEN RES REC CLEAR')]),
-        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('WORDS', 'LANG LYRIC POS (OCT+ TYPE)'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
-                           ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
-                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('VOICE 2', 'ALLOC DETUNE - -'), ('FOCUS', 'PARAM VALUE SRC AMT'), ('KIT 3', 'BP FEEDBK HANDS -'),
-                           ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('LEVELS', 'KICK SNARE CLAP HATCL'),
-                           ('LEVELS 2', 'HATOP TOM RIM BELL'), ('SOUND', 'SOUND SIDE PITCH PMOD'),
-                           ('SOUND 2', 'SOUND DECAY NOISE COLOR'), ('SOUND 3', 'SOUND MODE PM.TYPE DRIVE'),
-                           ('SOUND 4', 'SOUND LAYER FEEDBK SEND'), ('STEREO', 'IMAGE - - -')]),
-        ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT ALL TR'), ('CHORD', 'CHORD VOICING STRUM -'), ('ARP', 'MODE RATE OCT GATE'),
-                                ('ARP 2', 'SWING PROB HOLD ORDER')]),
+        ('ENV', HEAT[0], [('AMP', 'ATTACK DECAY SUSTAIN RELEASE'), ('ENV TO', 'FILTER PITCH SHAPE LOOP')]),
+        ('LFO', HEAT[1], [('LFO', 'RATE WAVE MODE FADE'), ('DEST', 'PITCH FILTER SHAPE AMP'), ('MOD MATRIX', 'SLOT SOURCE DEST AMOUNT'),
+                          ('MORE', 'PHASE · STEPS (LENGTH, STEP RATE, SMOOTH, STEP 1–16): K1 picks, K2 sets')]),
+        ('FX', HEAT[5], [('SENDS', 'DISTORT CHORUS DELAY REVERB'), ('SPACE', 'DLY\u00a0TIME DLY\u00a0FDBK REV\u00a0TYPE REV\u00a0SIZE'),
+                         ('MASTER', 'CLIP PUNCH DUCK DUCK\u00a0TIME'),
+                         ('MORE', 'DISTORT · AUTO PAN · DELAY · REVERB · CHORUS · SLICER · SLICE PITCH · PUNCH LANE: K1 picks, K2 sets')]),
+        ('EDIT', HEAT[3], [('SOUND', 'E1 E2 E3 E4'), ('TONE', 'E5 E6 E7 E8'), ('VOICE', 'VOICE GLIDE PRIORITY SPREAD'),
+                           ('FILTER', 'FILTER CUTOFF RESO DISTORT'), ('FM6 SOUND', 'ALGORITHM FEEDBACK MOD\u00a0LEVEL MOD\u00a0RATIO'),
+                           ('OPERATOR', 'OP RATIO FINE LEVEL'), ('OP ENV', 'OP STAGE RATE LEVEL'), ('KIT', 'MORPH TUNE TONE DECAY'),
+                           ('DRUM SOUND', 'DRUM LEVEL PITCH DECAY'), ('SOUND 2', 'DRUM NOISE COLOR WAVE'),
+                           ('MORE', 'the engine\'s other settings in groups: K1 picks, K2 sets')]),
+        ('SCL · ARP', HEAT[2], [('KEY', 'ROOT SCALE SNAP ALL\u00a0TRACKS'), ('CHORD', 'CHORD VOICING STRUM ROTATE'),
+                                ('MORE', 'SEQ PITCH · TRANSPOSE …: K1 picks, K2 sets'), ('ARP', 'ARP RATE OCTAVES GATE'),
+                                ('ARP 2', 'SWING CHANCE HOLD ORDER')]),
         ('SEQ', HEAT[4], [('PATTERN', 'LEN DIV SWING GATE'), ('STRETCH', 'x/÷ REPEAT NUDGE ROTATE'), ('PLAYHEADS', 'HEAD RATE DIR INTVL'),
                           ('TRACK', 'PITCH CHANCE HUMAN REC Q'), ('MUTATE', 'SOUND PATTERN AMOUNT MODE'),
                           ('BAR', 'BAR LEN - -'), ('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('NOTE', 'FOCUS PITCH MOVE MICRO'),
@@ -298,7 +295,7 @@ def controls():
 # ------------------------------------------------------------------------------------------- 2. SOUND & FX ---
 def sound():
     b = []
-    b.append(sec('ENGINES · EDIT 1 / EDIT 2'))
+    b.append(sec('ENGINES · SOUND / TONE'))
     eng = [
         ('ANALOG', HEAT[1], 'WAVE DETUNE MIX NOISE', 'CUT RES DRIVE INT',
          'SAW SQR TRI SIN PWM <b>SYNC RING SAW3</b>; INT: osc 2 ±24 st. Its filter is per voice. <b>Its picture</b> (0.9.6): '
@@ -338,7 +335,7 @@ def sound():
     ]
     ORDER = ['DRUM-X', 'VOICE', 'ANIMAL', 'LOFI', 'ANALOG', 'FM6', 'PHASE', 'WHEEL', 'NOISE']   # (0.9.9) the device's order
     eng.sort(key=lambda r: ORDER.index(r[0]))                     # (src/engines.c ENGINE_ORDER: PRESETS, KNOB 2 ENG)
-    t = '<table><tr><th>ENGINE</th><th>EDIT 1</th><th>EDIT 2</th><th>WHAT TO KNOW</th></tr>'
+    t = '<table><tr><th>ENGINE</th><th>SOUND</th><th>TONE</th><th>WHAT TO KNOW</th></tr>'
     for n, c, e1, e2, d in eng:
         t += (f'<tr><td class="n" style="--c:{c}">{e(n)}</td><td style="width:22%">{knobs(*e1.split())}</td>'
               f'<td style="width:22%">{knobs(*e2.split())}</td><td>{d}</td></tr>')
@@ -392,7 +389,7 @@ def sound():
                   'UP+8 CONV DIVG PINKY THUMB WALK CHORD <b style="color:#f4f1ea">TRNS</b> (the keys transpose the '
                   'sequence)</p>'))
     b.append(card('SONGS', HEAT[6],
-                  '<p><b>8 projects × 4 sections (A–D)</b>, a song of up to 16 rows by bars (SAVE › PROJECT › ARRANGE, OCT+ adds a row, PLAY plays; END: STOP, x2–x8, LOOP), SLOOP style. '
+                  '<p><b>4 projects × 4 sections (A–D)</b>, a song of up to 16 rows by bars (SAVE › PROJECT › ARRANGE, OCT+ adds a row, PLAY plays; END: STOP, x2–x8, LOOP), SLOOP style. '
                   'Each row can hold a <b>scene</b>: mutes, DRUM-X group mutes, macros and MIDI punch-ins. SAVE held '
                   'plays sections live on the next bar, stores them, records the song (SONG REC). Each section keeps its '
                   'sounds, steps, motion, kit and its SLICER.</p>'))
