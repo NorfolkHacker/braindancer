@@ -13,8 +13,10 @@
 
 /* the headings' words (ux_more.h UXM_H_*) */
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "STEPS", "DELAY", "REVERB", "CHORUS",
-                                              "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO"};   /* (3b
-                                                         * task 7: JIANT's MSEQ, the modulation sequence, its STEPS) */
+                                              "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
+                                              "AUTO PAN", "SLICE PITCH", "PUNCH LANE"};   /* (3b task 7: JIANT's MSEQ, the
+                                                         * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
+                                                         * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
 static const char *uxm_head(uint32_t h)
 {
@@ -32,6 +34,7 @@ static const char *uxm_head(uint32_t h)
 typedef struct { const char *name; uint8_t ask; } uxm_act_t;
 static const uxm_act_t UXM_ACT[UXM_A_N] = {
     {"TYPE LYRIC", 0},                                  /* VOICE: the lyric typed on the NAME screen (was WORDS' OCT+ TYPE) */
+    {"CLEAR LANE", CF_CLEAR_PFX},                       /* (3b task 8) FX: the punch-in lane emptied (was FX > PUNCH's CLEAR) */
 };
 #define UXM_GO "\x86"                                   /* (an action's value in the list: UF_HDR's arrow) */
 static int uxm_act_ok(uint32_t a) { return a == UXM_A_LYRIC ? trk_engp(TSEL) == &ENG_FORMANT : a < UXM_A_N; }
@@ -39,7 +42,11 @@ static void uxm_act_do(uint32_t a)
 {
     if (a >= UXM_A_N || !uxm_act_ok(a))
         return;
-    if (UXM_ACT[a].ask) {
+    if (UXM_ACT[a].ask) {                               /* (as JIANT's pages: not while a song plays, ui_input.c act_do; then */
+        if (chain_busy()) {                             /* the dialog, OCT+ yes / OCT- no) */
+            ui_message(UX_STOP);
+            return;
+        }
         confirm_open(UXM_ACT[a].ask, song.sel);
         return;
     }
@@ -57,11 +64,16 @@ static int uxm_row_ok(const ux_row_t *r)
     return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
            r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
 }
+/* (3b task 8) a global LOAD ECO takes out of the sound (fx.c fx_buses: no chorus; slicer.c slicer_on: no SLICER): its row not
+ * shown under ECO, as JIANT hid the CHORUS and SLICER pages (ui.c page_jiant, 0.6.30) */
+static int uxm_eco_out(uint32_t id) { return id == G_CRATE || id == G_CDEPTH || id == G_CSTER || (id >= G_SLMODE && id <= G_SLP15); }
 /* a setting or action row shown on this track now (above) */
 static int ux_row_shown(const ux_row_t *r)
 {
     uint32_t i, k, held = 0, glo = r->kind == UXR_GLOBAL;
     if (!uxm_row_ok(r))
+        return 0;
+    if (glo && sys_load == LOAD_ECO && uxm_eco_out(r->id))
         return 0;
     if (r->eng && trk_eng(TSEL) != r->eng - 1u)       /* (one engine's meaning of a shared slot) */
         return 0;
@@ -155,19 +167,20 @@ static uint32_t uxm_row_of(const ux_more_t *m, uint64_t sh, uint32_t v)   /* the
             return i;
     return uxm_n(m);
 }
+/* (3b task 8) row s's heading (UXM_H_N: none, or s a heading itself) */
+static uint32_t uxm_head_of(const ux_more_t *m, uint32_t s)
+{
+    if (s >= uxm_n(m) || m->rows[s].kind == UXR_HEAD)
+        return UXM_H_N;
+    while (s-- > 0u)
+        if (m->rows[s].kind == UXR_HEAD)
+            return m->rows[s].id;
+    return UXM_H_N;
+}
 /* (3b task 7 fix) row s is under the STEPS heading (LFO's MORE: JIANT's MSEQ): the panel shows the sixteen steps' levels as
  * bars under the list (ux_more_draw), the list UXM_STEPS_ROWS rows */
 #define UXM_STEPS_ROWS (UXM_ROWS - 3u)
-static int uxm_steps_pic(const ux_more_t *m, uint32_t s)
-{
-    uint32_t n = uxm_n(m);
-    if (s >= n || m->rows[s].kind == UXR_HEAD)
-        return 0;
-    while (s-- > 0u)
-        if (m->rows[s].kind == UXR_HEAD)
-            return m->rows[s].id == UXM_H_MSEQ;
-    return 0;
-}
+static int uxm_steps_pic(const ux_more_t *m, uint32_t s) { return uxm_head_of(m, s) == UXM_H_MSEQ; }
 static uint32_t uxm_rows(const ux_more_t *m, uint32_t s) { return uxm_steps_pic(m, s) ? UXM_STEPS_ROWS : UXM_ROWS; }   /* the
                                                          * rows on the panel with s picked */
 /* sel a shown setting (the nearest after it, else before; none: n), top a shown row with sel in sight (sel on the top

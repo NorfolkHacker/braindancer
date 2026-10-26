@@ -24,14 +24,7 @@ static void lz_blit(uint32_t x, uint32_t y)
     cv_blit(x, y);
 }
 
-/* (0.8.9) a tile in a lens's panel (FX's modules, the menu's tabs, ENV's tracks, MOD's slots): BOTTOM, HUD and AIR none
- * (the words on the background; the one picked: its name underlined, lz_uline; COLORS's rounded RAISE box gone with it,
- * ACID FM 0.3). What lies under its words: lz_tile_bg */
-static uint16_t lz_tile_bg(void) { return T_SURF; }
-static void lz_uline(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t c)   /* under a name */
-{
-    cv_rect(x, y, text_w(f, s) - 1, 1, c);
-}
+/* (0.8.9 .. ACID FM 3b task 8) a lens's tiles (lz_tile_bg, lz_uline: FX's modules, the last of them) gone with FX's lens */
 
 /* the height ADSR and LFO are drawn on: 100 px, or (MENU > LARGE's strip: draw_graph) the strip's ~ 56 */
 static int32_t graph_ht = 100;
@@ -46,7 +39,8 @@ static uint16_t knob_col(uint32_t c, int32_t ratio, int bip)
     return T_K(c);
 }
 /* (ACID FM 3b task 5) ui_being.c (JIANT 0.5's beings) and ui_engvis.c (0.9.4's creatures, the last FM6's colony and
- * DRUM-X's kit) gone: the user's "get rid of any creatures"; the output's level they read (bg_energy) is ui_organic.c's */
+ * DRUM-X's kit) gone: the user's "get rid of any creatures"; (3b task 8) the output's level they and FX's lens read
+ * (bg_energy) gone with the lens: FX > MASTER's meter reads the output itself (ux_section.c uxs_out_db10) */
 
 /* Matches voice.c: attack is linear, decay and release are exponential
  * (env += (target - env) * k each tick, ~99 % after the set time). Time
@@ -665,17 +659,14 @@ static void page_title(char *ti)
     char nb[24];
     const char *pt = pg->scope == SC_ENGINE ? e->page_title[pg->id[0] != P_E0] : 0;   /* EDIT: the engine's */
     str_cpy(nb, pg->title, sizeof nb);
-    if (!page_over && !ui.home) {                       /* (0.9.2) the page within its group ("ENV DEST 2/2", FX: the
-                                                         * effect's name, "DELAY 2/3") */
+    if (!page_over && !ui.home) {                       /* (0.9.2) the page within its group ("ENV DEST 2/2"; 3b task 8: FX's
+                                                         * effect's name, "DELAY 2/3", gone with its lens) */
         uint8_t cnt[8], gi[8];
         uint32_t g, m;
         (void)nav_groups(cnt, gi, &g, &k, &i, &m);
         n = cnt[g];
         k++;
-        if (pg->fam == FAM_FX && fx_level() == FXL_EFFECT)
-            str_cpy(nb, nav_group_name(gi[g]), sizeof nb);
-        else
-            str_cpy(nb, nav_page_name(), sizeof nb);
+        str_cpy(nb, nav_page_name(), sizeof nb);
     } else
         for (i = 0; i < NPAGES; i++)
             if (PAGES[i].fam == pg->fam && page_visible(i)) {
@@ -889,10 +880,8 @@ static uint32_t graph_signature(void)
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number) */
         return h ^ 0x5A17u;
-    if ((pg->graph == GR_NONE && !fx_on()) || (pg->graph == GR_MOTION && !lens_on())) h ^= ui.frame / 2u;   /* (0.8.5:
-                                                         * FX's lens pictures change with their values, */
-    if (fx_on() && (song.playing || bg_energy() > 2))   /* .. and with the sound while it sounds: FX live) */
-        h ^= ui.frame / 2u * 2246822519u;
+    if ((pg->graph == GR_NONE && !fx_on()) || (pg->graph == GR_MOTION && !lens_on())) h ^= ui.frame / 2u;   /* (3b task 8:
+                                                         * FX the ux pages', its lens's FX live gone) */
     for (i = 0; i < P_COUNT; i++)
         h = (h ^ (uint32_t)t->p[i]) * 16777619u;
     h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u +
@@ -911,13 +900,7 @@ static uint32_t graph_signature(void)
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
         h ^= (pd_level() + 1u) * 668265263u;
     }
-    if ((pg->graph == GR_SLCR || pg->graph == GR_SLPIT) && song.g[G_SLMODE])   /* the SLICER's step playing */
-        h ^= (sl.idx + 1u) * 2654435761u;
-    if (pg->graph == GR_SLCR || pg->graph == GR_SLPIT)   /* (its globals: the page's knobs and the bus) */
-        for (i = 0; i < G_SL_N; i++)
-            h = (h ^ (uint32_t)song.g[G_SLMODE + i]) * 16777619u;
-    if (pg->graph == GR_SLPIT)
-        h ^= (sl_ui_step + 1u) * 40503u;
+    /* (3b task 8: the SLICER's pages, their step and globals, gone: FX > MORE's rows) */
     if (pg->graph == GR_TOOLS)                       /* (0.6.12) the action picked, the song's row */
         h ^= ui.act * 7919u + ui.song_row * 104729u;
     if (pg->graph == GR_SLOTS) {                     /* (a checksum over each slot; the project, the music's section, the song) */
@@ -983,19 +966,6 @@ static uint32_t graph_signature(void)
         }
         if (pg->graph == GR_BROWSE)
             h ^= list_get() * 977u + preset_favorite() * 31u;
-    }
-    if (fx_on()) {                                   /* (0.8.5) FX's lens: the level, the module, the buses' values, the
-                                                         * slicer's step, the output (MASTER), the punch lane */
-        h = (h ^ (fx_level() + 1u) * 2654435761u ^ ui.fxmod * 40503u) * 16777619u;
-        for (i = 0; i < G_COUNT; i++)
-            h = (h ^ (uint32_t)song.g[i]) * 16777619u;
-        if (fx_level() == FXL_BUSES || (fx_level() == FXL_EFFECT && fx_mod_of(ui.page) == 3u))   /* (the SLICER drawn) */
-            h ^= (song.playing && song.g[G_SLMODE] ? sl.idx + 1u : 0u) * 2654435761u;
-        h ^= sl_ui_step * 7919u + (uint32_t)pfx_rec_ok() * 31u;
-        if (fx_level() == FXL_BUSES || fx_mod_of(ui.page) == 4u)
-            h ^= (uint32_t)(bg_energy() / 16) * 104729u;   /* (MASTER's level bar: 16 steps, not every frame) */
-        for (i = 0; i < 32u; i++)
-            h = (h ^ pfx_lane[i]) * 16777619u;
     }
     if (lens_on()) {                                 /* (0.8.3) LENTE: the level; its STEP, the cursor step's every byte */
         h = (h ^ (lens_level() + 1u) * 2654435761u) * 16777619u;
@@ -1399,7 +1369,7 @@ static uint16_t sec_col(uint32_t s)
 }
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
-#include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
+/* (ACID FM 3b task 8: ui_lzfx.c, FX's lens, gone: FX is ux_section.c's) */
 #include "ui_lzedit.c"                               /* (0.8.5) EDIT's lens panels */
 #include "ui_lzpage.c"                               /* (0.8.5) ENV's, LFO . MOD's, SCL . ARP's, GLO's */
 /* (0.9.17) a SEQ page's own marks over the roll (a kit: the grid), column i of the bar shown at x, w px wide:
@@ -1567,9 +1537,6 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_SAVE) {     /* (0.8.5) SAVE's lens */
         cv_oy = 0;
         graph_save_lz(pg);
-    } else if (lz_on() && lz_fam() == LZ_FX) {       /* (0.8.5) FX's lens */
-        cv_oy = 0;
-        graph_fx_lz(t, pg);
     } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
     } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
         cv_oy = 0;

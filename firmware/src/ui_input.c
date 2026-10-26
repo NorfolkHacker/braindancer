@@ -1232,10 +1232,6 @@ static void edit_param(uint32_t slot, int32_t steps)
             ui.ppick = (uint8_t)clamp((int32_t)pat_pick() + steps, 0, (int32_t)pat_count() - 1);
         return;
     }
-    if (pg->graph == GR_SLPIT && slot == 0u) {           /* (JIANT 0.6.3) SL PITCH: KNOB 1 the step, 2 its pitch */
-        sl_ui_step = (uint8_t)clamp((int32_t)sl_ui_step + steps, 0, 15);
-        return;
-    }
     if (pg->graph == GR_MOD && slot == 0u) {             /* MOD: KNOB 1 the slot, 2..4 its SRC DST AMT */
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;
@@ -1255,11 +1251,7 @@ static void act_do(void)
         confirm_open(CF_CLEAR_MOTION, song.sel);
         return;
     }
-    if (cur_page()->graph == GR_PUNCH) {                /* (0.6.99) the punch-in lane cleared (a dialog) */
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        confirm_open(CF_CLEAR_PFX, song.sel);
-        return;
-    }
+    /* (0.6.99 .. ACID FM 3b task 8) FX > PUNCH's CLEAR (the punch-in lane, a dialog): FX > MORE's CLEAR LANE (ux_more.c) */
     if (cur_page()->graph == GR_EVENTS) {
         ev_oct();
         return;
@@ -2253,7 +2245,7 @@ static void ui_input_frame(void)
                 ui_message(dk.msg);
             } else if (kind == CF_LOAD_PAT) {
                 pat_load_ui(&trk[ui.confirm_trk % NTRK], pat_pick());
-            } else if (kind == CF_CLEAR_PFX) {         /* (0.6.99) FX > PUNCH > CLEAR */
+            } else if (kind == CF_CLEAR_PFX) {         /* (0.6.99) FX > PUNCH > CLEAR; (3b task 8) FX > MORE > CLEAR LANE */
                 if (!chain_busy()) { memset(pfx_lane, 0, sizeof pfx_lane); pfx_ltgt = 0; ui_message("PUNCH LANE CLEARED"); }
             } else if (kind == CF_CLEAR_MOTION) {
                 track_t *t = &trk[ui.confirm_trk % NTRK];

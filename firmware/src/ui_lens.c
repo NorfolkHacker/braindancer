@@ -76,15 +76,12 @@ static const nv_t CE_SEQ[] = {NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, L
                               NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR), NV("COMP", 0, 3, LV_STEP),
                               NV("COMP 2", 0, 3, LV_STEP), NV("AUTOMATION", 0, 4, LV_BAR), NV("AUTO LIST", 0, 4, LV_BAR)};
 static const ng_t CG_SEQ[] = {{"PATTERN", "PATT"}, {"TRACK", 0}, {"BAR", 0}, {"STEP", 0}, {"AUTO", 0}};
-enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };
-static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, FXL_TRACK), NV("AUTO PAN", 0, 0, FXL_TRACK),
-                             NV("BUSES", 0, 1, FXL_BUSES), NV("DLY", 0, 2, FXL_EFFECT), NV("DLY 2", 0, 2, FXL_EFFECT),
-                             NV("DLY 3", 0, 2, FXL_EFFECT), NV("REVERB", 0, 3, FXL_EFFECT), NV("REVERB 2", 0, 3, FXL_EFFECT),
-                             NV("CHORUS", 0, 4, FXL_EFFECT), NV("SLICER", 0, 5, FXL_EFFECT), NV("SL BUS", 0, 5, FXL_EFFECT),
-                             NV("SL BUS 2", 0, 5, FXL_EFFECT), NV("SL PITCH", 0, 5, FXL_EFFECT), NV("MASTER", 0, 6, FXL_EFFECT),
-                             NV("PUNCH", 0, 7, FXL_EFFECT)};
-static const ng_t CG_FX[] = {{"TRACK", "TRK"}, {"BUSES", "BUS"}, {"DELAY", "DLY"}, {"REVERB", "REV"}, {"CHORUS", "CHO"},
-                             {"SLICER", "SLC"}, {"MASTER", "MST"}, {"PUNCH", "PCH"}};
+/* (ACID FM 3b task 8) FX on the ux pages (ux_section.c), a page a group (its button steps them round, spec 2.4): SENDS (JIANT's
+ * FX: the track's DISTORT, CHORUS, DELAY, REVERB), SPACE (DLY TIME, DLY FDBK, REV TYPE, REV SIZE), MASTER (CLIP, PUNCH, DUCK, DUCK
+ * REL), MORE (the rest of JIANT's sixteen pages: params.c UXM_FX). The DJ FILTER stays GLO's */
+static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, 0), NV("FX SPACE", "SPACE", 1, 0), NV("MASTER", 0, 2, 0),
+                             NV("FX MORE", "MORE", 3, 0)};
+static const ng_t CG_FX[] = {{"SENDS", 0}, {"SPACE", 0}, {"MASTER", 0}, {"MORE", 0}};
 static const nv_t CE_GLO[] = {NV("MANO", 0, 0, 0), NV("RIELES", 0, 0, 0), NV("MIXER", 0, 1, 0), NV("SENDS", 0, 1, 0),
                               NV("GLOBAL", 0, 2, 1), NV("SYSTEM", 0, 3, 2)};   /* (0.9.11) LIVE first (ui_live.c) */
 static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}};
@@ -205,7 +202,6 @@ static void gen_open(void);
 static void gen_page_put(uint32_t p);
 static int chain_busy(void);
 static void ui_message(const char *s);
-static uint32_t fx_mod_of(uint32_t i);
 /* entry e of section sec shown (one that is not here: the nearest after it, else before); outside: from another
  * section (SAVE: USER and SECTIONS come with their SAVE armed, SAVE . OCT+ . OCT+ as before) */
 static void nav_go(uint32_t sec, uint32_t e, int outside)

@@ -20,7 +20,7 @@ typedef struct { uint8_t key, glo, id; } uxc_id_t;      /* a setting reached in 
 
 /* the settings JIANT's pages reached, chain by chain (tests/ux_cover_test.c --dump at a5ae3f7 / 06ccb6f: every PAGES row its
  * chain names, every knob, MOD's four slots, MSEQ's and SL PITCH's sixteen steps; 3b task 7: MSEQ's steps are LFO's MORE rows,
- * reached there). Reviewed: the special pages (DRUM's
+ * reached there; task 8: SL PITCH's and the other thirteen FX pages' settings FX's MORE rows). Reviewed: the special pages (DRUM's
  * SOUND 1..4, X-MOD, KIT 3, FM6's OPERATOR / OP ENV / OPERATOR 2, FOCUS, STAGE's stages) turn kit and patch fields or other
  * pages' settings, not ids of their own: Task 5 covers the kit and patch fields; the held layers are Task 9's, but for SCL's
  * (3b task 6: its knobs the section's own, spec 2.5) */
@@ -112,7 +112,7 @@ static const uxc_hid_t UXC_HIDDEN[] = {
     {UXC_DRM, TRK, P_GLIDE, "GLIDE on a kit: no effect, a hit never glides (voice.c trk_note_on: oneshot)"},
     {UXC_DRM, TRK, P_GLMODE, "GLIDE MODE on a kit: no effect, as GLIDE"},
     {UXC_DRM, TRK, P_PRIO, "PRIORITY on a kit: no effect, it picks the note of a MONO voice (voice.c mono_stack)"},
-    {UXC_DRM, TRK, P_DIST, "the FILTER page's DRV on a kit: the same setting as FX > SENDS DRIVE (P_DIST); the kit has its own "
+    {UXC_DRM, TRK, P_DIST, "the FILTER page's DRV on a kit: the same setting as FX > SENDS DISTORT (P_DIST); the kit has its own "
                            "DRIVE (KIT 2), three drives were one too many"},
 };
 
@@ -124,13 +124,13 @@ static const char *uxc_key_name(uint32_t key)
            key == SEC_SCL ? "SEC_SCL" : "?";
 }
 
-/* the settings chain key reaches now, a bit each ([glo][id]): its pages' knobs (MOD's slots, SL PITCH's steps all), and
+/* the settings chain key reaches now, a bit each ([glo][id]): its pages' knobs (MOD's slots, the drum picked's: all), and
  * (more) its MORE lists' settings */
 static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
 {
     const ch_t *c = &CHAINS[key];
     uint32_t sec = key < SEC_N ? key : SEC_EDIT, e, i, sl, v, r;
-    uint8_t sp = sl_ui_step, mo = mod_ui_slot, dl = dx_ui_lane;
+    uint8_t mo = mod_ui_slot, dl = dx_ui_lane;
     memset(got, 0, 2 * 256);
     for (e = 0; e < c->n; e++) {
         if (!c->e[e].t)
@@ -149,10 +149,9 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
                 continue;
             }
             for (sl = 0; sl < 4u; sl++)
-                for (v = 0; v < 16u; v++) {             /* (the slot / the step shown: every one) */
+                for (v = 0; v < 16u; v++) {             /* (the slot / the drum shown: every one) */
                     uint32_t id;
                     mod_ui_slot = (uint8_t)(v & 3u);
-                    sl_ui_step = (uint8_t)v;
                     dx_ui_lane = (uint8_t)(v & 7u);     /* (3b task 5: DRUM-X's SOUND, the drum picked's LEVEL) */
                     id = page_id(pg, sl);
                     if (id < 256u)
@@ -160,7 +159,7 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
                 }
         }
     }
-    sl_ui_step = sp; mod_ui_slot = mo; dx_ui_lane = dl;
+    mod_ui_slot = mo; dx_ui_lane = dl;
 }
 
 static const uxc_hid_t *uxc_hidden(uint32_t key, uint32_t glo, uint32_t id)
@@ -258,8 +257,13 @@ int main(int argc, char **argv)
           !got[TRK][P_MS0] && !got[TRK][P_MSDIV] && !got[TRK][ID_LPHS];
     uxc_reach(SEC_LFO, 1, got);
     ok &= got[TRK][P_MS0] && got[TRK][P_MS15] && got[TRK][P_MSLEN] && got[TRK][P_MSDIV] && got[TRK][P_MSSLW] && got[TRK][ID_LPHS];
-    uxc_reach(SEC_FX, 0, got);
-    ok &= got[GLO][G_SLP0] && got[GLO][G_SLP15] && got[TRK][P_DIST] && got[GLO][G_DTIME];
+    uxc_reach(SEC_FX, 0, got);                          /* (3b task 8: SENDS SPACE MASTER on pages; JIANT's other thirteen FX
+                                                         * pages' settings, the SLICER's steps too, in MORE only) */
+    ok &= got[TRK][P_DIST] && got[TRK][P_REV] && got[GLO][G_DTIME] && got[GLO][G_RSIZE] && got[GLO][G_CLIP] && got[GLO][G_DREL] &&
+          !got[GLO][G_SLP0] && !got[GLO][G_SLMODE] && !got[TRK][P_DTYPE] && !got[GLO][G_DMIX] && !got[GLO][G_PFXLEN];
+    uxc_reach(SEC_FX, 1, got);
+    ok &= got[GLO][G_SLP0] && got[GLO][G_SLP15] && got[GLO][G_SLT6] && got[TRK][P_APWAVE] && got[GLO][G_DPING] &&
+          got[GLO][G_RWIDE] && got[GLO][G_CSTER] && got[GLO][G_PFXRES] && !got[GLO][G_DJF];
     uxc_reach(UXC_DRM, 0, got);                         /* (3b task 5: SOUND's LEVEL, every drum's; the kit's fields) */
     ok &= got[TRK][P_LN0] && got[TRK][P_LN7] && got[TRK][ID_DX_LANE] && !got[TRK][ID_DX_XRND];
     uxc_reach(UXC_DRM, 1, got);

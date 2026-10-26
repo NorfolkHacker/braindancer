@@ -259,6 +259,7 @@ static uint32_t ux_rows_ink(uint32_t y0, uint32_t h)    /* pixels of LCD rows y0
 /* one UI frame (input, then the drawing on the stub display) */
 struct ux_more_s;
 static void uxe_more_set(const ux_more_t *m, uint32_t id, int32_t s);   /* (3b task 7: LFO's MORE in the LFO tests) */
+static uint32_t uxt8_row(uint32_t kind, uint32_t id);   /* (3b task 8: FX's MORE rows in the older tests) */
 static void frame(void)
 {
     host_ticks += 16000u;
@@ -3415,8 +3416,9 @@ static int test_presets_knob(void)
     bad += check("0.9.2 PRESETS on every SEQ page (STEP NOTE COMP BAR PATTERN TRACK AUTO ..): the patterns' loader, OCT- back",
                  seq_ok && n_seq >= 11u);
     bad += check("0.9.2 PRESETS on PHRASES: the next pattern (KNOB 1's too); nothing loaded until OCT+", pat_ok);
+    printf("ui:   (PRESETS: %u pages a sound)\n", (unsigned)n_snd);
     bad += check("0.9.2 PRESETS everywhere else (EDIT ENV LFO FX SCL ARP GLO SAVE: USER TOOLS PROJECT ..): the next sound, the page stays",
-                 snd_ok && n_snd >= 40u);
+                 snd_ok && n_snd >= 30u);   /* (3b task 8: FX's sixteen pages four: 30, was 40 or more) */
     ui_power_on();
     set_engine_of(TSEL, ENGI_DRUM);
     TSEL->engine = TSEL->eng_req;
@@ -3539,19 +3541,19 @@ static int test_product_ux(void)
         uint32_t id;                                     /* (ACID FM 3a: on EDIT 1, HOME has its own knob row; 3b task 4: on
                                                           * FM6's, T2: a synth's EDIT is the ux pages'; task 5: on ENV, FM6's
                                                           * EDIT is the ux pages' too: their knob row has no mark yet; task 6: on FX > DIST, ENV
-                                                          * the ux pages' too) */
-        ui_power_on(); track_select(1); go_title("DIST"); frame();
+                                                          * the ux pages' too; task 8: on GLO > SENDS, FX the ux pages' too) */
+        ui_power_on(); track_select(1); go_title("SENDS"); frame();
         id = P_DIST;
         ok = !card_motion(0) && !card_motion(1);
-        song.rec = 2; seq_start(); go_title("DIST"); turn(EN_K1, 1); frame();
+        song.rec = 2; seq_start(); go_title("SENDS"); turn(EN_K1, 1); frame();
         ok &= card_motion(0) && !card_motion(1) && !card_motion(2) && !card_motion(3);
-        bad += check("MOTION: a recorded knob marks its card, FX DIST (and no other; ACID FM 3a: HOME's were JIANT's; 3b: EDIT's the ux row)", ok && motion_count(TSEL) == 1);
+        bad += check("MOTION: a recorded knob marks its card, GLO SENDS' DIST (and no other; ACID FM 3a: HOME's were JIANT's; 3b: EDIT's the ux row)", ok && motion_count(TSEL) == 1);
         song.rec = 0; press(B_PLAY); events_block(32); frame();
         ok = card_motion(0);
-        go_page(GR_MOTION); turn(EN_K1, -1); go_title("DIST"); frame();
+        go_page(GR_MOTION); turn(EN_K1, -1); go_title("SENDS"); frame();
         ok &= !card_motion(0) && motion_count(TSEL) == 1;
         bad += check("MOTION: PLAY OFF takes the icon off the card, the events stay", ok);
-        go_page(GR_MOTION); turn(EN_K1, 1); go_title("DIST"); frame();
+        go_page(GR_MOTION); turn(EN_K1, 1); go_title("SENDS"); frame();
         ok = card_motion(0);
         track_select(3); frame();
         ok &= !card_motion(0);                           /* (another track: its own motion, none) */
@@ -3565,7 +3567,7 @@ static int test_product_ux(void)
         bad += check("MOTION: a mix parameter's event marks its MIXER card (PAN)", ok);
         go_page(GR_MOTION); turn(EN_K4, 1); press(B_OCTUP); press(B_OCTUP);
         ok = motion_count(TSEL) == 0;
-        go_title("DIST"); frame();
+        go_title("SENDS"); frame();
         ok &= !card_motion(0) && !card_motion(1);
         go_page(GR_TRK); frame();
         ok &= !card_motion(1);
@@ -3597,7 +3599,7 @@ static int test_product_ux(void)
     for (p = 0; p < NPALETTES; p++) for (b = 0; b < 1u; b++) {
         uint16_t graph[240 * H_GRAPH], columns[240 * (Y_SEP_END - Y_LABEL)];
         ui_power_on(); palette_set(p); settings.zoom = 1;
-        open_family(FAM_FX); frame();                   /* (3b task 6: FX's, ENV's the ux pages') */
+        open_family(FAM_SAVE); frame();                 /* (3b task 6: FX's, ENV's the ux pages'; task 8: FX's too) */
         uint32_t gy = lz_on() ? LZ_GRAPH_Y : Y_GRAPH;   /* (0.8.5: ENV a lens, its panel under the cards' 38 px) */
         memcpy(graph, host_screen + gy * 240, sizeof graph);
         memcpy(columns, host_screen + Y_LABEL * 240, sizeof columns);
@@ -3672,7 +3674,7 @@ static int test_layer(void)
     bad += check("FX tap: nothing on press, the FX page when let go", ok && !ui.home && cur_page()->fam == FAM_FX);
     frames(320);                                       /* (not a double tap: #83) */
     press(B_FX);
-    bad += check("  0.9.2 a second tap: the next group, BUSES (was TRACK's next set, DIST)", str_eq(cur_page()->title, "BUSES"));
+    bad += check("  0.9.2 a second tap: the next group, SPACE (3b task 8; was BUSES)", str_eq(cur_page()->title, "FX SPACE"));
     ui_power_on();
     btn_down(B_FX);
     for (flash = 0, i = 0; i < 22u; i++) { frame(); flash |= ui.layer; }      /* 0.35 s */
@@ -3802,21 +3804,20 @@ static int test_layer(void)
     bad += check("FX + G5: nothing held, silent, no MIDI; KNOB 4 (FILTER) turns; FX let go: it stays (0.9.14)",
                  ok && !perf_held && !ui.layer && perf_m[3] == 40 && mo_w == mo);
     pm_off();
-    /* REVERB > TYPE (FX family, global): ROOM / SPRING on KNOB 1, kept by a project */
+    /* REV TYPE (FX family, global; 3b task 8: FX > SPACE's KNOB 3, was REVERB's KNOB 1): ROOM / SPRING .., kept by a project */
     ui_power_on();
-    go_title("REVERB");
-    ok = cur_page()->fam == FAM_FX && cur_page()->id[0] == G_RTYPE && cur_page()->id[1] == G_RSIZE &&
-         cur_page()->id[2] == G_RDAMP && song.g[G_RTYPE] == 0;
-    turn(EN_K1, 1);
+    press(B_FX); frame(); nav_put(SEC_FX, "SPACE"); frame();
+    ok = cur_page()->fam == FAM_FX && cur_page()->id[2] == G_RTYPE && cur_page()->id[3] == G_RSIZE && song.g[G_RTYPE] == 0;
+    turn(EN_K3, 1);
     ok &= song.g[G_RTYPE] == 1 && str_eq(GP[G_RTYPE].names[song.g[G_RTYPE]], "SPRING");
-    turn(EN_K1, 5);                                  /* (JIANT 0.5: SHIMR RESO CLOUD after it) */
+    turn(EN_K3, 5);                                  /* (JIANT 0.5: SHIMR RESO CLOUD after it) */
     ok &= song.g[G_RTYPE] == 4 && str_eq(GP[G_RTYPE].names[4], "CLOUD");
     song.playing = 0;
     project_save(2);
-    turn(EN_K1, -1);
+    turn(EN_K3, -1);
     ok &= song.g[G_RTYPE] == 3;
     project_load(2);
-    bad += check("REVERB page: TYPE ROOM -> SPRING .. CLOUD on KNOB 1 (SIZE, DAMP beside it); a project keeps CLOUD",
+    bad += check("FX > SPACE: REV TYPE ROOM -> SPRING .. CLOUD on KNOB 3 (REV SIZE beside it); a project keeps CLOUD",
                  ok && song.g[G_RTYPE] == 4);
     {   /* (0.5.1) the DRUM-X kit's X-MOD kept by a project (the kit's reserved bytes) */
         static const uint8_t XM[4] = {6, 90, 4, 70};
@@ -3828,9 +3829,13 @@ static int test_layer(void)
         bad += check("X-MOD: a project keeps the kit's RATE DPTH SHPE RAND", !memcmp(dx_mot, XM, 4));
         memset(dx_mot, 0, 4);
     }
-    go_title("CHORUS");
-    bad += check("  CHORUS page: CRT CDP STER (0.6.9)", cur_page()->fam == FAM_FX && cur_page()->id[0] == G_CRATE &&
-                 cur_page()->id[1] == G_CDEPTH && cur_page()->id[2] == G_CSTER && cur_page()->id[3] == 0xFFu);
+    {   /* (0.6.9; 3b task 8: FX > MORE's CHORUS rows, its page gone) RATE DEPTH STEREO */
+        uint32_t r, got = 0;
+        for (r = 0; r < UXM_FX.n; r++)
+            got += UXM_FX.rows[r].kind == UXR_GLOBAL && (UXM_FX.rows[r].id == G_CRATE || UXM_FX.rows[r].id == G_CDEPTH ||
+                                                         UXM_FX.rows[r].id == G_CSTER);
+        bad += check("  CHORUS: RATE DEPTH STEREO (0.6.9) in FX > MORE", got == 3u);
+    }
     /* chording: a key held before FX stays a note, its note-off arrives */
     ui_power_on();
     mo = mo_w;
@@ -7782,59 +7787,8 @@ static int test_scl_alltr(void)
     ui_power_on();
     return bad;
 }
-/* (0.9.2) FX one flat chain (this replaces the "FX plano" task): TRK (SENDS DIST AUTO PAN) . BUS (BUSES) . DLY (DLY DLY 2
- * DLY 3) . REV (REVERB REVERB 2) . CHO (CHORUS) . SLC (SLICER SL BUS SL BUS 2 SL PITCH) . MST (MASTER) . PCH (PUNCH),
- * sixteen pages; SELECT a page a detent (no wrap), an FX tap the next group's first (round), the eight tabs lit by group
- * (their short names), "FX . DELAY . DLY 2  6/16"; PRESETS a sound (was the module); BUSES' four knobs the buses' DLY MIX,
- * REV SIZE, CHORUS DEPTH, SLICER DEPTH; LOAD ECO: CHORUS and SLICER out of the chain (their tabs too); FX from elsewhere
- * the page left. (Was 0.8.5's lens: SELECT TRACK <-> BUSES <-> EFFECT, PRESETS the module, the FX tap the level's next) */
-static int test_fx_sections(void)
-{
-    static const char *const CH[16] = {"SENDS", "DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2",
-                                       "CHORUS", "SLICER", "SL BUS", "SL BUS 2", "SL PITCH", "MASTER", "PUNCH"};
-    static const char *const TP[7] = {"BUSES", "DLY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};
-    int bad = 0, ok;
-    uint32_t pr;
-    ui_power_on();
-    bad += check("0.9.2 FX: one chain of 16 (TRK BUS DLY REV CHO SLC MST PCH) by SELECT, no wrap; an FX tap each group's first, round",
-                 chain_walk(B_FX, CH, 16, TP, 7));
-    ui_power_on(); go_home(); frame(); press(B_FX); frame();
-    ok = fx_on() && fx_level() == FXL_TRACK && lz_on() && card_y() == LZ_CARD_Y && lz_tabs() == 8u && lz_tab_lit(0) &&
-         lz_crumb_is("FX \xB7 TRACK \xB7 SENDS") && lz_count_is("1/16");
-    turn(EN_SELECT, 3); frame();
-    ok &= fx_level() == FXL_BUSES && cur_page()->graph == GR_BUSES && lz_tab_lit(1) && lz_crumb_is("FX \xB7 BUSES \xB7 BUSES");
-    ok &= cur_page()->id[0] == G_DMIX && cur_page()->id[1] == G_RSIZE && cur_page()->id[2] == G_CDEPTH && cur_page()->id[3] == G_SLDEP;
-    song.g[G_RSIZE] = 50; turn(EN_K2, 3); frame();
-    ok &= song.g[G_RSIZE] > 50;
-    turn(EN_SELECT, 2); frame();
-    ok &= fx_level() == FXL_EFFECT && str_eq(cur_page()->title, "DLY 2") && lz_tab_lit(2) &&
-          lz_crumb_is("FX \xB7 DELAY \xB7 DLY 2") && lz_count_is("6/16") && ui.fxmod == 0u;
-    {   /* the eight tabs: their short names (the full ones do not fit) */
-        const char *nm[8], *tab[8];
-        uint8_t cnt[8];
-        uint32_t lv, at, n = tabs_now(nm, tab, cnt, &lv, &at);
-        ok &= n == 8u && str_eq(tab[2], "DLY") && str_eq(tab[5], "SLC") && cnt[2] == 3u && cnt[5] == 4u && lv == 2u && at == 1u;
-    }
-    pr = TSEL->preset;
-    turn(EN_PRESET, 1); frame();
-    ok &= str_eq(cur_page()->title, "DLY 2") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
-    frames(320); press(B_FX); frame();
-    ok &= str_eq(cur_page()->title, "REVERB") && ui.fxmod == 1u;
-    bad += check("0.9.2 FX: tabs (eight, short names, dots), crumb FX . DELAY . DLY 2 6/16; BUSES' knobs; PRESETS a sound (was the module)", ok);
-    go_home(); frame();
-    press(B_FX); frame();
-    ok = str_eq(cur_page()->title, "REVERB") && fx_level() == FXL_EFFECT;
-    ui_load = LOAD_ECO; frame();                                   /* LOAD ECO: no CHORUS, no SLICER */
-    turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "REVERB 2");
-    turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "MASTER");   /* (CHORUS, SLICER skipped) */
-    ok &= lz_tabs() == 6u && lz_count_is("10/11");
-    frames(320); press(B_FX); frame(); ok &= str_eq(cur_page()->title, "PUNCH");
-    ui_load = LOAD_FULL; frame();
-    bad += check("0.9.2 FX: from elsewhere the page left; LOAD ECO: CHORUS and SLICER out of the chain and the tabs", ok);
-    ui_power_on();
-    return bad;
-}
-
+/* (0.9.2 .. ACID FM 3b task 8) FX's one flat chain of sixteen JIANT pages (test_fx_sections: its tabs, crumbs, BUSES, LOAD
+ * ECO's CHORUS and SLICER out of it) gone: FX is SENDS, SPACE, MASTER, MORE (test_t8_nav) */
 /* (0.6.21) HOME + SELECT: the dialog, OCT+: everything diced (one musical scale, a sequence on every track, DRUM a
  * beat); GLO + G4: UNDO puts the music back, again: forward */
 static int test_dice_all(void)
@@ -8457,7 +8411,17 @@ static int test_div_order(void)
             turn(EN_K1 + c, -2);
             ok &= *vp == (d->names != N_SLDIV ? 4 : 3);  /* 8T */
         }
-    bad += check("#48 the pages' knobs step the divisions by length (SEQ, ARP, DLY, SLICER)", ok && found >= 4u);
+    {   /* (3b task 8) the SLICER's RATE: FX > MORE's SLICE RATE row (its page gone) */
+        ui_power_on(); press(B_FX); frame(); nav_put(SEC_FX, "MORE"); frame();
+        uxm_at[uxm_key()].sel = (uint8_t)uxt8_row(UXR_GLOBAL, G_SLRATE); uxm_at[uxm_key()].top = 0;
+        song.g[G_SLRATE] = 1;                           /* 1/16 */
+        turn(EN_K2, 1);
+        ok &= song.g[G_SLRATE] == 4;                    /* 16T */
+        turn(EN_K2, -2);
+        ok &= song.g[G_SLRATE] == 3;                    /* 8T */
+        found++;
+    }
+    bad += check("#48 the pages' knobs step the divisions by length (SEQ, ARP, DLY TIME, SLICE RATE in FX's MORE)", ok && found >= 4u);
     return bad;
 }
 
@@ -9226,8 +9190,9 @@ static int test_click_menu(void)
         ok &= fx.rtype == 0u;                           /* CLOUD as ROOM */
         ft.engine = ENGI_FM6;
         ok &= trk_nvoice(&ft) == LITE_FM6_POLY;         /* FM6: two voices */
-        song.g[G_RTYPE] = 2; go_title("REVERB"); frame();
-        ok &= strstr(ui.col[0], "|SHIMR|LITE") != 0;   /* the card says it is swapped */
+        song.g[G_RTYPE] = 2; frame();
+        ok &= str_eq(uxs_vfull(1, G_RTYPE, 2), "SHIMMER: AS ROOM IN LITE");   /* REV TYPE says it is swapped (3b task 8: FX >
+                                                         * SPACE's status line; JIANT's REVERB card said LITE) */
         load_put(2u);
         ok &= !sys_load && trk_nvoice(&ft) == FM6_POLY;
         song.g[G_RTYPE] = 2; mix_block(o, CTL); mix_block(o, CTL);
@@ -9250,24 +9215,27 @@ static int test_click_menu(void)
             ok &= trk_nvoice(&ft) == LITE_FM6_POLY;
             ft.engine = ENGI_DRUM;
             ok &= trk_nvoice(&ft) == (ENGINES[ENGI_DRUM]->poly ? ENGINES[ENGI_DRUM]->poly : NVOICE);
-            for (i = 0; i < NPAGES; i++) {
-                int sl = PAGES[i].graph == GR_SLCR || PAGES[i].graph == GR_SLPIT || str_eq(PAGES[i].title, "CHORUS");
-                if (sl) hidden &= !page_visible(i);
-                shown += str_eq(PAGES[i].title, "REVERB") && page_visible(i);
+            for (i = 0; i < UXM_FX.n; i++) {            /* (3b task 8: the SLICER's and the CHORUS's FX > MORE rows; their
+                                                         * JIANT pages gone) */
+                const ux_row_t *r = &UXM_FX.rows[i];
+                int sl = r->kind == UXR_GLOBAL && (r->id == G_CRATE || r->id == G_CDEPTH || r->id == G_CSTER ||
+                                                   (r->id >= G_SLMODE && r->id <= G_SLP15));
+                if (sl) hidden &= !ux_row_shown(r);
+                shown += r->kind == UXR_GLOBAL && r->id == G_RDAMP && ux_row_shown(r);
             }
             ok &= hidden && shown == 1u;
             ok &= voice_cap() == ECO_VOICES && fx.sp_ns == SP_N_ECO;   /* (0.6.70) 6 voices shared, a shorter SPRING */
-            go_title("REVERB"); frame();
-            ok &= strstr(ui.col[0], "|ROOM|ECO") != 0;
+            frame();
+            ok &= str_eq(uxs_vfull(1, G_RTYPE, 0), "ROOM: AS SPRING IN ECO");
             load_put(2u);
             fxg_g = 32767;
             song.g[G_RTYPE] = 1; mix_block(o, CTL);
             ok &= voice_cap() == NVOICE && fx.sp_ns == SP_N;   /* FULL: all of them */
-            for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, "SLICER"); i++) {}
-            ok &= slicer_on() && page_visible(i);
+            i = uxt8_row(UXR_GLOBAL, G_SLMODE);
+            ok &= slicer_on() && i < UXM_FX.n && ux_row_shown(&UXM_FX.rows[i]);
             song.g[G_SLMODE] = sm0;
             press(B_HOME); frame();
-            bad += check("LOAD ECO: reverb SPRING (4 stages), no SLICER / chorus (pages hidden), 4 voices a synth, 6 shared, DRUM as ever; FULL back", ok);
+            bad += check("LOAD ECO: reverb SPRING (4 stages), no SLICER / chorus (FX MORE's rows hidden), 4 voices a synth, 6 shared, DRUM as ever; FULL back", ok);
         }
         song.g[G_RTYPE] = rt0; song.g[G_DPIT] = dp0; mix_block(o, CTL); mix_block(o, CTL);
     }
@@ -10323,7 +10291,8 @@ static int test_style(void)
     static uint16_t sh[240 * 240];
     uint32_t rule;                                     /* (where LINE's rule over the panel was) */
     ui_power_on();
-    go_title("DIST"); frames(200);                      /* (a still page: HOME's beings move every frame) */
+    go_title("GLOBAL"); frames(200);                    /* (a still page: HOME's beings move every frame; 3b task 8: GLO's, FX's
+                                                         * the ux pages') */
     rule = (card_y() + card_h() + graph_y()) / 2u * 240u + 120u;
     ok = ui_style == 0u && T_SURF == T_BG && str_eq(MI_NAME[MI_STYLE], "STYLE") && menu_hidden(MI_STYLE) && menu_n(MI_STYLE) == 1u &&
          menu_get(MI_STYLE) == 0u && str_eq(menu_vname(MI_STYLE, 0), "ACID");
@@ -10744,7 +10713,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
                                                          * LFO; LFO + SELECT its dice as before) */
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
-    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
@@ -10753,7 +10722,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/2/FM6 OP ENV|EDIT/2/FM6 OP ENV|HOME/0/*",   /* (3b task 5) */
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
-    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
@@ -10762,7 +10731,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
-    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
@@ -10771,7 +10740,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/2/DRUM SOUND 2|EDIT/2/DRUM SOUND 2|HOME/0/*",   /* (3b task 5) */
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
-    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
@@ -10780,7 +10749,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
-    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
@@ -10789,7 +10758,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/5/STEP|SEQ/7/COMP|SEQ/9/AUTOMATION|SEQ/0/PATTERN|SEQ/3/TRACK|SEQ/5/STEP|SEQ/6/NOTE|SEQ/7/COMP|SEQ/6/NOTE|SEQ/6/NOTE|HOME/0/*",
-    "FX/0/FX|FX/3/BUSES|FX/4/DLY|FX/7/REVERB|FX/9/CHORUS|FX/10/SLICER|FX/11/SL BUS|FX/12/SL BUS 2|FX/11/SL BUS|FX/11/SL BUS|HOME/0/*",
+    "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
     "GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/0/MANO|GLO/2/MIXER|GLO/4/GLOBAL|GLO/5/SYSTEM|GLO/5/SYSTEM|GLO/4/GLOBAL|GLO/4/GLOBAL|HOME/0/*",
     "ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/0/ENV|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/1/ENV DEST|ENV/0/ENV|ENV/0/ENV|ENV/0/ENV",
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
@@ -11575,7 +11544,7 @@ static int test_lz_dialogs(void)
     int bad = 0, ok;
     int16_t e0;
     uint32_t y, x, acc = 0;
-    ui_power_on(); go_title("DIST"); frame();
+    ui_power_on(); go_title("GLOBAL"); frame();          /* (3b task 8: a lens page, GLO's; FX's the ux pages') */
     confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frame();
     ok = dlg_tab_lit(0) && swap16(host_screen[66 * 240 + 120]) == T_THEME;   /* (the card's THEME rule, 1 px: no card) */
     press(B_OCTDN); frame();
@@ -11620,7 +11589,7 @@ static int test_toasts(void)
             for (lg = 0; lg < 2u; lg++) {
                 ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
                 if (lg) ui_prefs |= PREF_LARGE; else ui_prefs &= ~PREF_LARGE;
-                go_title("DIST"); ui.force = 1; frames(1600);
+                go_title("GLOBAL"); ui.force = 1; frames(1600);   /* (3b task 8: a lens page; was FX > DIST) */
                 memcpy(toast_snap, host_screen, sizeof toast_snap);
                 ui_message("SAVED A LONG MESSAGE"); frame();
                 toast_box(ui.msg, b);
@@ -11639,12 +11608,18 @@ static int test_toasts(void)
     bad += check("  gone with the message: the page whole again", gone);
     for (sk = 0; sk < 1u; sk++) {                       /* playing: the page moves on behind it */
         ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
-        TSEL->p[P_APDEP] = 100; song.playing = 1;      /* (as test_fx_live: AUTO PAN's dot runs while it plays) */
-        go_title("AUTO PAN"); frames(800);
+        seq_start();                                    /* (3b task 8: GLOBAL's playhead runs while it plays; was AUTO PAN's
+                                                         * dot, FX's lens gone) */
+        go_title("GLOBAL"); frames(800);
         ui_message("SAVED A LONG MESSAGE"); frame();
         toast_box(ui.msg, b);
         memcpy(toast_snap, host_screen, sizeof toast_snap);
-        frames(320);
+        for (k = 0; k < 20u; k++) {                     /* (the transport on, 16 ms of blocks a frame: GLOBAL's step lit) */
+            uint32_t q;
+            int32_t o[2u * CTL];
+            for (q = 0; q < 16u * 44100u / 1000u / CTL; q++) { events_block(CTL); mix_block(o, CTL); }
+            frame();
+        }
         for (n = 0, y = graph_y(); y < graph_y() + graph_h(); y++)
             for (x = 0; x < 240u; x++)
                 if (!((int32_t)x >= b[0] && (int32_t)x < b[2] && (int32_t)y >= b[1] && (int32_t)y < b[3]))
@@ -11652,11 +11627,11 @@ static int test_toasts(void)
         moved &= ui.msg_t && n > 0u;
         song.playing = 0;
     }
-    bad += check("  playing: the page (AUTO PAN's dot) goes on moving behind the toast", moved);
+    bad += check("  playing: the page (GLOBAL's playhead) goes on moving behind the toast", moved);
     for (ok = 1, sk = 0; sk < 1u; sk++) {               /* NOTICE: the page round its box, its tabs, its breadcrumb */
         static const int16_t R[3][4] = {{0, LT_Y, 240, 0}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
         ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
-        go_title("DIST"); ui.force = 1; frames(800);
+        go_title("GLOBAL"); ui.force = 1; frames(800);
         memcpy(toast_snap, host_screen, sizeof toast_snap);
         confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frames(160);
         for (n = out = 0, y = H_HEAD; y < 240u; y++)
@@ -11750,37 +11725,8 @@ static int test_toasts(void)
     return bad;
 }
 
-/* FX live (ui_lzfx.c): while the song plays the EFFECT and TRACK pictures move (the echoes' pulse, the tail's sweep,
- * the chorus running, DIST's level, AUTO PAN's dot); stopped and silent they hold still */
-static int fx_panel_moves(const char *title)
-{
-    static uint16_t a[240 * 140];
-    go_title(title); frame(); frames(1600);
-    memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
-    frames(96);
-    return memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0;
-}
-static int test_fx_live(void)
-{
-    int bad = 0, ok = 1;
-    static const char *const LIVE[] = {"DLY", "REVERB", "CHORUS", "AUTO PAN"};
-    uint32_t i;
-    ui_power_on();
-    TSEL->p[P_APDEP] = 100; song.g[G_CDEPTH] = 90;
-    song.playing = 1;
-    for (i = 0; i < NELEM(LIVE); i++) {
-        int m = fx_panel_moves(LIVE[i]);
-        if (!m) printf("  FX live: %s still\n", LIVE[i]);
-        ok &= m;
-    }
-    song.playing = 0;
-    for (i = 0; i < NTRK; i++) trk[i].peak = 0;
-    memset(scope_buf, 0, sizeof scope_buf);
-    ok &= !fx_panel_moves("DLY");
-    bad += check("0.8.5 FX live: DLY, REVERB, CHORUS, AUTO PAN move while it plays; stopped and silent they hold still", ok);
-    ui_power_on();
-    return bad;
-}
+/* (0.8.5 .. ACID FM 3b task 8) FX live (ui_lzfx.c's pictures moving while it played: test_fx_live) gone with FX's lens; FX >
+ * MASTER's meter moves with the output, paced (test_t8_pace) */
 
 /* (0.9.4 .. ACID FM 3b task 4) the engines' creatures (ui_engvis.c) and JIANT's beings (ui_being.c): gone in 3b task 5, the
  * user's "get rid of any creatures"; FM6's EDIT draws its algorithm, DRUM-X's its drum's hit (test_edit_fm6, test_edit_drm) */
@@ -11845,9 +11791,7 @@ static const old_lv_t OLD_LV[] = {
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"}},
     {FAM_SEQ, LV_BAR, 9, {"STEP", "NOTE", "AUTOMATION", "AUTO LIST"}},
     {FAM_SEQ, LV_STEP, 9, {"COMP", "COMP 2"}},   /* (NOTE's STEP view: merged into BAR's, the mock-up's "páginas repetidas") */
-    {FAM_FX, FXL_TRACK, 9, {"FX", "DIST", "AUTO PAN"}}, {FAM_FX, FXL_BUSES, 9, {"BUSES"}},
-    {FAM_FX, FXL_EFFECT, 9, {"DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2", "CHORUS", "SLICER", "SL BUS", "SL BUS 2",
-                             "SL PITCH", "MASTER", "PUNCH"}},
+    {FAM_FX, 0, 9, {"FX", "FX SPACE", "MASTER", "FX MORE"}},   /* (3b task 8: FX its own; JIANT's other pages MORE's rows) */
 };
 static int test_lz_reach(void)
 {
@@ -11972,14 +11916,16 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
     trk[0].p[P_SLEN] = 64;
     go_home(); frames(64);
     if (from == 1u) { press(B_SEQ); frames(320); }
-    if (from == 2u) { press(B_FX); frames(320); press(B_FX); frames(320); press(B_FX); frames(320); }
+    if (from == 2u) { press(B_FX); frames(320); press(B_FX); frames(320); }   /* (3b task 8: FX > SPACE, the delay's; was DLY) */
     if (from == 3u) { press(B_SAVE); frames(320); press(B_SAVE); frames(320); turn(EN_SELECT, 1); frames(32); press(B_HOME); frames(320); }
     fm1_ms += 1200u;
     tk_n = 0;
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {7, 3, 5, 6, 13, 7, 10, 2, 3, 1, 3, 7, 11, 4};   /* (0.9.18, no BAR page: task 5 13 (was 5:
+    static const uint8_t WANT[14] = {7, 3, 16, 6, 13, 7, 10, 2, 25, 1, 3, 7, 11, 4};   /* (3b task 8: task 3 16 (was 5), task 9
+                                                         * 25 (was 3): FX > MORE's DLY MOD and SLICE MODE down its list;
+                                                         * 0.9.18, no BAR page: task 5 13 (was 5:
                                                          * KNOB 1 turned fast to bar 3), task 11 3 (was 4); 3b task 5: task 12
                                                          * 7 (was 8: DECAY on SOUND, no SELECT to SOUND 2), task 1 7 (was 4: FM6's
                                                          * filter MORE's, its first rows) */
@@ -11995,15 +11941,16 @@ static int test_nav_tasks(void)
             v = TSEL->p[P_FCUT]; tk_val(EN_K2, -8);
             ok = song.sel == 1u && str_eq(cur_page()->title, "FM6 MORE") && TSEL->p[P_FCUT] != v;
             break;
-        case 1:                                         /* the reverb's SIZE */
+        case 1:                                         /* the reverb's SIZE (3b task 8: FX > SPACE's KNOB 4, was BUSES' 2) */
             tk_start(0); tk_btn(B_FX); tk_btn(B_FX);
-            v = song.g[G_RSIZE]; tk_val(EN_K2, 6);
-            ok = cur_page()->graph == GR_BUSES && song.g[G_RSIZE] != v;
+            v = song.g[G_RSIZE]; tk_val(EN_K4, 6);
+            ok = str_eq(cur_page()->title, "FX SPACE") && song.g[G_RSIZE] != v;
             break;
-        case 2:                                         /* DLY 2's MOD */
-            tk_start(0); tk_btn(B_FX); tk_btn(B_FX); tk_go(EN_SELECT, 2);
-            v = song.g[G_DMOD]; tk_val(EN_K4, 6);
-            ok = str_eq(cur_page()->title, "DLY 2") && song.g[G_DMOD] != v;
+        case 2:                                         /* the delay's MOD (DLY 2's; 3b task 8: FX > MORE's DLY MOD, its 12th
+                                                         * setting) */
+            tk_start(0); tk_btn(B_FX); tk_btn(B_FX); tk_btn(B_FX); tk_btn(B_FX); tk_go(EN_K1, 11);
+            v = song.g[G_DMOD]; tk_val(EN_K2, 6);
+            ok = str_eq(cur_page()->title, "FX MORE") && song.g[G_DMOD] != v;
             break;
         case 3:                                         /* step 5's note: TIME 2 ST */
             tk_start(0); tk_btn(B_SEQ); tk_go(EN_K1, 4); tk_val(EN_K3, 1);
@@ -12032,14 +11979,15 @@ static int test_nav_tasks(void)
             v = TSEL->p[P_REL]; tk_val(EN_K4, 6);
             ok = str_eq(cur_page()->title, "ENV") && TSEL->p[P_REL] != v;
             break;
-        case 8:                                         /* FX: DELAY to SLICER */
-            tk_start(2); tk_btn(B_FX); tk_btn(B_FX); tk_btn(B_FX);
-            ok = str_eq(cur_page()->title, "SLICER");
+        case 8:                                         /* FX: from the delay (SPACE) to the SLICER's MODE (3b task 8: FX >
+                                                         * MORE's 24th setting) */
+            tk_start(2); tk_btn(B_FX); tk_btn(B_FX); tk_go(EN_K1, 23);
+            ok = str_eq(cur_page()->title, "FX MORE") && UXM_FX.rows[uxm_at[uxm_key()].sel].id == G_SLMODE;
             break;
-        case 9: {                                       /* the next preset, on FX > DLY */
+        case 9: {                                       /* the next preset, on FX > SPACE (was DLY) */
             uint32_t pr, e;
             tk_start(2); pr = TSEL->preset; e = TSEL->eng_req; tk_go(EN_PRESET, 1);
-            ok = (TSEL->preset != pr || TSEL->eng_req != e) && str_eq(cur_page()->title, "DLY");
+            ok = (TSEL->preset != pr || TSEL->eng_req != e) && str_eq(cur_page()->title, "FX SPACE");
             break;
         }
         case 10:                                        /* REC Q 0 % */
@@ -12070,7 +12018,8 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (82: 3b task 5, FM6's filter in MORE; 0.9.18 no BAR 80, was 73)", okall && tot == 82u);
+    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (115: 3b task 8, FX's DLY MOD and "
+                 "SLICER in MORE; 82: 3b task 5, FM6's filter in MORE; 0.9.18 no BAR 80, was 73)", okall && tot == 115u);
     ui_power_on();
     return bad;
 }
@@ -12465,9 +12414,7 @@ static const param_desc_t *old_page_desc(const page_t *pg, uint32_t slot, int16_
         *valp = 0;
         return 0;
     }
-    if (pg->scope == SC_GLOBAL) {
-        if (pg->graph == GR_SLPIT && id == G_SLP0)
-            id += sl_ui_step & 15u;
+    if (pg->scope == SC_GLOBAL) {                       /* (3b task 8: SL PITCH's step picked gone with its page) */
         *valp = &song.g[id];
         if (song.g[G_RTYPE] == 3 && (id == G_RPRE || id == G_RDAMP))
             return id == G_RPRE ? &RESO_PITCH : &RESO_FOLW;
@@ -12573,7 +12520,7 @@ static int test_param_knob_same(void)
                                                   * type, AUTO PAN on the tempo, the LFO FREE / TRIG */
                     int16_t *v0, *v1;
                     const param_desc_t *d0, *d1;
-                    mod_ui_slot = (uint8_t)(st & 3u); sl_ui_step = (uint8_t)(st * 7u);
+                    mod_ui_slot = (uint8_t)(st & 3u);
                     song.g[G_RTYPE] = (int16_t)(st % 5u); TSEL->p[P_APSYNC] = (int16_t)((st >> 2) & 1u);
                     TSEL->p[P_LPHASE] = (int16_t)((st >> 3) & 1u ? -1 : 20); lfo_ph_mem[song.sel] = (uint8_t)(st + 3u);
                     d0 = old_page_desc(&PAGES[i], sl, &v0);
@@ -12596,7 +12543,7 @@ static int test_param_knob_same(void)
                     uint32_t id = PAGES[i].id[sl];
                     if (id == G_TRKS || id == G_LOADP)
                         continue;                       /* (the device's settings, saved: moved verbatim, not run here) */
-                    mod_ui_slot = (uint8_t)(n & 3u); sl_ui_step = (uint8_t)(n * 3u);
+                    mod_ui_slot = (uint8_t)(n & 3u);
                     song.g[G_RTYPE] = (int16_t)(n % 5u); TSEL->p[P_APSYNC] = (int16_t)((n >> 1) & 1u);
                     TSEL->p[P_LPHASE] = (int16_t)(n % 3u == 0u ? -1 : (int16_t)(n % 100u));
                     song.rec = (uint8_t)(st >= 4u ? 1u << song.sel : 0u);   /* (recording: AUTOMATION's events) */
@@ -12874,10 +12821,12 @@ static int test_ux_section_draw(void)
     ok = str_eq(uxs_label(SEC_EDIT, 0, P_GLMODE, TP[P_GLMODE].label), "GLIDE MODE") &&
          str_eq(uxs_label(SEC_ARP, 0, P_GLMODE, TP[P_GLMODE].label), "GLIDE MODE") &&
          str_eq(uxs_label(SEC_ARP, 0, P_AMODE, TP[P_AMODE].label), "ARP") &&   /* (3b task 6: ARP OFF / UP ..) */
-         str_eq(uxs_label(SEC_FX, 1, G_SLMODE, GP[G_SLMODE].label), GP[G_SLMODE].label) &&
+         str_eq(uxs_label(SEC_FX, 1, G_SLMODE, GP[G_SLMODE].label), "SLICE MODE") &&   /* (3b task 8: the slicer's own) */
          str_eq(uxs_label(SEC_LFO, 0, ID_LMODE, "MODE"), "MODE") &&
-         str_eq(uxs_label(SEC_FX, 1, P_GLMODE, GP[P_GLMODE].label), uxs_label(SEC_FX, 1, 0xFFFFu, GP[P_GLMODE].label)) &&
-         str_eq(uxs_label(SEC_FX, 0, ID_NONE, "DIST"), "DRIVE") && str_eq(uxs_label(SEC_FX, 0, ID_NONE, 0), "");
+         !str_eq(uxs_label(SEC_FX, 1, P_GLMODE, GP[P_GLMODE].label), "GLIDE MODE") &&   /* (a global of P_GLMODE's number: not
+                                                         * the glide's; 3b task 8: FX's globals have names of their own) */
+         str_eq(uxs_label(SEC_FX, 0, P_DIST, "DIST"), "DISTORT") &&   /* (3b task 8: the track's distortion, DRIVE the engines') */
+         str_eq(uxs_label(SEC_FX, 0, ID_NONE, "DIST"), "DISTORT") && str_eq(uxs_label(SEC_FX, 0, ID_NONE, 0), "");
     for (i = 0; i < NELEM(UXS_NAME); i++) {             /* (each a knob's column wide; its glyphs in the faces it is drawn in) */
         const char *q;
         ok &= UXS_NAME[i].p && text_w(&UF_LBL, UXS_NAME[i].p) <= UX_COL_W - 4 &&
@@ -13030,14 +12979,14 @@ static int test_ux_section_foot(void)
             ok &= str_eq(b, "1 / 3");
         }
     }
-    {   /* FX > DIST: the knob says DRIVE, so does the footer (it said DIST) */
-        for (p = 0; p < NPAGES && !(PAGES[p].fam == FAM_FX && str_eq(PAGES[p].title, "DIST")); p++)
+    {   /* FX > SENDS (3b task 8: FX on the ux pages; was FX > DIST): the knob says DISTORT, the footer NEXT SPACE */
+        for (p = 0; p < NPAGES && !(PAGES[p].fam == FAM_FX && str_eq(PAGES[p].title, "FX")); p++)
             ;
         uxk_engine(ENGI_ANALOG);
         uxs_knobs(&PAGES[p], k);
-        uxs_foot("FX \xB7 DIST", k, "2 / 16", "AUTO PAN", b, sizeof b);
-        ok &= p < NPAGES && str_eq(k[0].label, "DRIVE") && str_eq(b, "2 / 16 \xB7 NEXT AUTO PAN");
-        if (!ok) printf("  FX DIST footer \"%s\"\n", b);
+        uxs_foot("FX \xB7 SENDS", k, "1 / 4", "SPACE", b, sizeof b);
+        ok &= p < NPAGES && str_eq(k[0].label, "DISTORT") && str_eq(b, "1 / 4 \xB7 NEXT SPACE");
+        if (!ok) printf("  FX SENDS footer \"%s\"\n", b);
     }
     bad += check("ACID FM 3b: the footer says NEXT and the next page, on every page and engine, no knob's name again",
                  ok && n > 100u && named == n);
@@ -13064,17 +13013,17 @@ static const uxs_pg_t UXS_PG[5][3] = {
      {"SYN VOICE", "EDIT \xB7 VOICE", {"VOICE", "GLIDE", "PRIORITY", "SPREAD"}, {P_VOICE, P_GLIDE, P_PRIO, P_DETUNE}}},
     {{"EDIT 1", "EDIT \xB7 SOUND", {"WAVE", "WAVE 2", "BRIGHT", "SWEEP"}, {P_E0, P_E1, P_E2, P_E3}},
      {"EDIT 2", "EDIT \xB7 TONE", {"DETUNE", "LINE 2", "SUB", "FEEDBACK"}, {P_E4, P_E5, P_E6, P_E7}},
-     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DISTORT"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
     {{"EDIT 1", "EDIT \xB7 SOUND", {"CHIP", "WAVE", "DUTY", "CRUSH"}, {P_E0, P_E1, P_E2, P_E3}},
      {"EDIT 2", "EDIT \xB7 TONE", {"MORPH", "VIBRATO", "BEND", "MASK"}, {P_MORPH, P_E5, P_E6, P_E7}},   /* (task 4 fix: MORPH
                                                          * in JIANT's empty slot; WRAM DRIFT: test_edit_lofi_knob1) */
-     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DISTORT"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
     {{"EDIT 1", "EDIT \xB7 SOUND", {"SOURCE", "COLOR", "FREQ", "PEAK"}, {P_E0, P_E1, P_E2, P_E3}},
      {"EDIT 2", "EDIT \xB7 TONE", {"KEY TRACK", "DENSITY", "DRIFT", "CRUSH"}, {P_E4, P_E5, P_E6, P_E7}},
-     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DISTORT"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
     {{"EDIT 1", "EDIT \xB7 SOUND", {"VOWEL", "VOWEL 2", "TALK", "SHIFT"}, {P_E0, P_E1, P_E2, P_E3}},
      {"EDIT 2", "EDIT \xB7 TONE", {"BUZZ", "BREATH", "RESO", "RANDOM"}, {P_E4, P_E5, P_E6, P_E7}},
-     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DRIVE"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
+     {"SYN FILTER", "EDIT \xB7 FILTER", {"FILTER", "CUTOFF", "RESO", "DISTORT"}, {P_FTYPE, P_FCUT, P_FRES, P_DIST}}},
 };
 /* EDIT walks SOUND -> TONE -> page 3 -> MORE -> SOUND (the EDIT button, round), SELECT stops at both ends; each page's
  * knobs are named as spec 2.1 says and each turns its setting (through edit_param: PAGES' knob path); FOCUS gone */
@@ -13644,7 +13593,8 @@ static int test_ux_knob_widths(void)
                         *vp = (int16_t)x;
                         if (pg->id[0] == P_E0 && c == 0u && UXS_SYN[e] != ENGI_ANALOG) { /* (a mode: the others' names change) */ }
                         uxs_knobs(pg, k);
-                        uxs_val(page_desc(pg, c, &vp), *vp, v, sizeof v);
+                        uxs_vtext(page_desc(pg, c, &vp), *vp, pg->scope == SC_GLOBAL, page_id(pg, c), v, sizeof v);   /* (3b
+                                                         * task 8: its words, DISTORT's OFF at 0, as the knob row's) */
                         (void)u;
                         n++;
                         if (text_w(&UF_LBL, k[c].label) > UX_COL_W - 4 || text_w(&UF_VAL, k[c].value) > UX_COL_W - 4 ||
@@ -13711,7 +13661,7 @@ static uint32_t uxe_more_page(const ux_more_t *m)
 }
 static const char *uxe_more_list(const ux_more_t *m)   /* MORE's rows shown now, "|" between, a heading in brackets */
 {
-    static char b[400];
+    static char b[800];                                 /* (3b task 8: FX's 63 rows) */
     uint64_t sh = uxm_mask(m);
     uint32_t r;
     b[0] = 0;
@@ -13902,7 +13852,7 @@ static int test_edit_fm6(void)
     bad += check("ACID FM 3b: an operator FIXED: RATIO reads FREQ, its decade (1HZ .. 1KHZ)", ok);
     uxe_on(ENGI_FM6);
     turn(EN_SELECT, 3);
-    ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DRIVE|[PATCH]|PATCH|DETUNE|[MOD]|MOD TIME|MOD VEL|[OP 1]|"
+    ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DISTORT|[PATCH]|PATCH|DETUNE|[MOD]|MOD TIME|MOD VEL|[OP 1]|"
                                          "FREQ MODE|OP DETUNE|VELOCITY|[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD");
     if (!ok) printf("  FM6 MORE: %s\n", uxe_more_list(&UXM_FM6));
     bad += check("ACID FM 3b: FM6's MORE lists what its pages leave (EDIT 2's four, the operator's three, FILTER, VOICE; ALLOC "
@@ -14355,7 +14305,7 @@ static int test_edit_t5_fix(void)
     {   /* 7. FM6's MORE: PATCH (PATCH DETUNE) near the top, MOD (MOD TIME MOD VEL); TONE nowhere */
         uxe_on(ENGI_FM6);
         turn(EN_SELECT, 3);
-        ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DRIVE|[PATCH]|PATCH|DETUNE|[MOD]|MOD TIME|MOD VEL|[OP 1]|"
+        ok = str_eq(uxe_more_list(&UXM_FM6), "[FILTER]|FILTER|CUTOFF|RESO|DISTORT|[PATCH]|PATCH|DETUNE|[MOD]|MOD TIME|MOD VEL|[OP 1]|"
                                              "FREQ MODE|OP DETUNE|VELOCITY|[VOICE]|VOICE|GLIDE|GLIDE MODE|PRIORITY|SPREAD");
         if (!ok) printf("  FM6 MORE: %s\n", uxe_more_list(&UXM_FM6));
         bad += check("3b task 5 fix: FM6's MORE groups PATCH (PATCH, DETUNE) after FILTER and MOD (MOD TIME, MOD VEL)", ok);
@@ -15845,20 +15795,12 @@ static int test_t7_fix(void)
                 }
             }
         }
-        for (i = 0; i < MD_N; i++)                      /* (no two destinations the same name; an E1..E8 named as another by
-                                                         * its EDIT knob, ANALOG's DRIVE and the track's: the status line tells
-                                                         * them apart, "DRIVE (ANALOG)") */
+        for (i = 0; i < MD_N; i++)                      /* (no two destinations the same name; 3b task 8: none excepted, the
+                                                         * track's distortion DISTORT, ANALOG's and DRUM-X's own DRIVE) */
             for (j = i + 1u; j < MD_N; j++)
                 if (str_eq(nm[i], nm[j]) && !str_eq(nm[i], "UNUSED")) {
-                    char fi[32], fj[32];
-                    uxs_mtx_say(TSEL, 1, (int32_t)i, fi, sizeof fi, 1);
-                    uxs_mtx_say(TSEL, 1, (int32_t)j, fj, sizeof fj, 1);
-                    if (!(j >= MD_E1 && j < MD_CLIP) || str_eq(fi, fj)) {
-                        printf("  %s: DEST %u and %u both \"%s\"\n", N_ENGNAME[UXK_ENG[e]], (unsigned)i, (unsigned)j, nm[i]);
-                        oku = 0;
-                    } else
-                        printf("ui:   (%s: DEST %u and %u both \"%s\" as their EDIT knobs: \"%s\", \"%s\")\n", N_ENGNAME[UXK_ENG[e]],
-                               (unsigned)i, (unsigned)j, nm[i], fi, fj);
+                    printf("  %s: DEST %u and %u both \"%s\"\n", N_ENGNAME[UXK_ENG[e]], (unsigned)i, (unsigned)j, nm[i]);
+                    oku = 0;
                 }
     }
     {   /* the sources: one name each, the knob's the box's and the status line's, none the same, none a WAVE's */
@@ -16036,6 +15978,955 @@ static int test_t7_fix(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3b task 8: FX on the ux pages (SENDS, SPACE, MASTER, MORE): JIANT's sixteen FX pages (FX, DIST, AUTO PAN, BUSES, DLY,
+ * DLY 2, DLY 3, REVERB, REVERB 2, CHORUS, SLICER, SL BUS, SL BUS 2, SL PITCH, MASTER, PUNCH) as three pages and a MORE list.
+ * The track's distortion (P_DIST) is DISTORT everywhere; the engines' own DRIVE stays DRIVE
+ * ------------------------------------------------------------------------------------------------------------------------- */
+typedef struct { const char *nm, *title; const char *lab[4]; uint16_t id[4]; uint8_t glo; } uxt8_pg_t;   /* id: what the knob stores */
+static const uxt8_pg_t UXT8_PG[] = {
+    {"SENDS", "FX", {"DISTORT", "CHORUS", "DELAY", "REVERB"}, {P_DIST, P_CHOR, P_DLY, P_REV}, 0},
+    {"SPACE", "FX SPACE", {"DLY TIME", "DLY FDBK", "REV TYPE", "REV SIZE"}, {G_DTIME, G_DFDBK, G_RTYPE, G_RSIZE}, 1},
+    {"MASTER", "MASTER", {"CLIP", "PUNCH", "DUCK", "DUCK REL"}, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}, 1},
+};
+static void uxt8_open(uint32_t i)                        /* T1 (ANALOG, its first sound), FX's page i shown (3: MORE) */
+{
+    uxs_syn_on(ENGI_ANALOG);
+    press(B_FX); frame();
+    nav_put(SEC_FX, i < NELEM(UXT8_PG) ? UXT8_PG[i].nm : "MORE"); frame();
+}
+static uint32_t uxt8_row(uint32_t kind, uint32_t id)    /* the row of (kind, id) in FX's MORE (none: its n) */
+{
+    uint32_t r;
+    for (r = 0; r < UXM_FX.n && !(UXM_FX.rows[r].kind == kind && UXM_FX.rows[r].id == id); r++)
+        ;
+    return r;
+}
+static void uxt8_pick(uint32_t kind, uint32_t id)
+{
+    uint32_t k = uxm_key();
+    uxm_at[k].sel = (uint8_t)uxt8_row(kind, id);
+    uxm_at[k].top = 0;
+    frame();
+}
+static int16_t *uxt8_val(uint32_t glo, uint32_t id) { return glo ? &song.g[id] : &TSEL->p[id]; }
+static const param_desc_t *uxt8_desc(uint32_t glo, uint32_t id)
+{
+    int16_t *vp;
+    return param_ref(glo ? 0 : TSEL, id, &vp);
+}
+static const char *const UXT8_MORE_A =
+    "[DISTORT]|DIST TYPE|DIST TONE|[AUTO PAN]|PAN DEPTH|PAN RATE|PAN SYNC|PAN WAVE|[DELAY]|DLY TONE|DLY MIX|DLY WIDE|DLY PITCH|"
+    "DLY SPRAY|DLY MOD|DLY TYPE|DLY PING|[REVERB]|REV DAMP|REV PRE|REV MOD|REV RATE|REV TONE|REV WIDE|";
+static const char *const UXT8_MORE_ECO =
+    "[CHORUS]|CHO RATE|CHO DEPTH|CHO WIDE|[SLICER]|SLICE MODE|SLICE PAT|SLICE RATE|SLICE DEPTH|SLICE T1|SLICE T2|SLICE T3|"
+    "SLICE T4|SLICE T5|SLICE T6|SLICE FX|[SLICE PITCH]|PITCH LOOP|PITCH SNAP|PITCH 1|PITCH 2|PITCH 3|PITCH 4|PITCH 5|PITCH 6|"
+    "PITCH 7|PITCH 8|PITCH 9|PITCH 10|PITCH 11|PITCH 12|PITCH 13|PITCH 14|PITCH 15|PITCH 16|";
+static const char *const UXT8_MORE_LANE = "[PUNCH LANE]|LANE STEPS|LANE RATE|CLEAR LANE";
+static int uxt8_eco_id(uint32_t id)                     /* (a global LOAD ECO takes out of the sound: the CHORUS's, the SLICER's) */
+{
+    return id == G_CRATE || id == G_CDEPTH || id == G_CSTER || (id >= G_SLMODE && id <= G_SLP15);
+}
+/* the chain (FX's button round, SELECT to the ends, n / 4), opening on SENDS, none of JIANT's sixteen; the footers; the page left
+ * kept, PRESETS a sound and ALGORITHM the track there; MORE's list; LOAD ECO without the CHORUS and the SLICER; the reverb's
+ * fourth row named by its TYPE (REV PRE / REV AIR / REV PITCH), DAMP FOLLOW on RESO; the DJ FILTER GLO's */
+static int test_t8_nav(void)
+{
+    static const char *const N[4] = {"SENDS", "SPACE", "MASTER", "MORE"}, *const T[4] = {"FX", "FX SPACE", "MASTER", "FX MORE"};
+    static const char *const OLD[] = {"DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2", "CHORUS",
+                                      "SLICER", "SL BUS", "SL BUS 2", "SL PITCH", "PUNCH", "TRACK"};
+    char want[700];
+    int bad = 0, ok;
+    uint32_t i, n = 0, pr;
+    ui_power_on(); frame();
+    press(B_FX); frame();
+    ok = str_eq(cur_page()->title, "FX") && ux_section_owns(SEC_FX) && uxt6_walk(B_FX, N, T, 4);
+    for (i = 0; i < NELEM(OLD); i++)
+        ok &= !nav_put(SEC_FX, OLD[i]);
+    for (i = 0; i < NPAGES; i++)
+        n += PAGES[i].fam == FAM_FX;
+    bad += check("ACID FM 3b task 8: FX is SENDS, SPACE, MASTER, MORE (its button round, SELECT to the ends, n / 4); opens on "
+                 "SENDS; JIANT's sixteen pages gone (four FX rows in PAGES)", ok && n == 4u);
+    {   /* the footers: n / N and NEXT the page FX's button goes to; MORE its knobs */
+        static const char *const F[3] = {"1 / 4 \xB7 NEXT SPACE", "2 / 4 \xB7 NEXT MASTER", "3 / 4 \xB7 NEXT MORE"};
+        uint32_t c;
+        ux_knob_t k[4];
+        char b[48];
+        ok = 1;
+        for (c = 0; c < 4u; c++) {
+            uxt8_open(c);
+            uxs_knobs(cur_page(), k);
+            uxs_foot(uxs_where(), k, uxs_count(), uxs_next(), b, sizeof b);
+            if (c < 3u ? !str_eq(b, F[c]) : !str_eq(b, "4 / 4 \xB7 SETTING \xB7 DIST TYPE")) {
+                printf("  %s: footer \"%s\"\n", uxs_where(), b);
+                ok = 0;
+            }
+        }
+        bad += check("ACID FM 3b task 8: FX's footers: n / 4 . NEXT the next page; MORE SETTING . DIST TYPE", ok);
+    }
+    ui_power_on(); frame();                             /* its page left; PRESETS a sound, ALGORITHM the track there */
+    press(B_FX); frame(); turn(EN_SELECT, 2); frame();
+    press(B_ENV); frame(); press(B_FX); frame();
+    ok = str_eq(cur_page()->title, "MASTER");
+    pr = TSEL->preset;
+    turn(EN_PRESET, 1); frame();
+    ok &= (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0)) && str_eq(cur_page()->title, "MASTER");
+    turn(EN_ALGO, 1); frame();
+    ok &= song.sel == 1u && str_eq(cur_page()->title, "MASTER");
+    bad += check("ACID FM 3b task 8: FX's page left kept; PRESETS a sound, ALGORITHM the track there", ok);
+    uxt8_open(3);                                       /* MORE: the list */
+    song.g[G_RTYPE] = 0; frame();
+    snprintf(want, sizeof want, "%s%s%s", UXT8_MORE_A, UXT8_MORE_ECO, UXT8_MORE_LANE);
+    ok = cur_page()->graph == GR_MORE && cur_page()->scope == SC_TRACK && str_eq(uxe_more_list(&UXM_FX), want);
+    if (!ok) printf("  MORE: %s\n", uxe_more_list(&UXM_FX));
+    bad += check("ACID FM 3b task 8: FX's MORE lists DISTORT, AUTO PAN, DELAY, REVERB, CHORUS, SLICER, SLICE PITCH, PUNCH LANE "
+                 "(spec 2.4's order)", ok);
+    {   /* LOAD ECO: no CHORUS, no SLICER (JIANT hid their pages), every row of them; LITE and FULL show them */
+        uint32_t l, r, hid = 1, back = 1, nr = 0;
+        static const uint8_t LD[3] = {LOAD_ECO, LOAD_LITE, LOAD_FULL};
+        for (l = 0; l < 3u; l++) {
+            ui_load = LD[l]; rp_apply(); frame();
+            for (r = 0; r < UXM_FX.n; r++) {
+                const ux_row_t *rw = &UXM_FX.rows[r];
+                int sh = ux_row_shown(rw), eco = rw->kind == UXR_GLOBAL && uxt8_eco_id(rw->id);
+                if (rw->kind == UXR_HEAD)
+                    continue;
+                if (l == 0u && eco) { nr++; hid &= !sh; }
+                else back &= sh;
+            }
+        }
+        ui_load = LOAD_ECO; rp_apply(); frame();
+        snprintf(want, sizeof want, "%s%s", UXT8_MORE_A, UXT8_MORE_LANE);
+        ok = hid && back && nr == 3u + 11u + 18u && str_eq(uxe_more_list(&UXM_FX), want);
+        if (!ok) printf("  ECO: %u rows, hidden %d, the others %d: %s\n", (unsigned)nr, hid, back, uxe_more_list(&UXM_FX));
+        ui_load = LOAD_FULL; rp_apply(); frame();
+        bad += check("ACID FM 3b task 8: LOAD ECO hides FX MORE's CHORUS, SLICER and SLICE PITCH rows (32, their headings with "
+                     "them); LITE and FULL show them", ok);
+    }
+    {   /* the reverb's fourth setting named by its TYPE (ROOM / SPRING PRE, SHIMMER / CLOUD AIR, RESO PITCH); DAMP FOLLOW on RESO */
+        static const char *const PRE[5] = {"REV PRE", "REV PRE", "REV AIR", "REV PITCH", "REV AIR"};
+        uint32_t ty;
+        ok = 1;
+        uxt8_open(3);
+        for (ty = 0; ty < 5u; ty++) {
+            song.g[G_RTYPE] = (int16_t)ty; frame();
+            uxt8_pick(UXR_GLOBAL, G_RPRE);
+            ok &= strstr(uxe_labels(), PRE[ty]) != 0 && strstr(uxe_more_list(&UXM_FX), PRE[ty]) != 0;
+            uxt8_pick(UXR_GLOBAL, G_RDAMP);
+            ok &= strstr(uxe_labels(), ty == 3u ? "FOLLOW" : "REV DAMP") != 0;
+            if (!ok) { printf("  TYPE %u: %s / %s\n", (unsigned)ty, uxe_labels(), uxe_more_list(&UXM_FX)); break; }
+        }
+        song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; frame();
+        uxt8_pick(UXR_GLOBAL, G_RDAMP);
+        ok &= str_eq(uxe_value(1), "T2");
+        song.g[G_RDAMP] = 0; frame();
+        ok &= str_eq(uxe_value(1), "OFF");
+        song.g[G_RTYPE] = 0; song.g[G_RDAMP] = 60;
+        bad += check("ACID FM 3b task 8: REVERB's fourth setting in MORE named by its TYPE (REV PRE, REV AIR, REV PITCH); DAMP is "
+                     "FOLLOW on RESO (T1..T6 / OFF)", ok);
+    }
+    {   /* the DJ FILTER is GLO's: on no FX page or MORE row */
+        uint32_t r, c;
+        ok = 1;
+        for (i = 0; i < NPAGES; i++)
+            for (c = 0; c < 4u; c++)
+                ok &= !(PAGES[i].fam == FAM_FX && PAGES[i].scope == SC_GLOBAL && PAGES[i].id[c] == G_DJF);
+        for (r = 0; r < UXM_FX.n; r++)
+            ok &= !(UXM_FX.rows[r].kind == UXR_GLOBAL && UXM_FX.rows[r].id == G_DJF);
+        bad += check("ACID FM 3b task 8: the DJ FILTER is on no FX page or MORE row (GLO's)", ok);
+    }
+    ui_power_on();
+    return bad;
+}
+
+/* a knob turned on T2: SENDS' its one setting of T2 (every other track, every global left), SPACE's and MASTER's their one
+ * global (no track touched); each MORE row the same; the values in plain words, the status line in full */
+static int uxt8_diff(const track_t *was, const int16_t *gw, uint32_t glo, uint32_t id)   /* settings moved but (glo, id) on T2 */
+{
+    uint32_t o, k, odd = 0;
+    for (o = 0; o < NTRK; o++)
+        for (k = 0; k < P_COUNT; k++)
+            odd += trk[o].p[k] != was[o].p[k] && !(!glo && o == 1u && k == id);
+    for (k = 0; k < G_COUNT; k++)
+        odd += song.g[k] != gw[k] && !(glo && k == id);
+    return odd;
+}
+static int test_t8_knobs(void)
+{
+    static track_t was[NTRK];
+    static int16_t gw[G_COUNT];
+    uint32_t i, c, r;
+    int bad = 0, ok = 1;
+    for (i = 0; i < NELEM(UXT8_PG); i++) {
+        char want[64];
+        uxt8_open(i);
+        track_select(1); frame();                       /* (on T2: the scope probe) */
+        want[0] = 0;
+        for (c = 0; c < 4u; c++) {
+            if (c) str_cpy(want + str_len(want), "|", sizeof want - str_len(want));
+            str_cpy(want + str_len(want), UXT8_PG[i].lab[c], sizeof want - str_len(want));
+        }
+        if (!str_eq(uxe_labels(), want)) { printf("  FX %s: %s\n", UXT8_PG[i].nm, uxe_labels()); ok = 0; }
+        for (c = 0; c < 4u; c++) {
+            uint32_t id = UXT8_PG[i].id[c], glo = UXT8_PG[i].glo, odd;
+            int16_t v0 = *uxt8_val(glo, id);
+            int32_t s = v0 >= uxt8_desc(glo, id)->max ? -1 : 1;
+            frames(400);
+            memcpy(was, trk, sizeof was);
+            memcpy(gw, song.g, sizeof gw);
+            turn(EN_K1 + c, s);
+            frames(4);
+            odd = uxt8_diff(was, gw, glo, id);
+            if (odd || *uxt8_val(glo, id) == v0) {
+                printf("  FX %s KNOB %u: %d -> %d, %u others moved\n", UXT8_PG[i].nm, (unsigned)c + 1u, v0, *uxt8_val(glo, id),
+                       (unsigned)odd);
+                ok = 0;
+            }
+        }
+    }
+    bad += check("ACID FM 3b task 8: FX's pages: their knobs in plain words; SENDS' each its one setting of T2 (every track, "
+                 "every global else left), SPACE's and MASTER's each its one global (no track's)", ok);
+    uxt8_open(3);
+    track_select(1); frame();
+    ok = 1;
+    for (r = 0; r < UXM_FX.n; r++) {
+        const ux_row_t *rw = &UXM_FX.rows[r];
+        uint32_t glo = rw->kind == UXR_GLOBAL, odd;
+        int16_t v0;
+        if (rw->kind != UXR_TRACK && rw->kind != UXR_GLOBAL) continue;
+        v0 = *uxt8_val(glo, rw->id);
+        frames(400);
+        memcpy(was, trk, sizeof was);
+        memcpy(gw, song.g, sizeof gw);
+        uxm_at[uxm_key()].sel = (uint8_t)r;
+        uxm_at[uxm_key()].top = 0;
+        turn(EN_K2, v0 >= uxt8_desc(glo, rw->id)->max ? -1 : 1);
+        frames(4);
+        odd = uxt8_diff(was, gw, glo, rw->id);
+        if (odd || *uxt8_val(glo, rw->id) == v0) {
+            printf("  FX MORE row %u (%s %u): %d -> %d, %u others\n", (unsigned)r, glo ? "G" : "P", (unsigned)rw->id, v0,
+                   *uxt8_val(glo, rw->id), (unsigned)odd);
+            ok = 0;
+        }
+    }
+    bad += check("ACID FM 3b task 8: FX's MORE: every row set from MORE alone (DISTORT's and AUTO PAN's T2's, the buses' their "
+                 "global)", ok);
+    {   /* the values in plain words: the knob's short (MORE: KNOB 2's), the status line's full */
+        static const struct { uint8_t pg, knob, glo; uint16_t id; int16_t v; const char *k, *f; } V[] = {
+            {0, 0, 0, P_DIST, 0, "OFF", "DISTORT \xB7 OFF"}, {0, 1, 0, P_CHOR, 0, "OFF", "CHORUS \xB7 OFF"},
+            {0, 3, 0, P_REV, 127, "100%", "REVERB \xB7 100%"},
+            {1, 0, 1, G_DTIME, 1, "1/8", "DLY TIME \xB7 1/8 NOTE: 250MS"},
+            {1, 0, 1, G_DTIME, 5, "1/16T", "DLY TIME \xB7 1/16 TRIPLET: 83MS"},
+            {1, 0, 1, G_DTIME, DT_FREE, "5MS", "DLY TIME \xB7 5MS"}, {1, 0, 1, G_DTIME, DT_FREE + 44, "1.03S", "DLY TIME \xB7 1.03S"},
+            {1, 1, 1, G_DFDBK, 60, "60%", "DLY FDBK \xB7 60%"}, {1, 1, 1, G_DFDBK, 110, "110%", "DLY FDBK \xB7 110%: GROWS"},
+            {1, 1, 1, G_DFDBK, 0, "0%", "DLY FDBK \xB7 0%: ONE ECHO"},
+            {1, 2, 1, G_RTYPE, 2, "SHIMMER", "REV TYPE \xB7 SHIMMER"}, {1, 2, 1, G_RTYPE, 1, "SPRING", "REV TYPE \xB7 SPRING"},
+            {2, 0, 1, G_CLIP, 0, "OFF", "CLIP \xB7 OFF"}, {2, 0, 1, G_CLIP, 50, "50%", "CLIP \xB7 50%: DRIVE X2.5"},
+            {2, 1, 1, G_PUNCH, 0, "OFF", "PUNCH \xB7 OFF"}, {2, 1, 1, G_PUNCH, 50, "50%", "PUNCH \xB7 50%: DRUMS +2.6DB"},
+            {2, 2, 1, G_DUCK, 100, "-30DB", "DUCK \xB7 OTHERS -30DB ON A KICK"}, {2, 2, 1, G_DUCK, 0, "OFF", "DUCK \xB7 OFF"},
+            {2, 3, 1, G_DREL, 30, "208MS", "DUCK REL \xB7 208MS"}, {2, 3, 1, G_DREL, 100, "600MS", "DUCK REL \xB7 600MS"},
+            {3, 1, 0, P_DTYPE, 4, "RECTIFY", "DIST TYPE \xB7 RECTIFY: AN OCTAVE UP"},
+            {3, 1, 0, P_DTONE, -32, "-50%", "DIST TONE \xB7 50% DARKER"}, {3, 1, 0, P_DTONE, 0, "FLAT", "DIST TONE \xB7 FLAT"},
+            {3, 1, 0, P_APWAVE, 4, "RAND", "PAN WAVE \xB7 RANDOM STEPS"}, {3, 1, 0, P_APDEP, 0, "OFF", "PAN DEPTH \xB7 OFF"},
+            {3, 1, 0, P_APSYNC, 1, "BEAT", "PAN SYNC \xB7 BEAT: IN TIME"},
+            {3, 1, 1, G_DCOLOR, 64, "OPEN", "DLY TONE \xB7 OPEN"}, {3, 1, 1, G_DCOLOR, 32, "-50%", "DLY TONE \xB7 50% DARKER"},
+            {3, 1, 1, G_DCOLOR, 127, "+100%", "DLY TONE \xB7 100% THINNER"},
+            {3, 1, 1, G_DPING, 1, "ON", "DLY PING \xB7 ON: LEFT RIGHT LEFT"},
+            {3, 1, 1, G_DTYPE, 1, "DIGITAL", "DLY TYPE \xB7 DIGITAL: EXACT REPEATS"}, {3, 1, 1, G_DPIT, 0, "OFF", "DLY PITCH \xB7 OFF"},
+            {3, 1, 1, G_RPRE, 20, "18MS", "REV PRE \xB7 18MS"}, {3, 1, 1, G_RPRE, 0, "OFF", "REV PRE \xB7 OFF"},
+            {3, 1, 1, G_CSTER, -64, "MONO", "CHO WIDE \xB7 MONO"}, {3, 1, 1, G_CSTER, 32, "+50%", "CHO WIDE \xB7 50% WIDER"},
+            {3, 1, 1, G_RFILT, -32, "-50%", "REV TONE \xB7 50% DARKER"}, {3, 1, 1, G_RFILT, 0, "FLAT", "REV TONE \xB7 FLAT"},
+            {3, 1, 1, G_CRATE, 60, "1.2HZ", "CHO RATE \xB7 1.18 HZ"},
+            {3, 1, 1, G_SLMODE, 2, "STUTTER", "SLICE MODE \xB7 STUTTER: REPEATS IN THE GAPS"},
+            {3, 1, 1, G_SLPAT, 3, "3", "SLICE PAT \xB7 3: X..X..X..X..X.X."}, {3, 1, 1, G_SLRATE, 4, "1/16T", "SLICE RATE \xB7 1/16 TRIPLET"},
+            {3, 1, 1, G_SLPQ, 1, "SCALE", "PITCH SNAP \xB7 SCALE: ONTO THE SCALE"}, {3, 1, 1, G_SLPQ, 0, "ANY", "PITCH SNAP \xB7 ANY: EVERY SEMITONE"},
+            {3, 1, 1, G_SLPLEN, 8, "8", "PITCH LOOP \xB7 8 STEPS"},
+            {3, 1, 1, G_SLP0 + 4, 7, "+7ST", "PITCH 5 \xB7 +7ST"}, {3, 1, 1, G_PFXRES, 1, "1/16", "LANE RATE \xB7 1/16 NOTE"},
+            {3, 1, 1, G_PFXLEN, 64, "64", "LANE STEPS \xB7 64 STEPS"}, {3, 1, 1, G_SLT1 + 2, 1, "ON", "SLICE T3 \xB7 ON"},
+            {3, 1, 1, G_SLFX, 1, "ON", "SLICE FX \xB7 ON: THE FX RETURNS TOO"},
+        };
+        uint32_t k;
+        ok = 1;
+        for (k = 0; k < NELEM(V); k++) {
+            int16_t keep, *vp;
+            uxt8_open(V[k].pg);
+            song.g[G_BPM] = 120;
+            vp = uxt8_val(V[k].glo, V[k].id);
+            keep = *vp;
+            *vp = V[k].v;
+            if (V[k].pg == 3u) uxt8_pick(V[k].glo ? UXR_GLOBAL : UXR_TRACK, V[k].id);
+            frames(UX_HOT_MS + 50u);
+            ux_knob_touch(V[k].knob);
+            frame();
+            if (!str_eq(uxe_value(V[k].knob), V[k].k) || !str_eq(uxt6_status(), V[k].f)) {
+                printf("  %s %u = %d: \"%s\", \"%s\"\n", V[k].glo ? "G" : "P", (unsigned)V[k].id, V[k].v, uxe_value(V[k].knob),
+                       uxt6_status());
+                ok = 0;
+            }
+            *vp = keep;
+        }
+        {   /* DLY TIME past what the line holds: its longest said */
+            uxt8_open(1);
+            song.g[G_BPM] = 60; song.g[G_DTIME] = 9; frame();   /* (4 BARS at 60: 16 s) */
+            frames(UX_HOT_MS + 50u); ux_knob_touch(0); frame();
+            ok &= str_eq(uxe_value(0), "4BAR") && strstr(uxt6_status(), " AT MOST") != 0 &&
+                  strncmp(uxt6_status(), "DLY TIME \xB7 4 BARS: ", 19) == 0;
+            if (!ok) printf("  4BAR: \"%s\"\n", uxt6_status());
+            song.g[G_BPM] = 120; song.g[G_DTIME] = 1;
+        }
+        {   /* REV PRE's slot per TYPE: AIR in semitones (SHIMMER), PITCH in scale steps (RESO), FOLLOW (RESO's DAMP) */
+            uxt8_open(3);
+            song.g[G_RTYPE] = 2; frame();
+            song.g[G_RPRE] = 12; uxt8_pick(UXR_GLOBAL, G_RPRE);
+            frames(UX_HOT_MS + 50u); ux_knob_touch(1); frame();
+            ok &= str_eq(uxe_value(1), "+12ST") && str_eq(uxt6_status(), "REV AIR \xB7 +12ST");
+            if (!ok) printf("  AIR: \"%s\" \"%s\"\n", uxe_value(1), uxt6_status());
+            song.g[G_RTYPE] = 3; frame(); song.g[G_RPRE] = 3; frame(); ux_knob_touch(1); frame();
+            ok &= str_eq(uxe_value(1), "+3") && str_eq(uxt6_status(), "REV PITCH \xB7 +3 SCALE STEPS");
+            if (!ok) printf("  PITCH: \"%s\" \"%s\"\n", uxe_value(1), uxt6_status());
+            song.g[G_RDAMP] = 3; uxt8_pick(UXR_GLOBAL, G_RDAMP); ux_knob_touch(1); frame();
+            ok &= str_eq(uxe_value(1), "T3") && str_eq(uxt6_status(), "FOLLOW \xB7 TUNED TO T3");
+            if (!ok) printf("  FOLLOW: \"%s\" \"%s\"\n", uxe_value(1), uxt6_status());
+            song.g[G_RTYPE] = 0; song.g[G_RDAMP] = 60; song.g[G_RPRE] = 0;
+        }
+        {   /* LOAD LITE / ECO: what plays instead said (JIANT's cards said LITE / ECO) */
+            uxt8_open(1);
+            song.g[G_RTYPE] = 2;
+            ui_load = LOAD_LITE; rp_apply(); frame();
+            frames(UX_HOT_MS + 50u); ux_knob_touch(2); frame();
+            ok &= str_eq(uxt6_status(), "REV TYPE \xB7 SHIMMER: AS ROOM IN LITE");
+            if (!ok) printf("  LITE: \"%s\"\n", uxt6_status());
+            uxt8_open(0);
+            TSEL->p[P_CHOR] = 64;
+            ui_load = LOAD_ECO; rp_apply(); frame();
+            frames(UX_HOT_MS + 50u); ux_knob_touch(1); frame();
+            ok &= str_eq(uxt6_status(), "CHORUS \xB7 50%: NO CHORUS IN ECO");
+            if (!ok) printf("  ECO: \"%s\"\n", uxt6_status());
+            uxt8_open(3);
+            ui_load = LOAD_ECO; rp_apply(); frame();
+            song.g[G_DPIT] = 5; uxt8_pick(UXR_GLOBAL, G_DPIT);
+            frames(UX_HOT_MS + 50u); ux_knob_touch(1); frame();
+            ok &= str_eq(uxt6_status(), "DLY PITCH \xB7 +5ST: OFF IN ECO");
+            if (!ok) printf("  ECO PITCH: \"%s\"\n", uxt6_status());
+            song.g[G_DPIT] = 0;
+            ui_load = LOAD_FULL; rp_apply(); song.g[G_RTYPE] = 0; frame();
+        }
+        bad += check("ACID FM 3b task 8: FX's values in plain words (OFF at 0; DLY TIME at the tempo, its longest; DUCK in dB, "
+                     "CLIP's drive, PUNCH's gain, DUCK REL in ms; TONEs DARKER / THINNER; REV PRE / AIR / PITCH and FOLLOW by "
+                     "TYPE; LOAD LITE / ECO said), the status line in full", ok);
+    }
+    ui_power_on();
+    return bad;
+}
+
+/* REC + FX: every FX setting that can be recorded, on a page or a MORE row, and the punch-in lane cleared; ENV's and LFO's kept */
+static int test_t8_rec_clear(void)
+{
+    uint32_t id, k, put = 0, left = 0, want = 0, r, c, i;
+    uint8_t fx[P_COUNT];
+    int bad = 0, ok;
+    track_t *t;
+    memset(fx, 0, sizeof fx);
+    for (i = 0; i < NPAGES; i++)                         /* (FX's track settings: its pages' and MORE's) */
+        if (PAGES[i].fam == FAM_FX && PAGES[i].scope == SC_TRACK)
+            for (c = 0; c < 4u; c++)
+                if (PAGES[i].id[c] < P_COUNT)
+                    fx[PAGES[i].id[c]] = 1;
+    for (r = 0; r < UXM_FX.n; r++)
+        if (UXM_FX.rows[r].kind == UXR_TRACK)
+            fx[UXM_FX.rows[r].id] = 1;
+    ui_power_on();
+    t = TSEL;
+    go_home(); frame();
+    for (id = 0, k = 0; id < P_COUNT; id++)
+        if (fx[id] && motion_param(id)) {
+            want++;
+            put += !((k & 1u) ? motion_set_lock(t, k, id, 1) : motion_set_event(t, k, id, 1));
+            k++;
+        }
+    ok = !motion_set_event(t, 40, P_ATK, 1) && !motion_set_event(t, 41, P_LRATE, 1);
+    pfx_lane[3] = 0x21;
+    btn_down(B_REC); frame();
+    btn_down(B_FX); frame(); btn_up(B_FX); frame();
+    btn_up(B_REC); frames(20);
+    for (id = 0, k = 0; id < P_COUNT; id++)
+        if (fx[id] && motion_param(id)) {
+            if (motion_find(t, k, id) >= 0) { printf("  id %u left\n", (unsigned)id); left++; }
+            k++;
+        }
+    ok &= want >= 5u && put == want && !left && motion_find(t, 40, P_ATK) >= 0 && motion_find(t, 41, P_LRATE) >= 0 &&
+          !pfx_lane[3] && msg_is("FX AUTOMATION CLEARED");
+    if (!ok) printf("  %u of %u put, %u left, \"%s\"\n", (unsigned)put, (unsigned)want, (unsigned)left, ui.msg);
+    bad += check("ACID FM 3b task 8: REC + FX clears every FX setting that can be recorded (its pages' and MORE's) and the "
+                 "punch-in lane; ENV's and LFO's kept", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* CLEAR LANE (JIANT's FX > PUNCH > CLEAR): asks first (OCT+ yes, OCT- no), refused while the song chain plays; the row says how a
+ * lane is recorded (was PUNCH's hint) */
+static int test_t8_lane_ask(void)
+{
+    int bad = 0, ok;
+    uint8_t keep[32];
+    uxt8_open(3);
+    uxt8_pick(UXR_ACTION, UXM_A_LANE);
+    memset(pfx_lane, 0, sizeof pfx_lane);
+    pfx_lane[0] = 0x21; pfx_lane[5] = 0x03;
+    memcpy(keep, pfx_lane, sizeof keep);
+    frames(UX_HOT_MS + 50u);
+    ok = str_eq(uxt6_status(), "REC + PLAY, HOLD FX + A KEY") && str_eq(uxe_value(1), "GO") &&
+         str_eq(uxe_labels(), "SETTING|CLEAR LANE||");
+    if (!ok) printf("  lane row: \"%s\" \"%s\" \"%s\"\n", uxt6_status(), uxe_value(1), uxe_labels());
+    turn(EN_K2, -1); frame();
+    ok &= !ui.confirm;
+    chain.armed = 1;
+    turn(EN_K2, 1); frame();
+    ok &= !ui.confirm && msg_is("STOP TO EDIT") && !memcmp(keep, pfx_lane, sizeof keep);
+    chain.armed = 0;
+    frames(200);
+    turn(EN_K2, 1); frame();
+    ok &= ui.confirm == CF_CLEAR_PFX && !memcmp(keep, pfx_lane, sizeof keep);
+    press(B_OCTDN); frame();
+    ok &= !ui.confirm && !memcmp(keep, pfx_lane, sizeof keep);
+    bad += check("ACID FM 3b task 8: FX > MORE's CLEAR LANE asks first, OCT- keeps the lane; refused while a song plays; the row "
+                 "says how a lane is recorded", ok);
+    turn(EN_K2, 1); frame();
+    ok = ui.confirm == CF_CLEAR_PFX;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && !pfx_lane[0] && !pfx_lane[5] && msg_is("PUNCH LANE CLEARED");
+    bad += check("ACID FM 3b task 8: .. OCT+ clears the lane (PUNCH LANE CLEARED)", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* every label and value of FX's pages and MORE fits its column (48 px) with its glyphs, over each setting's range (REV PRE and
+ * DAMP on each TYPE, PAN RATE both ways), MORE's names uncut beside their values, the status line's full words within 224 px */
+static int uxt8_fits(const char *where, const ux_knob_t *k, uint32_t c, const char *full, int more)
+{
+    int32_t dy;
+    const aafont_t *vf = ux_val_face(k[c].value, &dy);
+    uint32_t w = (uint32_t)text_w(vf, k[c].value);
+    int ok = w <= UX_COL_W - 4u && str_len(k[c].value) + 1u < sizeof k[c].value && uxe_glyphs(vf, k[c].value) &&
+             uxe_glyphs(&UF_HDR, k[c].value) && text_w(&UF_LBL, k[c].label) <= UX_COL_W - 4 && uxe_glyphs(&UF_LBL, k[c].label) &&
+             uxe_glyphs(&UF_HDR, k[c].label);
+    if (more) {                                         /* (MORE's row: the name in UF_HDR, its meter, the value: no name cut) */
+        int32_t vx = 222 - text_w(&UF_HDR, k[c].value);
+        ok &= 16 + text_w(&UF_HDR, k[c].label) <= (vx < 144 ? vx : 144) - 8;
+    }
+    if (full) {
+        char st[64];
+        snprintf(st, sizeof st, "%s \xB7 %s", k[c].label, full);
+        ok &= uxe_glyphs(&UF_HDR, full) && text_w(&UF_HDR, st) <= 224;
+    }
+    if (!ok)
+        printf("  %s %s = \"%s\" (%u px) full \"%s\"\n", where, k[c].label, k[c].value, (unsigned)w, full ? full : "-");
+    return ok;
+}
+static int test_t8_widths(void)
+{
+    uint32_t i, c, n = 0, ty, r, ld;
+    int32_t v;
+    int bad = 0, ok = 1;
+    for (ld = 0; ld < 2u; ld++)                          /* (FULL, and ECO: what plays instead said) */
+        for (ty = 0; ty < 5u; ty++)
+            for (i = 0; i < NELEM(UXT8_PG); i++) {
+                uxt8_open(i);
+                ui_load = ld ? LOAD_LITE : LOAD_FULL; rp_apply();
+                song.g[G_RTYPE] = (int16_t)ty;
+                song.g[G_BPM] = 40;                      /* (DLY TIME: the longest the line holds, said) */
+                for (c = 0; c < 4u; c++) {
+                    uint32_t id = UXT8_PG[i].id[c], glo = UXT8_PG[i].glo;
+                    const param_desc_t *d = uxt8_desc(glo, id);
+                    int16_t keep = *uxt8_val(glo, id);
+                    for (v = d->min; v <= d->max; v++) {
+                        ux_knob_t k[4];
+                        *uxt8_val(glo, id) = (int16_t)v;
+                        uxs_knobs(cur_page(), k);
+                        n++;
+                        ok &= uxt8_fits(UXT8_PG[i].nm, k, c, uxs_vfull(glo, id, v), 0);
+                    }
+                    *uxt8_val(glo, id) = keep;
+                    song.g[G_RTYPE] = (int16_t)ty;
+                }
+            }
+    ui_load = LOAD_FULL; rp_apply(); song.g[G_BPM] = 120;
+    for (ty = 0; ty < 5u; ty++) {                       /* MORE: KNOB 2's name and every value of every row */
+        uint32_t sync;
+        for (sync = 0; sync < 2u; sync++) {
+            uxt8_open(3);
+            song.g[G_RTYPE] = (int16_t)ty;
+            TSEL->p[P_APSYNC] = (int16_t)sync;
+            for (r = 0; r < UXM_FX.n; r++) {
+                const ux_row_t *rw = &UXM_FX.rows[r];
+                uint32_t glo = rw->kind == UXR_GLOBAL;
+                const param_desc_t *d;
+                int16_t keep;
+                if (rw->kind != UXR_TRACK && rw->kind != UXR_GLOBAL) continue;
+                if (!ux_row_shown(rw)) continue;
+                d = uxt8_desc(glo, rw->id);
+                keep = *uxt8_val(glo, rw->id);
+                uxm_at[uxm_key()].sel = (uint8_t)r;
+                for (v = d->min; v <= d->max; v++) {
+                    ux_knob_t k[4];
+                    *uxt8_val(glo, rw->id) = (int16_t)v;
+                    uxs_knobs(cur_page(), k);
+                    n++;
+                    ok &= uxt8_fits("MORE", k, 1, uxs_vfull(glo, rw->id, v), 1);
+                }
+                *uxt8_val(glo, rw->id) = keep;
+            }
+        }
+    }
+    song.g[G_RTYPE] = 0;
+    bad += check("ACID FM 3b task 8: every FX label and value (each reverb TYPE, PAN RATE free and in time, LOAD LITE) fits its "
+                 "column (48 px), MORE's names uncut beside their values, with their glyphs; the full words within the status line",
+                 ok && n > 3000u);
+    ui_power_on();
+    return bad;
+}
+
+/* the pictures: each knob moves its picture once, none idle (stopped or playing, silent), the cells within DC_MAX on each page
+ * and on every MORE row */
+static int test_t8_pictures(void)
+{
+    uint32_t i, c;
+    int bad = 0, ok = 1;
+    for (i = 0; i < NELEM(UXT8_PG); i++)
+        for (c = 0; c < 4u; c++) {
+            char w[32];
+            uint32_t id = UXT8_PG[i].id[c], glo = UXT8_PG[i].glo;
+            uxt8_open(i);
+            memset(scope_buf, 0, sizeof scope_buf);
+            if (glo && id == G_CLIP) song.g[G_CLIP] = 30;
+            if (glo && id == G_DREL) song.g[G_DUCK] = 60;
+            if (glo && id == G_RSIZE) song.g[G_RSIZE] = 40;
+            if (glo && id == G_DFDBK) song.g[G_DFDBK] = 60;
+            if (!glo) TSEL->p[id] = 30;
+            TSEL->p[P_DLY] = TSEL->p[P_DLY] ? TSEL->p[P_DLY] : 40;
+            TSEL->p[P_REV] = TSEL->p[P_REV] ? TSEL->p[P_REV] : 40;
+            frame();
+            snprintf(w, sizeof w, "FX %s KNOB %u", UXT8_PG[i].nm, (unsigned)c + 1u);
+            ok &= uxe_pic_turn(c, *uxt8_val(glo, id) + 4 <= uxt8_desc(glo, id)->max ? 4 : -4, w);
+            if (ux_rows_ink(UX_Y_PANEL, UX_H_PANEL) < 1500u) { printf("  %s: no picture\n", w); ok = 0; }
+            ok &= uxe_cells_ok();
+        }
+    uxt8_open(3);
+    for (c = 0; c < UXM_FX.n; c++) {                    /* MORE down its rows: within the budget */
+        uxm_at[uxm_key()].sel = (uint8_t)c;
+        frame();
+        ok &= uxe_cells_ok();
+    }
+    bad += check("ACID FM 3b task 8: FX's pictures: every knob moves its picture (one panel a turn), none idle stopped or playing; "
+                 "cells within DC_MAX on every page and MORE row", ok);
+    {   /* SENDS: four bars, each as tall as its send (DISTORT CHORUS DELAY REVERB), in its knob's colour */
+        uint32_t k, okb = 1;
+        uxt8_open(0);
+        TSEL->p[P_DIST] = 127; TSEL->p[P_CHOR] = 0; TSEL->p[P_DLY] = 64; TSEL->p[P_REV] = 32;
+        ui.force = 1; frame();
+        for (k = 0; k < 4u; k++) {
+            int32_t x = UX_COL_X0 + (int32_t)k * UX_COL_PITCH + UX_COL_W / 2, y, top = -1;
+            for (y = UX_Y_PANEL; y < UX_Y_PANEL + UX_H_PANEL; y++)
+                if (swap16(host_screen[(uint32_t)y * 240u + (uint32_t)x]) == ux_knob_col(k)) { top = y; break; }
+            if (k == 1u ? top >= 0 : top < 0) { printf("  SENDS bar %u: top %d\n", (unsigned)k, (int)top); okb = 0; }
+            if (k == 0u) okb &= top >= 0 && top < UX_Y_PANEL + 40;
+            if (k == 2u) okb &= top > UX_Y_PANEL + 40;
+        }
+        bad += check("ACID FM 3b task 8: SENDS draws four send bars, each its send's height in its knob's colour (none at 0)", okb);
+    }
+    ui_power_on();
+    return bad;
+}
+
+/* ---- the pictures against the engine */
+#define UXT8_N (16u * FS / CTL * CTL)
+static int32_t uxt8_buf[UXT8_N], uxt8_r[UXT8_N];
+static double uxt8_rt60_of(const int32_t *h, uint32_t n)   /* Schroeder: -5 .. -35 dB, x2 (reverb_test.c's) */
+{
+    static double e[UXT8_N];
+    double s = 0;
+    long t5 = -1, t35 = -1;
+    uint32_t i;
+    for (i = n; i-- > 0;) { s += (double)h[i] * h[i]; e[i] = s; }
+    for (i = 0; i < n; i++) {
+        double db = 10 * log10(e[i] / e[0] + 1e-30);
+        if (t5 < 0 && db <= -5) t5 = (long)i;
+        if (t35 < 0 && db <= -35) { t35 = (long)i; break; }
+    }
+    return t35 < 0 ? 99 : (t35 - t5) * 2.0 / FS;
+}
+/* the reverb's model alone (fx.c rev_run: no gate, no tone, no pre-delay), an impulse in: its RT60, ms */
+static uint32_t uxt8_rt60(uint32_t ty, int32_t size, int32_t damp, int32_t mod)
+{
+    static int32_t in[CTL], o[CTL];
+    uint32_t t, i;
+    song.g[G_RTYPE] = (int16_t)ty; song.g[G_RSIZE] = (int16_t)size; song.g[G_RDAMP] = (int16_t)damp; song.g[G_RMOD] = (int16_t)mod;
+    song.g[G_RWIDE] = 0; song.g[G_RRATE] = 30;
+    rev_clear();
+    fx.rtype = (uint8_t)ty; fx.sp_w = 0; fx.sp_size = 0; fx.sp_ph = 0;
+    for (t = 0; t < UXT8_N; t += CTL) {
+        for (i = 0; i < CTL; i++) { in[i] = t + i ? 0 : 200000; o[i] = 0; }
+        rev_run(ty, in, o, CTL);
+        for (i = 0; i < CTL; i++) uxt8_buf[t + i] = o[i];
+    }
+    return (uint32_t)(uxt8_rt60_of(uxt8_buf, UXT8_N) * 1000 + 0.5);
+}
+static void uxt8_dreset(void)                           /* the delay bus clean (delay_test.c's dreset) */
+{
+    memset(dly_buf, 0, sizeof dly_buf);
+    memset(cho_buf, 0, sizeof cho_buf);
+    rev_clear();
+    fx.dly_lp = fx.dly_hp = fx.dt1 = fx.dt2 = 0;
+    fx.dl_xf = fx.dr_xf = 0;
+    fx.gr_on = fx.gr_old = 0;
+    fx.primed = 0;
+    fx.rtype = 0;
+    fxg_g = 32767; fxg_quiet = 0;
+    song.g[G_DMIX] = 127; song.g[G_DFDBK] = 0; song.g[G_DCOLOR] = 64; song.g[G_DMOD] = 0; song.g[G_WIDTH] = 0;
+    song.g[G_DPIT] = 0; song.g[G_DSPRY] = 0; song.g[G_DPING] = 0; song.g[G_DTYPE] = 1; song.g[G_RTYPE] = 0;
+    song.g[G_CLOCK] = 0; midi_beat_samples = 0;
+    song.g[G_BPM] = 120;
+    memset(gfx_off, 0, sizeof gfx_off);
+}
+static void uxt8_drun(uint32_t len)                     /* an impulse into the delay's send: the bus's L and R */
+{
+    static int32_t c[CTL], d[CTL], r[CTL], w[CTL];
+    uint32_t t, i;
+    for (t = 0; t < len && t + CTL <= UXT8_N; t += CTL) {
+        for (i = 0; i < CTL; i++) {
+            c[i] = r[i] = 0;
+            d[i] = t + i == 0u ? 60000 : 0;
+            fx_sl[i] = fx_sr[i] = 0;
+        }
+        fxg_g = 32767; fxg_quiet = 0;                   /* (the gate out of it) */
+        fx_buses(c, d, r, w, CTL);
+        for (i = 0; i < CTL; i++) { uxt8_buf[t + i] = w[i] + fx_sl[i]; uxt8_r[t + i] = w[i] + fx_sr[i]; }
+    }
+}
+static uint32_t uxt8_arg(const int32_t *x, uint32_t a, uint32_t b, int32_t *pk)
+{
+    uint32_t i, k = a;
+    int32_t p = -1;
+    for (i = a; i < b && i < UXT8_N; i++) if (abs(x[i]) > p) { p = abs(x[i]); k = i; }
+    *pk = p;
+    return k;
+}
+static int test_t8_engine(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t k;
+    ui_power_on();
+    {   /* (a) the delay: its echoes where SPACE draws them (TIME at the tempo, PING, the longest), their decay its FEEDBACK */
+        static const struct { int16_t time, bpm, ping, fb; } D[] = {{1, 120, 0, 60}, {5, 97, 0, 40}, {9, 120, 0, 0}, {6, 60, 1, 0},
+                                                                    {DT_FREE + 40, 120, 0, 80}, {2, 140, 0, 100}};
+        for (k = 0; k < NELEM(D); k++) {
+            uxs_sp_t m;
+            uint32_t a, b, T;
+            int32_t p1, p2, md;
+            uxt8_dreset();
+            song.g[G_DTIME] = D[k].time; song.g[G_BPM] = D[k].bpm; song.g[G_DPING] = D[k].ping; song.g[G_DFDBK] = D[k].fb;
+            uxs_space_model(&m);
+            T = m.T;
+            uxt8_drun(3u * T + FS / 4u);
+            a = uxt8_arg(uxt8_buf, T - 400u, T + 600u, &p1);
+            b = uxt8_arg(D[k].ping ? uxt8_r : uxt8_buf, 2u * T - 400u, 2u * T + 600u, &p2);
+            md = D[k].fb ? (int32_t)(m.lv[1] - m.lv[0]) : 0;
+            if (!(a >= T && a <= T + 32u + 200u && (!D[k].fb || (b - a <= T + 1u && b - a + 1u >= T))) ||
+                (D[k].fb && fabs(200.0 * log10((double)p2 / p1) - md) > 10.0)) {
+                printf("  delay %d @ %d BPM ping %d: T %u, echo at %u, next %u later; repeat %.1f dB (drawn %.1f)\n", D[k].time,
+                       D[k].bpm, D[k].ping, (unsigned)T, (unsigned)a, (unsigned)(b - a), 20.0 * log10((double)p2 / p1), md / 10.0);
+                ok = 0;
+            }
+            if (D[k].time == 9 && T != DLY_MAX) ok = 0;   /* (4BAR at 120: the line's longest) */
+            if (D[k].ping && T != DLY_MAX / 2u) ok = 0;   /* (1/2 at 60 BPM PING: half the line) */
+        }
+        {   /* MIX: the first echo's level as drawn, MIX 127 against 64 */
+            uxs_sp_t m1, m2;
+            int32_t p1, p2;
+            uxt8_dreset(); song.g[G_DTIME] = 1; uxs_space_model(&m1); uxt8_drun(m1.T + 800u); (void)uxt8_arg(uxt8_buf, m1.T, m1.T + 600u, &p1);
+            uxt8_dreset(); song.g[G_DTIME] = 1; song.g[G_DMIX] = 64; uxs_space_model(&m2); uxt8_drun(m2.T + 800u);
+            (void)uxt8_arg(uxt8_buf, m2.T, m2.T + 600u, &p2);
+            if (fabs(200.0 * log10((double)p2 / p1) - (m2.lv[0] - m1.lv[0])) > 5.0) {
+                printf("  MIX 64: %.1f dB, drawn %.1f\n", 20.0 * log10((double)p2 / p1), (m2.lv[0] - m1.lv[0]) / 10.0);
+                ok = 0;
+            }
+        }
+        bad += check("ACID FM 3b task 8: SPACE's echoes where the delay plays them (1/8 at 120, 1/16T at 97, 4BAR its longest, PING "
+                     "within half the line, a free time), each as loud as FEEDBACK and MIX say (within 1 dB)", ok);
+    }
+    {   /* (b) the reverb's tail: RT60 of fx.c's model against the picture's, on the grid and between it */
+        static const struct { uint8_t ty, sz, dp; uint8_t tol; } R[] = {
+            {0, 0, 0, 5}, {0, 64, 64, 5}, {0, 112, 32, 5}, {0, 127, 127, 5}, {1, 16, 96, 5}, {1, 96, 0, 5}, {1, 120, 64, 5},
+            {0, 40, 20, 12}, {0, 100, 50, 12}, {0, 117, 110, 12}, {0, 124, 70, 15}, {1, 24, 48, 12}, {1, 88, 100, 12},
+            {1, 108, 16, 12}, {1, 124, 127, 12}, {2, 70, 40, 12}};
+        uint32_t okr = 1;
+        for (k = 0; k < NELEM(R); k++) {
+            uint32_t meas, drawn;
+            song.g[G_RMOD] = 0;
+            meas = uxt8_rt60(R[k].ty, R[k].sz, R[k].dp, 0);
+            song.g[G_RTYPE] = R[k].ty; song.g[G_RSIZE] = R[k].sz; song.g[G_RDAMP] = R[k].dp; song.g[G_RMOD] = 0;
+            drawn = uxs_tail_ms();
+            if (drawn * 100u > meas * (100u + R[k].tol) || drawn * 100u < meas * (100u - R[k].tol)) {
+                printf("  reverb %u SIZE %u DAMP %u: RT60 %u ms, drawn %u\n", (unsigned)R[k].ty, (unsigned)R[k].sz,
+                       (unsigned)R[k].dp, (unsigned)meas, (unsigned)drawn);
+                okr = 0;
+            }
+        }
+        {   /* RESO: SIZE's ring (its strings at C3, the default scale) */
+            static const uint8_t SZ[4] = {0, 64, 100, 127};
+            uint32_t j;
+            for (j = 0; j < NTRK; j++) { trk[j].p[P_ROOT] = 0; trk[j].p[P_SCALE] = 1; }
+            song.g[G_RPRE] = 0;
+            for (j = 0; j < NELEM(SZ); j++) {
+                uint32_t meas, drawn;
+                meas = uxt8_rt60(3, SZ[j], 0, 0);
+                song.g[G_RTYPE] = 3; song.g[G_RSIZE] = SZ[j];
+                drawn = uxs_tail_ms();
+                if (drawn * 100u > meas * 115u || drawn * 100u < meas * 85u) {
+                    printf("  RESO SIZE %u: RT60 %u ms, drawn %u\n", (unsigned)SZ[j], (unsigned)meas, (unsigned)drawn);
+                    okr = 0;
+                }
+            }
+            for (j = 0; j < NTRK; j++) trk[j].p[P_SCALE] = 0;
+        }
+        {   /* SHIMMER with MOD and CLOUD hold on (HOLDS): the model's level 7 .. 8 s in within 30 dB of its 0.5 .. 1 s;
+             * SHIMMER at MOD 0 is ROOM */
+            static const struct { uint8_t ty, sz, mod; } L[] = {{2, 0, 32}, {2, 48, 64}, {2, 112, 127}, {4, 20, 0}, {4, 90, 64},
+                                                               {4, 120, 127}};
+            uint32_t j;
+            for (j = 0; j < NELEM(L); j++) {
+                double e0 = 0, e1 = 0;
+                uint32_t i;
+                (void)uxt8_rt60(L[j].ty, L[j].sz, 60, L[j].mod);
+                for (i = FS / 2u; i < FS; i++) e0 += (double)uxt8_buf[i] * uxt8_buf[i];
+                for (i = 7u * FS; i < 8u * FS; i++) e1 += (double)uxt8_buf[i] * uxt8_buf[i] / 2.0;
+                song.g[G_RTYPE] = L[j].ty; song.g[G_RSIZE] = L[j].sz; song.g[G_RDAMP] = 60; song.g[G_RMOD] = L[j].mod;
+                if (10.0 * log10((e1 + 1e-9) / (e0 + 1e-9)) < -30.0 || uxs_tail_ms() != UXS_TAIL_LONG) {
+                    printf("  type %u SIZE %u MOD %u: 7..8 s %.1f dB under 0.5..1 s, drawn %u\n", (unsigned)L[j].ty,
+                           (unsigned)L[j].sz, (unsigned)L[j].mod, -10.0 * log10((e1 + 1e-9) / (e0 + 1e-9)), (unsigned)uxs_tail_ms());
+                    okr = 0;
+                }
+            }
+            song.g[G_RTYPE] = 2; song.g[G_RSIZE] = 64; song.g[G_RDAMP] = 64; song.g[G_RMOD] = 0;
+            okr &= uxs_tail_ms() == UXS_TAIL_ROOM[4][2];
+            ui_load = LOAD_LITE; rp_apply();
+            song.g[G_RMOD] = 50;
+            okr &= uxs_rev_eff() == 0u && uxs_tail_ms() == UXS_TAIL_ROOM[4][2];   /* (LITE: SHIMMER plays as ROOM) */
+            ui_load = LOAD_FULL; rp_apply();
+            song.g[G_RMOD] = 0; song.g[G_RTYPE] = 0;
+        }
+        bad += check("ACID FM 3b task 8: SPACE's reverb tail is its model's RT60 (fx.c rev_run, Schroeder): ROOM and SPRING within "
+                     "5 % on the table's grid, 12 % between; RESO's ring; SHIMMER (MOD) and CLOUD HOLD; LOAD LITE's kin", okr);
+        ok &= okr;
+    }
+    {   /* (c) MASTER: its CLIP curve fx.c clip_block's sample out; its DUCK curve duck_block's gain, block by block; PUNCH
+         * eng_drum.c's punch_gain */
+        uint32_t okc = 1, okk = 1, a, i;
+        for (a = 0; a <= 100u; a += 10u) {
+            song.g[G_CLIP] = (int16_t)a;
+            clip_eff = (int32_t)a;
+            master_begin();
+            for (i = 0; i < 64u; i++) {
+                int32_t x = (int32_t)i * 6000 - 100000;
+                mix_l[0] = x; mix_r[0] = x; wet[0] = 0;
+                if (a) clip_block(1);
+                if (uxs_clip_out(x) != (a ? mix_l[0] : x)) okc = 0;
+            }
+        }
+        song.g[G_CLIP] = 0; clip_eff = 0; master_begin();
+        for (a = 0; a <= 100u; a += 25u) {
+            uxs_dk_t dk;
+            uint32_t b;
+            int32_t dep = (int32_t)a * 31731 / 100;
+            uint32_t kb;
+            song.g[G_DUCK] = (int16_t)a; song.g[G_DREL] = (int16_t)(100 - a);
+            kb = dv_kb(40000u + (uint32_t)song.g[G_DREL] * 5600u);
+            duck_env = 0; duck_att = 0; duck_hold = 0; duck_g1 = 32767; duck_hit = 1;
+            uxs_duck_hit(&dk);
+            for (b = 0; b < uxs_ms_smp(UXS_KMS) / CTL; b++) {
+                duck_block();
+                if (uxs_duck_step(&dk, dep, kb) != duck_g1) okk = 0;
+            }
+        }
+        song.g[G_DUCK] = 0;
+        duck_env = 0; duck_g0 = duck_g1 = 32767;
+        bad += check("ACID FM 3b task 8: MASTER's CLIP curve is fx.c clip_block's sample out (CLIP 0 .. 100), its DUCK curve "
+                     "duck_block's gain, block by block (DUCK, DUCK REL)", okc && okk);
+    }
+    {   /* (d) MASTER's meter reads the output: the peak of what mix_block sends (audio.c's scope), in dBFS; the clip point the
+         * limiter's ceiling */
+        int32_t o[2u * CTL], pk = 0, db;
+        uint32_t i, j, okm = 1;
+        for (i = 0; i < SCOPE_N; i++) {                 /* a sine of 8192: -12.0 dBFS */
+            scope_buf[i] = (int16_t)(8192.0 * sin(i * 0.37));
+            pk = abs(scope_buf[i]) > pk ? abs(scope_buf[i]) : pk;
+        }
+        scope_w = 7;
+        db = uxs_out_db10();
+        okm &= abs(db - (int32_t)lround(200.0 * log10(pk / 32767.0))) <= 1 && abs(db + 120) <= 2;
+        pk = 0;
+        ui_power_on();
+        song.master_q12 = 4096;                         /* (the MASTER knob: main.c; 0 in these tests) */
+        for (i = 1; i < NTRK; i++) trk[i].p[P_MUTE] = 1;
+        set_engine_of(&trk[0], ENGI_ANALOG);
+        trk[0].engine = trk[0].eng_req;
+        song.g[G_DMIX] = 0; trk[0].p[P_REV] = trk[0].p[P_DLY] = trk[0].p[P_CHOR] = 0;
+        for (j = 0; j < 8u; j++) mix_block(o, CTL);     /* (the load's release done) */
+        trk_note_on(&trk[0], 60, 110);
+        for (j = 0; j < 40u; j++) {                     /* (~30 ms of the note: audio.c's scope, a sample of two) */
+            mix_block(o, CTL);
+            for (i = 1; i < CTL; i += 2u)
+                scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)o[2u * i];
+            if (j >= 40u - 2u * SCOPE_N / CTL)
+                for (i = 0; i < CTL; i++)
+                    pk = abs(o[2u * i]) > pk ? abs(o[2u * i]) : pk;
+        }
+        db = uxs_out_db10();
+        okm &= pk > 300 && abs(db - (int32_t)lround(200.0 * log10(pk / 32767.0))) <= 5;   /* (a sample of two: within 0.5 dB) */
+        if (!okm) printf("  meter %.1f dB, the output's peak %d (%.1f dB)\n", db / 10.0, (int)pk, 20.0 * log10(pk / 32767.0));
+        okm &= uxs_meter_px(-UXS_MDB * 10) == 0 && uxs_meter_px(0) == UXS_MW;
+        okm &= abs(uxs_db10((uint32_t)softclip(LIM_T), 32767u) + 60) <= 5;   /* (the limiter's ceiling ~-6 dB) */
+        bad += check("ACID FM 3b task 8: MASTER's meter reads the output's peak (a sine, a note through mix_block) in dBFS, its "
+                     "clip point the limiter's ceiling", okm);
+    }
+    ui_power_on();
+    return bad;
+}
+
+/* MASTER's meter moves with the sound, paced as HOME's ridges (40 ms, 100 ms under load), frozen after a shed and with gov_lite,
+ * still with ANIM OFF, nothing drawn when silent; SENDS and SPACE never move by themselves, SPACE follows an outside clock paced */
+static uint32_t uxt8_run(uint32_t ms, uint32_t *gmin, uint32_t *gmax, int loud)
+{
+    uint32_t i, n0 = uxs_panels, last = 0, k;
+    *gmin = 0xFFFFFFFFu; *gmax = 0;
+    for (i = 0; i < ms / 16u; i++) {
+        uint32_t d = uxs_panels;
+        for (k = 0; k < 16u * 44100u / 2000u; k++) {   /* (a frame of audio into the scope: a hit every 250 ms, fading) */
+            uint32_t ph = (fm1_ms + k * 1000u / 22050u) % 250u;
+            scope_buf[scope_w++ & (SCOPE_N - 1u)] = loud ? (int16_t)(20000 * (250 - (int32_t)ph) / 250 * ((k & 7u) < 4u ? 1 : -1)) : 0;
+        }
+        frame();
+        if (uxs_panels != d) {
+            if (last) { uint32_t g = fm1_ms - last; if (g < *gmin) *gmin = g; if (g > *gmax) *gmax = g; }
+            last = fm1_ms;
+        }
+    }
+    return uxs_panels - n0;
+}
+static int test_t8_pace(void)
+{
+    uint32_t n, gmin, gmax, t0;
+    int bad = 0, ok;
+    uxt8_open(2);
+    memset(scope_buf, 0, sizeof scope_buf);
+    frames(3000);                                       /* (the meter fallen to silence: 20 dB a second) */
+    n = uxt8_run(800, &gmin, &gmax, 0);
+    ok = n == 0u;
+    song.playing = 1;
+    n += uxt8_run(800, &gmin, &gmax, 0);
+    ok &= n == 0u;
+    if (!ok) printf("  silent: %u panels\n", (unsigned)n);
+    n = uxt8_run(1600, &gmin, &gmax, 1);
+    printf("ui:   (MASTER's meter: %u panels in 1.6 s, %u..%u ms apart)\n", n, gmin, gmax);
+    ok &= n >= 20u && n <= 41u && gmin >= UX_TRK_MS;
+    bad += check("ACID FM 3b task 8: MASTER's meter moves with the output, at most every 40 ms; silent (stopped or playing) no "
+                 "panel", ok);
+    load_tight = 1;
+    n = uxt8_run(1600, &gmin, &gmax, 1);
+    ok = n >= 8u && n <= 17u && gmin >= UX_TRK_SLOW_MS;
+    load_tight = 0;
+    bad += check("ACID FM 3b task 8: MASTER's meter every 100 ms while load_tight", ok);
+    load_diag.shed++; frame();
+    t0 = fm1_ms; n = uxs_panels;
+    (void)uxt8_run(384, &gmin, &gmax, 1);
+    ok = uxs_panels == n;
+    while (uxs_panels == n && fm1_ms - t0 < 1000u) (void)uxt8_run(16, &gmin, &gmax, 1);
+    ok &= fm1_ms - t0 >= UX_SHED_HOLD_MS && fm1_ms - t0 < UX_SHED_HOLD_MS + 48u;
+    if (!ok) printf("  shed: drawn again after %u ms\n", (unsigned)(fm1_ms - t0));
+    gov_lite = LOAD_LITE; frame();
+    n = uxs_panels;
+    (void)uxt8_run(800, &gmin, &gmax, 1);
+    ok &= uxs_panels == n;
+    turn(EN_K1, 1); frame();
+    ok &= uxs_panels == n + 1u;
+    if (!ok) printf("  gov_lite: %u panels\n", (unsigned)(uxs_panels - n));
+    gov_lite = 0; frame();
+    ui_prefs |= PREF_ANIM_OFF;
+    n = uxt8_run(800, &gmin, &gmax, 1);
+    ui_prefs &= ~PREF_ANIM_OFF;
+    ok &= n == 0u;
+    if (!ok) printf("  ANIM OFF: %u panels\n", (unsigned)n);
+    bad += check("ACID FM 3b task 8: MASTER's meter frozen 400 ms after a shed and while gov_lite (a turn drawn at once), still "
+                 "with ANIM OFF", ok);
+    ok = 1;
+    nav_put(SEC_FX, "SENDS"); frame();
+    n = uxt8_run(800, &gmin, &gmax, 1);
+    ok &= n == 0u;
+    nav_put(SEC_FX, "SPACE"); frame();
+    n += uxt8_run(800, &gmin, &gmax, 1);
+    ok &= n == 0u;
+    if (!ok) printf("  SENDS / SPACE: %u panels playing\n", (unsigned)n);
+    {   /* SPACE: an outside clock jittering moves the delay's time: paced, frozen with gov_lite */
+        uint32_t j;
+        song.g[G_DTIME] = 1; song.g[G_CLOCK] = 1; frame();
+        gov_lite = LOAD_LITE; frame(); n = uxs_panels;
+        for (j = 0; j < 20u; j++) { midi_beat_samples = 22050u + (j & 1u) * 40u; frames(32); }
+        ok &= uxs_panels == n;
+        if (!ok) printf("  outside clock, gov_lite: %u panels\n", (unsigned)(uxs_panels - n));
+        gov_lite = 0; frame(); n = uxs_panels;
+        for (j = 0; j < 20u; j++) { midi_beat_samples = 22050u + (j & 1u) * 40u; frames(32); }
+        ok &= uxs_panels - n >= 2u && uxs_panels - n <= 20u * 32u / UX_TRK_MS + 1u;
+        if (!ok) printf("  outside clock: %u panels\n", (unsigned)(uxs_panels - n));
+        song.g[G_CLOCK] = 0; midi_beat_samples = 0;
+    }
+    song.playing = 0;
+    bad += check("ACID FM 3b task 8: SENDS and SPACE still while it plays; SPACE's tempo-synced echoes follow an outside clock "
+                 "paced, frozen with gov_lite", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* one name each, everywhere: the track's distortion DISTORT on SENDS, a synth's FILTER page, FM6's MORE, the matrix (its status
+ * line too); the engines' own DRIVE stays DRIVE; the matrix's FX destinations are the FX pages' names */
+static int test_t8_names(void)
+{
+    static const struct { uint8_t d, glo, id; } MF[] = {
+        {MD_DIST, 0, P_DIST}, {MD_CHO, 0, P_CHOR}, {MD_DLY, 0, P_DLY}, {MD_REV, 0, P_REV}, {MD_CLIP, 1, G_CLIP},
+        {MD_PNCH, 1, G_PUNCH}, {MD_DTIME, 1, G_DTIME}, {MD_DFDBK, 1, G_DFDBK}, {MD_DCOL, 1, G_DCOLOR}, {MD_DMIX, 1, G_DMIX},
+        {MD_RSIZE, 1, G_RSIZE}, {MD_RDAMP, 1, G_RDAMP}, {MD_CRATE, 1, G_CRATE}, {MD_CDEPTH, 1, G_CDEPTH}};
+    int bad = 0, ok;
+    uint32_t i;
+    char b[32];
+    uxt8_open(0);
+    ok = strncmp(uxe_labels(), "DISTORT|", 8) == 0;
+    uxs_syn_on(ENGI_PHASE); nav_put(SEC_EDIT, "FILTER"); frame();
+    ok &= strstr(uxe_labels(), "|DISTORT") != 0 && !strstr(uxe_labels(), "DRIVE");
+    uxs_syn_on(ENGI_ANALOG); nav_put(SEC_EDIT, "TONE"); frame();
+    ok &= strstr(uxe_labels(), "DRIVE") != 0;           /* (ANALOG's own DRIVE) */
+    uxe_on(ENGI_FM6); nav_put(SEC_EDIT, "MORE"); frame();
+    ok &= strstr(uxe_more_list(&UXM_FM6), "|DISTORT|") != 0;
+    song.g[G_RTYPE] = 0;
+    for (i = 0; i < NELEM(MF); i++) {                   /* the matrix's FX destinations: the FX pages' names */
+        uxs_mtx_say(TSEL, 1, MF[i].d, b, sizeof b, 0);
+        if (!str_eq(b, uxs_label(SEC_FX, MF[i].glo, MF[i].id, MF[i].glo ? GP[MF[i].id].label : TP[MF[i].id].label))) {
+            printf("  matrix DEST %u \"%s\", FX's \"%s\"\n", (unsigned)MF[i].d, b,
+                   uxs_label(SEC_FX, MF[i].glo, MF[i].id, MF[i].glo ? GP[MF[i].id].label : TP[MF[i].id].label));
+            ok = 0;
+        }
+    }
+    uxs_mtx_say(TSEL, 1, MD_DIST, b, sizeof b, 1);
+    ok &= str_eq(b, "DISTORT");
+    uxt7_open(2);
+    TSEL->p[P_M1DST] = MD_DIST;
+    frames(UX_HOT_MS + 20u); ux_knob_touch(2); frame();
+    ok &= str_eq(uxe_value(2), "DISTORT") && str_eq(uxt6_status(), "DEST \xB7 DISTORT");
+    if (!ok) printf("  DEST 6: \"%s\" \"%s\"\n", uxe_value(2), uxt6_status());
+    bad += check("ACID FM 3b task 8: the track's distortion is DISTORT everywhere (SENDS, a synth's FILTER, FM6's MORE, the matrix "
+                 "and its status line), the engines' DRIVE stays DRIVE; the matrix's FX destinations the FX pages' own names", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -16051,7 +16942,6 @@ int main(void)
     bad += test_lz_glo();
     bad += test_lz_layer();
     bad += test_lz_dialogs();
-    bad += test_fx_live();
     bad += test_lz_reach();
     bad += test_nav_tasks();
     bad += test_nav_rules();
@@ -16107,7 +16997,6 @@ int main(void)
     bad += test_note_page();
     bad += test_step_len();
     bad += test_chord_glide();
-    bad += test_fx_sections();
     bad += test_scl_alltr();
     bad += test_clear_ghosts();
     bad += test_dx_sound();
@@ -16188,6 +17077,15 @@ int main(void)
     bad += test_t7_engine();
     bad += test_t7_pace();
     bad += test_t7_fix();                               /* (ACID FM 3b task 7 fix) */
+    bad += test_t8_nav();                               /* (ACID FM 3b task 8) */
+    bad += test_t8_knobs();
+    bad += test_t8_rec_clear();
+    bad += test_t8_lane_ask();
+    bad += test_t8_widths();
+    bad += test_t8_pictures();
+    bad += test_t8_engine();
+    bad += test_t8_pace();
+    bad += test_t8_names();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

@@ -39,10 +39,7 @@ PAGE_SHOT = {
     'SEQ': {'PATTERN': 'lente_pattern', 'STRETCH': 'lente_stretch', 'PLAYHEADS': 'fugue', 'TRACK': 'shift',
             'MUTATE': 'mutate', 'STEP': 'lente_bar', 'NOTE': 'lente_step_note',
             'COMP': 'lente_step_comp', 'COMP 2': 'lente_step_comp2', 'AUTOMATION': 'motion', 'AUTO LIST': 'auto_list'},
-    'FX': {'SENDS': 'fx_track_sends', 'DIST': 'fx_track_dist', 'AUTO PAN': 'fx_track_pan', 'BUSES': 'fx_buses',
-           'DLY': 'fx_effect_delay', 'DLY 2': 'fx_effect_delay2', 'REVERB': 'fx_effect_reverb', 'REVERB 2': 'reverb2',
-           'CHORUS': 'chorus', 'SLICER': 'fx_effect_slicer', 'SL BUS 2': 'slbus', 'SL PITCH': 'slpitch',
-           'MASTER': 'fx_effect_master', 'PUNCH': 'toast_punch'},
+    'FX': {'SENDS': 'fx_1', 'SPACE': 'fx_2', 'MASTER': 'fx_3', 'MORE': 'fx_more'},   # (3b task 8: FX on the ux pages)
     'GLO': {'MANO': 'live_mano', 'RIELES': 'live_rieles', 'MIXER': 'mixer', 'SENDS': 'glo_sends',
             'GLOBAL': 'global', 'SYSTEM': 'system'},
     'ENV': {'AMP': 'env_1', 'ENV TO': 'env_2'},   # (3b task 6: ENV, SCL, ARP on the ux pages)

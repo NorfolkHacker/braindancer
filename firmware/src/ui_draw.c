@@ -1371,18 +1371,7 @@ static void draw_columns(void)
                     r < n ? VAL(3u) : T_DIM, RATIO(d, enum_rank(d, v)), param_icon(d, v));
         return;
     }
-    if (cur_page()->graph == GR_PUNCH) {               /* (0.6.99) the punch-in lane: LEN, RES, its state, CLEAR */
-        uint32_t n = 0, i;
-        for (i = 0; i < 64u; i++) n += pfx_lane_at(i) != 0u;
-        fmt_int(val, song.g[G_PFXLEN]);
-        draw_column(0, "LEN", val, "ST", VAL(0u), RATIO(&GP[G_PFXLEN], song.g[G_PFXLEN]), ICON_AUTO);
-        draw_column(1, "RES", N_PFXRES[(uint32_t)clamp(song.g[G_PFXRES], 0, 2)], "", VAL(1u), -1, ICON_RATE);
-        fmt_int(val, (int32_t)n);
-        draw_column(2, pfx_rec_ok() ? "REC" : song.playing ? "PLAY" : "STEPS", pfx_rec_ok() ? "ON" : song.playing ? "ON" : val, "",
-                    pfx_rec_ok() ? T_ACCENT : T_MID, -1, pfx_rec_ok() ? ICON_X_REC : ICON_NONE);
-        draw_act_column(3, "CLEAR", n ? T_MID : T_DIM, ICON_X_MOTION_DEL);
-        return;
-    }
+    /* (0.6.99 .. ACID FM 3b task 8) FX > PUNCH's cards (LEN RES, its state, CLEAR): FX > MORE's PUNCH LANE rows */
     if (cur_page()->graph == GR_MOTION) {
         draw_column(0, "PLAY", motion_enabled(TSEL) ? "ON" : "OFF", "", VAL(0u), -1, motion_icon());
         fmt_int(val, (int32_t)(motion_count(TSEL) - motion_lock_count(TSEL)));
@@ -1470,19 +1459,7 @@ static void draw_columns(void)
         draw_act_column(3, "SAVE", T_THEME, ICON_AUTO);
         return;
     }
-    if (cur_page()->graph == GR_SLPIT) {                 /* (JIANT 0.6.3) STEP, its PIT, LEN, QNT */
-        uint32_t id = G_SLP0 + (sl_ui_step & 15u);
-        fmt_int(val, (int32_t)sl_ui_step + 1);
-        draw_column(0, "STEP", val, "/16", sl_ui_step < (uint32_t)song.g[G_SLPLEN] ? VAL(0u) : T_DIM,
-                    (int32_t)sl_ui_step * 1000 / 15, ICON_AUTO);
-        param_format(&GP[id], song.g[id], val, &unit);
-        draw_column(1, "PITCH", val, unit, song.g[id] ? VAL(1u) : T_DIM, RATIO(&GP[id], song.g[id]), ICON_AUTO);
-        param_format(&GP[G_SLPLEN], song.g[G_SLPLEN], val, &unit);
-        draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&GP[G_SLPLEN], song.g[G_SLPLEN]), ICON_AUTO);
-        param_format(&GP[G_SLPQ], song.g[G_SLPQ], val, &unit);
-        draw_column(3, "QUANT", val, unit, VAL(3u), -1, ICON_AUTO);
-        return;
-    }
+    /* (ACID FM 3b task 8) SL PITCH's columns gone: FX > MORE's SLICE PITCH rows */
     /* (ACID FM 3b task 7) MSEQ's and MOD's columns gone: LFO is drawn by ux_section.c (MOD MATRIX, its MORE's STEPS) */
     if (cur_page()->graph == GR_ROLL && lock_held()) {   /* a step held: what KNOB 1..4 lock (ui_input.c lock_turn) */
         uint64_t held = lock_held();

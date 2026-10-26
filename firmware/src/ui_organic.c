@@ -8,7 +8,6 @@
  * is there). Angles are 16-bit turns (0x10000 = 360 degrees), through dsp.c's sine table.
  *   og_line     an antialiased line (Q4 ends)
  *   og_ring, og_node    a circle; a dot with a soft rim
- *   bg_energy   the output's level now (what FX's lens moves with; ui_being.c's until ACID FM 3b task 5)
  * (ACID FM 3b task 5: the plates, shapes and illustrations (og_path, og_plate, og_ill, og_dash, og_stipple, og_label: the
  * beings' and creatures' line art) gone with the creatures, the user's "get rid of any creatures"; task 7: og_quad_a, the LFO
  * MOD net's curves) */
@@ -67,28 +66,8 @@ static void og_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c) 
 /* cos / sin of a 16-bit angle, Q15 */
 static int32_t og_cos(uint32_t ang) { return sine_i((ang + 0x4000u) << 16); }
 static int32_t og_sin(uint32_t ang) { return sine_i(ang << 16); }
-/* (JIANT 0.5, ui_being.c's until ACID FM 3b task 5, which took the beings away) a sine of a 16-bit turn, Q15 (FX's lens), and
- * the output's level now, 0..256, slewed (fast up, slow down): what FX's lens moves with */
-static int32_t bg_sin(uint32_t ang) { return sine_i(ang << 16); }
-static int32_t bg_energy(void)
-{
-    static int32_t e;
-    static uint32_t fr = 0xFFFFFFFFu;
-    uint32_t w = scope_w, i;
-    int32_t pk = 0, v;
-    if (fr == ui.frame)                                 /* (once a frame: a redraw in the same frame draws the same) */
-        return e;
-    fr = ui.frame;
-    for (i = 1; i <= 256u; i += 2u) {
-        v = scope_buf[(w - i) & (SCOPE_N - 1u)];
-        if (v < 0) v = -v;
-        if (v > pk) pk = v;
-    }
-    v = pk * 256 / 12000;
-    if (v > 256) v = 256;
-    e += v > e ? (v - e) * 3 / 4 : (v - e) / 6;
-    return e;
-}
+/* (ACID FM 3b task 8) bg_sin, bg_energy (FX's lens: a sine, the output's level it moved with) gone with the lens; FX > MASTER's
+ * meter reads the output itself (ux_section.c uxs_out_db10) */
 
 /* a circle of radius r (Q4) in 20 lines */
 static void og_ring(int32_t cx, int32_t cy, int32_t r, uint16_t c)

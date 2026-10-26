@@ -243,7 +243,8 @@ static int32_t ratio_d(const param_desc_t *d, int32_t v) { return ratio_of(d->mi
  * while SELECT walks past it), each at most HINT_MAX times ever. The count kept with the settings, a byte a hint in engine
  * 15's spare favourite bytes 0..12 (no engine 15: 0 in older settings, a hint not yet given; 4..12 held the layer buttons'
  * "HOLD [X] QUICK" counts, gone: kept as saved, unused); INIT SYSTEM starts them over */
-enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_MUTATE, HK_N };
+enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_MUTATE, HK_N };   /* (3b task 8: HK_PUNCH kept, its count stored with the settings:
+                                                         * FX > PUNCH gone, its hint FX > MORE's PUNCH LANE status line) */
 #define HINT_DWELL_MS 800u
 #define HINT_MAX 2u
 #define hint_given(k) (favorites.factory[15][(k)])
@@ -256,7 +257,7 @@ static struct {
     uint8_t pr_focus;            /* (0.6.81) SEQ > NOTE: the chord (0) or its note 1..4 (ui_input.c note_edit) */
     uint8_t nmem[13];            /* (0.9.2) each section's page last shown, its chain's entry ^ its default (ui_lens.c
                                   * nav_mem: EDIT one per kind of track) */
-    uint8_t fxmod;               /* (0.8.5) FX: the effect last shown (BUSES' tile lit) */
+                                 /* (ACID FM 3b task 8: fxmod, FX's effect last shown, gone with its lens) */
                                  /* (ACID FM 3b task 6: ENV > STAGE's stage gone with it) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
@@ -556,9 +557,8 @@ static int page_jiant(uint32_t i)
     if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
         return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
                                                          * was the same page twice; kept in the table: its index) */
-    if (sys_load == LOAD_ECO && ((PAGES[i].graph == GR_SLCR || PAGES[i].graph == GR_SLPIT) ||
-                                 (PAGES[i].fam == FAM_FX && PAGES[i].id[0] == G_CRATE)))
-        return 0;                                       /* (0.6.30) LOAD ECO: no SLICER, no chorus: their pages gone */
+    /* (0.6.30 .. ACID FM 3b task 8) LOAD ECO: no SLICER, no chorus: their pages were hidden here; FX's MORE rows now (ux_more.c
+     * ux_row_shown, uxm_eco_out) */
     if (PAGES[i].graph == GR_MORPH) {                   /* (0.6.45) MORPH: ANALOG's plain waves, PHASE, LOFI's (not BYTE FLOAT) */
         uint32_t e = trk_eng(TSEL);
         return e == ENGI_ANALOG || ENGINES[e] == &ENG_PHASE ||   /* (0.6.81: every ANALOG WAVE) */
@@ -607,63 +607,24 @@ static uint32_t page_first(uint32_t fam)
 }
 
 /* (0.9.2) the sections' pages (ui_lens.c: the chains, the six rules). The 0.8.5 lenses' pictures stay, each page drawn
- * for the level it was on (lens_level, save_level, fx_level, pd_level, home_level):
+ * for the level it was on (lens_level, save_level, pd_level, home_level):
  *   SEQ   PATTERN's bars (PATTERN STRETCH TRACK, the new BAR), the roll (STEP NOTE AUTOMATION AUTO LIST), the step
  *         large (COMP COMP 2); PHRASES (PRESETS' pattern loader) and SONG read as PATTERN, CHANCE as STEP
  *   SAVE  LIBRARY (PROJECTS TOOLS), PROJECT (SECTIONS ARRANGE: the PROJECT page's KNOB 1 the section), SOUND (USER PRESETS)
- *   FX    TRACK (SENDS DIST AUTO PAN), BUSES, the effects (ui.fxmod: the module shown last, BUSES' tile lit) */
+ * (ACID FM 3b task 8: FX's, TRACK BUSES and the effects, gone with its lens: FX is ux_section.c's) */
 static int lens_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SEQ; }
 static int save_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SAVE; }
 static void page_entered(void);
 static void page_flash(void);
-#define FX_NMOD 6u
-static const char *const FX_MOD[FX_NMOD] = {"DELAY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};
-static const char *const FX_MHEAD[FX_NMOD] = {"DLY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};   /* its first page */
-static const uint8_t FX_MN[FX_NMOD] = {3, 2, 1, 4, 1, 1};   /* its pages, one after another in PAGES */
 static int page_visible(uint32_t i);
-static int fx_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_FX; }
-static uint32_t fx_page(const char *title)
-{
-    uint32_t i;
-    for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].fam == FAM_FX && str_eq(PAGES[i].title, title))
-            return i;
-    return 0;
-}
-static int32_t fx_trk_k(uint32_t i)                     /* page i's place among TRACK's pages, -1 none */
-{
-    static const char *const FX_TRK[3] = {"FX", "DIST", "AUTO PAN"};
-    uint32_t k;
-    for (k = 0; k < 3u; k++)
-        if (PAGES[i].fam == FAM_FX && str_eq(PAGES[i].title, FX_TRK[k]))
-            return (int32_t)k;
-    return -1;
-}
-static uint32_t fx_mod_of(uint32_t i)                   /* an effect page's module (another page: ui.fxmod) */
-{
-    uint32_t m, f;
-    for (m = 0; m < FX_NMOD; m++) {
-        f = fx_page(FX_MHEAD[m]);
-        if (i >= f && i < f + FX_MN[m])
-            return m;
-    }
-    return ui.fxmod % FX_NMOD;
-}
-static uint32_t fx_mod_k(uint32_t i) { return i - fx_page(FX_MHEAD[fx_mod_of(i)]); }   /* .. its place in it */
-static uint32_t fx_mod_n(uint32_t m) { return FX_MN[m % FX_NMOD]; }
-static int fx_mod_ok(uint32_t m) { return page_visible(fx_page(FX_MHEAD[m % FX_NMOD])); }   /* (LOAD ECO: no CHORUS, SLICER) */
+static int fx_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_FX; }   /* (3b task 8: its lens, ui_lzfx.c,
+                                                         * and its modules, levels and tiles gone: FX the ux pages') */
 
 /* (0.8.5) a lens page shown (every section's, the menu's, a layer's map): the mock-up's layout, its tabs and breadcrumb */
 static int name_on(void);                               /* (ui_name.c: NAME keeps its own layout) */
 #include "ux_nav.h"                                     /* (ACID FM 3a) HOME: TRACKS / VISUAL */
 #include "ui_lens.c"
 #include "ux_nav.c"
-static uint32_t fx_level(void)
-{
-    if (fx_trk_k(ui.page) >= 0)
-        return FXL_TRACK;
-    return PAGES[ui.page].graph == GR_BUSES ? FXL_BUSES : FXL_EFFECT;
-}
 static uint32_t lens_level(void)                        /* SEQ: the level the page is drawn as */
 {
     uint32_t g = PAGES[ui.page].graph;
@@ -785,15 +746,14 @@ static void ev_enter(void);
 static void page_entered(void)
 {
     const page_t *pg = cur_page();
-    if (!ui.home && pg->fam == FAM_FX && fx_trk_k(ui.page) < 0 && pg->graph != GR_BUSES)
-        ui.fxmod = (uint8_t)fx_mod_of(ui.page);  /* (FX: the effect shown, BUSES' tile lit) */
     if (!ui.home && pg->graph == GR_EVENTS)      /* AUTO LIST: + ADD LOCK on the SEQ cursor's step */
         ev_enter();
     if (!ui.home && lock_page_ok(ui.page))
         ui.plk_src = (uint8_t)(ui.page + 1u);
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
-    ui.hint_k = ui.home ? HK_NONE : pg->graph == GR_MOTION ? HK_MOTION : pg->graph == GR_PUNCH ? HK_PUNCH :
-                pg->graph == GR_MUTATE ? HK_MUTATE : HK_NONE;   /* (0.9.5: its hint once dwelt on: ui_layer.c hint_tick) */
+    ui.hint_k = ui.home ? HK_NONE : pg->graph == GR_MOTION ? HK_MOTION : pg->graph == GR_MUTATE ? HK_MUTATE : HK_NONE;   /* (0.9.5:
+                                                         * its hint once dwelt on: ui_layer.c hint_tick; 3b task 8: FX > PUNCH's,
+                                                         * HK_PUNCH, its MORE rows' status line, ux_section.c UXS_LANE_SAY) */
     ui.hint_at = (uint8_t)(ui.home ? 255u : ui.page + 1u);
     ui.hint_ms = fm1_ms;
     ui.entry_open = 0;
@@ -1821,7 +1781,7 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     uint32_t c, m = 0;
     if (ui.home)
         return 0;
-    if (pg->graph == GR_MOTION || pg->graph == GR_PUNCH) return 8u;   /* (0.6.99) PUNCH: KNOB 4 CLEAR */
+    if (pg->graph == GR_MOTION) return 8u;      /* KNOB 4 CLEAR (3b task 8: FX > PUNCH's, FX > MORE's CLEAR LANE now) */
     if (pg->graph == GR_EVENTS) return 16u;     /* AUTO LIST: no knob is an action; OCT+ adds / toggles (ev_oct) */
     if (pg->graph == GR_TOOLS) return 15u;
     /* (0.8.5 .. ACID FM 3b task 4) WORDS' OCT+ TYPE: its page MORE's rows now, TYPE LYRIC an action there (ux_more.c) */
@@ -1856,7 +1816,7 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
 {
     static const char *const UP_GO[3] = {"LOAD", "ERASE", "SAVE"};
     uint32_t id = cur_page()->id[c & 3u];
-    if (cur_page()->graph == GR_MOTION || cur_page()->graph == GR_PUNCH) return "CLEAR";
+    if (cur_page()->graph == GR_MOTION) return "CLEAR";
     if (cur_page()->graph == GR_EVENTS) return ev_act_name();
     if (cur_page()->graph == GR_TOOLS) {
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};

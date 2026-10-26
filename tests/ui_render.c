@@ -565,9 +565,11 @@ static void write_ppm(const char *dir, const char *pal, const char *name)
 
 /* ------------------------------------------------------------------ the screens --- */
 static void pal(uint32_t p) { settings.palette = p; palette_set(p); }
+static void fx_load_back(void);                 /* (3b task 8: an FX scene's LOAD, put back) */
 static void state(void)                          /* a playing song with steps on every track */
 {
     uint32_t i;
+    fx_load_back();
     ui_power_on();
     dx_mute_set(0);
     memset(macro_v, 0, sizeof macro_v);
@@ -658,7 +660,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
     "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum", "drum_hand", "drum_cym",
-    "mixer", "mixer_pan", "env_1", "env_2", "lfo_1", "lfo_3", "fx", "slicer", "slbus", "slpitch", "dly", "scl_1", "shift",
+    "mixer", "mixer_pan", "env_1", "env_2", "lfo_1", "lfo_3", "fx_1_eco", "fx_more_eco", "fx_3_quiet", "fx_more_end", "fx_2_free", "scl_1", "shift",
     "arp_off", "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env",
     "edit_voice", "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level",
     "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2",
@@ -667,7 +669,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "about_profile2", "uboot", "calibration", "splash", "batt_0", "batt_1", "batt_2", "batt_3", "batt_usb",
     "motion_rec", "motion_off", "motion_card", "song_home", "perform_peek", "perform_held", "perform_wait",
     "perform_harm", "perform_glitch", "perform_scratch", "perform_shuffle", "perform_freeze", "menu_hold", "menu_leds",
-    "menu_end", "menu_system", "menu_slide", "reverb_spring", "reverb_reso", "layer_glo_peek", "layer_glo_active",
+    "menu_end", "menu_system", "menu_slide", "fx_2_lite", "fx_2_reso", "layer_glo_peek", "layer_glo_active",
     "layer_glo_ext", "layer_scl_peek", "layer_scl_active", "layer_edit_peek", "layer_edit_active", "layer_edit_user",
     "layer_edit_drum", "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain",
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song", "lente_pattern", "lente_pattern_drum",
@@ -677,12 +679,12 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "words", "words_en", "words_ja", "words_edit", "words_off", "name_lyric", "name_lyric_long", "roll_empty",
     "roll_acid", "roll_chords", "roll_ties", "roll_len32_p2", "roll_high", "roll_low", "roll_wide", "roll_playing",
     "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "drum_lock_page", "motion_locks", "auto_list",
-    "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "lfo_more", "dist",
-    "dly2", "reverb2", "chorus", "master", "lfo_2", "lfo_sh", "lfo_free", "countin", "countin_2bars", "menu_audio",
+    "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "lfo_more", "fx_1_turn",
+    "fx_2_hold", "fx_2_cloud", "fx_more_chorus", "fx_3_hot", "lfo_2", "lfo_sh", "lfo_free", "countin", "countin_2bars", "menu_audio",
     "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock", "head_bpm_locked", "head_glo_turn",
     "head_downbeat", "head_beat_2", "save_library", "save_tools", "save_project", "save_arrange", "save_sound",
-    "save_presets", "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay",
-    "fx_effect_delay2", "fx_effect_reverb", "fx_effect_slicer", "fx_effect_master", "gen_lead", "ed_filter",
+    "save_presets", "fx_1", "fx_more", "fx_more_lane", "fx_2", "fx_2_ping",
+    "fx_more_delay", "fx_more_reso", "fx_more_slicer", "fx_3", "gen_lead", "ed_filter",
     "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop", "env_first", "lfo_more_end",
     "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs",
     "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "drum_hit_x4",
@@ -900,6 +902,60 @@ static void seq_line(void)
     uint32_t j;
     for (j = 0; j < 16u; j += 2u) step_put(&TSEL->step[j], ST_NOTE, 0, 1, &NN[j / 2u]);
 }
+/* (3b task 8) FX's scenes: T1's sends DISTORT 30 CHORUS 60 DELAY 40 REVERB 50, SOFT, AUTO PAN 40; DLY 1/8 FDBK 70 MIX 90, REVERB
+ * ROOM SIZE 70, CHORUS DEPTH 64, SLICER GATE PAT 3 DEPTH 90, CLIP 30 PUNCH 40 DUCK 20 REL 60; no first-time hint, no knob hot */
+static void fx_scene(void)
+{
+    uxs_seen = 0x3FFu; ux_hot_k = -1;
+    TSEL->p[P_DIST] = 30; TSEL->p[P_CHOR] = 60; TSEL->p[P_DLY] = 40; TSEL->p[P_REV] = 50;
+    TSEL->p[P_DTYPE] = 0; TSEL->p[P_APDEP] = 40; TSEL->p[P_APWAVE] = 0;
+    song.g[G_DTIME] = 1; song.g[G_DFDBK] = 70; song.g[G_DMIX] = 90; song.g[G_RTYPE] = 0; song.g[G_RSIZE] = 70;
+    song.g[G_CDEPTH] = 64; song.g[G_SLMODE] = SL_GATE; song.g[G_SLPAT] = 3; song.g[G_SLDEP] = 90;
+    song.g[G_CLIP] = 30; song.g[G_PUNCH] = 40; song.g[G_DUCK] = 20; song.g[G_DREL] = 60;
+    ui.msg_t = 0;
+}
+/* (3b task 8) a scene at LOAD l (FX's ECO and LITE ones): the LOAD settings as they were put back by the next scene's state(),
+ * so the scenes after keep theirs (GLO > SYSTEM's TRACKS and LOAD) */
+static struct { uint8_t on, ul, sl, tl, tu; int16_t lu; } fx_ld;
+static void fx_load(uint8_t l)
+{
+    if (!fx_ld.on) {
+        fx_ld.on = 1; fx_ld.ul = ui_load; fx_ld.sl = sys_load; fx_ld.tl = (uint8_t)trk_live; fx_ld.tu = (uint8_t)trks_ui;
+        fx_ld.lu = load_ui;
+    }
+    ui_load = l;
+    rp_apply();
+}
+static void fx_load_back(void)
+{
+    if (!fx_ld.on)
+        return;
+    fx_ld.on = 0;
+    ui_load = fx_ld.ul; sys_load = fx_ld.sl; trk_live = fx_ld.tl; trks_ui = fx_ld.tu; load_ui = fx_ld.lu;
+}
+static void fx_scope(int32_t a)                         /* (MASTER's meter: the output a sine of peak a) */
+{
+    uint32_t i;
+    for (i = 0; i < SCOPE_N; i++)
+        scope_buf[i] = (int16_t)(a * sin(i * 0.37));
+}
+static void fx_more_at(uint32_t id, uint32_t kind)      /* FX > MORE, the row (kind, id) picked */
+{
+    uint32_t r;
+    fx_scene();
+    memset(uxm_at, 0, sizeof uxm_at);
+    nav_scene(SEC_FX, "MORE");
+    for (r = 0; r < UXM_FX.n && !(UXM_FX.rows[r].kind == kind && UXM_FX.rows[r].id == id); r++)
+        ;
+    uxm_at[uxm_key()].sel = (uint8_t)r;
+    uxm_at[uxm_key()].top = 0;
+    {   /* (the pick in sight) */
+        uint32_t s = r, t = 0;
+        uxm_fix(&UXM_FX, uxm_mask(&UXM_FX), &s, &t);
+        uxm_at[uxm_key()].sel = (uint8_t)s;
+        uxm_at[uxm_key()].top = (uint8_t)t;
+    }
+}
 static void setup(int s)
 {
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
@@ -912,8 +968,8 @@ static void setup(int s)
                                                    * too; 3b: ANALOG's EDIT the ux page, FM6's OPERATOR; task 6: toast_env
                                                    * over GLOBAL, ENV the ux pages', their message the status line) */
         int b = BASE[s - S_TOAST_ENV];
-        if (b == S_COUNT) { setup(S_HOME); go_page(GR_PUNCH); }
-        else setup(b);
+        if (b == S_COUNT) { setup(S_FXL_PAN); return; }   /* (3b task 8: PUNCH's hint, FX > MORE's PUNCH LANE status line) */
+        setup(b);
         if (s == S_TOAST_MUTATE_HINT) {           /* (MUTATE's hint, dwelt on: ui_layer.c hint_tick) */
             ui_message("OCT+ KEEP  GLO+A4 FREEZE");
             str_cpy(ui.msg2, "SEQ+D5 REVERT  GLO+B4 ALL", sizeof ui.msg2);
@@ -1102,12 +1158,18 @@ static void setup(int s)
         (void)ux_more_knob(0, s == S_MSEQ ? 6 : 30);
         break;
     }
-    case S_DIST_PAGE: TSEL->p[P_DIST] = 70; TSEL->p[P_DTYPE] = 2; TSEL->p[P_DTONE] = 20; go_title("DIST"); break;
-    /* (JIANT 0.5) the technical graphs (ui_tech.c) */
-    case S_DLY2: song.g[G_WIDTH] = 90; song.g[G_DPIT] = 5; song.g[G_DSPRY] = 60; go_title("DLY 2"); break;
-    case S_REVERB2: song.g[G_RMOD] = 80; song.g[G_RWIDE] = 100; go_title("REVERB 2"); break;
-    case S_CHORUS: song.g[G_CDEPTH] = 90; go_title("CHORUS"); break;
-    case S_MASTER: song.g[G_CLIP] = 60; song.g[G_PUNCH] = 50; song.g[G_DUCK] = 40; go_title("MASTER"); break;
+    /* (3b task 8) FX on the ux pages (JIANT's DIST, DLY 2, REVERB 2, CHORUS, MASTER pages gone): their scenes the new pages' */
+    case S_DIST_PAGE:                                   /* SENDS, DISTORT just turned (FOLD): the status line */
+        fx_scene(); TSEL->p[P_DIST] = 70; TSEL->p[P_DTYPE] = 2; nav_scene(SEC_FX, "SENDS"); edit_param(0, 1); ux_knob_touch(0);
+        break;
+    case S_DLY2:                                        /* SPACE: SHIMMER with MOD (its tail holds), 1/16T */
+        fx_scene(); song.g[G_RTYPE] = 2; song.g[G_RMOD] = 60; song.g[G_DTIME] = 5; nav_scene(SEC_FX, "SPACE"); break;
+    case S_REVERB2:                                     /* SPACE: CLOUD, a long free echo */
+        fx_scene(); song.g[G_RTYPE] = 4; song.g[G_RSIZE] = 100; song.g[G_DTIME] = DT_FREE + 44; nav_scene(SEC_FX, "SPACE"); break;
+    case S_CHORUS: fx_more_at(G_CRATE, UXR_GLOBAL); break;   /* MORE: the CHORUS rows */
+    case S_MASTER:                                      /* MASTER: CLIP, PUNCH, DUCK all up, the output past the clip point */
+        fx_scene(); song.g[G_CLIP] = 100; song.g[G_PUNCH] = 100; song.g[G_DUCK] = 100; song.g[G_DREL] = 20;
+        fx_scope(30000); nav_scene(SEC_FX, "MASTER"); break;
     case S_LFO2: case S_LFO2_FREE:                      /* (3b task 7) LFO: RANDOM in time (1/8), TRIG at PHASE 32; a square
                                                          * at 1/16, FREE (the 1 BEAT window) */
         uxs_seen = 0x3FFu; ux_hot_k = -1;
@@ -1278,16 +1340,21 @@ static void setup(int s)
         mod_ui_slot = 1;
         nav_scene(SEC_LFO, "MOD MATRIX");
         break;
-    case S_FX: go_title("FX"); break;
-    case S_SLICER: song.g[G_SLMODE] = 1; go_title("SLICER"); break;   /* (0.6.3: the bus) */
-    case S_SLBUS: song.g[G_SLMODE] = 2; song.g[G_SLT1 + 2] = 0; song.g[G_SLFX] = 0; go_title("SL BUS 2"); break;
-    case S_SLPITCH: {
+    case S_FX:                                          /* (3b task 8) SENDS under LOAD ECO: no chorus (its bar dim, ECO: OFF) */
+        fx_scene(); fx_load(LOAD_ECO); nav_scene(SEC_FX, "SENDS"); break;
+    case S_SLICER:                                      /* .. MORE under LOAD ECO: no CHORUS, no SLICER rows */
+        fx_load(LOAD_ECO); fx_more_at(G_RWIDE, UXR_GLOBAL); break;
+    case S_SLBUS:                                       /* .. MASTER silent, every setting OFF */
+        fx_scene(); song.g[G_CLIP] = song.g[G_PUNCH] = song.g[G_DUCK] = 0; fx_scope(0); nav_scene(SEC_FX, "MASTER"); break;
+    case S_SLPITCH: {                                   /* .. MORE at its end: the SLICER's pitches */
         static const int8_t PS[16] = {0, 7, 12, -5, 0, 3, 24, -12, 5, 0, -24, 7, 12, 0, 0, 0};
         for (uint32_t k = 0; k < 16u; k++) song.g[G_SLP0 + k] = PS[k];
-        song.g[G_SLMODE] = 2; song.g[G_SLPLEN] = 12; sl_ui_step = 2; go_title("SL PITCH");
+        song.g[G_SLMODE] = 2; song.g[G_SLPLEN] = 12;
+        fx_more_at(G_SLP15, UXR_GLOBAL);
         break;
     }
-    case S_DLY: go_title("DLY"); break;
+    case S_DLY:                                         /* .. SPACE: a free time, the track sending no delay */
+        fx_scene(); TSEL->p[P_DLY] = 0; song.g[G_DTIME] = DT_FREE + 30; nav_scene(SEC_FX, "SPACE"); break;
     case S_SCL:                                         /* (3b task 6) SCL's KEY: A minor, SNAP (each black key the scale's note) */
         uxs_seen = 0x3FFu; ux_hot_k = -1;
         TSEL->p[P_ROOT] = 9; TSEL->p[P_SCALE] = 2; TSEL->p[P_QUANT] = 1;
@@ -1442,8 +1509,11 @@ static void setup(int s)
         song.playing = 1; ui.layer = LAYER_FX; ui.lylv = 1;
         perf_held = perf_act = perf_down = PF_BIT(PF_FRZ); perf_gp[GX_FRZ][1] = 12; perf_gp[GX_FRZ][3] = 0;
         break;
-    case S_REVERB: go_title("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */
-    case S_REVERB_RESO: go_title("REVERB"); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; break;   /* (0.6.5) PITCH, FOLW */
+    case S_REVERB:                                      /* (3b task 8) SPACE: SHIMMER at LOAD LITE (plays as ROOM: said), REV TYPE
+                                                         * touched */
+        fx_scene(); fx_load(LOAD_LITE); song.g[G_RTYPE] = 2; nav_scene(SEC_FX, "SPACE"); ux_knob_touch(2); break;
+    case S_REVERB_RESO:                                 /* .. SPACE: RESO (PITCH 4, FOLLOW T2) */
+        fx_scene(); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; nav_scene(SEC_FX, "SPACE"); break;
     case S_MENU_HOLD: ui.menu = 1; ui.menu_sel = MI_HOLD; settings_hold = 2; break;
     case S_MENU_LEDS: ui.menu = 1; ui.menu_sel = MI_LEDS; settings_leds = LEDS_INV; break;
     case S_MENU_END: ui.menu = 1; ui.menu_sel = MI_COUNT - 1u; ui_prefs = 0xFF; ui_rec_prefs = 0x2A; break;   /* the last row,
@@ -1636,22 +1706,19 @@ static void setup(int s)
         break;
     }
     case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER); break;   /* EDIT NAME lit */
-    /* (0.8.5) FX's lens as the mock-up's values: T1's sends DIST 0 CHORUS 0 DLY 0 REV 10 (sends: 30 60 40 50 to show
-     * them), DIST SOFT, AUTO PAN 40 SIN; DLY 1/8 FDBK 70 MIX 50, REVERB ROOM SIZE 70, CHORUS DEPTH 64, SLICER GATE PAT 3
-     * DEPTH 90, CLIP 30 PUNCH 40 DUCK 20 REL 60 */
-    case S_FXL_SENDS: case S_FXL_DIST: case S_FXL_PAN: case S_FXL_BUSES: case S_FXL_DELAY: case S_FXL_DELAY2:
-    case S_FXL_REVERB: case S_FXL_SLICER: case S_FXL_MASTER: {
-        static const char *const T[] = {"FX", "DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "REVERB", "SLICER", "MASTER"};
-        TSEL->p[P_DIST] = 30; TSEL->p[P_CHOR] = 60; TSEL->p[P_DLY] = 40; TSEL->p[P_REV] = 50;
-        TSEL->p[P_DTYPE] = 0; TSEL->p[P_APDEP] = 40; TSEL->p[P_APWAVE] = 0;
-        song.g[G_DFDBK] = 70; song.g[G_DMIX] = 50; song.g[G_RTYPE] = 0; song.g[G_RSIZE] = 70; song.g[G_CDEPTH] = 64;
-        song.g[G_SLMODE] = SL_GATE; song.g[G_SLPAT] = 3; song.g[G_SLDEP] = 90;
-        song.g[G_CLIP] = 30; song.g[G_PUNCH] = 40; song.g[G_DUCK] = 20; song.g[G_DREL] = 60;
-        ui.fxmod = s == S_FXL_REVERB || s == S_FXL_BUSES ? 1u : s == S_FXL_SLICER ? 3u : s == S_FXL_MASTER ? 4u : 0u;
-        go_title(T[s - S_FXL_SENDS]);
-        ui.msg_t = 0;
+    /* (3b task 8) FX on the ux pages (fx_scene's values): SENDS, SPACE (1/8, FDBK 70, ROOM 70), MASTER (the meter at -9 dB), MORE
+     * (DIST TYPE picked; the PUNCH LANE rows; DELAY's; REVERB's on RESO; the SLICER's), SPACE with PING and ANALOG FDBK 110 */
+    case S_FXL_SENDS: fx_scene(); nav_scene(SEC_FX, "SENDS"); break;
+    case S_FXL_BUSES: fx_scene(); nav_scene(SEC_FX, "SPACE"); break;
+    case S_FXL_MASTER: fx_scene(); fx_scope(11600); nav_scene(SEC_FX, "MASTER"); break;
+    case S_FXL_DIST: fx_more_at(P_DTYPE, UXR_TRACK); break;
+    case S_FXL_PAN: fx_more_at(UXM_A_LANE, UXR_ACTION); break;
+    case S_FXL_DELAY:
+        fx_scene(); song.g[G_DPING] = 1; song.g[G_DTYPE] = 0; song.g[G_DFDBK] = 110; song.g[G_RTYPE] = 1; nav_scene(SEC_FX, "SPACE");
         break;
-    }
+    case S_FXL_DELAY2: fx_more_at(G_DMIX, UXR_GLOBAL); break;
+    case S_FXL_REVERB: fx_more_at(G_RPRE, UXR_GLOBAL); song.g[G_RTYPE] = 3; song.g[G_RPRE] = 4; song.g[G_RDAMP] = 2; break;
+    case S_FXL_SLICER: fx_more_at(G_SLPAT, UXR_GLOBAL); break;
     /* (0.8.5) SAVE's lens as the mock-up's data: projects NOCHE LARGA (A B C), ACID 03, DUB KIT, BOSQUE, TRANCE A; the
      * song B16 C16 A32 D8 C16 A32 (scenes on 2 and 4, END LOOP); seven user sounds */
     case S_SAVE_LIB: case S_SAVE_TOOLS: case S_SAVE_PROJ: case S_SAVE_ARR: case S_SAVE_SOUND: case S_SAVE_PRESETS: {

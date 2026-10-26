@@ -525,11 +525,13 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACKS page (ui_input.c tracks_edit) */
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
-       GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_SLPIT,
-       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES,
+       GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS,
+       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE,
        GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP };   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
                                                          * (task 5) GR_FM6P FM6's OPERATOR, OP ENV; GR_DXP DRUM-X's SOUND, SOUND 2 */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
-                                                         * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone; task 7: GR_MSEQ, MSEQ's) */
+                                                         * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone; task 7: GR_MSEQ, MSEQ's;
+                                                         * task 8: GR_SLCR GR_SLPIT GR_PUNCH GR_BUSES, JIANT's FX pages': FX the ux
+                                                         * pages', GR_FX its SENDS) */
 
 #include "ux_more.h"
 typedef struct {
@@ -710,6 +712,33 @@ static const ux_row_t UXM_LFO_ROWS[] = {
     {P_MS0 + 12, UXR_TRACK, 0}, {P_MS0 + 13, UXR_TRACK, 0}, {P_MS0 + 14, UXR_TRACK, 0}, {P_MS0 + 15, UXR_TRACK, 0},
 };
 static const ux_more_t UXM_LFO = {UXM_LFO_ROWS, (uint8_t)(sizeof UXM_LFO_ROWS / sizeof UXM_LFO_ROWS[0])};
+/* (3b task 8) FX's MORE (spec 2.4): what SENDS (the track's DISTORT and three sends), SPACE (DLY TIME, DLY FDBK, REV TYPE, REV
+ * SIZE) and MASTER (CLIP PUNCH DUCK DUCK REL) leave of JIANT's sixteen FX pages, in the spec's order: the track's DISTORT (TYPE,
+ * TONE) and AUTO PAN, then the buses (globals): DELAY, REVERB (its fourth row PRE / AIR / PITCH by the TYPE, DAMP FOLLOW on RESO:
+ * params.c param_ref, ux_section.c uxs_label), CHORUS, SLICER and its pitch steps (JIANT's SLICER, SL BUS, SL BUS 2, SL PITCH;
+ * BUSES' four amounts each in its own group), the punch-in lane (JIANT's PUNCH: its length, step, CLEAR asking first). CHORUS and
+ * the SLICER none under LOAD ECO (ux_more.c ux_row_shown: ECO takes them out of the sound, as JIANT hid their pages) */
+static const ux_row_t UXM_FX_ROWS[] = {
+    {UXM_H_DIST, UXR_HEAD, 0}, {P_DTYPE, UXR_TRACK, 0}, {P_DTONE, UXR_TRACK, 0},
+    {UXM_H_APAN, UXR_HEAD, 0}, {P_APDEP, UXR_TRACK, 0}, {P_APRATE, UXR_TRACK, 0}, {P_APSYNC, UXR_TRACK, 0},
+    {P_APWAVE, UXR_TRACK, 0},
+    {UXM_H_DELAY, UXR_HEAD, 0}, {G_DCOLOR, UXR_GLOBAL, 0}, {G_DMIX, UXR_GLOBAL, 0}, {G_WIDTH, UXR_GLOBAL, 0},
+    {G_DPIT, UXR_GLOBAL, 0}, {G_DSPRY, UXR_GLOBAL, 0}, {G_DMOD, UXR_GLOBAL, 0}, {G_DTYPE, UXR_GLOBAL, 0}, {G_DPING, UXR_GLOBAL, 0},
+    {UXM_H_REVERB, UXR_HEAD, 0}, {G_RDAMP, UXR_GLOBAL, 0}, {G_RPRE, UXR_GLOBAL, 0}, {G_RMOD, UXR_GLOBAL, 0},
+    {G_RRATE, UXR_GLOBAL, 0}, {G_RFILT, UXR_GLOBAL, 0}, {G_RWIDE, UXR_GLOBAL, 0},
+    {UXM_H_CHORUS, UXR_HEAD, 0}, {G_CRATE, UXR_GLOBAL, 0}, {G_CDEPTH, UXR_GLOBAL, 0}, {G_CSTER, UXR_GLOBAL, 0},
+    {UXM_H_SLICER, UXR_HEAD, 0}, {G_SLMODE, UXR_GLOBAL, 0}, {G_SLPAT, UXR_GLOBAL, 0}, {G_SLRATE, UXR_GLOBAL, 0},
+    {G_SLDEP, UXR_GLOBAL, 0}, {G_SLT1, UXR_GLOBAL, 0}, {G_SLT1 + 1, UXR_GLOBAL, 0}, {G_SLT1 + 2, UXR_GLOBAL, 0},
+    {G_SLT1 + 3, UXR_GLOBAL, 0}, {G_SLT1 + 4, UXR_GLOBAL, 0}, {G_SLT6, UXR_GLOBAL, 0}, {G_SLFX, UXR_GLOBAL, 0},
+    {UXM_H_SLPIT, UXR_HEAD, 0}, {G_SLPLEN, UXR_GLOBAL, 0}, {G_SLPQ, UXR_GLOBAL, 0},
+    {G_SLP0, UXR_GLOBAL, 0}, {G_SLP0 + 1, UXR_GLOBAL, 0}, {G_SLP0 + 2, UXR_GLOBAL, 0}, {G_SLP0 + 3, UXR_GLOBAL, 0},
+    {G_SLP0 + 4, UXR_GLOBAL, 0}, {G_SLP0 + 5, UXR_GLOBAL, 0}, {G_SLP0 + 6, UXR_GLOBAL, 0}, {G_SLP0 + 7, UXR_GLOBAL, 0},
+    {G_SLP0 + 8, UXR_GLOBAL, 0}, {G_SLP0 + 9, UXR_GLOBAL, 0}, {G_SLP0 + 10, UXR_GLOBAL, 0}, {G_SLP0 + 11, UXR_GLOBAL, 0},
+    {G_SLP0 + 12, UXR_GLOBAL, 0}, {G_SLP0 + 13, UXR_GLOBAL, 0}, {G_SLP0 + 14, UXR_GLOBAL, 0}, {G_SLP15, UXR_GLOBAL, 0},
+    {UXM_H_LANE, UXR_HEAD, 0}, {G_PFXLEN, UXR_GLOBAL, 0}, {G_PFXRES, UXR_GLOBAL, 0}, {UXM_A_LANE, UXR_ACTION, 0},
+};
+typedef char uxm_fx_fits[sizeof UXM_FX_ROWS / sizeof UXM_FX_ROWS[0] <= 64u ? 1 : -1];   /* (ux_more.c: a list holds 64 at most) */
+static const ux_more_t UXM_FX = {UXM_FX_ROWS, (uint8_t)(sizeof UXM_FX_ROWS / sizeof UXM_FX_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -717,25 +746,13 @@ static const page_t PAGES[] = {
     {"LFO DEST", FAM_LFO, SC_TRACK, GR_NONE, {P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP}},
     {"MOD", FAM_LFO, SC_TRACK, GR_MOD, {ID_MSLOT, P_M1SRC, P_M1DST, P_M1AMT}},   /* KNOB 1: the slot (mod_ui_slot) */
     /* (ACID FM 3b task 7) JIANT's MSEQ (KNOB 1 the step, its LEVEL, LEN, SLEW) and MSEQ 2 (DIV) gone: LFO's MORE rows (STEPS) */
+    /* (ACID FM 3b task 8) FX on the ux pages (ui_lens.c CE_FX): SENDS (JIANT's FX: the track's DISTORT and its three sends),
+     * SPACE, MASTER, MORE. JIANT's DIST, AUTO PAN, BUSES, DLY, DLY 2, DLY 3, REVERB, REVERB 2, CHORUS, SLICER, SL BUS, SL BUS 2,
+     * SL PITCH and PUNCH pages gone: MORE's rows (UXM_FX) */
     {"FX", FAM_FX, SC_TRACK, GR_FX, {P_DIST, P_CHOR, P_DLY, P_REV}},
-    {"MASTER", FAM_FX, SC_GLOBAL, GR_NONE, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}},   /* JIANT: clipper, drum bus, ducking;
-                                                         * (0.7.6) FX's second page, at hand (was after SL PITCH) */
-    {"DIST", FAM_FX, SC_TRACK, GR_NONE, {P_DIST, P_DTYPE, P_DTONE, 0xFF}},   /* JIANT: the drive's type and tone */
-    {"AUTO PAN", FAM_FX, SC_TRACK, GR_NONE, {P_APDEP, P_APRATE, P_APSYNC, P_APWAVE}},   /* (JIANT 0.6.9) the track's pan swung */
-    {"BUSES", FAM_FX, SC_GLOBAL, GR_BUSES, {G_DMIX, G_RSIZE, G_CDEPTH, G_SLDEP}},   /* (0.8.5) FX's lens: the buses' main values */
-    {"DLY", FAM_FX, SC_GLOBAL, GR_NONE, {G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX}},
-    {"DLY 2", FAM_FX, SC_GLOBAL, GR_NONE, {G_WIDTH, G_DPIT, G_DSPRY, G_DMOD}},
-    {"DLY 3", FAM_FX, SC_GLOBAL, GR_NONE, {G_DTYPE, G_DPING, 0xFF, 0xFF}},   /* (0.6.90) ANALOG / DIGITAL, PING-PONG */   /* JIANT: width, the grains (0.4: the low cut
-                                                                                 * in DLY's TONE; G_DHPF stored, unused) */
-    {"REVERB", FAM_FX, SC_GLOBAL, GR_NONE, {G_RTYPE, G_RSIZE, G_RDAMP, G_RPRE}},   /* TYPE: ROOM / SPRING */
-    {"REVERB 2", FAM_FX, SC_GLOBAL, GR_NONE, {G_RMOD, G_RRATE, G_RFILT, G_RWIDE}},   /* JIANT: modulation, tone, width */
-    {"CHORUS", FAM_FX, SC_GLOBAL, GR_NONE, {G_CRATE, G_CDEPTH, G_CSTER, 0xFF}},   /* (0.6.9: STEREO) */
-    /* (0.6.81) the SLICER after the buses, before MASTER: DELAY, REVERB and CHORUS nearer at hand */
-    {"SLICER", FAM_FX, SC_GLOBAL, GR_SLCR, {G_SLMODE, G_SLPAT, G_SLRATE, G_SLDEP}},   /* (0.6.3) one, on a bus */
-    {"SL BUS", FAM_FX, SC_GLOBAL, GR_SLCR, {G_SLT1, G_SLT1 + 1, G_SLT1 + 2, G_SLT1 + 3}},   /* what goes in */
-    {"SL BUS 2", FAM_FX, SC_GLOBAL, GR_SLCR, {G_SLT1 + 4, G_SLT6, G_SLFX, 0xFF}},
-    {"SL PITCH", FAM_FX, SC_GLOBAL, GR_SLPIT, {0xFF, G_SLP0, G_SLPLEN, G_SLPQ}},   /* KNOB 1 the step (sl_ui_step) */
-    {"PUNCH", FAM_FX, SC_GLOBAL, GR_PUNCH, {G_PFXLEN, G_PFXRES, 0xFF, 0xFF}},   /* (0.6.99) the punch-in lane: LEN RES, REC, CLEAR */
+    {"FX SPACE", FAM_FX, SC_GLOBAL, GR_NONE, {G_DTIME, G_DFDBK, G_RTYPE, G_RSIZE}},   /* the delay's time and repeats, the
+                                                         * reverb's model and size */
+    {"MASTER", FAM_FX, SC_GLOBAL, GR_NONE, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}},   /* JIANT: clipper, drum bus, ducking */
     {"SCL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_QUANT, ID_ALLTR}},   /* (JIANT: ROOT, SCALE every melodic track's;
                                                          * 0.7.6: ALL TR, the global, where TRANS was: SCL 2 gone) */
     {"CHORD", FAM_SCL, SC_TRACK, GR_NONE, {P_CHRD, P_CVOI, P_CSTR, P_SOFS}},   /* (0.6.81) a key plays a chord (seq.c); (ACID FM 3b
@@ -832,6 +849,9 @@ static const page_t PAGES[] = {
     /* (ACID FM 3b task 7) LFO's MORE (ui_lens.c CE_LFO: LFO, DEST, MOD MATRIX, MORE): PHASE (JIANT's LFO 2), the STEPS (JIANT's
      * MSEQ, MSEQ 2: the modulation sequence the matrix's source STEPS reads) */
     {"LFO MORE", FAM_LFO, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_LFO},
+    /* (ACID FM 3b task 8) FX's MORE (ui_lens.c CE_FX: SENDS, SPACE, MASTER, MORE): a track page (its DISTORT and AUTO PAN rows the
+     * track's: REC + FX clears their automation, ui_input.c rec_clear_auto), the buses' rows globals */
+    {"FX MORE", FAM_FX, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_FX},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot_tr[NTRK];   /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit, a track each (3b task 7: as FM6's
@@ -844,7 +864,7 @@ static const param_desc_t REV_PRE = PD("PRE", F_INT, 0, 100, 0);       /* ROOM /
 static const param_desc_t REV_AIR = PD("AIR", F_SEMI, -24, 24, 0);    /* (0.6.12) SHIMMER / CLOUD: pitch and tone, down dark,
                                                                        * up airy (G_RPRE; fx.c rev_air) */
 static const param_desc_t AP_BEAT = PE("RATE", N_APDIV, 2);          /* (0.6.9) AUTO PAN's RATE on the tempo (SYNC BEAT) */
-static uint8_t sl_ui_step;       /* (JIANT 0.6.3) the SL PITCH page: the step KNOB 2 edits */
+/* (ACID FM 3b task 8: sl_ui_step, SL PITCH's step picked, gone with its page: FX > MORE's PITCH 1 .. 16 rows) */
 
 /* (ACID FM 3b) the setting id of track t (0: the globals, song.g) as a knob turns it: its descriptor and value (*valp; 0 and 0:
  * none). The ids past both tables are views (ID_ALLTR, G_TRKS, ID_LMODE / ID_LPHS, G_LOADP, ID_MSLOT), whatever t. page_desc (a page's
@@ -896,7 +916,7 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
         return &AP_BEAT;
     return track_desc(t, id);
 }
-/* page pg's knob slot: the setting it turns (the step / slot shown on SL PITCH, MOD), ID_NONE none; whose (0: global) */
+/* page pg's knob slot: the setting it turns (the slot shown on MOD), ID_NONE none; whose (0: global) */
 static uint32_t page_id(const page_t *pg, uint32_t slot)
 {
     uint32_t id = pg->id[slot];
@@ -907,7 +927,7 @@ static uint32_t page_id(const page_t *pg, uint32_t slot)
     if (pg->scope == SC_STEP || pg->scope == SC_TRK)
         return ID_NONE;
     if (pg->scope == SC_GLOBAL)
-        return pg->graph == GR_SLPIT && id == G_SLP0 ? id + (sl_ui_step & 15u) : id;   /* the pitch of the step shown */
+        return id;                                      /* (3b task 8: SL PITCH's step picked gone: MORE's rows) */
     if (pg->scope == SC_ENGINE && id == P_E4 && ENGINES[TSEL->eng_req % NENGINES] == &ENG_LOFI && TSEL->p[P_E1] < RW_BYTE)
         return TSEL->p[P_E1] == RW_WRAM ? P_DRIFT : P_MORPH;   /* (ACID FM 3b task 4 fix) LOFI's TONE KNOB 1, JIANT's empty
                                                          * slot outside BYTE / FLOAT (no knob dead): MORPH, the chip wave on

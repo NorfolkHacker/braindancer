@@ -307,9 +307,8 @@ static void hint_tick(void)
     settings_save();                                    /* (the count kept: deferred while playing) */
     if (k == HK_MOTION)
         ui_message("REC + PLAY, TURN A KNOB");          /* (0.6.92) how it is recorded */
-    else if (k == HK_PUNCH)
-        ui_message("REC + PLAY, HOLD FX + A KEY");      /* (0.6.99) the lane's recording */
-    else {                                              /* HK_MUTATE */
+    else {                                              /* HK_MUTATE (ACID FM 3b task 8: HK_PUNCH never set, FX > PUNCH gone:
+                                                         * FX > MORE's PUNCH LANE rows say it, ux_section.c UXS_LANE_SAY) */
         ui_message("OCT+ KEEP  GLO+A4 FREEZE");
         str_cpy(ui.msg2, "SEQ+D5 REVERT  GLO+B4 ALL", sizeof ui.msg2);   /* (0.9.3) back to the anchor */
     }

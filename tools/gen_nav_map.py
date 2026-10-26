@@ -91,7 +91,7 @@ L = {
   notes={'HOME': 'TRACKS → VISUAL → GEN: HOME again (round) or SELECT; HOME + SELECT straight to GEN. GEN 1–3: PRESETS the genre, OCT+ makes the piece, OCT− back to TRACKS.',
          'SEQ': 'PRESETS: the patterns (PHRASES). KNOB 1: all 64 steps on STEP (a fast turn several).',
          'EDIT': 'Synths: page 3 is VOICE on ANALOG, FILTER on the others; MORE lists the rest (KNOB 1 picks, KNOB 2 sets). FM6: KNOB 1 picks the operator on OPERATOR and OP ENV. DRUM-X: KNOB 1 picks the drum on SOUND and SOUND 2 (a key struck picks it too).',
-         'FX': 'CHORUS and SLICER are hidden with LOAD ECO; the chain skips them.',
+         'FX': 'SENDS: the track\'s DISTORT and sends as bars; SPACE: the echoes and the reverb\'s tail; MASTER: the output\'s meter. MORE: DELAY, REVERB, CHORUS, SLICER, the PUNCH LANE (CHORUS and SLICER hidden with LOAD ECO).',
          'SAVE': 'From outside, USER and SECTIONS come with SAVE armed: SAVE · OCT+ · OCT+.',
          'ARP': 'ARP again: the other page. The picture: the notes it plays from C G E held.',
          'SCL': 'ROTATE (CHORD) and SEQ PITCH (MORE) without the layer. The picture: what each key plays.',
@@ -137,7 +137,7 @@ L = {
   notes={'HOME': 'TRACKS → VISUAL → GEN: HOME otra vez (en ronda) o SELECT; HOME + SELECT directo a GEN. GEN 1–3: PRESETS el género, OCT+ arma la pieza, OCT− vuelve a TRACKS.',
          'SEQ': 'PRESETS: los patrones (PHRASES). KNOB 1: los 64 pasos en STEP (girado rápido, varios).',
          'EDIT': 'Sintes: la página 3 es VOICE en ANALOG, FILTER en los demás; MORE lista el resto (KNOB 1 elige, KNOB 2 cambia). FM6: KNOB 1 elige el operador en OPERATOR y OP ENV. DRUM-X: KNOB 1 elige el tambor en SOUND y SOUND 2 (una tecla tocada también).',
-         'FX': 'CHORUS y SLICER se ocultan con LOAD ECO; la cadena los saltea.',
+         'FX': 'SENDS: DISTORT y los envíos de la pista en barras; SPACE: los ecos y la cola de la reverb; MASTER: el medidor de la salida. MORE: DELAY, REVERB, CHORUS, SLICER, el PUNCH LANE (CHORUS y SLICER se ocultan con LOAD ECO).',
          'SAVE': 'Desde afuera, USER y SECTIONS llegan con SAVE elegido: SAVE · OCT+ · OCT+.',
          'ARP': 'ARP otra vez: la otra página. El dibujo: las notas que toca con C G E apretadas.',
          'SCL': 'ROTATE (CHORD) y SEQ PITCH (MORE) sin la capa. El dibujo: qué toca cada tecla.',
@@ -165,8 +165,8 @@ L = {
 }
 
 # pages shown only where they apply (the manual's "Some pages only appear when they apply"); drawn dashed
-COND = {('CE_SYN', 'VOICE'), ('CE_SYN', 'FILTER'), ('FX', 'CHORUS'), ('FX', 'SLICER'),   # (3b: a synth's page 3, ANALOG's
-        ('FX', 'SL BUS'), ('FX', 'SL BUS 2'), ('FX', 'SL PITCH')}                         # VOICE or the others' FILTER)
+COND = {('CE_SYN', 'VOICE'), ('CE_SYN', 'FILTER')}   # (3b: a synth's page 3, ANALOG's VOICE or the others' FILTER;
+                                                     # task 8: FX's CHORUS and SLICER pages gone, MORE's rows)
 
 
 def is_cond(sec, ce, name):

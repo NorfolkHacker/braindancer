@@ -9,7 +9,8 @@
  *            synth's EDIT what it sounds like (the engine's signal path, ported; its
  *            FILTER page the filter's response; VOICE singing words the word); FM6's its algorithm (the picked operator
  *            outlined; OP ENV its envelope); DRUM-X's the picked drum's hit (dx_run) and the eight drums; MORE its
- *            list (ux_more.c); the sections still to come (3b tasks 7, 8) their title and the four values as bars
+ *            list (ux_more.c); (3b task 7) LFO's wave, DEST, MOD MATRIX; (task 8) FX's SENDS bars, SPACE's echoes and
+ *            reverb tail, MASTER's output meter
  *   status   a message (STOP TO EDIT in ACCENT), else the knob just turned: its full name and value ("RELEASE . 420MS"),
  *            else the section's first-time hint ("ARP AGAIN: NEXT PAGE", once a power-on, spec 0 rule 7), else on MORE
  *            what its controls do
@@ -25,7 +26,7 @@
  * specific row wins (its section over every section's, then its engine over every engine's). JIANT's labels themselves
  * (TP / GP: the web editor reads them, editor.c) stay as they are. Each fits a knob's column in UF_LBL (tests/ui_test.c) */
 typedef char uxs_sec_edit_ok[SEC_EDIT == UXS_SEC_EDIT && SEC_ENV == UXS_SEC_ENV && SEC_SCL == UXS_SEC_SCL &&
-                            SEC_ARP == UXS_SEC_ARP && SEC_LFO == UXS_SEC_LFO ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
+                            SEC_ARP == UXS_SEC_ARP && SEC_LFO == UXS_SEC_LFO && SEC_FX == UXS_SEC_FX ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
 #define UXS_ALL 0xFFu
 typedef struct { uint8_t sec, eng, glo, id; const char *p; } uxs_name_t;   /* id: a P_* (glo 0) or G_* (glo 1), or a view */
 static const uxs_name_t UXS_NAME[] = {
@@ -60,7 +61,64 @@ static const uxs_name_t UXS_NAME[] = {
     /* (3b task 7) LFO's: MOD MATRIX's SRC1 DEST1 AMT1 .. are SOURCE DEST AMOUNT, the STEPS' LEVELs STEP 1 .. 16 (uxs_label) */
     {UXS_ALL, UXS_ALL, 0, P_MSDIV, "STEP RATE"},        /* MSEQ's DIV: a step's length (3b task 7 fix: not RATE, the LFO's) */
     {UXS_ALL, UXS_ALL, 0, P_MSSLW, "SMOOTH"},           /* .. SLEW: gliding from one step's level to the next */
+    /* (3b task 8) FX's (spec 2.4; the user's short names that fit, one abbreviation each). The track's distortion P_DIST is
+     * DISTORT everywhere (UXS_LABEL: SENDS, a synth's FILTER, FM6's MORE, the matrix's DEST; the engines' own DRIVE keeps DRIVE),
+     * its TYPE and TONE DIST .., AUTO PAN's four PAN ... The buses' (globals) with their bus first, as the matrix names them
+     * (DLY TIME .. CHO DEPTH, 3b task 7 fix): DLY REV CHO, FEEDBACK the one word cut (FDBK: "DLY FEEDBACK" fits no face's
+     * 48 px); the SLICER's SLICE .., its pitch steps PITCH ..; the punch-in lane's LANE ... REV PRE's slot named by the TYPE,
+     * DAMP FOLLOW on RESO (uxs_label) */
+    {UXS_ALL, UXS_ALL, 0, P_DTYPE, "DIST TYPE"},
+    {UXS_ALL, UXS_ALL, 0, P_DTONE, "DIST TONE"},
+    {UXS_ALL, UXS_ALL, 0, P_APDEP, "PAN DEPTH"},
+    {UXS_ALL, UXS_ALL, 0, P_APRATE, "PAN RATE"},
+    {UXS_ALL, UXS_ALL, 0, P_APSYNC, "PAN SYNC"},
+    {UXS_ALL, UXS_ALL, 0, P_APWAVE, "PAN WAVE"},
+    {UXS_ALL, UXS_ALL, 1, G_DTIME, "DLY TIME"},
+    {UXS_ALL, UXS_ALL, 1, G_DFDBK, "DLY FDBK"},
+    {UXS_ALL, UXS_ALL, 1, G_DCOLOR, "DLY TONE"},
+    {UXS_ALL, UXS_ALL, 1, G_DMIX, "DLY MIX"},
+    {UXS_ALL, UXS_ALL, 1, G_WIDTH, "DLY WIDE"},         /* (JIANT's WIDE: the right echo later; the chorus's taps apart too) */
+    {UXS_ALL, UXS_ALL, 1, G_DPIT, "DLY PITCH"},
+    {UXS_ALL, UXS_ALL, 1, G_DSPRY, "DLY SPRAY"},
+    {UXS_ALL, UXS_ALL, 1, G_DMOD, "DLY MOD"},
+    {UXS_ALL, UXS_ALL, 1, G_DTYPE, "DLY TYPE"},
+    {UXS_ALL, UXS_ALL, 1, G_DPING, "DLY PING"},
+    {UXS_ALL, UXS_ALL, 1, G_RTYPE, "REV TYPE"},
+    {UXS_ALL, UXS_ALL, 1, G_RSIZE, "REV SIZE"},
+    {UXS_ALL, UXS_ALL, 1, G_RDAMP, "REV DAMP"},
+    {UXS_ALL, UXS_ALL, 1, G_RMOD, "REV MOD"},
+    {UXS_ALL, UXS_ALL, 1, G_RRATE, "REV RATE"},
+    {UXS_ALL, UXS_ALL, 1, G_RFILT, "REV TONE"},         /* (JIANT's FILT: the reverb's input darker / brighter, as DLY TONE) */
+    {UXS_ALL, UXS_ALL, 1, G_RWIDE, "REV WIDE"},
+    {UXS_ALL, UXS_ALL, 1, G_CRATE, "CHO RATE"},
+    {UXS_ALL, UXS_ALL, 1, G_CDEPTH, "CHO DEPTH"},
+    {UXS_ALL, UXS_ALL, 1, G_CSTER, "CHO WIDE"},         /* (JIANT's STEREO: "CHO STEREO" is 49 px; WIDE as DLY's and REV's) */
+    {UXS_ALL, UXS_ALL, 1, G_SLMODE, "SLICE MODE"},
+    {UXS_ALL, UXS_ALL, 1, G_SLPAT, "SLICE PAT"},        /* ("SLICE PATTERN" is 60 px; the status line spells the pattern out) */
+    {UXS_ALL, UXS_ALL, 1, G_SLRATE, "SLICE RATE"},
+    {UXS_ALL, UXS_ALL, 1, G_SLDEP, "SLICE DEPTH"},
+    {UXS_ALL, UXS_ALL, 1, G_SLT1, "SLICE T1"}, {UXS_ALL, UXS_ALL, 1, G_SLT1 + 1, "SLICE T2"},
+    {UXS_ALL, UXS_ALL, 1, G_SLT1 + 2, "SLICE T3"}, {UXS_ALL, UXS_ALL, 1, G_SLT1 + 3, "SLICE T4"},
+    {UXS_ALL, UXS_ALL, 1, G_SLT1 + 4, "SLICE T5"}, {UXS_ALL, UXS_ALL, 1, G_SLT6, "SLICE T6"},
+    {UXS_ALL, UXS_ALL, 1, G_SLFX, "SLICE FX"},
+    {UXS_ALL, UXS_ALL, 1, G_SLPLEN, "PITCH LOOP"},      /* (JIANT's SL PITCH LEN: the pitches go round after so many steps) */
+    {UXS_ALL, UXS_ALL, 1, G_SLPQ, "PITCH SNAP"},        /* (.. QUANT: onto the scale, as SCL's SNAP the keys) */
+    {UXS_ALL, UXS_ALL, 1, G_SLP0, "PITCH 1"}, {UXS_ALL, UXS_ALL, 1, G_SLP0 + 1, "PITCH 2"},
+    {UXS_ALL, UXS_ALL, 1, G_SLP0 + 2, "PITCH 3"}, {UXS_ALL, UXS_ALL, 1, G_SLP0 + 3, "PITCH 4"},
+    {UXS_ALL, UXS_ALL, 1, G_SLP0 + 4, "PITCH 5"}, {UXS_ALL, UXS_ALL, 1, G_SLP0 + 5, "PITCH 6"},
+    {UXS_ALL, UXS_ALL, 1, G_SLP0 + 6, "PITCH 7"}, {UXS_ALL, UXS_ALL, 1, G_SLP0 + 7, "PITCH 8"},
+    {UXS_ALL, UXS_ALL, 1, G_SLP0 + 8, "PITCH 9"}, {UXS_ALL, UXS_ALL, 1, G_SLP0 + 9, "PITCH 10"},
+    {UXS_ALL, UXS_ALL, 1, G_SLP0 + 10, "PITCH 11"}, {UXS_ALL, UXS_ALL, 1, G_SLP0 + 11, "PITCH 12"},
+    {UXS_ALL, UXS_ALL, 1, G_SLP0 + 12, "PITCH 13"}, {UXS_ALL, UXS_ALL, 1, G_SLP0 + 13, "PITCH 14"},
+    {UXS_ALL, UXS_ALL, 1, G_SLP0 + 14, "PITCH 15"}, {UXS_ALL, UXS_ALL, 1, G_SLP15, "PITCH 16"},
+    {UXS_ALL, UXS_ALL, 1, G_PFXLEN, "LANE STEPS"},      /* (JIANT's PUNCH LEN: the punch-in lane's steps, */
+    {UXS_ALL, UXS_ALL, 1, G_PFXRES, "LANE RATE"},       /* .. RES a step's length: as LFO's STEP RATE) */
+    {UXS_ALL, UXS_ALL, 1, G_DREL, "DUCK REL"},          /* (JIANT's REL: DUCK's release, the others back) */
 };
+/* (3b task 8) REVERB's fourth setting by its TYPE (params.c param_ref: ROOM / SPRING the pre-delay, SHIMMER / CLOUD AIR, RESO its
+ * chord's PITCH), and DAMP on RESO: FOLLOW (the track its strings take their notes from) */
+static const char *const UXS_RPRE[3] = {"REV PRE", "REV AIR", "REV PITCH"};
+static const char *const UXS_RFOLW[1] = {"FOLLOW"};   /* ("REV FOLLOW" is 49 px) */
 static const char *uxs_name_in(const uxs_name_t *t, uint32_t n, uint32_t sec, uint32_t eng, uint32_t glo, uint32_t id)
 {
     const char *p = 0;
@@ -83,7 +141,8 @@ static const char *const UXS_MSTEP[16] = {"STEP 1", "STEP 2", "STEP 3", "STEP 4"
 typedef struct { const char *j, *p; } uxs_lbl_t;
 static const uxs_lbl_t UXS_LABEL[] = {
     {"ATK", "ATTACK"}, {"DEC", "DECAY"}, {"SUS", "SUSTAIN"}, {"REL", "RELEASE"}, {"RES", "RESO"}, {"CUT", "CUTOFF"},
-    {"DLY", "DELAY"}, {"REV", "REVERB"}, {"FEEDBK", "FEEDBACK"}, {"PRIO", "PRIORITY"}, {"DIST", "DRIVE"},
+    {"DLY", "DELAY"}, {"REV", "REVERB"}, {"FEEDBK", "FEEDBACK"}, {"PRIO", "PRIORITY"}, {"DIST", "DISTORT"},   /* (3b task 8: DISTORT, not DRIVE:
+                                                         * the engines' own DRIVE, ANALOG's and DRUM-X's, is DRIVE) */
     /* (3b task 4) the synths' (the engines' .edit[] and their mode relabels, eng_*.c) */
     {"INT", "INTERVAL"}, {"WAVE2", "WAVE 2"}, {"FB", "FEEDBACK"}, {"VIB", "VIBRATO"}, {"WAV#", "TABLE"}, {"VAR", "VARIANT"},
     {"ALGO", "FORMULA"}, {"TRK", "KEY TRACK"}, {"DENSE", "DENSITY"}, {"LEN", "LENGTH"}, {"VOWEL2", "VOWEL 2"}, {"Q", "RESO"},
@@ -92,7 +151,12 @@ static const uxs_lbl_t UXS_LABEL[] = {
 static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char *l)
 {
     uint32_t i;
-    const char *p = id < 256u ? uxs_name_in(UXS_NAME, NELEM(UXS_NAME), sec, trk_eng(TSEL), glo ? 1u : 0u, id) : 0;
+    const char *p;
+    if (glo && id == G_RPRE)                            /* (3b task 8) the reverb's by its TYPE */
+        return UXS_RPRE[song.g[G_RTYPE] == 3 ? 2 : song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4 ? 1 : 0];
+    if (glo && id == G_RDAMP && song.g[G_RTYPE] == 3)
+        return UXS_RFOLW[0];
+    p = id < 256u ? uxs_name_in(UXS_NAME, NELEM(UXS_NAME), sec, trk_eng(TSEL), glo ? 1u : 0u, id) : 0;
     if (p)
         return p;
     if (!glo && id >= P_LN0 && id <= P_LN7 && trk_eng(TSEL) == ENGI_DRUM)
@@ -178,7 +242,7 @@ static void uxs_strn(int32_t v, char *b, uint32_t nb, int full)   /* ALL TRACKS'
  *       (UXS_MSRC_N, UXS_MDST_N; an engine's E1..E8 its EDIT knob's label, uxs_label); the status line adds what it is after
  *       a colon (UXS_MSRC_X, UXS_MDST_X: "WHEEL: MOD WHEEL CC1"). A name wider than UF_VAL's 48 px is drawn in a smaller face
  *       (ux_widgets.c ux_val_face). The FX buses' (D.TIM .. C.DEP) are their section's (DLY REV CHO) and the FX page's knob
- *       (TIME FDBK TONE MIX, SIZE DAMP, RATE DEPTH: 3b task 8 names its knobs so) */
+ *       (TIME FDBK TONE MIX, SIZE DAMP, RATE DEPTH: 3b task 8's UXS_NAME, the same words; DIST: DISTORT, as UXS_LABEL's) */
 static const char *const UXS_LSYNC_F[12] = {"4 BARS", "2 BARS", "1 BAR", "1/2 NOTE", "1/4 NOTE", "1/8 DOTTED", "1/4 TRIPLET",
                                             "1/8 NOTE", "1/8 TRIPLET", "1/16 NOTE", "1/16 TRIPLET", "1/32 NOTE"};
 static const char *const UXS_LWAVE_K[5] = {"SINE", "TRI", "SAW", "SQR", "RAND"};
@@ -190,7 +254,7 @@ static const char *const UXS_MSRC_N[15] = {"OFF", "LFO", "ENV", "VELOCITY", "KEY
 static const char *const UXS_MSRC_X[15] = {0, 0, "THE ENVELOPE", "HOW HARD", "THE NOTE PLAYED", "NEW PER NOTE", "MOD WHEEL CC1",
                                            "AFTERTOUCH", "EXPRESSION CC11", "ON HOME VISUAL", "ON HOME VISUAL", "ON HOME VISUAL",
                                            "ON HOME VISUAL", "SET IN MORE", "A RANDOM WANDER"};
-static const char *const UXS_MDST_N[MD_N] = {"OFF", "PITCH", "FILTER", "SHAPE", "AMP", "PAN", "DRIVE", "CHORUS", "DELAY",
+static const char *const UXS_MDST_N[MD_N] = {"OFF", "PITCH", "FILTER", "SHAPE", "AMP", "PAN", "DISTORT", "CHORUS", "DELAY",
                                              "REVERB", "LFO RATE", "VIBRATO", 0, 0, 0, 0, 0, 0, 0, 0, "CLIP", "PUNCH",
                                              "DLY TIME", "DLY FDBK", "DLY TONE", "DLY MIX", "REV SIZE", "REV DAMP", "CHO RATE",
                                              "CHO DEPTH"};
@@ -321,9 +385,403 @@ static int uxs_lfo_val(uint32_t id, int32_t v, char *b, uint32_t nb, int full)
     }
     return 0;
 }
+/* ------------------------------------------------------------------------------------------ FX's values (3b task 8) --- */
+/* (spec 0 rule 4: plain values) what the engine does with each, from its own code: DLY TIME the time it plays at the tempo (fx.c
+ * delay_samples, PING within half the line), DUCK in dB (fx.c duck_block), DUCK REL in ms (40 .. 600), CLIP's drive (master_begin),
+ * PUNCH's body gain (eng_drum.c punch_gain), REV PRE in ms (fx_buses: PRE x 40 samples), the TONEs darker / brighter, every amount
+ * OFF at 0, JIANT's cut names whole (RECT, STUT, 16T, CHR SCL); the knob's short (48 px: ux_widgets.c ux_val_face), the status
+ * line's in full; LOAD LITE / ECO what plays instead said (JIANT's cards said LITE / ECO) */
+/* log2 x, Q16 (x > 0); 20 log10 (n / d) in tenths of a dB (no 64-bit division: shifts) */
+static int32_t uxs_log2(uint32_t x)
+{
+    int32_t r, b;
+    uint32_t y, n = 31;
+    if (!x)
+        return -(32 << 16);
+    while (!(x >> n))
+        n--;
+    r = (int32_t)n << 16;
+    y = n >= 31u ? x : x << (31u - n);                  /* (Q31: 1 <= y < 2) */
+    for (b = 15; b >= 0; b--) {
+        uint64_t q = ((uint64_t)y * y) >> 31;           /* (y squared, Q31: < 4) */
+        if (q >> 32) {
+            y = (uint32_t)(q >> 1);
+            r |= 1 << b;
+        } else
+            y = (uint32_t)q;
+    }
+    return r;
+}
+static int32_t uxs_db10(uint32_t n, uint32_t d)          /* (200 log10 2 = 60.206: x 3945659 / 2^32 in Q16) */
+{
+    return (int32_t)(((int64_t)(uxs_log2(n) - uxs_log2(d)) * 3945659 + (1ll << 31)) >> 32);
+}
+static void uxs_fix1(char *b, uint32_t nb, int32_t v10)  /* "-5.7", "0.5" (fmt_fix: ".5") */
+{
+    char t[12];
+    uint32_t a = (uint32_t)(v10 < 0 ? -v10 : v10);
+    str_cpy(b, v10 < 0 ? "-" : "", nb);
+    fmt_int(t, (int32_t)(a / 10u));
+    uxs_cat(b, nb, t);
+    uxs_cat(b, nb, ".");
+    fmt_int(t, (int32_t)(a % 10u));
+    uxs_cat(b, nb, t);
+}
+static void uxs_dbtxt(char *b, uint32_t nb, int32_t d10, int plus)   /* "-5.7DB", "-12DB", "+2.6DB" */
+{
+    char t[12];
+    if (d10 > -100 && d10 < 100)
+        uxs_fix1(t, sizeof t, d10);
+    else
+        fmt_int(t, (d10 + (d10 < 0 ? -5 : 5)) / 10);
+    str_cpy(b, plus && d10 > 0 ? "+" : "", nb);
+    uxs_cat(b, nb, t);
+    uxs_cat(b, nb, "DB");
+}
+static void uxs_mstxt(char *b, uint32_t nb, uint32_t ms)   /* "250MS", "1.25S" */
+{
+    char t[12];
+    if (ms < 1000u) {
+        fmt_int(b, (int32_t)ms);
+        uxs_cat(b, nb, "MS");
+        return;
+    }
+    ms = (ms + 5u) / 10u;                               /* (hundredths, rounded) */
+    fmt_int(b, (int32_t)(ms / 100u));
+    uxs_cat(b, nb, ".");
+    fmt_int(t, (int32_t)(ms % 100u + 100u));            /* (two decimals: "1.05S") */
+    uxs_cat(b, nb, t + 1);
+    uxs_cat(b, nb, "S");
+}
+static uint32_t uxs_smp_ms(uint32_t smp) { return (smp * 10u + FS / 200u) / (FS / 100u); }   /* (samples to ms, rounded) */
+static uint32_t uxs_ms_smp(uint32_t ms) { return ms * (FS / 100u) / 10u; }
+/* the delay as it plays: its TIME in samples (fx.c fx_buses: delay_samples, the knob's TIME, not the matrix's offset: a picture
+ * moving with an LFO would redraw unpaced; PING-PONG, not with the GRAIN, within half the line: dly_rate) */
+static uint32_t uxs_dly_smp(void)
+{
+    uint32_t g = (uint32_t)song.g[G_DTIME], d;
+    int gr = !LOAD_EFF() && (song.g[G_DPIT] || song.g[G_DSPRY]);
+    d = g < DT_FREE ? div_samples(g) : (uint32_t)DTIME_MS[(g - DT_FREE) % NELEM(DTIME_MS)] * 441u / 10u;
+    d = d < 16u ? 16u : d > DLY_MAX ? DLY_MAX : d;
+    return song.g[G_DPING] == 1 && !gr && d > DLY_MAX / 2u ? DLY_MAX / 2u : d;
+}
+/* the reverb's tail: the time its model takes to fall 60 dB (RT60, the Schroeder integral's -5 .. -35 dB slope: tests/ui_test.c
+ * uxt8_rt60 measures fx.c rev_run and checks these against it), ms, by SIZE (UXS_TSZ) and DAMP (UXS_TDP); RESO's by SIZE (its
+ * strings at C3: DAMP fixed, rev_reso). SHIMMER with MOD (its octaves fed back) and CLOUD (its grains) do not die away by themselves
+ * (they hold, or grow, as long as the picture's 8 s and more, until the bus's gate fades a quiet residue, fx.c fx_gate): HOLDS.
+ * SHIMMER at MOD 0 is ROOM */
+#define UXS_TAIL_LONG 0xFFFFu
+static const uint8_t UXS_TSZ[11] = {0, 16, 32, 48, 64, 80, 96, 104, 112, 120, 127};
+static const uint8_t UXS_TDP[5] = {0, 32, 64, 96, 127};
+static const uint16_t UXS_TAIL_ROOM[11][5] = {
+    {728, 594, 568, 522, 436}, {806, 656, 628, 577, 481}, {916, 749, 708, 648, 535}, {1072, 861, 811, 761, 617},
+    {1299, 1033, 979, 887, 740}, {1657, 1315, 1229, 1110, 894}, {2351, 1814, 1684, 1487, 1117}, {2988, 2256, 2072, 1797, 1318},
+    {4148, 3008, 2664, 2270, 1606}, {6779, 4440, 3815, 3081, 2014}, {15644, 7891, 6264, 4623, 2683}};
+static const uint16_t UXS_TAIL_SPRING[11][5] = {
+    {348, 312, 288, 288, 228}, {451, 407, 397, 340, 273}, {531, 510, 509, 434, 372}, {685, 663, 643, 562, 478},
+    {904, 837, 814, 725, 612}, {1256, 1197, 1150, 966, 762}, {1795, 1686, 1581, 1346, 1030}, {2181, 2071, 1963, 1613, 1114},
+    {2907, 2627, 2469, 2000, 1350}, {3728, 3527, 3119, 2452, 1608}, {5134, 4768, 4048, 3000, 1898}};
+static const uint16_t UXS_TAIL_RESO[11] = {160, 187, 218, 260, 321, 414, 567, 705, 955, 1451, 2670};
+static uint32_t uxs_grid(const uint8_t *g, uint32_t n, int32_t v, uint32_t *f)   /* v's cell of grid g (n points), *f in it 0..256 */
+{
+    uint32_t i = 0;
+    v = clamp(v, g[0], g[n - 1u]);
+    while (i + 2u < n && v > g[i + 1u])
+        i++;
+    *f = (uint32_t)(v - g[i]) * 256u / (uint32_t)(g[i + 1u] - g[i]);
+    return i;
+}
+static uint32_t uxs_lerp(uint32_t a, uint32_t b, uint32_t f) { return (a * (256u - f) + b * f + 128u) >> 8; }
+static uint32_t uxs_rev_eff(void)                       /* the model playing (LOAD LITE / ECO: each reverb's kin, fx.c REV_LITE) */
+{
+    return REV_LITE[LOAD_EFF() % 3u][(uint32_t)clamp(song.g[G_RTYPE], 0, 4)];
+}
+static uint32_t uxs_tail_ms(void)
+{
+    uint32_t e = uxs_rev_eff(), fs, fd, i, j;
+    const uint16_t (*T)[5] = e == 1u ? UXS_TAIL_SPRING : UXS_TAIL_ROOM;   /* (SHIMMER at MOD 0: ROOM) */
+    if (e == 4u || (e == 2u && song.g[G_RMOD] > 0))
+        return UXS_TAIL_LONG;
+    i = uxs_grid(UXS_TSZ, 11u, song.g[G_RSIZE], &fs);
+    if (e == 3u)
+        return uxs_lerp(UXS_TAIL_RESO[i], UXS_TAIL_RESO[i + 1u], fs);
+    j = uxs_grid(UXS_TDP, 5u, song.g[G_RDAMP], &fd);
+    return uxs_lerp(uxs_lerp(T[i][j], T[i][j + 1u], fd), uxs_lerp(T[i + 1u][j], T[i + 1u][j + 1u], fd), fs);
+}
+static uint32_t uxs_rev_pre(void)                       /* the pre-delay heard, samples (fx_buses: ROOM and SPRING's, PRE x 40) */
+{
+    return song.g[G_RPRE] > 0 && song.g[G_RTYPE] <= 1 && uxs_rev_eff() <= 1u ? (uint32_t)song.g[G_RPRE] * 40u : 0u;
+}
+static const char *const UXS_DIV_K[10] = {"1/4", "1/8", "1/16", "1/32", "1/8T", "1/16T", "1/2", "1/1", "2BAR", "4BAR"};
+static const char *const UXS_DIV_F[10] = {"1/4 NOTE", "1/8 NOTE", "1/16 NOTE", "1/32 NOTE", "1/8 TRIPLET", "1/16 TRIPLET",
+                                          "1/2 NOTE", "1 BAR", "2 BARS", "4 BARS"};
+static const char *const UXS_APDIV_F[8] = {"4 BARS", "2 BARS", "1 BAR", "1/2 NOTE", "1/4 NOTE", "1/8 NOTE", "1/16 NOTE",
+                                           "1/32 NOTE"};
+static const char *const UXS_SLDIV_K[6] = {"1/8", "1/16", "1/32", "1/8T", "1/16T", "1/32T"};
+static const char *const UXS_SLDIV_F[6] = {"1/8 NOTE", "1/16 NOTE", "1/32 NOTE", "1/8 TRIPLET", "1/16 TRIPLET", "1/32 TRIPLET"};
+static const char *const UXS_DTYPE_K[6] = {"SOFT", "HARD", "FOLD", "CRUSH", "RECTIFY", "AMP"};
+static const char *const UXS_DTYPE_F[6] = {"SOFT CLIP", "HARD CLIP", "WAVEFOLD", "BIT CRUSH", "RECTIFY: AN OCTAVE UP",
+                                           "GUITAR AMP"};
+static const char *const UXS_RTYPE_K[5] = {"ROOM", "SPRING", "SHIMMER", "RESO", "CLOUD"};
+static const char *const UXS_SLMODE_K[3] = {"OFF", "GATE", "STUTTER"};
+static const char *const UXS_SLMODE_F[3] = {"OFF", "GATE: CUTS THE GAPS", "STUTTER: REPEATS IN THE GAPS"};
+static const char *const UXS_LOAD_N[3] = {"", " IN LITE", " IN ECO"};
+/* the words FX's full values are made of (UXF_*: an index each) */
+static const char *const UXS_FX_SAY[] = {"FLAT", "OPEN", "MONO", "% DARKER", "% BRIGHTER", "% THINNER", "% NARROWER", "% WIDER",
+                                         " STEPS", ": AS ", " AT MOST", ": ", "OTHERS ", " ON A KICK", ": DRIVE X",
+                                         ": DRUMS ", " SCALE STEPS", "TUNED TO ", "FREE: RATE IN HZ", "BEAT: IN TIME",
+                                         ": LEFT RIGHT LEFT", "ANALOG: WARM REPEATS", "DIGITAL: EXACT REPEATS",
+                                         ": THE FX RETURNS TOO", "ANY: EVERY SEMITONE", "SCALE: ONTO THE SCALE", " NOTE", ": GROWS",
+                                         ": ONE ECHO", ": NO CHORUS IN ECO", ": OFF", "ANY", "SCALE"};
+enum { UXF_FLAT, UXF_OPEN, UXF_MONO, UXF_DARK, UXF_BRIGHT, UXF_THIN, UXF_NARROW, UXF_WIDE, UXF_STEPS, UXF_AS, UXF_LONGEST,
+       UXF_COLON, UXF_OTHERS, UXF_KICK, UXF_DRIVE, UXF_DRUMS, UXF_SCLSTEPS, UXF_TUNED, UXF_AP_FREE, UXF_AP_BEAT, UXF_PING,
+       UXF_ANALOG, UXF_DIGITAL, UXF_SLFX, UXF_SNAP0, UXF_SNAP1, UXF_NOTE, UXF_GROWS, UXF_ONE, UXF_NOCHO, UXF_OFFIN, UXF_ANY,
+       UXF_SCALE, UXF_N };
+typedef char uxs_fx_say_ok[NELEM(UXS_FX_SAY) == UXF_N ? 1 : -1];
+/* a bipolar amount v (0 at w: below to w - 64, above to w + 63) as the knob shows it, "-50%" / "+50%" / zero's word; in full
+ * "50% DARKER" */
+static void uxs_bip(int32_t v, int32_t w, uint32_t zero, uint32_t neg, uint32_t pos, char *b, uint32_t nb, int full)
+{
+    int32_t p = v < w ? (v - w) * 100 / 64 : (v - w) * 100 / 63;
+    if (v == w) {
+        str_cpy(b, UXS_FX_SAY[zero], nb);
+        return;
+    }
+    if (full) {
+        fmt_int(b, p < 0 ? -p : p);
+        uxs_cat(b, nb, UXS_FX_SAY[p < 0 ? neg : pos]);
+        return;
+    }
+    str_cpy(b, p > 0 ? "+" : "", nb);
+    fmt_int(b + str_len(b), p);
+    uxs_cat(b, nb, "%");
+}
+static void uxs_pct(int32_t v, int32_t max, char *b, uint32_t nb)   /* "50%" (F_PCT's, of max) */
+{
+    fmt_int(b, (v * 100 + max / 2) / max);
+    uxs_cat(b, nb, "%");
+}
+/* setting id's (a G_* when glo, else the track's) value v in FX's words: 1 done (b holds it), 0 not one of these (uxs_val's) */
+static int uxs_fx_val(uint32_t glo, uint32_t id, int32_t v, char *b, uint32_t nb, int full)
+{
+    char t[16];
+    uint32_t ld = (uint32_t)LOAD_EFF() % 3u;
+    if (!glo) {
+        if (!v && (id == P_DIST || id == P_CHOR || id == P_DLY || id == P_REV || id == P_APDEP)) {
+            str_cpy(b, N_ONOFF[0], nb);
+            return 1;
+        }
+        if (id == P_CHOR && full && sys_load == LOAD_ECO) {   /* (fx.c: LOAD ECO no chorus, the send goes nowhere) */
+            uxs_pct(v, 127, b, nb);
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_NOCHO]);
+            return 1;
+        }
+        if (id == P_DTYPE) {
+            v = clamp(v, 0, 5);
+            str_cpy(b, full ? UXS_DTYPE_F[v] : UXS_DTYPE_K[v], nb);
+            return 1;
+        }
+        if (id == P_DTONE) {
+            uxs_bip(v, 0, UXF_FLAT, UXF_DARK, UXF_BRIGHT, b, nb, full);
+            return 1;
+        }
+        if (id == P_APRATE) {                           /* (BEAT: a division, params.c AP_BEAT; FREE: the LFO's rate) */
+            if (TSEL->p[P_APSYNC])
+                str_cpy(b, full ? UXS_APDIV_F[clamp(v, 0, 7)] : N_APDIV[clamp(v, 0, 7)], nb);
+            else
+                uxs_lrate(v, b, nb, full);
+            return 1;
+        }
+        if (id == P_APSYNC) {
+            str_cpy(b, full ? UXS_FX_SAY[v ? UXF_AP_BEAT : UXF_AP_FREE] : N_APSYNC[v != 0], nb);
+            return 1;
+        }
+        if (id == P_APWAVE && v >= 0 && v < 5) {        /* (S&H: "&" in no ux face; LFO's words) */
+            str_cpy(b, full ? UXS_LWAVE_F[v] : UXS_LWAVE_K[v], nb);
+            return 1;
+        }
+        return 0;
+    }
+    switch (id) {
+    case G_DTIME:
+        if (v >= 0 && v < DT_FREE) {                    /* (a division: in full, the time it plays at the tempo) */
+            str_cpy(b, full ? UXS_DIV_F[v] : UXS_DIV_K[v], nb);
+            if (full) {
+                uint32_t d = uxs_dly_smp();
+                uxs_cat(b, nb, UXS_FX_SAY[UXF_COLON]);
+                uxs_mstxt(t, sizeof t, uxs_smp_ms(d));
+                uxs_cat(b, nb, t);
+                if (d < div_samples((uint32_t)v))       /* (past what the line holds: its longest) */
+                    uxs_cat(b, nb, UXS_FX_SAY[UXF_LONGEST]);
+            }
+        } else
+            uxs_mstxt(b, nb, DTIME_MS[(uint32_t)(v - DT_FREE) % NELEM(DTIME_MS)]);
+        return 1;
+    case G_DFDBK:
+        fmt_int(b, v);
+        uxs_cat(b, nb, "%");
+        if (full && !v)
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_ONE]);
+        else if (full && v > 100 && song.g[G_DTYPE] != 1)   /* (ANALOG past 100 %: it grows into its saturation, fx.c dly_sat) */
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_GROWS]);
+        return 1;
+    case G_DCOLOR:                                      /* (TONE: 64 open, below darker, above thinner: fx.c tone_set) */
+        uxs_bip(v, 64, UXF_OPEN, UXF_DARK, UXF_THIN, b, nb, full);
+        return 1;
+    case G_DPIT: case G_DSPRY:                          /* (the GRAIN: LOAD LITE / ECO a plain delay, fx_buses) */
+        if (!v) {
+            str_cpy(b, N_ONOFF[0], nb);
+            return 1;
+        }
+        if (!full || !ld)
+            return 0;
+        uxs_val(&GP[id], v, b, nb);
+        uxs_cat(b, nb, UXS_FX_SAY[UXF_OFFIN]);
+        uxs_cat(b, nb, UXS_LOAD_N[ld]);
+        return 1;
+    case G_DMIX: case G_WIDTH: case G_DMOD: case G_RMOD: case G_RWIDE: case G_CDEPTH: case G_SLDEP:
+        if (v)
+            return 0;
+        str_cpy(b, N_ONOFF[0], nb);
+        return 1;
+    case G_DTYPE:
+        str_cpy(b, full ? UXS_FX_SAY[v ? UXF_DIGITAL : UXF_ANALOG] : N_DLYTYPE[v != 0], nb);
+        return 1;
+    case G_DPING: case G_SLFX:
+        str_cpy(b, N_ONOFF[v != 0], nb);
+        if (full && v)
+            uxs_cat(b, nb, UXS_FX_SAY[id == G_SLFX ? UXF_SLFX : UXF_PING]);
+        return 1;
+    case G_RTYPE: {
+        uint32_t e = uxs_rev_eff();
+        v = clamp(v, 0, 4);
+        str_cpy(b, UXS_RTYPE_K[v], nb);
+        if (full && e != (uint32_t)v) {                 /* (LOAD LITE / ECO: its kin plays, fx.c REV_LITE) */
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_AS]);
+            uxs_cat(b, nb, UXS_RTYPE_K[e]);
+            uxs_cat(b, nb, UXS_LOAD_N[ld]);
+        }
+        return 1;
+    }
+    case G_RDAMP:
+        if (song.g[G_RTYPE] != 3)
+            return 0;
+        v = clamp(v, 0, 6);                             /* (RESO: FOLLOW, the track whose notes its strings take) */
+        str_cpy(b, full && v ? UXS_FX_SAY[UXF_TUNED] : "", nb);
+        uxs_cat(b, nb, N_RFOLW[v]);
+        return 1;
+    case G_RPRE:
+        if (!v) {
+            str_cpy(b, N_ONOFF[0], nb);
+            return 1;
+        }
+        if (song.g[G_RTYPE] == 3) {                     /* (RESO: PITCH, its chord this many steps up the scale) */
+            str_cpy(b, "+", nb);
+            fmt_int(b + 1, v);
+            if (full)
+                uxs_cat(b, nb, UXS_FX_SAY[UXF_SCLSTEPS]);
+            return 1;
+        }
+        if (song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4)
+            return 0;                                   /* (AIR: semitones, uxs_val's) */
+        uxs_mstxt(b, nb, uxs_smp_ms((uint32_t)clamp(v, 0, 100) * 40u));   /* (PRE: fx_buses' v x 40 samples) */
+        return 1;
+    case G_RRATE: case G_CRATE:
+        uxs_lrate(v, b, nb, full);
+        return 1;
+    case G_RFILT:
+        uxs_bip(v, 0, UXF_FLAT, UXF_DARK, UXF_BRIGHT, b, nb, full);
+        return 1;
+    case G_CSTER:
+        if (v <= -64) {
+            str_cpy(b, UXS_FX_SAY[UXF_MONO], nb);
+            return 1;
+        }
+        uxs_bip(v, 0, UXF_FLAT, UXF_NARROW, UXF_WIDE, b, nb, full);
+        return 1;
+    case G_SLMODE:
+        v = clamp(v, 0, 2);
+        str_cpy(b, full ? UXS_SLMODE_F[v] : UXS_SLMODE_K[v], nb);
+        return 1;
+    case G_SLPAT:
+        fmt_int(b, v);
+        if (full) {                                     /* (the rhythm itself: X open, . a gap, slicer.c SL_PAT) */
+            uint32_t i, pat = SL_PAT[(uint32_t)(v - 1) % SL_NPAT], n;
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_COLON]);
+            n = str_len(b);
+            for (i = 0; i < 16u && n + 1u < nb; i++)
+                b[n++] = (pat >> i) & 1u ? 'X' : '.';
+            b[n] = 0;
+        }
+        return 1;
+    case G_SLRATE:
+        v = clamp(v, 0, 5);
+        str_cpy(b, full ? UXS_SLDIV_F[v] : UXS_SLDIV_K[v], nb);
+        return 1;
+    case G_SLPLEN: case G_PFXLEN:
+        fmt_int(b, v);
+        if (full)
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_STEPS]);
+        return 1;
+    case G_SLPQ:
+        str_cpy(b, UXS_FX_SAY[full ? (v ? UXF_SNAP1 : UXF_SNAP0) : v ? UXF_SCALE : UXF_ANY], nb);
+        return 1;
+    case G_PFXRES:
+        str_cpy(b, N_PFXRES[clamp(v, 0, 2)], nb);
+        if (full)
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_NOTE]);
+        return 1;
+    case G_CLIP:                                        /* (fx.c master_begin: the mix driven x1 .. x4 into the soft clip) */
+        if (!v) {
+            str_cpy(b, N_ONOFF[0], nb);
+            return 1;
+        }
+        fmt_int(b, v);
+        uxs_cat(b, nb, "%");
+        if (full) {
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_DRIVE]);
+            uxs_fix1(t, sizeof t, 10 + v * 30 / 100);
+            uxs_cat(b, nb, t);
+        }
+        return 1;
+    case G_PUNCH:                                       /* (eng_drum.c punch_gain: a hit's body up to x1.7) */
+        if (!v) {
+            str_cpy(b, N_ONOFF[0], nb);
+            return 1;
+        }
+        fmt_int(b, v);
+        uxs_cat(b, nb, "%");
+        if (full) {
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_DRUMS]);
+            uxs_dbtxt(t, sizeof t, uxs_db10(32768u + (uint32_t)clamp(v, 0, 100) * 230u, 32768u), 1);
+            uxs_cat(b, nb, t);
+        }
+        return 1;
+    case G_DUCK: {                                      /* (fx.c duck_block: the others down by up to 30 dB on a kick) */
+        uint32_t g = 32767u - (uint32_t)(clamp(v, 0, 100) * 31731 / 100);
+        if (!v) {
+            str_cpy(b, N_ONOFF[0], nb);
+            return 1;
+        }
+        str_cpy(b, full ? UXS_FX_SAY[UXF_OTHERS] : "", nb);
+        uxs_dbtxt(t, sizeof t, uxs_db10(g, 32767u), 0);
+        uxs_cat(b, nb, t);
+        if (full)
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_KICK]);
+        return 1;
+    }
+    case G_DREL:                                        /* (.. its release, 40 .. 600 ms: dv_kb(40000 + REL x 5600) us) */
+        uxs_mstxt(b, nb, 40u + (uint32_t)clamp(v, 0, 100) * 56u / 10u);
+        return 1;
+    default:
+        return 0;
+    }
+}
 static const char *uxs_vfull(uint32_t glo, uint32_t id, int32_t v)   /* value v of setting id in full (0: as the knob's) */
 {
     static char b[32];
+    if (uxs_fx_val(glo, id, v, b, sizeof b, 1))         /* (3b task 8) */
+        return b;
     if (!glo && uxs_lfo_val(id, v, b, sizeof b, 1))   /* (3b task 7) */
         return b;
     if (uxs_is_strn(glo, id)) {
@@ -336,6 +794,8 @@ static const char *uxs_vfull(uint32_t glo, uint32_t id, int32_t v)   /* value v 
 }
 static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t id, char *b, uint32_t nb)
 {
+    if (uxs_fx_val(glo, id, v, b, nb, 0))               /* (3b task 8) FX's */
+        return;
     if (!glo && uxs_lfo_val(id, v, b, nb, 0))         /* (3b task 7) LFO's, the PITCH amounts, every amount's OFF */
         return;
     if (!glo && id == P_AMODE && v >= 0 && v < 16 && UXS_AMODE_K[v]) {
@@ -361,12 +821,16 @@ static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t i
 #define UXS_HINT " AGAIN: NEXT PAGE"                    /* (after the section's name: what its button does next) */
 #define UXM_HINT "SELECT SCROLLS \xB7 KNOB 2 SETS"      /* MORE: what its controls do (KNOB 1 picks: its column says so) */
 #define UXS_PICK "SETTING"                              /* MORE's KNOB 1 */
+#define UXS_LANE_SAY "REC + PLAY, HOLD FX + A KEY"      /* (3b task 8) FX > MORE's PUNCH LANE rows: how a lane is recorded (was
+                                                         * PUNCH's hint, ui_layer.c hint_tick) */
 static uint16_t uxs_seen;        /* the sections opened since power-on (a bit per SEC_*): their hint said */
 static uint8_t uxs_hint_sec = 0xFF, uxs_hint_page;      /* the page saying its section's hint (0xFF none): the first one
                                                          * opened there, until it is left or a knob turns */
 static uint32_t uxs_frame;                              /* the UI frame last drawn here (another in between: left) */
 static uint32_t uxs_panels;                             /* the panels drawn (tests/ui_test.c: one a change, none idle) */
 static uint32_t uxs_lfo_sc, uxs_lfo_ms;                 /* (3b task 7) LFO's wave: where it was drawn from, when (ms) */
+static int32_t uxs_mtr_px;                              /* (3b task 8) FX > MASTER's meter as drawn (px), SPACE's tempo key, */
+static uint32_t uxs_fx_ms, uxs_sp_win;                  /* .. when either was drawn (ms) */
 
 /* the footer's left, "ARP . MORE"; its right's count, "3 / 3" (the chain's pages shown here, MORE too) */
 static const char *uxs_where(void)
@@ -528,6 +992,12 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
         str_cpy(b, SEC_NAME[sec], sizeof b);
         str_cpy(b + str_len(b), UXS_HINT, sizeof b - str_len(b));
         return b;
+    }
+    if (pg->graph == GR_MORE && pg->more) {             /* (3b task 8) a PUNCH LANE row picked: how a lane is recorded */
+        uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
+        uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
+        if (uxm_head_of(pg->more, s) == UXM_H_LANE)
+            return UXS_LANE_SAY;
     }
     return pg->graph == GR_MORE ? UXM_HINT : 0;
 }
@@ -2012,12 +2482,309 @@ static void uxs_mod_draw(const track_t *t, const char *name)
     uxs_pic_head(t, name);
 }
 
-/* the page's picture: MORE its list; EDIT's its engine's, ENV's, ARP's, SCL's, LFO's (above); FX's (until Task 8 gives it its
- * own) the page's title over its four values as bars in the knobs' colours */
-static void uxs_picture(const page_t *pg, const ux_knob_t k[4])
+/* ---------------------------------------------------------------------------------------------------------------- FX (3b task 8) --- */
+/* SENDS: four send bars, one under each knob (DISTORT CHORUS DELAY REVERB: the track's, 0 .. 127), in its knob's colour; under
+ *        each what it goes to: DISTORT its TYPE, CHORUS nothing (LOAD ECO: OFF, fx.c fx_buses), DELAY its TIME, REVERB its TYPE */
+#define UXS_BY0 24               /* the bars' top, their height, the captions' row */
+#define UXS_BH 80
+#define UXS_BCAP 110
+static void uxs_sends_draw(const track_t *t, const page_t *pg, const char *name)
 {
-    const aafont_t *f = &UF_TTL;
-    int32_t w, x, i;
+    uint32_t k;
+    char b[16];
+    uxs_pic_head(t, name);
+    for (k = 0; k < 4u; k++) {
+        int32_t cx = UX_COL_X0 + (int32_t)k * UX_COL_PITCH + UX_COL_W / 2, v = clamp(t->p[pg->id[k]], 0, 127), h = v * UXS_BH / 127;
+        const char *cap = b;
+        cv_rect(cx - 10, UXS_BY0, 20, UXS_BH, UX_EMPTY);
+        if (h > 0)
+            cv_rect(cx - 10, UXS_BY0 + UXS_BH - h, 20, h, k == 1u && sys_load == LOAD_ECO ? ux_mix(UX_BG, ux_knob_col(k), 40) :
+                                                                                            ux_knob_col(k));
+        b[0] = 0;
+        if (k == 0u)
+            cap = UXS_DTYPE_K[clamp(t->p[P_DTYPE], 0, 5)];
+        else if (k == 1u)
+            cap = sys_load == LOAD_ECO ? "ECO: OFF" : "";
+        else if (k == 2u)
+            (void)uxs_fx_val(1, G_DTIME, song.g[G_DTIME], b, sizeof b, 0);
+        else
+            cap = UXS_RTYPE_K[uxs_rev_eff()];
+        if (cap[0]) {
+            int32_t w = text_w(&UF_LBL, cap);
+            GFX_HOOK_ALIGN(cx - w / 2, UXS_BCAP + UF_LBL_CAP_Y, cx - w / 2 + w, UXS_BCAP + UF_LBL_CAP_Y + UF_LBL_CAP_H,
+                           AL_V | AL_PASS, "SENDS' caption");
+            cv_text_on(cx - w / 2, UXS_BCAP, &UF_LBL, cap, v ? UX_MID : ux_mix(UX_BG, UX_MID, 60), ux_under(cx, UXS_BCAP + 4));
+        }
+    }
+}
+/* SPACE: a note sent to the buses and what comes back over time, as the engine plays it: along the axis the time (the beats under
+ * it), up the level in dB (0 at the top, -60 at the foot); the note at 0, the delay's taps TIME apart (uxs_dly_smp), each as loud
+ * as MIX and the FEEDBACK before it (fx.c dly_fb: ANALOG past 100 % grows into its saturation, held at the top; DIGITAL at most
+ * 100 %), a line through their tops; the reverb's tail after its pre-delay, a line falling 60 dB in its RT60 (uxs_tail_ms: the model
+ * playing, LOAD LITE / ECO's kin; SHIMMER with MOD and CLOUD past the window). The window the taps' and the tail's (a quarter of a
+ * second .. 8 s). A track that sends nothing to one: it says so. A turn redraws it, once; a tempo change (an outside clock) paced */
+#define UXS_SX0 14               /* the axis: its left, its width (columns), 0 dB's row and -60's */
+#define UXS_SW 212
+#define UXS_SY0 24
+#define UXS_SY1 118
+static const uint16_t UXS_SWIN[9] = {250, 500, 1000, 1500, 2000, 3000, 4000, 6000, 8000};   /* (the windows, ms) */
+typedef struct { uint32_t T, pre, t60, win; int16_t lv[24]; uint8_t n; } uxs_sp_t;   /* (samples; lv: a tap's dB x 10) */
+static void uxs_space_model(uxs_sp_t *m)
+{
+    int32_t fb = dly_fb(song.g[G_DFDBK]), mix = song.g[G_DMIX] * 258, l, step;
+    uint32_t k, end, i;
+    if (song.g[G_DTYPE] == 1 && fb > 32767)
+        fb = 32767;                                     /* (DIGITAL: 100 % at most) */
+    m->T = uxs_dly_smp();
+    m->pre = uxs_rev_pre();
+    m->t60 = uxs_tail_ms();
+    l = mix > 0 ? uxs_db10((uint32_t)mix, 32768u) : -999;
+    step = fb > 0 ? uxs_db10((uint32_t)fb, 32768u) : -999;
+    for (k = 0; k < 24u && l > -600; k++) {
+        m->lv[k] = (int16_t)(l > 0 ? 0 : l);
+        l += step;
+        if (l > 0)
+            l = 0;                                      /* (grown to the top: held, fx.c dly_sat) */
+    }
+    m->n = (uint8_t)k;
+    end = uxs_smp_ms(m->pre) + (m->t60 >= 8000u ? 8000u : m->t60);
+    if (m->n && uxs_smp_ms(m->T) * m->n > end)
+        end = uxs_smp_ms(m->T) * m->n;
+    end += end / 12u;
+    for (i = 0; i + 1u < NELEM(UXS_SWIN) && UXS_SWIN[i] < end; i++)
+        ;
+    m->win = UXS_SWIN[i];
+}
+static int32_t uxs_sx(const uxs_sp_t *m, uint32_t smp)  /* sample smp's column (past the window: off it) */
+{
+    uint64_t c = uxs_div64((uint64_t)smp * UXS_SW, uxs_ms_smp(m->win));
+    return c > (uint64_t)UXS_SW ? UXS_SW + 1 : (int32_t)c;
+}
+static int32_t uxs_sy(int32_t d10) { return UXS_SY0 + clamp(-d10, 0, 600) * (UXS_SY1 - UXS_SY0) / 600; }   /* dB x 10's row */
+static const char *const UXS_SP_SAY[] = {"NO DELAY OR REVERB SEND", "NO DELAY SEND", "NO REVERB SEND", "ECHO ", "TAIL ",
+                                         "HOLDS"};
+static void uxs_space_draw(const track_t *t, const char *name)
+{
+    uxs_sp_t m;
+    uint32_t k, beat = beat_samples(), nb;
+    int32_t x, xe = 0, py = 0, sd = t->p[P_DLY] > 0, sr = t->p[P_REV] > 0;
+    uint16_t dcol = sd ? UX_ACID : ux_mix(UX_BG, UX_ACID, 40), fcol = sd ? UX_SLIDE : ux_mix(UX_BG, UX_SLIDE, 40);
+    char b[32], c[16];
+    uxs_space_model(&m);
+    cv_rect(UXS_SX0, UXS_SY1 + 1, UXS_SW, 1, UX_LINE);
+    nb = beat ? uxs_ms_smp(m.win) / beat : 0u;
+    for (k = 1; nb <= 32u && k <= nb; k++) {            /* the beats (the bars taller) */
+        x = UXS_SX0 + uxs_sx(&m, k * beat);
+        cv_rect(x, UXS_SY1 + 2, 1, k % 4u ? 2 : 4, UX_LINE);
+    }
+    {   /* the reverb's tail: from its pre-delay at the top, 60 dB down in t60 (past the window: off its edge), its fill in REV
+         * TYPE's colour, its line in REV SIZE's */
+        uint16_t fill = ux_mix(UX_BG, UX_VIOLET, sr ? 34 : 14), lc = sr ? UX_ACCENT : ux_mix(UX_BG, UX_ACCENT, 40);
+        uint32_t len = uxs_ms_smp(m.t60 >= 8000u ? 8000u : m.t60), span = uxs_ms_smp(m.win);
+        int32_t x0 = UXS_SX0 + uxs_sx(&m, m.pre), hold = m.t60 == UXS_TAIL_LONG;
+        for (x = x0; x < UXS_SX0 + UXS_SW; x++) {
+            uint32_t smp = (uint32_t)uxs_div64((uint64_t)(uint32_t)(x - UXS_SX0) * span, UXS_SW);
+            int32_t d10, y;
+            smp = smp > m.pre ? smp - m.pre : 0u;
+            d10 = hold ? -(int32_t)uxs_div64((uint64_t)smp * 60u, span) : -(int32_t)uxs_div64((uint64_t)smp * 600u, len ? len : 1u);
+            if (d10 < -600)
+                break;
+            y = uxs_sy(d10);
+            cv_rect(x, y, 1, UXS_SY1 + 1 - y, fill);
+            if (x > x0)
+                cv_line_t(x - 1, py, x, y, lc, 2);
+            py = y;
+        }
+    }
+    cv_rect(UXS_SX0, UXS_SY0, 2, UXS_SY1 + 1 - UXS_SY0, UX_TEXT);   /* the note */
+    for (k = 0; k < m.n; k++) {                         /* the taps, a line through their tops (the FEEDBACK) */
+        int32_t y = uxs_sy(m.lv[k]);
+        x = UXS_SX0 + uxs_sx(&m, (k + 1u) * m.T);
+        if (x >= UXS_SX0 + UXS_SW - 2)
+            break;
+        cv_rect(x, y, 3, UXS_SY1 + 1 - y, dcol);
+        if (k)
+            cv_line_t(xe + 1, py, x + 1, y, fcol, 1);
+        xe = x;
+        py = y;
+    }
+    uxs_pic_head(t, name);
+    if (!sd || !sr) {                                   /* the top right: what this track does not send */
+        b[0] = 'T'; b[1] = (char)('1' + song.sel % NTRK); b[2] = ':'; b[3] = ' '; b[4] = 0;
+        uxs_cat(b, sizeof b, UXS_SP_SAY[!sd && !sr ? 0 : !sd ? 1 : 2]);
+        x = 228 - text_w(&UF_LBL, b);
+        GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "SPACE's note");
+        cv_text_on(x, 8, &UF_LBL, b, UX_MID, ux_under(x, 12));
+    }
+    /* the foot: the echo's time, the window, the tail's length */
+    str_cpy(b, UXS_SP_SAY[3], sizeof b);
+    uxs_mstxt(c, sizeof c, uxs_smp_ms(m.T));
+    uxs_cat(b, sizeof b, m.n ? c : N_ONOFF[0]);
+    GFX_HOOK_ALIGN(0, 128 + UF_LBL_CAP_Y, 0, 128 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "SPACE's foot");
+    cv_text_on(UXS_SX0, 128, &UF_LBL, b, sd ? UX_ACID : UX_MID, ux_under(UXS_SX0, 132));
+    uxs_mstxt(c, sizeof c, m.win);
+    x = (UXS_SX0 + 228) / 2 - text_w(&UF_LBL, c) / 2;
+    cv_text_on(x, 128, &UF_LBL, c, UX_MID, ux_under(x, 132));
+    str_cpy(b, UXS_SP_SAY[4], sizeof b);
+    if (m.t60 == UXS_TAIL_LONG)
+        str_cpy(c, UXS_SP_SAY[5], sizeof c);
+    else
+        uxs_mstxt(c, sizeof c, m.t60);
+    uxs_cat(b, sizeof b, c);
+    x = 228 - text_w(&UF_LBL, b);
+    cv_text_on(x, 128, &UF_LBL, b, sr ? UX_VIOLET : UX_MID, ux_under(x, 132));
+}
+/* MASTER: the output as a level meter (OUT: the peak of audio.c's scope, the music after the master, dBFS, -48 .. 0), the clip
+ * point marked (the limiter's ceiling, fx.c master_out: LIM_T into the soft clip, ~-6 dB; above it in ACCENT); CLIP's curve (fx.c
+ * clip_block: the mix in, what goes on out; the straight line without it); after a kick (a DRUM-X hit) the drums' gain (eng_drum.c
+ * punch_gain, PUNCH) and the others' (fx.c duck_block, DUCK, back at DUCK REL's rate) over 0.8 s, +6 .. -30 dB, block by block as
+ * the engine computes them (worked out once a change: uxs_kick). The meter moves as the sound does, paced as HOME's ridges
+ * (ux_section_draw); the rest a turn redraws */
+#define UXS_MX0 14               /* the meter: its left, width, row, height */
+#define UXS_MW 212
+#define UXS_MY 26
+#define UXS_MH 10
+#define UXS_MDB 48               /* its range, dB */
+static int32_t uxs_out_db10(void)                       /* the output's peak now, dB x 10 (-UXS_MDB x 10: silence) */
+{
+    uint32_t w = scope_w, i;
+    int32_t pk = 0, v;
+    for (i = 1; i <= SCOPE_N; i++) {
+        v = scope_buf[(w - i) & (SCOPE_N - 1u)];
+        if (v < 0)
+            v = -v;
+        if (v > pk)
+            pk = v;
+    }
+    return pk > 0 ? clamp(uxs_db10((uint32_t)pk, 32767u), -UXS_MDB * 10, 0) : -UXS_MDB * 10;
+}
+static int32_t uxs_meter_px(int32_t d10) { return clamp((d10 + UXS_MDB * 10) * UXS_MW / (UXS_MDB * 10), 0, UXS_MW); }
+static int32_t uxs_clip_out(int32_t x)                  /* fx.c clip_block's sample out of the mix x (CLIP 0: x, not in it) */
+{
+    int32_t a = song.g[G_CLIP], g = a > 0 ? 4096 + a * 12288 / 100 : 0, mk;
+    if (!g)
+        return x;
+    mk = (int32_t)((6000u << 15) / (uint32_t)softclip((6000 * g) >> 12));
+    return ((softclip(((x + 8) >> 4) * g >> 10) * mk + 16384) >> 15) << 2;
+}
+#define UXS_KMS 800u             /* "after a kick": the window, ms */
+#define UXS_KW 136               /* .. its columns */
+/* (fx.c duck_block, block by block from a kick: its attack halving to the top, ~25 ms held, back at DUCK REL's rate) */
+typedef struct { int32_t env; uint8_t att, hold; } uxs_dk_t;
+static void uxs_duck_hit(uxs_dk_t *d) { d->env = 0; d->att = 1; d->hold = (uint8_t)(1103u / CTL); }
+static int32_t uxs_duck_step(uxs_dk_t *d, int32_t dep, uint32_t kb)   /* one block: the others' gain after it, Q15 */
+{
+    int32_t e;
+    if (d->att) {
+        d->env += (32767 - d->env) >> 1;
+        if (d->env > 31000)
+            d->att = 0;
+    } else if (d->hold)
+        d->hold--;
+    else if (d->env)
+        d->env = (int32_t)(((uint32_t)d->env * kb) >> 16);
+    e = (d->env * (65536 - d->env)) >> 15;
+    return 32767 - mulq15(dep, e > 32767 ? 32767 : e);
+}
+#define UXS_KY 64                /* .. its top row, its height (+6 dB at the top, -30 at the foot) */
+#define UXS_KH 56
+static int32_t uxs_gain_y(int32_t d10) { return clamp((60 - d10) * UXS_KH / 360, 0, UXS_KH - 1); }   /* a gain's row in it */
+/* the kick's two curves (a row a column), worked out when PUNCH, DUCK or DUCK REL change (not each meter frame) */
+static struct { uint32_t key; uint8_t duck[UXS_KW], punch[UXS_KW]; } uxs_kick;
+static void uxs_kick_calc(void)
+{
+    uint32_t key = (uint32_t)song.g[G_PUNCH] * 65537u ^ (uint32_t)song.g[G_DUCK] * 131u ^ (uint32_t)song.g[G_DREL] * 7919u ^ 1u, blk = 0,
+             kb = dv_kb(40000u + (uint32_t)clamp(song.g[G_DREL], 0, 100) * 5600u), nblk = uxs_ms_smp(UXS_KMS) / CTL, x;
+    int32_t dep = clamp(song.g[G_DUCK], 0, 100) * 31731 / 100, pu = clamp(song.g[G_PUNCH], 0, 100), g = 32767;
+    uxs_dk_t dk;
+    if (key == uxs_kick.key)
+        return;
+    uxs_kick.key = key;
+    uxs_duck_hit(&dk);
+    for (x = 0; x < (uint32_t)UXS_KW; x++) {
+        uint32_t to = (x + 1u) * nblk / (uint32_t)UXS_KW;
+        for (; blk < to; blk++)
+            g = uxs_duck_step(&dk, dep, kb);
+        uxs_kick.duck[x] = (uint8_t)uxs_gain_y(uxs_db10((uint32_t)(g > 1 ? g : 1), 32767u));
+        uxs_kick.punch[x] = (uint8_t)uxs_gain_y(uxs_db10((uint32_t)punch_gain(to, pu), 32768u));
+    }
+}
+static const char *const UXS_MS_SAY[] = {"OUT ", "CLIPS", "CLIP", "AFTER A KICK", "DRUMS", "OTHERS"};
+static void uxs_master_draw(const track_t *t, const char *name, int32_t lvl)
+{
+    int32_t lim = uxs_meter_px(uxs_db10((uint32_t)softclip(LIM_T), 32767u)), i, x, y, py = 0;
+    char b[16], c[16];
+    uxs_pic_head(t, name);
+    {   /* OUT: the meter, the clip point */
+        cv_rect(UXS_MX0, UXS_MY, UXS_MW, UXS_MH, UX_EMPTY);
+        if (lvl > 0)
+            cv_rect(UXS_MX0, UXS_MY, lvl < lim ? lvl : lim, UXS_MH, UX_ACID);
+        if (lvl > lim)
+            cv_rect(UXS_MX0 + lim, UXS_MY, lvl - lim, UXS_MH, UX_ACCENT);
+        for (i = 1; i < UXS_MDB / 12; i++)              /* (-36 -24 -12) */
+            cv_rect(UXS_MX0 + i * UXS_MW * 12 / UXS_MDB, UXS_MY + UXS_MH, 1, 3, UX_LINE);
+        cv_rect(UXS_MX0 + lim, UXS_MY - 3, 2, UXS_MH + 6, UX_TEXT);
+        x = UXS_MX0 + lim - text_w(&UF_LBL, UXS_MS_SAY[1]) / 2;
+        GFX_HOOK_ALIGN(0, UXS_MY + UXS_MH + 4 + UF_LBL_CAP_Y, 0, UXS_MY + UXS_MH + 4 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS,
+                       "MASTER's clip point");
+        cv_text_on(x, UXS_MY + UXS_MH + 4, &UF_LBL, UXS_MS_SAY[1], UX_MID, ux_under(x, UXS_MY + UXS_MH + 8));
+        str_cpy(b, UXS_MS_SAY[0], sizeof b);
+        if (lvl <= 0)
+            uxs_cat(b, sizeof b, N_ONOFF[0]);
+        else {
+            uxs_dbtxt(c, sizeof c, (lvl * UXS_MDB * 10 / UXS_MW - UXS_MDB * 10) / 10 * 10, 0);
+            uxs_cat(b, sizeof b, c);
+        }
+        x = 228 - text_w(&UF_LBL, b);
+        GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "MASTER's level");
+        cv_text_on(x, 8, &UF_LBL, b, UX_TEXT, ux_under(x, 12));
+    }
+    {   /* CLIP: the mix in (0 .. full scale) -> out, its box */
+        int32_t bx = 14, by = 58, s = 60;
+        cv_rect(bx, by + s, s, 1, UX_LINE);
+        cv_rect(bx, by, 1, s, UX_LINE);
+        for (i = 0; i < s; i++)                         /* (without CLIP) */
+            cv_rect(bx + i, by + s - 1 - i, 1, 1, ux_mix(UX_BG, UX_LINE, 80));
+        for (i = 0; i < s; i++) {
+            int32_t o = uxs_clip_out((i + 1) * 32768 / s);
+            y = by + s - 1 - clamp(o * s / 32768, 0, s - 1);
+            if (i)
+                cv_line_t(bx + i - 1, py, bx + i, y, song.g[G_CLIP] ? UX_ACID : ux_mix(UX_BG, UX_ACID, 40), 2);
+            py = y;
+        }
+        GFX_HOOK_ALIGN(0, by + s + 4 + UF_LBL_CAP_Y, 0, by + s + 4 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "MASTER's CLIP");
+        cv_text_on(bx, by + s + 4, &UF_LBL, UXS_MS_SAY[2], UX_MID, ux_under(bx, by + s + 8));
+    }
+    {   /* after a kick: the drums' gain (PUNCH) up, the others' (DUCK) down, +6 .. -30 dB */
+        int32_t gx = 90, gy = UXS_KY, gh = UXS_KH, y0 = gy + gh * 6 / 36, pp = 0, dp = 0, du = song.g[G_DUCK] > 0, pu = song.g[G_PUNCH] > 0;
+        uxs_kick_calc();
+        cv_rect(gx, y0, UXS_KW, 1, UX_LINE);            /* (0 dB) */
+        cv_rect(gx, gy, 1, gh, UX_LINE);
+        for (x = 0; x < UXS_KW; x++) {
+            int32_t yd = gy + uxs_kick.duck[x], yp = gy + uxs_kick.punch[x];
+            if (x) {
+                cv_line_t(gx + x - 1, pp, gx + x, yp, pu ? UX_SLIDE : ux_mix(UX_BG, UX_SLIDE, 40), 2);
+                cv_line_t(gx + x - 1, dp, gx + x, yd, du ? UX_VIOLET : ux_mix(UX_BG, UX_VIOLET, 40), 2);
+            }
+            pp = yp;
+            dp = yd;
+        }
+        GFX_HOOK_ALIGN(0, gy + gh + 4 + UF_LBL_CAP_Y, 0, gy + gh + 4 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "MASTER's kick");
+        cv_text_on(gx, gy + gh + 4, &UF_LBL, UXS_MS_SAY[3], UX_MID, ux_under(gx, gy + gh + 8));
+        uxs_mstxt(c, sizeof c, UXS_KMS);
+        x = gx + UXS_KW - text_w(&UF_LBL, c);
+        cv_text_on(x, gy + gh + 4, &UF_LBL, c, UX_MID, ux_under(x, gy + gh + 8));
+        GFX_HOOK_ALIGN(0, gy - 10 + UF_LBL_CAP_Y, 0, gy - 10 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "MASTER's kick");
+        cv_text_on(gx + 4, gy - 10, &UF_LBL, UXS_MS_SAY[4], pu ? UX_SLIDE : UX_MID, ux_under(gx + 4, gy - 6));
+        x = gx + UXS_KW - text_w(&UF_LBL, UXS_MS_SAY[5]);
+        cv_text_on(x, gy - 10, &UF_LBL, UXS_MS_SAY[5], du ? UX_VIOLET : UX_MID, ux_under(x, gy - 6));
+    }
+}
+
+/* the page's picture: MORE its list; EDIT's its engine's, ENV's, ARP's, SCL's, LFO's, FX's (above). (3b task 8: the fallback,
+ * the title over the four values as bars, gone with the last section to come) */
+static void uxs_picture(const page_t *pg)
+{
     if (pg->graph == GR_MORE) {
         ux_more_draw(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top);
         return;
@@ -2054,26 +2821,21 @@ static void uxs_picture(const page_t *pg, const ux_knob_t k[4])
             uxs_scl_key(TSEL, nav_page_name());
         return;
     }
+    if (pg->fam == FAM_FX) {                            /* (3b task 8) FX: SENDS' bars, SPACE's taps and tail, MASTER's meter */
+        if (pg->graph == GR_FX)
+            uxs_sends_draw(TSEL, pg, nav_page_name());
+        else if (pg->id[0] == G_DTIME)
+            uxs_space_draw(TSEL, nav_page_name());
+        else
+            uxs_master_draw(TSEL, nav_page_name(), uxs_mtr_px);
+        return;
+    }
     if (pg->fam == FAM_EDIT && !edit_kind()) {          /* (a synth: its wave; the filter's page its response) */
         if (pg->id[0] == P_FTYPE)
             uxs_filter_draw(TSEL, pg, nav_page_name());
         else
             uxs_wave_draw(TSEL, nav_page_name(), trk_engp(TSEL) == &ENG_ANALOG && pg->id[0] == P_E0);   /* (ANALOG's
                                                          * SOUND: its oscillators) */
-        return;
-    }
-    w = text_w(f, pg->title);
-    if (w > 224) {
-        f = &UF_VAL;
-        w = text_w(f, pg->title);
-    }
-    x = (240 - w) / 2;
-    ux_text_grad(x, 30, f, pg->title, ux_under(x + w / 2, 40));
-    for (i = 0; i < 4; i++) {
-        int32_t y = 86 + i * 14, fw = (int32_t)k[i].bar * 200 / 255;
-        cv_rect(20, y, 200, 6, UX_EMPTY);
-        if (fw > 0 && k[i].label[0])
-            cv_rect(20, y, fw, 6, ux_knob_col((uint32_t)i));
     }
 }
 
@@ -2081,7 +2843,8 @@ static void ux_section_draw(void)
 {
     static uint32_t head_sig, panel_sig, foot_sig;
     const page_t *pg = cur_page();
-    uint32_t sec = nav_sec(), sig, all, c, scr = uxs_lfo_sc, win = uxs_rh.win;
+    uint32_t sec = nav_sec(), sig, all, c, scr = uxs_lfo_sc, win = uxs_rh.win, spw = uxs_sp_win;
+    int32_t mtr = uxs_mtr_px;
     int due = 0;
     ux_knob_t k[4];
     const char *st;
@@ -2191,6 +2954,32 @@ static void ux_section_draw(void)
         due = (scr != uxs_lfo_sc || win != uxs_rh.win) && ux_pace_at(fm1_ms, uxs_lfo_ms, load_tight, ux_since_shed(), gov_lite, sys_load, 0, UX_TRK_MS,
                                               UX_TRK_SLOW_MS).draw;
     }
+    if (pg->fam == FAM_FX && pg->graph != GR_MORE) {    /* (3b task 8: what FX's pictures are drawn from: the track's sends and
+                                                         * DISTORT's TYPE, the globals (the buses', the master's), the LOAD. Not
+                                                         * the tempo, the output: below) */
+        static const uint8_t F[] = {P_DIST, P_CHOR, P_DLY, P_REV, P_DTYPE};
+        for (c = 0; c < sizeof F; c++)
+            sig = sig * 31u + (uint16_t)TSEL->p[F[c]];
+        for (c = 0; c < G_COUNT; c++)
+            sig = sig * 31u + (uint16_t)song.g[c];
+        sig = sig * 31u + sys_load * 7u + (uint32_t)LOAD_EFF() * 13u;
+        if (pg->id[0] == G_DTIME) {                     /* SPACE: the delay's time at the tempo (an outside clock moves it 4
+                                                         * times a beat): redrawn as the load allows, as LFO's window */
+            spw = uxs_dly_smp() * 2654435761u ^ beat_samples();
+            due = spw != uxs_sp_win && ux_pace_at(fm1_ms, uxs_fx_ms, load_tight, ux_since_shed(), gov_lite, sys_load, 0, UX_TRK_MS,
+                                                  UX_TRK_SLOW_MS).draw;
+        } else if (pg->id[0] == G_CLIP) {               /* MASTER: the output's peak, falling 20 dB a second, redrawn as it moves
+                                                         * at HOME's ridges' pace (frozen while the guard sheds or gov_lite; still
+                                                         * with ANIM OFF) */
+            uint32_t el = fm1_ms - uxs_fx_ms;
+            int32_t fall = (int32_t)((el > 2000u ? 2000u : el) * UXS_MW * 20u / (UXS_MDB * 1000u));
+            mtr = uxs_meter_px(uxs_out_db10());
+            if (mtr < uxs_mtr_px - fall)
+                mtr = uxs_mtr_px - fall;
+            due = mtr != uxs_mtr_px && !(ui_prefs & PREF_ANIM_OFF) &&
+                  ux_pace_at(fm1_ms, uxs_fx_ms, load_tight, ux_since_shed(), gov_lite, sys_load, 0, UX_TRK_MS, UX_TRK_SLOW_MS).draw;
+        }
+    }
     if (all || sig != panel_sig || due) {
         panel_sig = sig;
         uxs_panels++;
@@ -2199,8 +2988,13 @@ static void ux_section_draw(void)
             uxs_lfo_ms = fm1_ms;
             uxs_rh.win = win;
         }
+        if (pg->fam == FAM_FX) {                        /* (3b task 8: the paced pictures' state, drawn from now) */
+            uxs_mtr_px = mtr;
+            uxs_sp_win = spw;
+            uxs_fx_ms = fm1_ms;
+        }
         ux_panel_begin(1);
-        uxs_picture(pg, k);
+        uxs_picture(pg);
         ux_panel_end();
     }
     {   /* the footer: where, n / N and NEXT the next page (MORE: its knobs' names), when they fit */
