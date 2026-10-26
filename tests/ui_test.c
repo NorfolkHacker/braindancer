@@ -12483,6 +12483,22 @@ static int test_power_on_demo(void)
     frame();
     ok &= !demo_on;
     bad += check("  .. a step written, a pattern or a sound loaded ends it too", ok);
+    {   /* (3b final review M6) under an external clock the tempo is the host's (midi_clock.c): it is no edit */
+        int16_t clk = song.g[G_CLOCK];
+        ui_power_on_099();
+        song.g[G_CLOCK] = 1;                                                /* CLOCK USB */
+        frame();
+        song.g[G_BPM] = 131; frame();
+        song.g[G_BPM] = 97; frame();
+        ok = demo_on;
+        song.g[G_CLOCK] = 0;
+        ui_power_on_099();
+        frame();
+        song.g[G_BPM] = 131; frame();
+        ok &= !demo_on;
+        song.g[G_CLOCK] = clk;
+        bad += check("  .. the tempo ends it under the internal clock only (an external clock's tempo is the host's)", ok);
+    }
     ui_power_on_099();
     system_init();
     for (i = 0, ok = !demo_on && song.g[G_BPM] == GP[G_BPM].def; i < NTRK; i++)
@@ -17434,7 +17450,7 @@ static int test_t9_knobs(void)
         for (k = 0; k < UXL_S_N; k++) if (text_w(&UF_HDR, UXL_SAY[k]) > 224) { printf("  \"%s\" %d px\n", UXL_SAY[k], (int)text_w(&UF_HDR, UXL_SAY[k])); okw = 0; }
         for (k = 0; k < 4u; k++) if (text_w(&UF_HDR, UXL_GXSAY[k]) > 224) { printf("  \"%s\" %d px\n", UXL_GXSAY[k], (int)text_w(&UF_HDR, UXL_GXSAY[k])); okw = 0; }
         for (k = 0; k < 7u; k++)
-            for (s = 0; s < 2u; s++) okw &= 8 + text_w(&UF_LBL, UXL_WHERE[k]) + 16 + text_w(&UF_LBL, UXL_ALGO[s]) <= 232;
+            for (s = 0; s < 2u; s++) okw &= 8 + uxf_w(UXL_WHERE[k]) + 16 + uxf_w(UXL_ALGO[s]) <= 232;
         for (l = 0; l < 4u; l++)                         /* every key's name a layer can show, in the list's column */
             for (s = 0; s < 3u; s++) {
                 pfx_tgt = (uint8_t)s;

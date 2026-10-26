@@ -1415,7 +1415,7 @@ static void setup(int s)
     case S_CONFIRM_PAT: ui.confirm = CF_LOAD_PAT; ui.confirm_trk = 0; ui.ppick = 4; break;
     case S_CONFIRM_MOTION: ui.confirm = CF_CLEAR_MOTION; ui.confirm_trk = 3; break;
     case S_CONFIRM_ERASE: song.playing = 0; up_store(6, "A VERY LONG SOUND NAME"); ui.confirm = CF_ERASE_USER; ui.confirm_trk = 6; break;
-    case S_GEN: ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = 1; gp.seed = 421; str_cpy(gp.last, "HOUSE 0421", sizeof gp.last); break;   /* (0.6.91) GEN */
+    case S_GEN: ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = (uint8_t)(1u + GEN_SHOWN[4]); gp.seed = 421; str_cpy(gp.last, "ACID 0421", sizeof gp.last); break;   /* (0.6.91) GEN (3b: a shown genre, ACID) */
     case S_GEN_PARTS: ui.confirm = CF_DICE_ALL; gp.page = 1; gp.hot = 2; gp.amt[GP_CHORDS] = 70; gp.amt[GP_ARP] = 0; break;
     case S_MENU: ui.menu = 1; ui.menu_sel = 0; song.rec = 1; break;
     case S_MENU_SPEAKER: ui.menu = 1; ui.menu_sel = MI_LOWCUT; settings.lowcut = 2; break;

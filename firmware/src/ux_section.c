@@ -939,7 +939,7 @@ static void uxs_foot(const char *w, const ux_knob_t k[4], const char *cnt, const
         str_cpy(t + str_len(t), next, sizeof t - str_len(t));
         n++;
     }
-    if (n && 8 + text_w(&UF_LBL, w) + 16 + text_w(&UF_LBL, t) <= 232)
+    if (n && 8 + uxf_w(w) + 16 + uxf_w(t) <= 232)    /* (ux_widgets.c: the footer's wider spaces) */
         str_cpy(b, t, nb);
 }
 

@@ -52,7 +52,7 @@ files.
 1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track. (0.9.9) The tracks
    start as **T1 DRUM-X** (the factory kit), **T2 VOICE** (SINGER EN: it sings words), **T3 PHASE** (BRASS; ACID FM 0.2, was ANIMAL),
    **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (ACID) and **T6 FM6** (PAD), each its preset's sound, dry. With nothing to restore, T1, T5 and T6 also carry a short demo at 124 BPM (beat, acid line, pad): press PLAY; the status line says DEMO until your first edit or a PLAY→STOP. NEW PROJECT starts empty.
-2. Turn **ALGORITHM** to pick a track (T1–T6). With **TRACKS 4** (a setting; the default is 6 since the power-on demo) it stops at T4: T5 and T6 appear only with TRACKS 6 (see
+2. Turn **ALGORITHM** to pick a track (T1–T6). With **TRACKS 4** (a setting; the default is 6 since the power-on demo, and 0.4 sets it to 6 once on its first start; a 4 picked after that stays) it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
 4. Turn **KNOB 1–4**: on HOME › TRACKS KNOB 1–3 are the LEVELs of three tracks (the selected one's group: T1–T3 or T4–T6) and KNOB 4 the BPM; on **EDIT** the engine's controls.
@@ -62,7 +62,7 @@ files.
 ### Your first song (5 minutes)
 
 1. Hold **HOME** and turn **SELECT** (or on HOME tap **HOME** twice: TRACKS → VISUAL → **GEN**). The **GENERATOR** opens on
-   **EXPLORE** (no genre, every rule broken): press **OCT+** as it is, or pick RANDOM or one of the 43 genres with KNOB 1
+   **EXPLORE** (no genre, every rule broken): press **OCT+** as it is, or pick RANDOM or one of the ten genres with KNOB 1
    or PRESETS first. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
 2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** one detent right for GEN 2 and lower
    **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **OCT−** goes back to TRACKS. To go back to what was there before: hold **GLO** and press **G4** (UNDO).
@@ -741,7 +741,7 @@ of RAM; nothing in the sound.
 ### Six more engines draw their own creature (0.9.6)
 
 With 0.9.6 every engine has its own picture: ANALOG, FM6, WHEEL, NOISE, PHASE and LOFI draw theirs on **EDIT › SOUND**
-(on the left; the scope and the chips on the right as before; 0.9.7: with **MENU › SCREEN 2 › SCOPE** ON — OFF, the default,
+(on the left; the scope and the chips on the right as before; 0.9.7: with SCOPE ON, a MENU setting gone in ACID FM 0.4 — OFF, the default,
 gives the creature the whole panel, centred, the sound's name a small caption in a corner) and on **HOME › BEING** (HOME's ecosystem keeps its
 beings), in the same thermal line art, the bichos' face shared with DRUM-X's beings, moving only while the track sounds:
 
@@ -1292,19 +1292,17 @@ the transport without leaving the screen (0.6.97).
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: **EXPLORE** (the screen always opens on it: no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B) or one of 43, in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: **EXPLORE** (the screen always opens on it: no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B from the two genres' names) or one of the ten, in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's) |
 | 3/3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
 
 The piece is **deterministic**: the same settings make the same piece every time, so a seed you like can be dialled
 back. **OCT+ with the settings unchanged throws a new seed** (another piece); turn a knob and press OCT+ and you get
 the **same piece with that one thing changed** — every part draws its random numbers from its own stream, so BASS
-turned leaves the drums and the lead as they were. The screen shows **LAST: HOUSE 0421** (the genre and the seed).
+turned leaves the drums and the lead as they were. The screen shows **LAST: ACID 0421** (the genre and the seed).
 
-The genres: HOUSE, DEEP HOUSE, MICRO HOUSE, TECH HOUSE, ACID HOUSE, TECHNO, DETROIT, DUB TECHNO, HARD TECHNO,
-HYPNOTIC, TRANCE, ELECTRO, EBM, ITALO, SYNTH POP, DARKWAVE, POST PUNK, TRIBAL PUNK, MINIMAL SYNTH, MAN MACHINE,
-MOTORIK, INDIE, SHOEGAZE, POST ROCK, FUNK, DISCO, BOOM BAP, TRAP, UK GARAGE, DUBSTEP, BREAKS, DRUM & BASS, DUB,
-STEPPERS, JAZZ, BOSSA, AFROBEAT, AMBIENT, NEO CLASSIC, IMPRESSION, SOUNDTRACK, IDM, BROKEN. Each one knows its tempo
+The genres: IDM, BROKEN BEAT, BREAKS,
+DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT. Each one knows its tempo
 range, its scales and chord progressions, its drum map and kit, its bass archetypes and register, how its chords, arp
 and lead speak, which sound recipe each role takes, how human it plays and its space (reverb type, delay type and
 time, how wet).
@@ -2042,10 +2040,9 @@ every setting, its values and its meaning: nothing changes in the saved settings
 | Tab › page | KNOB | Setting | Values |
 | --- | --- | --- | --- |
 | SCREEN › SCREEN | 1 | LARGE | OFF, ON (big labels and values) |
-| | 2 | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
-| | 3 | ANIMATION | ON, OFF (values snap) — was ANIM |
-| | 4 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
-| | | (COLOR, SKIN, STYLE) | gone in ACID FM 0.3: one look, ACID; kept as inert ids for the editor |
+| | 2 | ANIMATION | ON, OFF (values snap) — was ANIM |
+| | 3 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
+| | | (COLOR, SKIN, STYLE; SCOPE) | gone in ACID FM 0.3 (one look, ACID) and 0.4 (SCOPE: no creatures); kept as inert ids for the editor |
 | SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow (was LEDS: OFF, DIM LO, DIM HI, INV); (0.7.3) the glow's LEDs take turns frame to frame, so it no longer hums through the speaker once the music stops |
 | | 2 | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |

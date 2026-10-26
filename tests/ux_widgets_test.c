@@ -128,6 +128,21 @@ int main(void)
                     if ((px((int32_t)x, (int32_t)y) >> 11) < 6) { if (x < 100) l++; else if (x > 140) r++; }
             ck("footer: dark text on the left (the location) and on the right (the knobs' names)", l > 15 && r > 15);
         }
+        {   /* (3b final review M4) the words apart: "NEXT OP ENV" two gaps of at least 3 clear columns (UF_LBL's 1.7 px
+             * space read as "NEXT OPENV") and none inside a word */
+            int32_t x, y, run = 0, gaps = 0, w;
+            ux_footer("NEXT OP ENV", "");
+            w = uxf_w("NEXT OP ENV");
+            for (x = 8; x <= 8 + w; x++) {
+                int ink = 0;
+                for (y = 0; y < (int32_t)UX_H_FOOT - 1; y++)
+                    ink |= px(x, y) != px(x, (int32_t)UX_H_FOOT - 1);   /* (any ink, its antialiased edge too: the band
+                                                         * is one colour down a column) */
+                if (!ink) run++;
+                else { gaps += run >= 3; run = 0; }
+            }
+            ck("footer: two-word names apart (NEXT OP ENV: two gaps of 3 px or more)", gaps == 2);
+        }
     }
     {   /* status */
         bl_n = 0;

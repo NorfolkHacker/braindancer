@@ -53,7 +53,7 @@ Guardá tus archivos WAV.
    pistas arrancan como **T1 DRUM-X** (el kit de fábrica), **T2 VOICE** (SINGER EN: canta palabras), **T3 ANIMAL**
    (CMOS BIRD), **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (FAT BASS) y **T6 FM6** (TINE EP), cada una con el sonido de su
    preset, seco.
-2. Girá **ALGORITHM** para elegir una pista (T1–T6). Con el valor por defecto, **TRACKS 4**, se detiene en T4: T5 y T6 aparecen solo con TRACKS 6 (ver
+2. Girá **ALGORITHM** para elegir una pista (T1–T6). Con **TRACKS 4** (un ajuste; el valor por defecto es 6 desde la demo del encendido, y 0.4 lo pone en 6 una sola vez al arrancar por primera vez; un 4 elegido después queda) se detiene en T4: T5 y T6 aparecen solo con TRACKS 6 (ver
    [13](#13-sistema-tracks-load-y-el-menu)).
 3. Girá **PRESETS** para recorrer sonidos. Tocá las teclas.
 4. Girá **KNOB 1–4**: en HOME › TRACKS, KNOB 1–3 son los niveles de tres pistas (el grupo de la elegida: T1–T3 o T4–T6) y KNOB 4 el BPM; en **EDIT**, los controles del motor.
@@ -63,7 +63,7 @@ Guardá tus archivos WAV.
 ### Tu primer tema (5 minutos)
 
 1. Mantené **HOME** y girá **SELECT** (o en HOME tocá **HOME** dos veces: ECO → BEING → **GEN**). Se abre el **GENERATOR** en
-   **EXPLORE** (ningún género, todas las reglas rotas): apretá **OCT+** así, o antes elegí RANDOM o uno de los 43 géneros
+   **EXPLORE** (ningún género, todas las reglas rotas): apretá **OCT+** así, o antes elegí RANDOM o uno de los diez géneros
    con KNOB 1 o PRESETS. Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
    **PLAY**.
 2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Girá **SELECT** un paso a la
@@ -806,7 +806,7 @@ bytes de RAM; nada en el sonido.
 ### Seis motores más dibujan su propia criatura (0.9.6)
 
 Con 0.9.6 cada motor tiene su propio dibujo: ANALOG, FM6, WHEEL, NOISE, PHASE y LOFI dibujan el suyo en **EDIT › SOUND**
-(a la izquierda; el osciloscopio y las fichas a la derecha como antes; 0.9.7: con **MENU › SCREEN 2 › SCOPE** en ON — en OFF,
+(a la izquierda; el osciloscopio y las fichas a la derecha como antes; 0.9.7: con SCOPE en ON, un ajuste del MENU que se fue en ACID FM 0.4 — en OFF,
 el de fábrica, la criatura tiene todo el panel, centrada, el nombre del sonido un rótulo chiquito en una esquina) y en **HOME › BEING** (el ecosistema de HOME
 conserva sus seres), con el mismo dibujo térmico, la cara de los bichitos compartida con los de DRUM-X, y se mueven
 solo mientras la pista suena:
@@ -1395,20 +1395,18 @@ pantalla (0.6.97).
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: **EXPLORE** (la pantalla siempre abre ahí: ningún género, todas las reglas rotas, ver abajo), RANDOM (la mitad de sus tiradas son mutantes de dos géneros, con nombre A+B) o uno de 43, en ese orden | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: **EXPLORE** (la pantalla siempre abre ahí: ningún género, todas las reglas rotas, ver abajo), RANDOM (la mitad de sus tiradas son mutantes de dos géneros, con nombre A+B con los nombres de los dos géneros) o uno de los diez, en ese orden | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — cada uno OFF, 10–100 %, o **AUTO** (lo que pide el género) |
 | 3/3 | **LEAD** (igual) | **COMPLEX** 0–100 % | **SWING** AUTO o 0–100 % | **HUMAN** 0–100 % |
 
 La pieza es **determinista**: los mismos ajustes dan siempre la misma pieza, así que una semilla que te gustó se
 puede volver a marcar. **OCT+ con los ajustes sin tocar tira una semilla nueva** (otra pieza); girá una perilla y
 apretá OCT+ y tenés **la misma pieza con esa sola cosa cambiada**: cada parte saca sus números al azar de su propio
-flujo, así que mover BASS deja la batería y el lead como estaban. La pantalla muestra **LAST: HOUSE 0421** (el género
+flujo, así que mover BASS deja la batería y el lead como estaban. La pantalla muestra **LAST: ACID 0421** (el género
 y la semilla).
 
-Los géneros: HOUSE, DEEP HOUSE, MICRO HOUSE, TECH HOUSE, ACID HOUSE, TECHNO, DETROIT, DUB TECHNO, HARD TECHNO,
-HYPNOTIC, TRANCE, ELECTRO, EBM, ITALO, SYNTH POP, DARKWAVE, POST PUNK, TRIBAL PUNK, MINIMAL SYNTH, MAN MACHINE,
-MOTORIK, INDIE, SHOEGAZE, POST ROCK, FUNK, DISCO, BOOM BAP, TRAP, UK GARAGE, DUBSTEP, BREAKS, DRUM & BASS, DUB,
-STEPPERS, JAZZ, BOSSA, AFROBEAT, AMBIENT, NEO CLASSIC, IMPRESSION, SOUNDTRACK, IDM, BROKEN. Cada uno sabe su rango de
+Los géneros: IDM, BROKEN BEAT, BREAKS,
+DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT. Cada uno sabe su rango de
 tempo, sus escalas y progresiones, su mapa de batería y su kit, sus arquetipos de bajo y su registro, cómo hablan sus
 acordes, su arpegio y su lead, qué receta de sonido toma cada rol, qué tan humano toca y su espacio (tipo de reverb,
 tipo y tiempo del delay, cuánta humedad).
@@ -2205,13 +2203,10 @@ configuración guardada ni para el editor.)
 
 | Pestaña › página | KNOB | Ajuste | Valores |
 | --- | --- | --- | --- |
-| SCREEN › SCREEN | 1 | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (por defecto) |
-| | 2 | SKIN | **AIR** (por defecto en ajustes nuevos), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM se retiró en la 0.9.17: abre como AIR) ver [Pieles](#pieles-air-colors-hud-089-air-097) |
-| | 3 | STYLE | FLAT, LINE |
-| | 4 | LARGE | OFF, ON (etiquetas y valores grandes) |
-| SCREEN › SCREEN 2 | 1 | SCOPE | **OFF** (por defecto), ON — (0.9.7) las páginas EDIT de un motor: OFF la criatura en todo el panel, centrada; ON la criatura a la izquierda, la tarjeta SCOPE y las fichas como antes |
+| SCREEN › SCREEN | 1 | LARGE | OFF, ON (etiquetas y valores grandes) |
 | | 2 | ANIMATION | ON, OFF (los valores saltan; la firma del encendido aparece entera) — era ANIM |
 | | 3 | SCREEN SLEEP | **NEVER** (por defecto), 5 MIN, 15 MIN, 30 MIN, 60 MIN — la pantalla se apaga tras ese tiempo sin tocar nada (era SCREEN OFF) |
+| | | (COLOR, SKIN, STYLE; SCOPE) | se fueron en ACID FM 0.3 (un solo look, ACID) y 0.4 (SCOPE: sin criaturas); quedan como ids inertes para el editor |
 | SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (por defecto), INVERT — cómo brillan las teclas y botones en reposo (era LEDS: OFF, DIM LO, DIM HI, INV) |
 | | 2 | SCALE LEDS | OFF, ON — las teclas de la escala brillan, la raíz más |
 | AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; llega también a las salidas y al USB) |

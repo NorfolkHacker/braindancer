@@ -18,6 +18,7 @@ the Rephlex catalogue.
 - GEN shows ten IDM genres (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT),
   plus EXPLORE and RANDOM; JIANT's techno and house are hidden (a song saved with one generates as before).
 - At power-on PLAY plays a short demo (beat, acid line, pad, 124 BPM); NEW PROJECT still starts empty.
+- The first time 0.4 starts, MENU › TRACKS switches to 6 once (the demo uses T5 and T6); a 4 picked after that stays.
 - HOME TRACKS: KNOB 1-3 are three tracks' levels, KNOB 4 the BPM.
 - Steadier timing: the screen draws more slowly when the audio is busy.
 - SEQ, GLO, SAVE, the MENU and the dialogs keep JIANT's layouts in ACID colours until 3c.

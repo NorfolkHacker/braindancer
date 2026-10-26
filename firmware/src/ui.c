@@ -84,7 +84,8 @@ static void list_put(uint32_t v)
 #define PREF_LATCH 1u                          /* MENU > FX LATCH ON (#40); JIANT 0.6.44: ON once for everyone (prefs_rev);
                                                 * 0.6.64: OFF again (the FX screen locks open by itself) */
 #define prefs_rev (favorites.factory[15][25])  /* (JIANT 0.6.44) the settings' revision (a byte no engine uses: engine 15):
-                                                * 0 before; 1: FX LATCH turned ON once (main.c prefs_update); 2: OFF once (0.6.64) */
+                                                * 0 before; 1: FX LATCH turned ON once (main.c prefs_update); 2: OFF once (0.6.64);
+                                                * (ACID FM 0.4) 3: TRACKS 6 once (append-only: a new step takes the next value) */
 #define PREF_ANIM_OFF 2u                       /* MENU > ANIM OFF (#46): values snap (no rolling digits, no glide) */
 /* (0.6.57) values snap: MENU > ANIM OFF, or LOAD LITE / ECO (the rolling digits, the roll's and the tabs' glides are
  * frames drawn again for a look: the time goes to the keys and knobs instead; the beings still move) */
@@ -108,6 +109,20 @@ static const int16_t USB_GAIN[5] = {4096, 2048, 1024, 512, 256};   /* Q12: 0 -6 
                                                 * restored at power-on, project.c). JIANT 0.6.40: OFF by default (clear =
                                                 * OFF, power-on as INIT SYSTEM leaves it); the bit was RESTORE LAST OFF */
 #define fx_latch ui_prefs
+/* MENU > AUDIO CLICK, CLICK LEVEL, COUNT-IN (1.1, Discussion #131; click.c, seq.c): two bits each in another byte no
+ * engine uses, saved with the settings: bits 0-1 CLICK (OFF REC ON), 2-3 CLICK LEVEL (stored 0 MID, 1 LOW, 2 HIGH),
+ * 4-5 COUNT-IN (OFF, 1 BAR, 2 BARS); 0 in older settings = OFF / MID / OFF, so nothing clicks or counts in that did
+ * not; 3 (unknown) reads as 0 (settings_persist.c puts it back). Bit 6 (1.2): MENU > SCALE LEDS ON (Discussion #127,
+ * ui_input.c scale_leds; 0 in older settings = OFF). Bit 7: TRACKS 6 (PREF_SIX) */
+#define ui_rec_prefs (favorites.factory[15][28])
+#define PREF_REC 0xFF00u                       /* (menu_items.c MENU_FLAGS: a bit of ui_rec_prefs, << 8) */
+#define PREF_SCALE_LEDS (0x40u << 8)
+#define ui_load (favorites.factory[15][26])    /* (JIANT 0.6.30) LOAD (voice.c sys_load): 0 FULL, 1 LITE, 2 ECO; a byte no
+                                                * engine uses, 0 in older settings (0.6.29's 6 LITE: 1, LITE) */
+#define midi_out_mode (favorites.factory[15][24])   /* (JIANT 0.6.72) MENU > MIDI OUT (seq.c MO_*): 0 KEYS (older settings,
+                                                * as ever), 1 CLOCK, 2 ALL, 3 OFF; a byte no engine uses */
+#define PREF_SIX (0x80u << 8)                  /* (JIANT 0.6.18) MENU > TRACKS 6: all six tracks play; clear (the
+                                                * default): 4, T5 and T6 asleep (voice.c trk_live) */
 /* (JIANT 0.6.44) the settings brought up to date at power-on (main.c; 0.6.58 the browser emulator too, web/emu, where
  * the punch-in FX had no LATCH): FX LATCH ON by default, once; (0.6.64) OFF again, once, so who turns it ON after
  * keeps it so */
@@ -119,21 +134,14 @@ static void prefs_update(void)
         prefs_rev = 2u;
         settings_save();
     }
+    if (prefs_rev < 3u) {                              /* (ACID FM 0.4) MENU > TRACKS 6, once: settings saved before hold
+                                                        * JIANT's default 4 (a clear bit, not a pick), and the power-on demo
+                                                        * plays T5 and T6; a 4 picked after this is kept */
+        ui_rec_prefs |= (uint8_t)(PREF_SIX >> 8);
+        prefs_rev = 3u;
+        settings_save();
+    }
 }
-/* MENU > AUDIO CLICK, CLICK LEVEL, COUNT-IN (1.1, Discussion #131; click.c, seq.c): two bits each in another byte no
- * engine uses, saved with the settings: bits 0-1 CLICK (OFF REC ON), 2-3 CLICK LEVEL (stored 0 MID, 1 LOW, 2 HIGH),
- * 4-5 COUNT-IN (OFF, 1 BAR, 2 BARS); 0 in older settings = OFF / MID / OFF, so nothing clicks or counts in that did
- * not; 3 (unknown) reads as 0 (settings_persist.c puts it back). Bit 6 (1.2): MENU > SCALE LEDS ON (Discussion #127,
- * ui_input.c scale_leds; 0 in older settings = OFF). Bit 7 free (append-only) */
-#define ui_rec_prefs (favorites.factory[15][28])
-#define PREF_REC 0xFF00u                       /* (menu_items.c MENU_FLAGS: a bit of ui_rec_prefs, << 8) */
-#define PREF_SCALE_LEDS (0x40u << 8)
-#define ui_load (favorites.factory[15][26])    /* (JIANT 0.6.30) LOAD (voice.c sys_load): 0 FULL, 1 LITE, 2 ECO; a byte no
-                                                * engine uses, 0 in older settings (0.6.29's 6 LITE: 1, LITE) */
-#define midi_out_mode (favorites.factory[15][24])   /* (JIANT 0.6.72) MENU > MIDI OUT (seq.c MO_*): 0 KEYS (older settings,
-                                                * as ever), 1 CLOCK, 2 ALL, 3 OFF; a byte no engine uses */
-#define PREF_SIX (0x80u << 8)                  /* (JIANT 0.6.18) MENU > TRACKS 6: all six tracks play; clear (the
-                                                * default): 4, T5 and T6 asleep (voice.c trk_live) */
 enum { RP_CLICK, RP_LEVEL, RP_COUNTIN };
 static uint32_t rp_get(uint32_t f)                     /* a field as the MENU steps it: 0..2 */
 {
@@ -1484,7 +1492,7 @@ static uint32_t demo_preset(uint32_t i)
     return i == 4u ? TRK_PR_ACID : i == 5u ? demo_fm6_pad() : TRK_DEF[i][1];
 }
 /* the demo is on from the power-on until its first edit (demo_sig0: every track's parameters, steps, engine and preset, and
- * the tempo, hashed at the first frame and compared each frame after; a knob turn too) or a PLAY -> STOP cycle: HOME's status line says
+ * the tempo under the internal clock, hashed at the first frame and compared each frame after; a knob turn too) or a PLAY -> STOP cycle: HOME's status line says
  * what to do with it (ux_home.c UX_DEMO) */
 static uint8_t demo_on, demo_played, demo_fresh;
 static uint32_t demo_sig0;
@@ -1498,7 +1506,8 @@ static uint32_t demo_hash(void)
         h = fnv(h, &t->eng_req, 1);
         h = fnv(h, &t->preset, 1);
     }
-    return fnv(h, &song.g[G_BPM], sizeof song.g[G_BPM]);
+    return song.g[G_CLOCK] ? h : fnv(h, &song.g[G_BPM], sizeof song.g[G_BPM]);   /* (an external clock's tempo is the host's,
+                                                 * midi_clock.c: no edit) */
 }
 static void demo_end(void) { demo_on = 0; }
 static void demo_watch(void)                    /* each frame (ui_input) */

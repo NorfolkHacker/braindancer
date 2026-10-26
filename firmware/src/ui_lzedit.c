@@ -43,6 +43,7 @@ static int32_t ed_resp(uint32_t ty, int32_t x, int32_t xc, int32_t res)
     y = ty == 0u ? (d > 0 ? 2 * d : 0) : ty == 1u ? (d < 0 ? 2 * a : 0) : 2 * a / 3;   /* LP HP BP */
     return clamp(62 + y - bump - (ty == 2u ? pk / 3 : 0), 8, 104);
 }
+#if FELUCCA_FM4   /* (ACID FM 3b final review M3) DIGITAL's EDIT only: every other engine's EDIT is ux_section.c's */
 static void graph_filter_lz(const track_t *t, const page_t *pg)
 {
     static const char *const FX[3] = {"100", "1k", "10k"};
@@ -136,3 +137,4 @@ static int graph_edit_lz(const track_t *t, const page_t *pg)
         return 0;
     return 1;
 }
+#endif

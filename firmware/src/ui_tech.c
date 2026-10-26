@@ -7,11 +7,13 @@
  *   (DIST      tk_dist_y, the drive TYPE's transfer, drawn by FX's lens, ui_lzfx.c: gone with it, ACID FM 3b task 8)
  *   ENV DEST   the source now (the envelope's level) into four bipolar columns under the cards, each as long as its
  *              amount and lit by what it sends now (0.9.7: LFO DEST's and VOICE's, never drawn since the lenses, gone)
+ *   (RETRIG    LOFI's formula over four notes: LOFI's page is ux_section.c's, gone, ACID FM 3b final review M3)
  *   GLOBAL     a bar of 16 steps with SWING moving the off-beats, the playhead, the beat */
 #define TK_X0 PANEL_X0
 #define TK_X1 (PANEL_X0 + PANEL_W)
 #define TK_Y0 8
 #define TK_Y1 112
+#if FELUCCA_FM4   /* (ACID FM 3b final review M3) DIGITAL's only: every other engine's ENV DEST page is ux_section.c's */
 /* the current page's knob c as 0..1000 (no knob: 500) */
 static int32_t tk(uint32_t c)
 {
@@ -51,6 +53,7 @@ static void tech_dest(const track_t *t)
         cv_rect(TK_X0, src >= 0 ? mid - sh : mid, 3, sh ? sh : 1, T_TEXT);
     }
 }
+#endif
 
 /* GLOBAL (JIANT 0.5): the bar as 16 columns, one a sixteenth, in four beats; each as hot as the tempo (40 BPM cold ..
  * 240 white), the downbeats taller, the off-beats late by SWING, the one playing now white; under them CLK's three
@@ -83,32 +86,14 @@ static void tech_global(void)
                 heat_col(60 + (tune > 0 ? tune : -tune) * 180 / 50));
 }
 
-/* (0.6.12) RETRIG (LOFI BYTE / FLOAT): the formula's time over four notes (their ticks under it): RTRG ON a ramp from 0
- * at each note (the formula from its start every time), OFF one ramp running on under them */
-static void tech_retrig(const track_t *t)
-{
-    int32_t x0 = TK_X0 + 10, w = PANEL_W - 20, base = TK_Y1 - 12, top = TK_Y0 + 10, on = t->p[P_LRTRG] != 0, i, py = base;
-    for (i = 0; i < 4; i++)                              /* the notes */
-        cv_rect(x0 + i * w / 4, base + 3, 3, 6, T_ACCENT);
-    for (i = 0; i <= w; i++) {
-        int32_t ph = on ? (i % (w / 4)) * 1000 / (w / 4) : i * 1000 / w;
-        int32_t y = base - ph * (base - top) / 1000;
-        if (i && !(on && i % (w / 4) == 0))
-            cv_line_t(x0 + i - 1, py, x0 + i, y, T_THEME, 2);
-        else if (i)
-            cv_rect(x0 + i, y, 1, py - y + 1, T_RAISE);  /* (back to 0) */
-        py = y;
-    }
-    cv_text(x0, TK_Y0, &AF_S, on ? "FROM THE START, EVERY NOTE" : "THE FORMULA RUNS ON", T_DIM);
-}
-
 /* the page's technical graph, if it has one (1) */
 static int graph_tech(const track_t *t, const page_t *pg)
 {
     if (pg->scope != SC_GLOBAL)
         switch (pg->id[0]) {
-        case P_LRTRG: if (pg->id[1] != 0xFFu) return 0; tech_retrig(t); return 1;   /* (not DIGITAL's OP1 ENV) */
-        case P_ED_FLT: tech_dest(t); return 1;
+#if FELUCCA_FM4
+        case P_ED_FLT: tech_dest(t); return 1;          /* (DIGITAL's: the others' ENV DEST is ux_section.c's) */
+#endif
         default: return 0;
         }
     switch (pg->id[0]) {

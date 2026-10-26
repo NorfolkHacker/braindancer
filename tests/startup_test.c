@@ -7,7 +7,7 @@
  * 0.6.81 fix (felucca_init clearing the arrangement persist_boot had read) and passes with it. */
 #include "../web/emu/felucca_web.c"
 
-static int startup_case(int saved, int restore, int noprefs)
+static int startup_case(int saved, int restore, int noprefs, int picked4)
 {
     song_index_t want, got;
     persist_t prefs = {0};
@@ -32,6 +32,9 @@ static int startup_case(int saved, int restore, int noprefs)
     prefs.magic = PERSIST_MAGIC;
     prefs.panel = PANEL_DEFAULT;
     prefs.favorites.factory[15][30] = restore ? PREF_RESTORE_ON : 0;
+    prefs.favorites.factory[15][25] = picked4 ? 3u : 2u;   /* prefs_rev: 2 as JIANT and ACID FM 0.3 saved it (TRACKS bit clear:
+                                                        * JIANT's default 4, not a choice); 3 = saved by 0.4 after its one-time
+                                                        * TRACKS 6, here with the player's own pick, 4 */
     if (!noprefs && st_save(OBJ_SETTINGS, &prefs, sizeof prefs)) return 1;
 
     web_boot();
@@ -68,9 +71,25 @@ static int startup_case(int saved, int restore, int noprefs)
         ok &= st_load(OBJ_SONGIDX, &got, sizeof got) < 0;
     {   /* (ACID FM 3b) no autosave in any case: the power-on demo (T1 BEAT, T5 ACID line, T6 pad, 124 BPM, six tracks) */
         int okd = !seq_is_empty(&trk[0]) && !seq_is_empty(&trk[4]) && !seq_is_empty(&trk[5]) && seq_is_empty(&trk[1]) &&
-                  song.g[G_BPM] == 124 && demo_on && (noprefs ? trk_live == NTRK : trk_live == 4u);   /* (new settings: TRACKS 6; saved ones keep theirs) */
-        printf("startup: no autosave: the demo is loaded %s\n", okd ? "ok" : "FAIL");
+                  song.g[G_BPM] == 124 && demo_on && (picked4 ? trk_live == 4u : trk_live == NTRK);   /* (ACID FM 0.4: older
+                                                        * settings TRACKS 6 once; a 4 picked after that is kept) */
+        printf("startup: no autosave: the demo is loaded (%s) %s\n", picked4 ? "TRACKS 4 picked on 0.4: kept" :
+               "older settings: TRACKS 6 once", okd ? "ok" : "FAIL");
         ok &= okd;
+    }
+    {   /* the one-time switch is saved (prefs_rev 3), so it never runs again; a 4 picked after it is saved as 4 */
+        persist_t s;
+        int okm = st_load(OBJ_SETTINGS, &s, sizeof s) == (int)sizeof s && s.favorites.factory[15][25] >= 3u &&
+                  !!(s.favorites.factory[15][28] & (PREF_SIX >> 8)) == !picked4;
+        if (!picked4) {
+            trks_put(0);                               /* MENU > TRACKS 4 */
+            settings_save();
+            for (i = 0; i < 400u; i++) web_render(128);
+            okm &= trk_live == 4u && st_load(OBJ_SETTINGS, &s, sizeof s) == (int)sizeof s &&
+                   s.favorites.factory[15][25] >= 3u && !(s.favorites.factory[15][28] & (PREF_SIX >> 8));
+        }
+        printf("startup: TRACKS migration saved once, the player's 4 saved as 4 %s\n", okm ? "ok" : "FAIL");
+        ok &= okm;
     }
     printf("startup: %s, RESTORE LAST %s: rows, bars, END, scenes and flash %s\n",
            saved ? "saved project 3" : "empty flash", restore ? "ON" : "OFF", ok ? "ok" : "FAIL");
@@ -81,10 +100,11 @@ int main(void)
 {
     int mode, status, bad = 0;
     /* Each child starts with fresh static RAM, as a new device instance does. */
-    for (mode = 0; mode < 4; mode++) {                 /* (0.9.7: 3, no settings saved at all) */
+    for (mode = 0; mode < 5; mode++) {                 /* (0.9.7: 3, no settings saved at all; ACID FM 0.4: 4, settings
+                                                        * saved by 0.4 with TRACKS 4 picked: a reboot keeps 4) */
         pid_t child = fork();
         if (child < 0) return 2;
-        if (!child) exit(startup_case(mode == 1 || mode == 2, mode == 2, mode == 3));
+        if (!child) exit(startup_case(mode == 1 || mode == 2, mode == 2, mode == 3, mode == 4));
         if (waitpid(child, &status, 0) != child || !WIFEXITED(status) || WEXITSTATUS(status)) bad++;
     }
     puts(bad ? "startup test FAILED" : "startup test passed");

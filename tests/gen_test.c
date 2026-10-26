@@ -1001,6 +1001,37 @@ int main(void)
             bad += gcheck("  (3b) ... and its name shows as JIANT's", !strcmp(v, "HOUSE"));
             gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF;
         }
+        {   /* (3b final review I2) RANDOM's mutants are named from the shown names only ("ACID+D'N'BASS 0421"), never JIANT's
+             * hidden ones; the name fits the GEN panel's LAST line and the status line */
+            uint32_t sd, nm = 0, badn = 0, wide = 0, j;
+            char v[48];
+            for (sd = 0; sd < 3000u; sd++) {
+                char a[24], *pl;
+                gen_with(0, sd, 50, 0);
+                if (!gs.mutant) continue;
+                nm++;
+                str_cpy(a, gp.last, sizeof a);
+                pl = strchr(a, ' ');                   /* the name before the seed (no shown card name has a space) */
+                if (pl) *pl = 0;
+                pl = strchr(a, '+');
+                if (!pl) { badn++; continue; }
+                *pl++ = 0;
+                {
+                    int ka = 0, kb = 0;
+                    for (j = 0; j < GEN_NSHOWN; j++) {
+                        ka |= !strcmp(a, GEN_SHOWN_CARD[j]);
+                        kb |= !strcmp(pl, GEN_SHOWN_CARD[j]);
+                    }
+                    if (!ka || !kb) { if (badn < 3u) printf("    mutant name \"%s\"\n", gp.last); badn++; }
+                }
+                gen_last_line(v, sizeof v);
+                wide += text_w(&AF_X, v) > GEN_LAST_W || !strstr(v, gp.last) || text_w(&UF_HDR, ui.msg) > 232 || str_len(gp.last) + 1u >= sizeof gp.last ||
+                        strncmp(ui.msg, "GEN: ", 5) || strcmp(ui.msg + 5, gp.last);
+            }
+            bad += gcheck("  (3b) RANDOM's mutants over 3,000 seeds: named from the shown card names only", nm > 500u && badn == 0u);
+            bad += gcheck("  (3b) ... the name and seed whole, fitting the GEN panel (150 px) and the status line", nm > 500u && wide == 0u);
+            gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF; ui.msg_t = 0;
+        }
         frames(800);
         press(B_PLAY); frames(4);
         bad += gcheck("  (0.6.97) PLAY on the GEN screen: the transport runs, the screen stays", (song.playing || transport_req == 1) && ui.confirm == CF_DICE_ALL);

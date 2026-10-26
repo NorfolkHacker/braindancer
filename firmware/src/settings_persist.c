@@ -123,7 +123,8 @@ static void settings_fresh(void)
 #ifdef FELUCCA_FAVORITES
     favorites.factory[15][20] = SKIN_AIR;
     favorites.factory[15][28] |= 0x80u;            /* (ACID FM 3b) MENU > TRACKS 6 (ui.c PREF_SIX >> 8): a six-track sequencer; settings
-                                                     * saved before keep what they hold (0 = 4, as JIANT's default was) */
+                                                     * saved before get TRACKS 6 once (ui.c prefs_update, prefs_rev 3), then
+                                                     * keep what the player picks */
 #endif
 }
 

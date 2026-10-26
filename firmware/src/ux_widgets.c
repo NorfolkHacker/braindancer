@@ -140,6 +140,37 @@ static void ux_transport(char *b, uint32_t n)
     str_cpy(b + str_len(b), " BPM", n - str_len(b));
 }
 
+/* (3b final review M4) the footer's words apart: UF_LBL's space is 1.7 px, so "NEXT OP ENV" read as "NEXT OPENV"; each
+ * space in the footer UXF_SP px wider (the face itself stays: the knob labels fill their columns) */
+#define UXF_SP 2
+static int32_t uxf_w(const char *s)
+{
+    int32_t n = 0;
+    const char *p;
+    for (p = s; *p; p++)
+        n += *p == ' ';
+    return text_w(&UF_LBL, s) + n * UXF_SP;
+}
+static void uxf_text(int32_t x, int32_t y, const char *s, uint16_t ink, uint16_t bg)
+{
+    char b[64];
+    uint32_t i = 0, j, n = 0;
+    while (s[i] && i < sizeof b - 1u) { b[i] = s[i]; i++; }
+    b[i] = 0;
+    for (i = 0; b[i];) {
+        char c;
+        int32_t px;
+        if (b[i] == ' ') { i++; n++; continue; }
+        for (j = i; b[j] && b[j] != ' '; j++) {}
+        c = b[i]; b[i] = 0;
+        px = text_w(&UF_LBL, b);                        /* (the words before, as one string: their kerning) */
+        b[i] = c;
+        c = b[j]; b[j] = 0;
+        cv_text_on(x + px + (int32_t)n * UXF_SP, y, &UF_LBL, b + i, ink, bg);
+        b[j] = c;
+        i = j;
+    }
+}
 static void ux_footer(const char *where, const char *right)
 {
     int32_t ty = 2;                                     /* (the 6 px capitals centred in 14 rows) */
@@ -147,12 +178,12 @@ static void ux_footer(const char *where, const char *right)
     ux_band(0, (int32_t)UX_H_FOOT);
     if (where && *where) {
         GFX_HOOK_ALIGN(0, 0, 0, (int32_t)UX_H_FOOT, AL_V, "footer left");
-        cv_text_on(8, ty, &UF_LBL, where, UX_BG, UX_BLEND[(8 + text_w(&UF_LBL, where) / 2) * 255 / 239]);
+        uxf_text(8, ty, where, UX_BG, UX_BLEND[(8 + uxf_w(where) / 2) * 255 / 239]);
     }
     if (right && *right) {
-        int32_t w = text_w(&UF_LBL, right);
+        int32_t w = uxf_w(right);
         GFX_HOOK_ALIGN(0, 0, 0, (int32_t)UX_H_FOOT, AL_V, "footer right");
-        cv_text_on(232 - w, ty, &UF_LBL, right, UX_BG, UX_BLEND[(232 - w / 2) * 255 / 239]);
+        uxf_text(232 - w, ty, right, UX_BG, UX_BLEND[(232 - w / 2) * 255 / 239]);
     }
     cv_blit_cells(0, UX_Y_FOOT);
 }

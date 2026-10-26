@@ -37,7 +37,7 @@ static struct {
     uint8_t complex, swing, human;                      /* 0..100 (swing: GA_AUTO the genre's) */
     uint8_t page, hot;                                  /* the GEN screen's page, its last knob */
     uint32_t sig;                                       /* the settings of the last piece made (OCT+ again: a new seed) */
-    char last[20];                                      /* the last piece: "HOUSE 0421" */
+    char last[24];                                      /* the last piece: "ACID 0421", "D'N'BASS+D'N'BASS 0421" */
 } gp = {GEN_EXPLORE, 1, 50, 1, {GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO}, 50, GA_AUTO, 30, 0, 0, 0, ""};
 
 /* the generator's own random numbers: a stream a part, from the seed */
@@ -2323,8 +2323,8 @@ static void gen_make(void)
         gs.mutant = 0;
         if (!gp.genre && dice_force_style < 0 && gch(45)) {   /* (0.6.95) RANDOM: a mutant, the drums of one genre, the bass
                                                              * of another, the rest from either; a name of its own: "EBM+JAZZ" */
-            const ggenre_t *b = &GENRE[gen_random_genre() - 1u], *c = &GENRE[gen_random_genre() - 1u];
-            uint32_t k2, n2 = 0;
+            uint32_t bg = gen_random_genre(), k2;
+            const ggenre_t *b = &GENRE[bg - 1u], *c = &GENRE[gen_random_genre() - 1u];
             gmut.drum = b->drum; gmut.kit = b->kit; gmut.ghosts = b->ghosts; gmut.hats = b->hats; gmut.fills = b->fills;
             gmut.sd_micro = b->sd_micro; gmut.snd[GP_DRUMS] = b->snd[GP_DRUMS];
             gmut.drum_pct = (uint8_t)(b->drum_pct > g->drum_pct ? b->drum_pct : g->drum_pct);
@@ -2344,10 +2344,11 @@ static void gen_make(void)
             gmut.bpm_hi = (uint8_t)(((uint32_t)g->bpm_hi + b->bpm_hi) / 2u);
             if (gmut.bpm_hi < gmut.bpm_lo + 4u) gmut.bpm_hi = (uint8_t)(gmut.bpm_lo + 4u);
             gmut.swing = (uint8_t)(((uint32_t)g->swing + b->swing) / 2u);
-            for (k2 = 0; g->name[k2] && g->name[k2] != ' ' && k2 < 7u; k2++) gmut_name[n2++] = g->name[k2];   /* (the first words) */
-            gmut_name[n2++] = '+';
-            for (k2 = 0; b->name[k2] && b->name[k2] != ' ' && k2 < 6u; k2++) gmut_name[n2++] = b->name[k2];
-            gmut_name[n2] = 0;
+            str_cpy(gmut_name, GEN_SHOWN_CARD[gen_shown_index(gs.gi + 1u) % GEN_NSHOWN], sizeof gmut_name);   /* (3b) the two
+                                                             * genres' card names, as the GEN screen shows them: "ACID+D'N'BASS" */
+            k2 = str_len(gmut_name);
+            gmut_name[k2++] = '+';
+            str_cpy(gmut_name + k2, GEN_SHOWN_CARD[gen_shown_index(bg) % GEN_NSHOWN], sizeof gmut_name - k2);
             gmut.name = gmut_name;
             gs.mutant = 1;
         }
@@ -2754,13 +2755,22 @@ static uint32_t gen_draw_sig(void)
     return gen_sig() * 31u + gp.page * 7u + str_hash(gp.hot * 977u, gp.last) + ux.gen;
 }
 static uint32_t gen_hash(uint32_t x) { x *= 2654435761u; x ^= x >> 15; x *= 2246822519u; x ^= x >> 13; return x % 1000u; }
+/* the GEN panel's last line: "LAST: ACID 0421"; a mutant's two names without the "LAST: " when it would not fit */
+#define GEN_LAST_W 150
+static void gen_last_line(char *v, uint32_t n)
+{
+    str_cpy(v, "LAST: ", n);
+    str_cpy(v + 6, gp.last[0] ? gp.last : "-", n - 6u);
+    if (text_w(&AF_X, v) > GEN_LAST_W)
+        str_cpy(v, gp.last, n);
+}
 static void gen_panel(void)
 {
     static const char *const ROLE[5] = {"DRUMS", "BASS", "CHORDS", "ARP", "LEAD"};
     uint8_t ord[GF_MAXROWS], mul[GF_MAXROWS];
     uint32_t k, i, p = gp.page % 3u, n;
     int32_t bw;
-    char v[24];
+    char v[32];
     for (k = 0; k < 5u; k++) {
         int32_t y = 4 + (int32_t)k * 19, dn;
         uint32_t a = gp.amt[k];
@@ -2799,10 +2809,8 @@ static void gen_panel(void)
         k = gen_shown_index(gp.genre);
         str_cpy(v + 7, gp.genre == GEN_EXPLORE ? "EXPLORE" : !gp.genre ? "RANDOM" : k != 255u ? GEN_SHOWN_NAME[k] :
                 GENRE[(gp.genre - 1u) % NGENRE].name, sizeof v - 7);
-    } else {
-        str_cpy(v, "LAST: ", sizeof v);
-        str_cpy(v + 6, gp.last[0] ? gp.last : "-", sizeof v - 6);
-    }
-    cv_clip_text(6, 126, &AF_X, v, T_MID, T_SURF, 150);
+    } else
+        gen_last_line(v, sizeof v);
+    cv_clip_text(6, 126, &AF_X, v, T_MID, T_SURF, GEN_LAST_W);
     cv_text_r(234, 126, &AF_X, "OCT+ MAKE", T_ACCENT, T_SURF);
 }
