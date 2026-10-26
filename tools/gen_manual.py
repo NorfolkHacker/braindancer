@@ -37,7 +37,7 @@ PAGE_SHOT = {
     'CE_DRM': {'KIT': 'edit_drum_1', 'SOUND': 'edit_drum_2', 'SOUND 2': 'edit_drum_3', 'MORE': 'edit_drum_more'},
     # (3b task 5: FM6's and DRUM-X's EDIT on the ux pages, their creatures gone)
     'SEQ': {'PATTERN': 'lente_pattern', 'STRETCH': 'lente_stretch', 'PLAYHEADS': 'fugue', 'TRACK': 'shift',
-            'MUTATE': 'mutate', 'STEP': 'lente_bar', 'NOTE': 'lente_step_note',
+            'MUTATE': 'mutate', 'STEPS': 'seq_steps', 'NOTE': 'lente_step_note',   # (3c-1 task 2: STEPS on the ux pages)
             'COMP': 'lente_step_comp', 'COMP 2': 'lente_step_comp2', 'AUTOMATION': 'motion', 'AUTO LIST': 'auto_list'},
     'FX': {'SENDS': 'fx_1', 'SPACE': 'fx_2', 'MASTER': 'fx_3', 'MORE': 'fx_more'},   # (3b task 8: FX on the ux pages)
     'GLO': {'MANO': 'live_mano', 'RIELES': 'live_rieles', 'MIXER': 'mixer', 'SENDS': 'glo_sends',

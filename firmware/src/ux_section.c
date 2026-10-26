@@ -26,7 +26,7 @@
  * specific row wins (its section over every section's, then its engine over every engine's). JIANT's labels themselves
  * (TP / GP: the web editor reads them, editor.c) stay as they are. Each fits a knob's column in UF_LBL (tests/ui_test.c) */
 typedef char uxs_sec_edit_ok[SEC_EDIT == UXS_SEC_EDIT && SEC_ENV == UXS_SEC_ENV && SEC_SCL == UXS_SEC_SCL &&
-                            SEC_ARP == UXS_SEC_ARP && SEC_LFO == UXS_SEC_LFO && SEC_FX == UXS_SEC_FX ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
+                            SEC_ARP == UXS_SEC_ARP && SEC_LFO == UXS_SEC_LFO && SEC_FX == UXS_SEC_FX && SEC_SEQ == UXS_SEC_SEQ ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
 #define UXS_ALL 0xFFu
 typedef struct { uint8_t sec, eng, glo, id; const char *p; } uxs_name_t;   /* id: a P_* (glo 0) or G_* (glo 1), or a view */
 static const uxs_name_t UXS_NAME[] = {
@@ -864,6 +864,10 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         k[c].bar = 0;
         k[c].off = 0;
     }
+    if (pg->fam == FAM_SEQ && pg->graph != GR_MORE) {   /* (3c-1 task 2) SEQ's: ux_seq.c (STEPS: STEP NOTE ACC/SLD GATE, the grid's) */
+        uxq_knobs(pg, k);
+        return;
+    }
     if (pg->graph == GR_MORE) {
         uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, n;
         uint64_t m;
@@ -952,6 +956,11 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
     if (ui.msg_t && ui.msg[0]) {
         *col = str_eq(ui.msg, UX_STOP) ? UX_ACCENT : UX_TEXT;
         return ui.msg;
+    }
+    if (h >= 0 && pg->fam == FAM_SEQ && pg->graph != GR_MORE && uxq_say((uint32_t)h, b, sizeof b)) {   /* (3c-1 task 2) SEQ's in
+                                                         * its words (ux_seq.c) */
+        *col = UX_TEXT;
+        return b;
     }
     if (h >= 0) {
         const char *nm = 0;
@@ -2791,6 +2800,10 @@ static void uxs_master_draw(const track_t *t, const char *name, int32_t lvl)
  * the title over the four values as bars, gone with the last section to come) */
 static void uxs_picture(const page_t *pg)
 {
+    if (pg->fam == FAM_SEQ && pg->graph != GR_MORE) {   /* (3c-1 task 2) SEQ: STEPS' roll over the strip, the grid (ux_seq.c) */
+        uxq_picture(pg);
+        return;
+    }
     if (pg->graph == GR_MORE) {
         ux_more_draw(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top);
         return;
@@ -2850,7 +2863,7 @@ static void ux_section_draw(void)
     static uint32_t head_sig, panel_sig, foot_sig;
     const page_t *pg = cur_page();
     uint32_t sec = nav_sec(), sig, all, c, scr = uxs_lfo_sc, win = uxs_rh.win, spw = uxs_sp_win;
-    int32_t mtr = uxs_mtr_px;
+    int32_t mtr = uxs_mtr_px, qph = uxq_ph_drawn;
     int due = 0;
     ux_knob_t k[4];
     const char *st;
@@ -2869,9 +2882,12 @@ static void ux_section_draw(void)
     dc_frame(ui.force);
     all = dc_all;
     {   /* the header: T3 . the sound, the transport */
-        char nm[24], tr[16];
+        char nm[24], tr[24];
         ux_trk_name(song.sel % NTRK, nm, sizeof nm, 1);
-        ux_transport(tr, sizeof tr);
+        if (pg->fam == FAM_SEQ)                         /* (3c-1 task 2) SEQ: which 16 shown, "2/4 . ", then the transport */
+            uxq_head(tr, sizeof tr);
+        else
+            ux_transport(tr, sizeof tr);
         sig = str_hash(str_hash(song.sel + 1u, nm), tr);
         if (all || sig != head_sig) {
             head_sig = sig;
@@ -2989,6 +3005,14 @@ static void ux_section_draw(void)
                   ux_pace_at(fm1_ms, uxs_fx_ms, load_tight, ux_since_shed(), gov_lite, sys_load, 0, UX_TRK_MS, UX_TRK_SLOW_MS).draw;
         }
     }
+    if (pg->fam == FAM_SEQ && pg->graph != GR_MORE) {   /* (3c-1 task 2) SEQ: what STEPS is drawn from (uxq_sig); the playhead
+                                                         * redrawn as it moves at HOME's ridges' pace (UX_TRK_MS, slower under load,
+                                                         * never frozen): one panel a played step at most, none while it stays */
+        qph = uxq_ph();
+        sig = sig * 31u + uxq_sig();
+        due = qph != uxq_ph_drawn && ux_pace_at(fm1_ms, uxq_ph_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_TRK_MS,
+                                                UX_TRK_SLOW_MS).draw;
+    }
     if (!all && sig != panel_sig && !due && pg == uxs_heavy_pg && pg->fam == FAM_EDIT && pg->graph != GR_MORE &&
         (edit_kind() == 2u || (!edit_kind() && trk_eng(TSEL) == ENGI_NOISE)) &&
         !ux_pace_at(fm1_ms, uxs_heavy_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_VIS_MS, UX_VIS_SLOW_MS).draw)
@@ -3007,6 +3031,10 @@ static void ux_section_draw(void)
             uxs_lfo_sc = scr;
             uxs_lfo_ms = fm1_ms;
             uxs_rh.win = win;
+        }
+        if (pg->fam == FAM_SEQ) {                       /* (3c-1 task 2: the playhead drawn, when) */
+            uxq_ph_drawn = qph;
+            uxq_ph_ms = fm1_ms;
         }
         if (pg->fam == FAM_FX) {                        /* (3b task 8: the paced pictures' state, drawn from now) */
             uxs_mtr_px = mtr;

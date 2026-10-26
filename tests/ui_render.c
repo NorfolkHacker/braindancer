@@ -656,7 +656,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_VOICE_WORDS_1, S_EDIT_VOICE_MORE_END, S_EDIT_PHASE_MORE_K3, S_EDIT_ANALOG_TURN, S_EDIT_FM6_1, S_EDIT_FM6_2,
        S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_FM6_ALG4, S_EDIT_FM6_TURN, S_EDIT_DRUM_1, S_EDIT_DRUM_2, S_EDIT_DRUM_3,
        S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL,
-       S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_COUNT };
+       S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS, S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
@@ -702,7 +702,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_voice_more_end", "edit_phase_more_k3", "edit_analog_turn", "edit_fm6_1", "edit_fm6_2", "edit_fm6_3",
     "edit_fm6_more", "edit_fm6_alg4", "edit_fm6_turn", "edit_drum_1", "edit_drum_2", "edit_drum_3", "edit_drum_more",
     "edit_drum_muted", "edit_drum_more_end", "layer_edit", "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state",
-    "roll_lock_more", "home_bpm"};
+    "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64", "seq_steps_drum"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1597,7 +1597,7 @@ static void setup(int s)
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
         nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
-                  "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : "COMP");   /* (0.9.2: NOTE the roll; the
+                  "STEPS" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : "COMP");   /* (0.9.2: NOTE the roll; the
                                                          * step large on COMP: TIE, REST, LONG there) */
         cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
@@ -1609,7 +1609,7 @@ static void setup(int s)
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : "COMP");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEPS" : "COMP");
         cursor_set(20); ui.lane = 4;
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name
@@ -1930,6 +1930,44 @@ static void setup(int s)
         ui.hot_col = 1; ui.hot_t = 30;
         break;
     }
+    /* (ACID FM 3c-1 task 2) SEQ > STEPS: a synth's 16 (an acid line: accents, slides, a tie, a chord, a rest; step 5 picked,
+     * G2 . ACC, playing on 9, KNOB 3 just turned); 64 steps on its third 16 (a long note, 3/4 in the header); the DRUM grid
+     * (SNARE picked, accents, playing) */
+    case S_SEQ_STEPS:
+    case S_SEQ_STEPS_64: {
+        static const uint8_t LINE[16] = {36, 0, 48, 43, 43, 0, 46, 48, 41, 0, 53, 48, 36, 0, 39, 43};
+        static const uint8_t CH3[3] = {48, 51, 55};
+        track_t *t = TSEL;
+        uint32_t i, n = s == S_SEQ_STEPS_64 ? 64u : 16u;
+        eng(ENGI_ANALOG); t->engine = t->eng_req;
+        track_defaults_steps(t);
+        t->p[P_SLEN] = (int16_t)n;
+        for (i = 0; i < n; i++) {
+            uint8_t nt = (uint8_t)(LINE[i % 16u] + (i / 16u) * 2u);
+            if (!LINE[i % 16u])
+                step_put(&t->step[i], i % 3u ? ST_REST : ST_TIE, 0, 0, &nt);
+            else
+                step_put(&t->step[i], ST_NOTE, i % 16u == 4u || i % 16u == 11u ? SF_ACCENT : i % 16u == 7u ? SF_SLIDE : 0u, 1, &nt);
+        }
+        step_put(&t->step[8], ST_NOTE, SF_SLIDE, 3, CH3);
+        if (s == S_SEQ_STEPS_64) {
+            step_put(&t->step[34], ST_NOTE, SF_ACCENT, 1, CH3);
+            for (i = 35; i < 38u; i++) step_put(&t->step[i], ST_TIE, 0, 0, CH3);
+        }
+        song.playing = 1; t->seq_idx = s == S_SEQ_STEPS_64 ? 40u : 8u;
+        nav_scene(SEC_SEQ, "STEPS");
+        cursor_set(s == S_SEQ_STEPS_64 ? 34 : 4);
+        if (s == S_SEQ_STEPS) ux_knob_touch(2);
+        break;
+    }
+    case S_SEQ_STEPS_DRUM:
+        drum(0); trk[3].p[P_SLEN] = 32;
+        memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
+        trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
+        song.playing = 1; trk[3].seq_idx = 22;
+        nav_scene(SEC_SEQ, "STEPS");
+        cursor_set(20); ui.lane = 1;
+        break;
     case S_COMP_SEL_DRUM:
         drum(0);
         trk[3].step[2].comp = CP_ECHO; trk[3].step[2].carg = 1;

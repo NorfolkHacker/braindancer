@@ -864,7 +864,8 @@ static void step_edit(uint32_t slot, int32_t steps)
         grid_edit(slot, steps);
         return;
     }
-    switch (slot) {
+    switch (cur_page()->id[slot & 3u]) {                 /* (ACID FM 3c-1 task 2) the field the PAGES row's knob names: STEPS'
+                                                         * KNOB 3 FLAG (ACC/SLD), KNOB 4 TIME (GATE) */
     case 0:                                               /* STEP: the cursor */
         cursor_turn(steps);
         break;
@@ -2516,6 +2517,8 @@ static void ui_input_frame(void)
                                                         * chain, a page a detent (HOME's: TRACKS VISUAL GEN 1..3) */
         if (lock_held())                                /* (0.9.12) a step held on STEP: the page its locks take */
             lock_select(s);
+        else if (uxq_select(s))                         /* (ACID FM 3c-1 task 2) STEPS: on the strip's last cell the next 16 */
+            ;
         else if (ui.home || cur_page()->graph != GR_MORE || !ux_more_knob(UXM_SELECT, s))
             nav_select(s);                              /* (ACID FM 3b: MORE scrolls; before its first row the page before) */
     }

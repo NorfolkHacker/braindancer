@@ -71,11 +71,18 @@ static const nv_t CE_DIG[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("
                               NV("OP4 ENV", 0, 2, 2), NV("OP LEVEL", 0, 2, 2)};
 static const ng_t CG_DIG[] = {{"SOUND", 0}, {"TONE", 0}, {"OPERATOR", "OPS"}};
 enum { LV_PAT, LV_BAR, LV_STEP, LV_N };                 /* SEQ's pictures: the bars, the roll, the step large */
-static const nv_t CE_SEQ[] = {NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, LV_PAT), NV("PLAYHEADS", 0, 0, LV_PAT),
-                              NV("TRACK", 0, 1, LV_PAT), NV("MUTATE", 0, 1, LV_PAT),   /* (0.9.18: no BAR page) */
-                              NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR), NV("COMP", 0, 3, LV_STEP),
-                              NV("COMP 2", 0, 3, LV_STEP), NV("AUTOMATION", 0, 4, LV_BAR), NV("AUTO LIST", 0, 4, LV_BAR)};
-static const ng_t CG_SEQ[] = {{"PATTERN", "PATT"}, {"TRACK", 0}, {"BAR", 0}, {"STEP", 0}, {"AUTO", 0}};
+/* (ACID FM 3c-1 task 2) SEQ = STEPS -> STEP EXTRAS -> PATTERN -> MORE (spec 2), opening on STEPS (JIANT's STEP page, the ux pages:
+ * ux_seq.c). STEP EXTRAS and MORE have no PAGES row yet (tasks 3, 4): not shown. Until those tasks move them, the inherited SEQ
+ * pages follow PATTERN in their groups (STRETCH and PLAYHEADS PATTERN's; TRACK MUTATE, NOTE, COMP COMP 2, AUTOMATION AUTO LIST),
+ * each still reached (SELECT, SEQ's button), drawn as before */
+static const nv_t CE_SEQ[] = {NV("STEP", "STEPS", 0, LV_BAR), NV("STEP EXTRAS", 0, 1, LV_STEP), NV("PATTERN", 0, 2, LV_PAT),
+                              NV("STRETCH", 0, 2, LV_PAT), NV("PLAYHEADS", 0, 2, LV_PAT),
+                              NV("TRACK", 0, 3, LV_PAT), NV("MUTATE", 0, 3, LV_PAT),   /* (0.9.18: no BAR page) */
+                              NV("NOTE", 0, 4, LV_BAR), NV("COMP", 0, 5, LV_STEP),
+                              NV("COMP 2", 0, 5, LV_STEP), NV("AUTOMATION", 0, 6, LV_BAR), NV("AUTO LIST", 0, 6, LV_BAR),
+                              NV("SEQ MORE", "MORE", 7, LV_PAT)};
+static const ng_t CG_SEQ[] = {{"STEPS", 0}, {"STEP EXTRAS", "EXTRAS"}, {"PATTERN", "PATT"}, {"TRACK", 0}, {"NOTE", 0},
+                              {"COMP", 0}, {"AUTO", 0}, {"MORE", 0}};
 /* (ACID FM 3b task 8) FX on the ux pages (ux_section.c), a page a group (its button steps them round, spec 2.4): SENDS (JIANT's
  * FX: the track's DISTORT, CHORUS, DELAY, REVERB), SPACE (DLY TIME, DLY FDBK, REV TYPE, REV SIZE), MASTER (CLIP, PUNCH, DUCK, DUCK
  * TIME), MORE (the rest of JIANT's sixteen pages: params.c UXM_FX). The DJ FILTER stays GLO's */
@@ -112,11 +119,11 @@ static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, CG_HOME), CH(CE_SYN, CG_SYN), 
                                       CH(CE_GLO, CG_GLO), CH(CE_ENV, CG_ENV), CH(CE_LFO, CG_LFO), CH(CE_SCL, CG_SCL),
                                       CH(CE_ARP, CG_ARP), CH(CE_SAVE, CG_SAVE), CH(CE_FM6, CG_FM6), CH(CE_DRM, CG_DRM),
                                       CH(CE_DIG, CG_DIG)};
-/* the page each opens on at power-on (the mock-up's): SEQ its STEP, ENV its ENV, LFO its LFO, (0.9.11) GLO its MIXER (LIVE's
+/* the page each opens on at power-on (the mock-up's): SEQ its STEP (STEPS), ENV its ENV, LFO its LFO, (0.9.11) GLO its MIXER (LIVE's
  * pages before it: a GLO tap inside, rule 2); ui.nmem holds it ^ this */
-static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 5, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0};   /* (3b task 6: ENV its AMP, 0; task 7: LFO
+static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0};   /* (3b task 6: ENV its AMP, 0; task 7: LFO
                                                          * its LFO, now the first) */   /* (0.9.11: GLO its MIXER; 0.9.18: SEQ its
-                                                         * STEP, 5 with BAR gone) */
+                                                         * STEP, 5 with BAR gone; ACID FM 3c-1 task 2: SEQ its STEPS, the first) */
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }
 static uint32_t nav_mem(uint32_t key) { return (uint32_t)(ui.nmem[key] ^ NAV_DEF[key]); }

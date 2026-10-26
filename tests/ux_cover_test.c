@@ -355,6 +355,57 @@ static int uxc_widths(void)
                 uxc_wfit(UXL_GX[i * 4u + sl], b);
             }
         }
+    {   /* (ACID FM 3c-1 task 2) SEQ > STEPS: STEP n/LEN (every LEN), NOTE (every note, chords), ACC/SLD, GATE (NOTE TIE REST, 2 ..
+         * 16 steps); a DRUM track's LANE (each), HIT (each mode), ACC (ux_seq.c uxq_knobs) */
+        track_t keep = *TSEL;
+        ux_knob_t k[4];
+        uint32_t len, st, nt, f, g, l, h;
+        set_engine_of(TSEL, ENGI_ANALOG); TSEL->engine = TSEL->eng_req;
+        for (len = 1; len <= NSTEP; len++) {
+            TSEL->p[P_SLEN] = (int16_t)len;
+            for (st = 0; st < len; st++) {
+                ui.cursor = (uint8_t)st;
+                uxq_knobs(&PAGES[0], k);
+                uxc_wfit("STEPS STEP", k[0].value);
+            }
+        }
+        TSEL->p[P_SLEN] = 16; ui.cursor = 0;
+        for (i = 0; i < NSTEP; i++) step_clear(&TSEL->step[i]);
+        for (nt = 0; nt < 128u; nt++)
+            for (g = 1; g <= 4u; g++)                   /* (a note, a chord of 2 .. 4) */
+                for (f = 0; f < 4u; f++) {
+                    TSEL->step[0].time = ST_NOTE; TSEL->step[0].n = (uint8_t)g; TSEL->step[0].note[0] = (uint8_t)nt;
+                    TSEL->step[0].flags = (uint8_t)((f & 1u ? SF_ACCENT : 0u) | (f & 2u ? SF_SLIDE : 0u));
+                    for (l = 0; l < 4u; l++) {
+                        ux_knob_t kk[4];
+                        uint32_t c;
+                        for (c = 0; c < 4u; c++) { kk[c].label = ""; kk[c].value[0] = 0; kk[c].bar = 0; kk[c].off = 0; }
+                        uxq_knobs(&PAGES[0], kk);
+                        uxc_wfit(l == 0u ? "STEPS NOTE" : l == 1u ? "STEPS ACC/SLD" : "STEPS GATE", kk[l == 0u ? 1u : l == 1u ? 2u : 3u].value);
+                    }
+                }
+        for (g = 0; g < 16u; g++) {                     /* GATE: a NOTE g + 1 steps long; a TIE; a REST */
+            for (i = 1; i < 16u; i++) TSEL->step[i].time = i <= g ? ST_TIE : ST_REST;
+            uxq_knobs(&PAGES[0], k);
+            uxc_wfit("STEPS GATE", k[3].value);
+        }
+        TSEL->step[0].time = ST_TIE; uxq_knobs(&PAGES[0], k); uxc_wfit("STEPS GATE", k[3].value);
+        TSEL->step[0].time = ST_REST; uxq_knobs(&PAGES[0], k); uxc_wfit("STEPS GATE", k[3].value); uxc_wfit("STEPS NOTE", k[1].value);
+        set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req;
+        for (i = 0; i < NSTEP; i++) step_clear(&TSEL->step[i]);
+        for (l = 0; l < NLANE; l++)
+            for (h = 0; h <= LM_N; h++) {
+                ui.lane = (uint8_t)l;
+                grid_hit_set(TSEL, 0, l, h);
+                grid_acc(TSEL, 0, l, (int)(h & 1u));
+                uxq_knobs(&PAGES[0], k);
+                uxc_wfit("STEPS LANE", k[1].value);
+                uxc_wfit("STEPS HIT", k[2].value);
+                uxc_wfit("STEPS ACC", k[3].value);
+            }
+        *TSEL = keep;
+        ui.lane = 0; ui.cursor = 0;
+    }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);
     printf("ux widths: %u values a 3b knob can show (%u on MORE pages' knob rows), %u names kept whole in a smaller face "

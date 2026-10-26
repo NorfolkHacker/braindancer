@@ -459,7 +459,8 @@ static int screens(void)
     t->step[1] = (step_t){{60}, 1, ST_NOTE, 0, 100};
     t->step[3] = t->step[1];
     step_set_ratchet(&t->step[1], 2);
-    go_page(GR_ROLL); ui.cursor = 8; ui.bank = 0;
+    go_title("NOTE"); ui.cursor = 8; ui.bank = 0;     /* (ACID FM 3c-1 task 2: ui_graph.c's roll and grid, NOTE's; STEPS' own,
+                                                         * ux_seq.c: tests/ui_test.c test_t32_ratchet) */
     memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
     y = graph_y() + (uint32_t)pr_row_y(60) + 1u;
     x = (uint32_t)PR_CX(1);                          /* (0.8.5: columns 14 / 15 px, the bar a px in: x2 at x + 1 .. 6, 8 .. 13) */

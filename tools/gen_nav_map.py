@@ -52,11 +52,14 @@ def parse():
     chains = re.findall(r'CH\((CE_\w+),\s*(CG_\w+)\)', re.search(r'CHAINS\[NAV_KEYS\] = \{(.*?)\};', s, re.S).group(1))
     navdef = [int(x) for x in re.findall(r'\d+', re.search(r'NAV_DEF\[NAV_KEYS\] = \{(.*?)\};', s, re.S).group(1))]
     fm4 = re.search(r'#define FELUCCA_FM4 (\d)', (R / 'firmware/src/core.h').read_text()).group(1) != '0'
+    rows = set(re.findall(r'^\s*\{"([^"]+)", FAM_\w+,', (R / 'firmware/src/params.c').read_text(encoding='latin-1'), re.M))
     keys = []                                          # key k: the section's chain (EDIT's synths), then FM6 DRUM DIGITAL
     for k, (ce, cg) in enumerate(chains):
         if not fm4 and ce == 'CE_DIG':
             continue
-        pages = [dict(e, name=e['nm'] or e['t'], i=i) for i, e in enumerate(tabs[ce])]
+        pages = [dict(e, name=e['nm'] or e['t'], i=i) for i, e in enumerate(tabs[ce])
+                 if e['t'] is None or e['t'] in rows]  # (ACID FM 3c-1 task 2: an entry with no PAGES row yet, SEQ's STEP
+                                                       # EXTRAS and MORE until tasks 3 and 4, is not shown: not on the map)
         keys.append(dict(key=k, ce=ce, sec=sec[k] if k < len(sec) else 'EDIT', groups=groups[cg], pages=pages,
                          default=navdef[k]))
     assert len(navdef) == len(chains), 'NAV_DEF and CHAINS disagree'
@@ -89,7 +92,7 @@ L = {
          'LFO': ('MACROS M1–M4', 'LFO dice'), 'SCL': ('ROOT on the keys', 'walk this chain'), 'ARP': (None, 'walk this chain'),
          'SAVE': ('sections live · NAME', 'walk this chain')},
   notes={'HOME': 'TRACKS → VISUAL → GEN: HOME again (round) or SELECT; HOME + SELECT straight to GEN. GEN 1–3: PRESETS the genre, OCT+ makes the piece, OCT− back to TRACKS.',
-         'SEQ': 'PRESETS: the patterns (PHRASES). KNOB 1: all 64 steps on STEP (a fast turn several).',
+         'SEQ': 'PRESETS: the patterns (PHRASES). KNOB 1: all 64 steps on STEPS (a fast turn several); SELECT on the last cell: the next 16.',
          'EDIT': 'Synths: page 3 is VOICE on ANALOG, FILTER on the others; MORE lists the rest (KNOB 1 picks, KNOB 2 sets). FM6: KNOB 1 picks the operator on OPERATOR and OP ENV. DRUM-X: KNOB 1 picks the drum on SOUND and SOUND 2 (a key struck picks it too).',
          'FX': 'SENDS: the track\'s DISTORT and sends as bars; SPACE: the echoes and the reverb\'s tail; MASTER: the output\'s meter. MORE: DELAY, REVERB, CHORUS, SLICER, the PUNCH LANE (CHORUS and SLICER hidden with LOAD ECO).',
          'SAVE': 'From outside, USER and SECTIONS come with SAVE armed: SAVE · OCT+ · OCT+.',
@@ -135,7 +138,7 @@ L = {
          'LFO': ('MACROS M1–M4', 'dados de LFO'), 'SCL': ('ROOT en las teclas', 'recorre esta cadena'),
          'ARP': (None, 'recorre esta cadena'), 'SAVE': ('secciones en vivo · NAME', 'recorre esta cadena')},
   notes={'HOME': 'TRACKS → VISUAL → GEN: HOME otra vez (en ronda) o SELECT; HOME + SELECT directo a GEN. GEN 1–3: PRESETS el género, OCT+ arma la pieza, OCT− vuelve a TRACKS.',
-         'SEQ': 'PRESETS: los patrones (PHRASES). KNOB 1: los 64 pasos en STEP (girado rápido, varios).',
+         'SEQ': 'PRESETS: los patrones (PHRASES). KNOB 1: los 64 pasos en STEPS (girado rápido, varios); SELECT en la última celda: los 16 siguientes.',
          'EDIT': 'Sintes: la página 3 es VOICE en ANALOG, FILTER en los demás; MORE lista el resto (KNOB 1 elige, KNOB 2 cambia). FM6: KNOB 1 elige el operador en OPERATOR y OP ENV. DRUM-X: KNOB 1 elige el tambor en SOUND y SOUND 2 (una tecla tocada también).',
          'FX': 'SENDS: DISTORT y los envíos de la pista en barras; SPACE: los ecos y la cola de la reverb; MASTER: el medidor de la salida. MORE: DELAY, REVERB, CHORUS, SLICER, el PUNCH LANE (CHORUS y SLICER se ocultan con LOAD ECO).',
          'SAVE': 'Desde afuera, USER y SECTIONS llegan con SAVE elegido: SAVE · OCT+ · OCT+.',
@@ -174,8 +177,9 @@ def is_cond(sec, ce, name):
     return (sec, name) in COND or (ce, name) in COND
 
 # the map's rows: the sections in each (EDIT: its three chains side by side) and their accent (KNOB 1..4 colours)
-ROWS = [['HOME', 'SEQ', 'ARP'], ['EDIT'], ['FX', 'GLO'], ['ENV', 'LFO', 'SCL'], ['SAVE']]   # (3b task 6: SCL 3 pages, ARP 2;
-                                                        # task 7: LFO 4, MOD MATRIX's pill too narrow beside SAVE)
+ROWS = [['SEQ', 'ARP'], ['EDIT'], ['FX', 'GLO'], ['ENV', 'LFO', 'SCL'], ['HOME', 'SAVE']]   # (3b task 6: SCL 3 pages, ARP 2;
+                                                        # task 7: LFO 4, MOD MATRIX's pill too narrow beside SAVE; 3c-1 task 2:
+                                                        # SEQ's six groups beside ARP alone, HOME beside SAVE)
 ACCENT = {'HOME': K[0], 'SEQ': K[2], 'SCL': K[3], 'EDIT': K[1], 'FX': K[3], 'GLO': K[0], 'ENV': K[1], 'LFO': K[2],
           'ARP': K[0], 'SAVE': K[1]}
 

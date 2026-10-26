@@ -802,7 +802,8 @@ static const page_t PAGES[] = {
     /* (0.6.92) eleven pages, was fifteen: the piano roll, the pattern, the roll's edits (NOTE: FOCUS PITCH MOVE MICRO,
      * TIMING folded in), STRETCH (on the turn), the step's two components (EVERY on them: WHEN and TRIG's loops in
      * one), TRACK (SHIFT's PITCH and CHANCE, HUMAN as one amount, REC Q; C.LEN retired from the pages), then the rest */
-    {"STEP", FAM_SEQ, SC_STEP, GR_ROLL, {0, 1, 2, 3}},
+    {"STEP", FAM_SEQ, SC_STEP, GR_ROLL, {0, 1, 3, 2}},   /* (ACID FM 3c-1 task 2: SEQ > STEPS, ux_seq.c) KNOB 1..4 the fields
+                                                         * STEP NOTE FLAG TIME (ui_input.c step_edit): STEP NOTE ACC/SLD GATE */
     {"PATTERN", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SLEN, P_SDIV, P_SSWING, P_SGATE}},
     {"NOTE", FAM_SEQ, SC_STEP, GR_ROLL, {4, 5, 6, 9}},   /* (0.6.81) the piano roll's edits: FOCUS PITCH MOVE; (0.6.92) MICRO */
     {"STRETCH", FAM_SEQ, SC_TRACK, GR_SHAPE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.85) STRETCH REPEAT NUDGE (0.6.92: on the turn) ROTATE */

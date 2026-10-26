@@ -1528,45 +1528,7 @@ static void draw_columns(void)
                     ICON_ORDER);
         return;
     }
-    if (cur_page()->scope == SC_STEP) {
-        static const char *const TIME_N[3] = {"NOTE", "TIE", "REST"};
-        const step_t *st = &seq_steps(TSEL)[ui.cursor];
-        char u[8];
-        uint32_t cnt = st->n, first = st->note[0], l;
-        for (l = NLANE; l-- > 0;)                         /* (lane hits count as their notes) */
-            if ((st->hit >> l) & 1u) {
-                cnt++;
-                if (!st->n)
-                    first = DRUM_LANE_NOTE[l];
-            }
-        if (cnt) {
-            note_name(val, first);
-            u[0] = 0;
-            if (cnt > 1) {
-                str_cpy(u, "+", 8);
-                fmt_int(u + 1, (int32_t)cnt - 1);
-            }
-        } else {
-            str_cpy(val, "--", 12);
-            u[0] = 0;
-        }
-        {
-            static const char *const FLAG_N[4] = {"-", "ACC", "SLD", "A+S"};
-            char sn[8], sl[8], tv[8];
-            uint32_t nl = st->time == ST_NOTE && st->n ? note_len(TSEL, ui.cursor, (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP)) : 1u;
-            fmt_int(sn, (int32_t)ui.cursor + 1);
-            str_cpy(sl, "/", 8);
-            fmt_int(sl + 1, TSEL->p[P_SLEN]);
-            if (nl > 1u) fmt_int(tv, (int32_t)nl);            /* (0.8.4) a NOTE's length: 3 ST (NOTE: one step) */
-            else str_cpy(tv, TIME_N[st->time % 3u], sizeof tv);
-            draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
-            draw_column(1, "NOTE", val, u, step_on(st) ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-            draw_column(2, "TIME", tv, nl > 1u ? "ST" : "", VAL(2u), -1, ICON_AUTO);
-            draw_column(3, "FLAG", FLAG_N[(st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u)], "",
-                        VAL(3u), -1, ICON_AUTO);
-        }
-        return;
-    }
+    /* (ACID FM 3c-1 task 2) STEP's columns (STEP NOTE TIME FLAG) gone: SEQ > STEPS is drawn by ux_seq.c */
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(cur_page(), c, &vp);
@@ -2068,6 +2030,7 @@ static void ui_draw_body(uint32_t counting)
     if (ux_section_owns(nav_sec())) {                   /* (ACID FM 3b) a section moved to the ux pages (ux_section.c), its
                                                          * own strips as HOME's */
         uint32_t k;
+        cursor_fix();                                   /* (3c-1 task 2: SEQ > STEPS, LEN shorter: onto its last step) */
         ux_section_draw();
         for (k = 0; k <= ROLL_BPM; k++)                 /* (3b task 5: JIANT's cards' rolling digits, a JIANT page's left */
             ui.roll[k].from[0] = 0;                     /* pending: none drawn here, none left to roll back) */
