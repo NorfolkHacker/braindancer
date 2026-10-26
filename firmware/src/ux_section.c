@@ -113,7 +113,7 @@ static const uxs_name_t UXS_NAME[] = {
     {UXS_ALL, UXS_ALL, 1, G_SLP0 + 14, "PITCH 15"}, {UXS_ALL, UXS_ALL, 1, G_SLP15, "PITCH 16"},
     {UXS_ALL, UXS_ALL, 1, G_PFXLEN, "LANE STEPS"},      /* (JIANT's PUNCH LEN: the punch-in lane's steps, */
     {UXS_ALL, UXS_ALL, 1, G_PFXRES, "LANE RATE"},       /* .. RES a step's length: as LFO's STEP RATE) */
-    {UXS_ALL, UXS_ALL, 1, G_DREL, "DUCK REL"},          /* (JIANT's REL: DUCK's release, the others back) */
+    {UXS_ALL, UXS_ALL, 1, G_DREL, "DUCK TIME"},         /* (JIANT's REL: DUCK's release, how long the others take back) */
 };
 /* (3b task 8) REVERB's fourth setting by its TYPE (params.c param_ref: ROOM / SPRING the pre-delay, SHIMMER / CLOUD AIR, RESO its
  * chord's PITCH), and DAMP on RESO: FOLLOW (the track its strings take their notes from) */
@@ -387,7 +387,7 @@ static int uxs_lfo_val(uint32_t id, int32_t v, char *b, uint32_t nb, int full)
 }
 /* ------------------------------------------------------------------------------------------ FX's values (3b task 8) --- */
 /* (spec 0 rule 4: plain values) what the engine does with each, from its own code: DLY TIME the time it plays at the tempo (fx.c
- * delay_samples, PING within half the line), DUCK in dB (fx.c duck_block), DUCK REL in ms (40 .. 600), CLIP's drive (master_begin),
+ * delay_samples, PING within half the line), DUCK in dB (fx.c duck_block), DUCK TIME in ms (40 .. 600), CLIP's drive (master_begin),
  * PUNCH's body gain (eng_drum.c punch_gain), REV PRE in ms (fx_buses: PRE x 40 samples), the TONEs darker / brighter, every amount
  * OFF at 0, JIANT's cut names whole (RECT, STUT, 16T, CHR SCL); the knob's short (48 px: ux_widgets.c ux_val_face), the status
  * line's in full; LOAD LITE / ECO what plays instead said (JIANT's cards said LITE / ECO) */
@@ -2637,7 +2637,7 @@ static void uxs_space_draw(const track_t *t, const char *name)
 /* MASTER: the output as a level meter (OUT: the peak of audio.c's scope, the music after the master, dBFS, -48 .. 0), the clip
  * point marked (the limiter's ceiling, fx.c master_out: LIM_T into the soft clip, ~-6 dB; above it in ACCENT); CLIP's curve (fx.c
  * clip_block: the mix in, what goes on out; the straight line without it); after a kick (a DRUM-X hit) the drums' gain (eng_drum.c
- * punch_gain, PUNCH) and the others' (fx.c duck_block, DUCK, back at DUCK REL's rate) over 0.8 s, +6 .. -30 dB, block by block as
+ * punch_gain, PUNCH) and the others' (fx.c duck_block, DUCK, back at DUCK TIME's rate) over 0.8 s, +6 .. -30 dB, block by block as
  * the engine computes them (worked out once a change: uxs_kick). The meter moves as the sound does, paced as HOME's ridges
  * (ux_section_draw); the rest a turn redraws */
 #define UXS_MX0 14               /* the meter: its left, width, row, height */
@@ -2659,6 +2659,16 @@ static int32_t uxs_out_db10(void)                       /* the output's peak now
     return pk > 0 ? clamp(uxs_db10((uint32_t)pk, 32767u), -UXS_MDB * 10, 0) : -UXS_MDB * 10;
 }
 static int32_t uxs_meter_px(int32_t d10) { return clamp((d10 + UXS_MDB * 10) * UXS_MW / (UXS_MDB * 10), 0, UXS_MW); }
+static void uxs_out_txt(int32_t lvl, char *b, uint32_t nb)   /* the meter's lvl (px) in words: "OUT -12DB", whole dB ("OUT OFF") */
+{
+    str_cpy(b, "OUT ", nb);
+    if (lvl <= 0) {
+        uxs_cat(b, nb, N_ONOFF[0]);
+        return;
+    }
+    fmt_int(b + str_len(b), (lvl * UXS_MDB * 2 + UXS_MW) / (2 * UXS_MW) - UXS_MDB);   /* (rounded) */
+    uxs_cat(b, nb, "DB");
+}
 static int32_t uxs_clip_out(int32_t x)                  /* fx.c clip_block's sample out of the mix x (CLIP 0: x, not in it) */
 {
     int32_t a = song.g[G_CLIP], g = a > 0 ? 4096 + a * 12288 / 100 : 0, mk;
@@ -2669,7 +2679,7 @@ static int32_t uxs_clip_out(int32_t x)                  /* fx.c clip_block's sam
 }
 #define UXS_KMS 800u             /* "after a kick": the window, ms */
 #define UXS_KW 136               /* .. its columns */
-/* (fx.c duck_block, block by block from a kick: its attack halving to the top, ~25 ms held, back at DUCK REL's rate) */
+/* (fx.c duck_block, block by block from a kick: its attack halving to the top, ~25 ms held, back at DUCK TIME's rate) */
 typedef struct { int32_t env; uint8_t att, hold; } uxs_dk_t;
 static void uxs_duck_hit(uxs_dk_t *d) { d->env = 0; d->att = 1; d->hold = (uint8_t)(1103u / CTL); }
 static int32_t uxs_duck_step(uxs_dk_t *d, int32_t dep, uint32_t kb)   /* one block: the others' gain after it, Q15 */
@@ -2689,7 +2699,7 @@ static int32_t uxs_duck_step(uxs_dk_t *d, int32_t dep, uint32_t kb)   /* one blo
 #define UXS_KY 64                /* .. its top row, its height (+6 dB at the top, -30 at the foot) */
 #define UXS_KH 56
 static int32_t uxs_gain_y(int32_t d10) { return clamp((60 - d10) * UXS_KH / 360, 0, UXS_KH - 1); }   /* a gain's row in it */
-/* the kick's two curves (a row a column), worked out when PUNCH, DUCK or DUCK REL change (not each meter frame) */
+/* the kick's two curves (a row a column), worked out when PUNCH, DUCK or DUCK TIME change (not each meter frame) */
 static struct { uint32_t key; uint8_t duck[UXS_KW], punch[UXS_KW]; } uxs_kick;
 static void uxs_kick_calc(void)
 {
@@ -2709,7 +2719,7 @@ static void uxs_kick_calc(void)
         uxs_kick.punch[x] = (uint8_t)uxs_gain_y(uxs_db10((uint32_t)punch_gain(to, pu), 32768u));
     }
 }
-static const char *const UXS_MS_SAY[] = {"OUT ", "CLIPS", "CLIP", "AFTER A KICK", "DRUMS", "OTHERS"};
+static const char *const UXS_MS_SAY[] = {"", "CLIPS", "CLIP", "AFTER A KICK", "DRUMS", "OTHERS"};
 static void uxs_master_draw(const track_t *t, const char *name, int32_t lvl)
 {
     int32_t lim = uxs_meter_px(uxs_db10((uint32_t)softclip(LIM_T), 32767u)), i, x, y, py = 0;
@@ -2728,13 +2738,7 @@ static void uxs_master_draw(const track_t *t, const char *name, int32_t lvl)
         GFX_HOOK_ALIGN(0, UXS_MY + UXS_MH + 4 + UF_LBL_CAP_Y, 0, UXS_MY + UXS_MH + 4 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS,
                        "MASTER's clip point");
         cv_text_on(x, UXS_MY + UXS_MH + 4, &UF_LBL, UXS_MS_SAY[1], UX_MID, ux_under(x, UXS_MY + UXS_MH + 8));
-        str_cpy(b, UXS_MS_SAY[0], sizeof b);
-        if (lvl <= 0)
-            uxs_cat(b, sizeof b, N_ONOFF[0]);
-        else {
-            uxs_dbtxt(c, sizeof c, (lvl * UXS_MDB * 10 / UXS_MW - UXS_MDB * 10) / 10 * 10, 0);
-            uxs_cat(b, sizeof b, c);
-        }
+        uxs_out_txt(lvl, b, sizeof b);
         x = 228 - text_w(&UF_LBL, b);
         GFX_HOOK_ALIGN(0, 8 + UF_LBL_CAP_Y, 0, 8 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "MASTER's level");
         cv_text_on(x, 8, &UF_LBL, b, UX_TEXT, ux_under(x, 12));
@@ -2958,10 +2962,13 @@ static void ux_section_draw(void)
                                                          * DISTORT's TYPE, the globals (the buses', the master's), the LOAD. Not
                                                          * the tempo, the output: below) */
         static const uint8_t F[] = {P_DIST, P_CHOR, P_DLY, P_REV, P_DTYPE};
+        static const uint8_t G[] = {G_DTIME, G_DFDBK, G_DMIX, G_DTYPE, G_DPING, G_DPIT, G_DSPRY, G_RTYPE, G_RSIZE, G_RDAMP, G_RMOD,
+                                    G_RPRE, G_CLIP, G_PUNCH, G_DUCK, G_DREL};   /* (fix: only the globals the pictures read: not
+                                                         * the DJ FILTER, which recorded automation writes every step) */
         for (c = 0; c < sizeof F; c++)
             sig = sig * 31u + (uint16_t)TSEL->p[F[c]];
-        for (c = 0; c < G_COUNT; c++)
-            sig = sig * 31u + (uint16_t)song.g[c];
+        for (c = 0; c < sizeof G; c++)
+            sig = sig * 31u + (uint16_t)song.g[G[c]];
         sig = sig * 31u + sys_load * 7u + (uint32_t)LOAD_EFF() * 13u;
         if (pg->id[0] == G_DTIME) {                     /* SPACE: the delay's time at the tempo (an outside clock moves it 4
                                                          * times a beat): redrawn as the load allows, as LFO's window */

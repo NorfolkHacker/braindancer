@@ -713,7 +713,7 @@ static const ux_row_t UXM_LFO_ROWS[] = {
 };
 static const ux_more_t UXM_LFO = {UXM_LFO_ROWS, (uint8_t)(sizeof UXM_LFO_ROWS / sizeof UXM_LFO_ROWS[0])};
 /* (3b task 8) FX's MORE (spec 2.4): what SENDS (the track's DISTORT and three sends), SPACE (DLY TIME, DLY FDBK, REV TYPE, REV
- * SIZE) and MASTER (CLIP PUNCH DUCK DUCK REL) leave of JIANT's sixteen FX pages, in the spec's order: the track's DISTORT (TYPE,
+ * SIZE) and MASTER (CLIP PUNCH DUCK DUCK TIME) leave of JIANT's sixteen FX pages, in the spec's order: the track's DISTORT (TYPE,
  * TONE) and AUTO PAN, then the buses (globals): DELAY, REVERB (its fourth row PRE / AIR / PITCH by the TYPE, DAMP FOLLOW on RESO:
  * params.c param_ref, ux_section.c uxs_label), CHORUS, SLICER and its pitch steps (JIANT's SLICER, SL BUS, SL BUS 2, SL PITCH;
  * BUSES' four amounts each in its own group), the punch-in lane (JIANT's PUNCH: its length, step, CLEAR asking first). CHORUS and

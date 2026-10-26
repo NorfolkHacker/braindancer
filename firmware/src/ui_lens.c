@@ -78,7 +78,7 @@ static const nv_t CE_SEQ[] = {NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, L
 static const ng_t CG_SEQ[] = {{"PATTERN", "PATT"}, {"TRACK", 0}, {"BAR", 0}, {"STEP", 0}, {"AUTO", 0}};
 /* (ACID FM 3b task 8) FX on the ux pages (ux_section.c), a page a group (its button steps them round, spec 2.4): SENDS (JIANT's
  * FX: the track's DISTORT, CHORUS, DELAY, REVERB), SPACE (DLY TIME, DLY FDBK, REV TYPE, REV SIZE), MASTER (CLIP, PUNCH, DUCK, DUCK
- * REL), MORE (the rest of JIANT's sixteen pages: params.c UXM_FX). The DJ FILTER stays GLO's */
+ * TIME), MORE (the rest of JIANT's sixteen pages: params.c UXM_FX). The DJ FILTER stays GLO's */
 static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, 0), NV("FX SPACE", "SPACE", 1, 0), NV("MASTER", 0, 2, 0),
                              NV("FX MORE", "MORE", 3, 0)};
 static const ng_t CG_FX[] = {{"SENDS", 0}, {"SPACE", 0}, {"MASTER", 0}, {"MORE", 0}};

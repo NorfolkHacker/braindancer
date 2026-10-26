@@ -15987,7 +15987,7 @@ typedef struct { const char *nm, *title; const char *lab[4]; uint16_t id[4]; uin
 static const uxt8_pg_t UXT8_PG[] = {
     {"SENDS", "FX", {"DISTORT", "CHORUS", "DELAY", "REVERB"}, {P_DIST, P_CHOR, P_DLY, P_REV}, 0},
     {"SPACE", "FX SPACE", {"DLY TIME", "DLY FDBK", "REV TYPE", "REV SIZE"}, {G_DTIME, G_DFDBK, G_RTYPE, G_RSIZE}, 1},
-    {"MASTER", "MASTER", {"CLIP", "PUNCH", "DUCK", "DUCK REL"}, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}, 1},
+    {"MASTER", "MASTER", {"CLIP", "PUNCH", "DUCK", "DUCK TIME"}, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}, 1},
 };
 static void uxt8_open(uint32_t i)                        /* T1 (ANALOG, its first sound), FX's page i shown (3: MORE) */
 {
@@ -16224,7 +16224,7 @@ static int test_t8_knobs(void)
             {2, 0, 1, G_CLIP, 0, "OFF", "CLIP \xB7 OFF"}, {2, 0, 1, G_CLIP, 50, "50%", "CLIP \xB7 50%: DRIVE X2.5"},
             {2, 1, 1, G_PUNCH, 0, "OFF", "PUNCH \xB7 OFF"}, {2, 1, 1, G_PUNCH, 50, "50%", "PUNCH \xB7 50%: DRUMS +2.6DB"},
             {2, 2, 1, G_DUCK, 100, "-30DB", "DUCK \xB7 OTHERS -30DB ON A KICK"}, {2, 2, 1, G_DUCK, 0, "OFF", "DUCK \xB7 OFF"},
-            {2, 3, 1, G_DREL, 30, "208MS", "DUCK REL \xB7 208MS"}, {2, 3, 1, G_DREL, 100, "600MS", "DUCK REL \xB7 600MS"},
+            {2, 3, 1, G_DREL, 30, "208MS", "DUCK TIME \xB7 208MS"}, {2, 3, 1, G_DREL, 100, "600MS", "DUCK TIME \xB7 600MS"},
             {3, 1, 0, P_DTYPE, 4, "RECTIFY", "DIST TYPE \xB7 RECTIFY: AN OCTAVE UP"},
             {3, 1, 0, P_DTONE, -32, "-50%", "DIST TONE \xB7 50% DARKER"}, {3, 1, 0, P_DTONE, 0, "FLAT", "DIST TONE \xB7 FLAT"},
             {3, 1, 0, P_APWAVE, 4, "RAND", "PAN WAVE \xB7 RANDOM STEPS"}, {3, 1, 0, P_APDEP, 0, "OFF", "PAN DEPTH \xB7 OFF"},
@@ -16312,7 +16312,7 @@ static int test_t8_knobs(void)
             ui_load = LOAD_FULL; rp_apply(); song.g[G_RTYPE] = 0; frame();
         }
         bad += check("ACID FM 3b task 8: FX's values in plain words (OFF at 0; DLY TIME at the tempo, its longest; DUCK in dB, "
-                     "CLIP's drive, PUNCH's gain, DUCK REL in ms; TONEs DARKER / THINNER; REV PRE / AIR / PITCH and FOLLOW by "
+                     "CLIP's drive, PUNCH's gain, DUCK TIME in ms; TONEs DARKER / THINNER; REV PRE / AIR / PITCH and FOLLOW by "
                      "TYPE; LOAD LITE / ECO said), the status line in full", ok);
     }
     ui_power_on();
@@ -16751,7 +16751,7 @@ static int test_t8_engine(void)
         song.g[G_DUCK] = 0;
         duck_env = 0; duck_g0 = duck_g1 = 32767;
         bad += check("ACID FM 3b task 8: MASTER's CLIP curve is fx.c clip_block's sample out (CLIP 0 .. 100), its DUCK curve "
-                     "duck_block's gain, block by block (DUCK, DUCK REL)", okc && okk);
+                     "duck_block's gain, block by block (DUCK, DUCK TIME)", okc && okk);
     }
     {   /* (d) MASTER's meter reads the output: the peak of what mix_block sends (audio.c's scope), in dBFS; the clip point the
          * limiter's ceiling */
@@ -16927,6 +16927,37 @@ static int test_t8_names(void)
     return bad;
 }
 
+/* (3b task 8 fix) the FX pictures redraw on what they read only (the DJ FILTER's recorded automation writes song.g[G_DJF] every
+ * step: no panel for it); MASTER's OUT in whole dB, no decimal */
+static int test_t8_fix(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t i, n, k;
+    char b[16];
+    for (i = 0; i < NELEM(UXT8_PG); i++) {
+        uxt8_open(i);
+        memset(scope_buf, 0, sizeof scope_buf);
+        frames(3000);
+        n = uxs_panels;
+        for (k = 0; k < 40u; k++) { song.g[G_DJF] = (int16_t)((int32_t)(k * 7u % 127u) - 64); frame(); }
+        if (uxs_panels != n) { printf("  FX %s: %u panels for the DJ FILTER\n", UXT8_PG[i].nm, (unsigned)(uxs_panels - n)); ok = 0; }
+        song.g[G_DJF] = 0;
+    }
+    bad += check("ACID FM 3b task 8 fix: the DJ FILTER moving (its automation) redraws no FX picture", ok);
+    ok = 1;
+    for (k = 0; k <= (uint32_t)UXS_MW; k++) {
+        uxs_out_txt((int32_t)k, b, sizeof b);
+        ok &= strchr(b, '.') == 0 && strncmp(b, "OUT ", 4) == 0 && text_w(&UF_LBL, b) <= 100;
+    }
+    uxs_out_txt(0, b, sizeof b); ok &= str_eq(b, "OUT OFF");
+    uxs_out_txt(uxs_meter_px(-50), b, sizeof b); ok &= str_eq(b, "OUT -5DB");
+    uxs_out_txt(UXS_MW, b, sizeof b); ok &= str_eq(b, "OUT 0DB");
+    if (!ok) printf("  OUT \"%s\"\n", b);
+    bad += check("ACID FM 3b task 8 fix: MASTER's OUT in whole dB (OUT -5DB, OUT 0DB, OUT OFF), never a decimal", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -17086,6 +17117,7 @@ int main(void)
     bad += test_t8_engine();
     bad += test_t8_pace();
     bad += test_t8_names();
+    bad += test_t8_fix();                               /* (ACID FM 3b task 8 fix) */
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();
