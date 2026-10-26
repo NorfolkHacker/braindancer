@@ -19,14 +19,16 @@ static const char *ux_home_hint(void);                  /* the status line: what
 static void ux_home_draw(void);                         /* (ux_home.c) TRACKS / VISUAL on the screen (GEN: JIANT's) */
 
 /* TRACKS' ridgelines (ux_home.c, 3a task 6): each track's level history, UXR_N points a UXR_MS apart (~2 s), drawn over x
- * UXR_X0 .. UXR_X0 + UXR_W - 1 of the panel, row r's baseline at panel y UXR_BASE(r), a peak UXR_PEAK px high; the strip's
- * caption and the strip under them */
+ * UXR_X0 .. UXR_X0 + UXR_W - 1 of the panel, row r's baseline at panel y UXR_BASE(r), UXR_ROW apart, a peak UXR_PEAK px high:
+ * (3b task 10) inside its own row, the selected line's extra pixel too, never up into the row above (T5's acid line rising
+ * into T4's row read as T4 playing); the strip's caption and the strip under them */
 #define UXR_N 112u
 #define UXR_MS 18u
 #define UXR_X0 58
 #define UXR_W 148u
-#define UXR_PEAK 24
-#define UXR_BASE(r) (26 + 17 * (int32_t)(r))
+#define UXR_ROW 17
+#define UXR_PEAK (UXR_ROW - 2)
+#define UXR_BASE(r) (26 + UXR_ROW * (int32_t)(r))
 #define UXR_CAP_Y 116
 #define UXR_STRIP_Y 128
 static void ux_levels_tick(void);                       /* every UI frame (ui_draw): the one reader of trk[c].peak */
@@ -35,5 +37,9 @@ static int32_t ux_trk_peak(uint32_t c);                 /* track c's peak since 
                                                          * measured it (MIXER's meters, ui_engvis.c's creatures: what they
                                                          * read of trk[c].peak before) */
 static void ux_knob_touch(uint32_t k);                  /* (ux_widgets.c) knob k just turned: its column lit UX_HOT_MS */
+static uint32_t ux_trk_first(void);                     /* (ux_home.c, 3b task 10) TRACKS' KNOB 1..3: the LEVELs of tracks from this
+                                                         * one (the three holding the selected: T1 or T4); KNOB 4 the tempo */
+#define UXH_NLVL 3u
+static void ux_home_bpm(int32_t steps);                 /* (ux_home.c, 3b task 10) TRACKS' KNOB 4 turned: the tempo */
 
 #endif

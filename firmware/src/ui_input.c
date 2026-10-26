@@ -2552,9 +2552,11 @@ static void ui_input_frame(void)
                                                          * section page's too */
         if (home_macros()) {                            /* (ACID FM 3a) HOME's VISUAL: M1..M4 */
             macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);
-        } else if (ui.home) {                           /* (3a task 6) TRACKS: the LEVELs of the four holding the selected
-                                                         * track (T5, T6: T3..T6), as GLO's layer */
-            track_t *t = &trk[k + trk_base4()];
+        } else if (ui.home && k == 3u) {                /* (3b task 10) TRACKS' KNOB 4: the tempo (ux_home.c) */
+            ux_home_bpm(s);
+        } else if (ui.home) {                           /* (3a task 6) TRACKS: the LEVELs of the three holding the selected
+                                                         * track (3b task 10: T1..T3, T4..T6; GLO's layer keeps its four) */
+            track_t *t = &trk[k + ux_trk_first()];
             int16_t *vp = &t->p[P_LEVEL];
             *vp = (int16_t)clamp(*vp + accel(EN_K1 + k, s, TP[P_LEVEL].max - TP[P_LEVEL].min), TP[P_LEVEL].min,
                                  TP[P_LEVEL].max);

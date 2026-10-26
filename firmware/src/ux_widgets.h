@@ -51,9 +51,10 @@ typedef struct { uint8_t draw, glow; } ux_pace_t;
 static ux_pace_t ux_pace(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite, uint32_t sys_load,
                          uint32_t glow);
 /* the same rule at other intervals: gap normally, slow while load_tight or LOAD LITE / ECO (ux_pace: UX_VIS_MS,
- * UX_VIS_SLOW_MS). HOME TRACKS' ridges (fix wave I2): UX_TRK_MS (25 frames a second at most), UX_TRK_SLOW_MS */
+ * UX_VIS_SLOW_MS). HOME TRACKS' ridges (fix wave I2): UX_TRK_MS (25 frames a second at most), UX_TRK_SLOW_MS (3b task 10, spec
+ * 5: half rate under load, was 100 ms; LFO's wave and FX MASTER's meter pace as the ridges) */
 #define UX_TRK_MS 40u
-#define UX_TRK_SLOW_MS 100u
+#define UX_TRK_SLOW_MS 200u
 static ux_pace_t ux_pace_at(uint32_t now, uint32_t last, uint32_t tight, uint32_t since_shed, uint32_t gov_lite,
                             uint32_t sys_load, uint32_t glow, uint32_t gap, uint32_t slow);
 static uint32_t ux_glow_eff(uint32_t glow_level);                               /* the glow as the load allows (ux_pace) */

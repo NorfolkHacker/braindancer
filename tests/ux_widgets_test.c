@@ -190,10 +190,14 @@ int main(void)
         ck("pace_at (TRACKS): 39 ms after: not yet", !r.draw && r.glow == 2);
         r = ux_pace_at(1000, 1000 - 40, 0, UX_NO_SHED, 0, 0, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
         ck("pace_at (TRACKS): 40 ms after: draw", r.draw);
-        r = ux_pace_at(1000, 1000 - 99, 1, UX_NO_SHED, 0, 0, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
-        ck("pace_at (TRACKS): tight: 99 ms after: not yet, the glow off", !r.draw && r.glow == 0);
-        r = ux_pace_at(1000, 1000 - 100, 0, UX_NO_SHED, 0, 1, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
-        ck("pace_at (TRACKS): LOAD LITE: 100 ms after: draw", r.draw);
+        r = ux_pace_at(1000, 1000 - 199, 1, UX_NO_SHED, 0, 0, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
+        ck("pace_at (TRACKS, 3b task 10: half rate under load): tight: 199 ms after: not yet, the glow off", !r.draw && r.glow == 0);
+        r = ux_pace_at(1000, 1000 - 200, 1, UX_NO_SHED, 0, 0, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
+        ck("pace_at (TRACKS): tight: 200 ms after: draw", r.draw && r.glow == 0);
+        r = ux_pace_at(1000, 1000 - 199, 0, UX_NO_SHED, 0, 1, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
+        ck("pace_at (TRACKS): LOAD LITE: 199 ms after: not yet", !r.draw);
+        r = ux_pace_at(1000, 1000 - 200, 0, UX_NO_SHED, 0, 2, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
+        ck("pace_at (TRACKS): LOAD ECO: 200 ms after: draw", r.draw);
         r = ux_pace_at(1000, 1000 - 5000, 0, 399, 0, 0, 2, UX_TRK_MS, UX_TRK_SLOW_MS);
         ck("pace_at (TRACKS): frozen in the shed hold", !r.draw);
         r = ux_pace_at(1000, 1000 - 5000, 0, UX_NO_SHED, 1, 0, 2, UX_TRK_MS, UX_TRK_SLOW_MS);

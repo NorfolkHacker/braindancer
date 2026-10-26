@@ -51,6 +51,9 @@ typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #ifndef GFX_HOOK_CELL
 #define GFX_HOOK_CELL(x0, y0, x1, y1) ((void)0)    /* a cell, card, row or button (cv_rrect): a box touching it lies inside it */
 #endif
+#ifndef GFX_HOOK_HC
+#define GFX_HOOK_HC(hc, built) ((void)0)           /* (3b task 10) a Huffman face drawn (hc_lut), built: its decode table made */
+#endif
 #ifndef GFX_HOOK_INK
 #define GFX_HOOK_INK(ink, bg) ((void)0)            /* a text, icon or keycap label's ink and what it is drawn on */
 #endif
@@ -604,6 +607,7 @@ static const uint16_t *hc_lut(const uint8_t *hc)
     uint32_t k, len, code = 0, sym = 15, i;
     for (k = 0; k < HC_FONTS - 1u && hc_tab[k].hc && hc_tab[k].hc != hc; k++)
         ;
+    GFX_HOOK_HC(hc, hc_tab[k].hc != hc);
     if (hc_tab[k].hc != hc) {                        /* (more fonts than slots: the last slot is rebuilt) */
         hc_tab[k].hc = hc;
         for (i = 0; i < 256u; i++)

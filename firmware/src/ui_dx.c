@@ -16,16 +16,17 @@
  *   sets the snare's), SEND TO (OFF CHO DLY REV) and SEND (how much: JIANT's one SEND knob of 49; OFF while SEND TO is)
  *   the kit's: METAL (TONE's BP, a band-pass on the hats, rim and bell), FEEDBACK, HANDS (the clap's); MORPH LFO (X-MOD:
  *   RATE DEPTH SHAPE RANDOM) */
-static uint32_t dx_kb_seen;                          /* the keys down at the last look (seq.c kb_prev) */
+static uint32_t dx_kb_seen;                          /* seq.c kb_tog at the last look: a bit that flipped since, a key struck */
 static uint32_t dx_lane_picked(void) { return dx_ui_lane & 7u; }   /* (params.c page_id) */
 
 /* (3b task 5 fix) each UI pass (ui_input.c): the drum picked follows the user's own hands only, never MIDI IN or the
  * sequencer playing (seq.c last_note follows both; and no 8,192-sample redraw a note in): a key struck on a DRUM track
- * picks that track's drum (any page; seq.c keyboard_block's keys, kb_prev / kb_note / kb_trk, read here, the ISR untouched);
+ * picks that track's drum (any page; seq.c keyboard_block's keys, kb_tog / kb_note / kb_trk, read here; 3b task 10: kb_tog
+ * latches the press, so one shorter than a UI frame - down and up between two passes - is seen too);
  * a step held on the DRUM grid picks its lane's (ui.lane: the hit it got, the LEVEL SOUND's KNOB 2 locks) */
 static void dx_follow(void)
 {
-    uint32_t cur = kb_prev, up = cur & ~dx_kb_seen, k;
+    uint32_t cur = kb_tog, up = cur ^ dx_kb_seen, k;
     dx_kb_seen = cur;
     for (k = 0; up && k < 27u; k++)
         if (((up >> k) & 1u) && kb_note[k] != KB_SILENT && drum_track(&trk[kb_trk[k] % NTRK]))

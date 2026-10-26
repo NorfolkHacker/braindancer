@@ -36,6 +36,8 @@ static const uint16_t SCALE_MASK[] = {
 
 #define KB_SILENT 255u
 static uint32_t kb_prev;
+static volatile uint32_t kb_tog;         /* (ACID FM 3b task 10) a bit a key, flipped at each press (keyboard_block, the ISR): the UI
+                                          * sees a press however short (ui_dx.c dx_follow), the ISR the only writer */
 static volatile uint8_t kb_boot_hold;    /* #137: set from power-on to the end of the splash (main.c): the keys sound nothing,
                                           * and one held across its end stays silent until it is let go and pressed again */
 static uint8_t kb_note[27], kb_trk[27];  /* per key: the note it started and on which track */
@@ -1146,6 +1148,7 @@ static void keyboard_block(void)
     ch = cur ^ kb_prev;                           /* keys also sound while entering steps */
     if (!ch)
         return;
+    kb_tog ^= ch & cur;                           /* (the presses, latched for the UI) */
     if (kb_boot_hold) {                           /* #137: under the splash; their release is silent too */
         for (k = 0; k < 27u; k++)
             if ((ch & cur) >> k & 1u)

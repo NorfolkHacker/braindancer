@@ -2,11 +2,16 @@ ACID FM piece 3a (UI foundations) — deferred items, each tagged with the piece
 Read this when writing the plan for that piece. [3b] EDIT screens, [3c] the remaining sections and the menu,
 [3d] docs, pictures and tools.
 
-[3b]      Low-contrast creature reds (1.2-2:1) on the EDIT screens: fix as the creatures are restyled.
-[3b]      ux_knob_touch has no firmware caller beyond HOME: wire it into the EDIT knob rows.
-[3b]      6 Huffman faces share 4+1 slots in gfx.c: profile slot thrash on screens that mix title + keycaps + values.
-[3b]      Margins after 3a: .pool spare 8,416 B against the 8,192 B floor (224 B) and HOME's DC cells 1830 of 1920 (90):
+[3b] DONE  Low-contrast creature reds (1.2-2:1) on the EDIT screens: fix as the creatures are restyled.
+          (3b tasks 4-5: the creatures are gone.)
+[3b] DONE  ux_knob_touch has no firmware caller beyond HOME: wire it into the EDIT knob rows. (3b: every section page's
+          knob, ui_input.c.)
+[3b] DONE  6 Huffman faces share 4+1 slots in gfx.c: profile slot thrash on screens that mix title + keycaps + values.
+          (3b task 10: the EDIT pages draw no Huffman face at all - UF_VAL / HDR / LBL are plain - so no thrash; ui_test
+          test_hc_edit counts the faces and table rebuilds per page through gfx.c GFX_HOOK_HC.)
+[3b] DONE  Margins after 3a: .pool spare 8,416 B against the 8,192 B floor (224 B) and HOME's DC cells 1830 of 1920 (90):
           plan 3b without new .pool data (new tables in flash, buffers on the stack) and count the cells per screen.
+          (3b: no new .pool data; spare 9,952 B after the creatures went.)
 [3c]      The menu's help text (DIM on RAISE rows, 2.9:1) needs contrast; the SCREEN rows (COLOR / SKIN / STYLE are inert
           editor ids) get removed or repurposed. ui_menu.c ~469 still hashes the inert ui_style / ui_skin; mi_tab hidden
           rows rely on the page-0 fallback.
@@ -15,7 +20,9 @@ Read this when writing the plan for that piece. [3b] EDIT screens, [3c] the rema
           agree (fix with GLO MIX, which shows the same scale).
 [3c]      NOTICE / DICE / NAME dialogs drawn over the new HOME look messy (JIANT's dialogs on ACID FM's strips): restyle
           them with the dialogs.
-[3c]      Knob-row value width in UF_VAL is not measured by a test (renders fit): add the measurement.
+[3c] DONE  Knob-row value width in UF_VAL is not measured by a test (renders fit): add the measurement. (3b task 10:
+          ux_cover_test uxc_widths, every 3b knob's range; MOD's source / destination names and SHIMMER kept whole in a
+          smaller face on purpose, UXC_WIDE.)
 [3d]      docs/MANUAL.md has a brief 0.3 pass only (HOME TRACKS / VISUAL / GEN, one ACID look); docs/MANUAL.es.md and the
           JIANT-era chapters (header / cards / beings, GEN's panel) still describe 0.9.x: the full rewrite.
 [3d]      tools/video/* scripts still have signature stubs.
@@ -33,7 +40,9 @@ Read this when writing the plan for that piece. [3b] EDIT screens, [3c] the rema
 [any]     VISUAL legend clock starts before the legend is first shown (a knob held in the first 4 s hides it).
 [any]     VISUAL silent-ring test tolerance is loose; "full panel <= 1 write per pixel incl. glyphs" is not tested.
 [any]     SCOPE ON is not positively checked in ui_test (pre-existing).
-[piece 6 / 3c, priority] Power-on starts with EMPTY patterns (JIANT TRK_DEF patterns 0): PLAY on a fresh FM-1 is silent with no hint (user hit this 2026-10-25). §0: start with something playable (a short factory acid line + beat) or at least a status line "EMPTY: HOME → GENERATE, OR PLAY THE KEYS" while the project is empty.
-[3b] HOME TRACKS adds ~2 late audio blocks/s over a static page under the CPU TEST worst case (MENU 6.2/s, TRACKS 8.2/s, VISUAL 7.0/s; 0 with a normal generated song): slow the ridge scroll further while load_tight.
-[3b, user 2026-10-25] Interim: hide JIANT's non-IDM GEN genres (techno, house, …), keep the closest (acid / IDM / ambient / electro-like), renamed where needed, until piece 6 replaces GEN with ACID / BRAINDANCE / DRILL'N'BASS / BOC / AMBIENT / GLITCH / EXPLORE.
+[piece 6 / 3c, priority] DONE (3b task 2: the power-on demo) Power-on starts with EMPTY patterns (JIANT TRK_DEF patterns 0): PLAY on a fresh FM-1 is silent with no hint (user hit this 2026-10-25). §0: start with something playable (a short factory acid line + beat) or at least a status line "EMPTY: HOME → GENERATE, OR PLAY THE KEYS" while the project is empty.
+[3b] DONE (3b task 10: the ridges every 200 ms while load_tight or LOAD LITE / ECO, was 100; LFO's wave and FX MASTER's meter the same; re-measure on the device in Task 11) HOME TRACKS adds ~2 late audio blocks/s over a static page under the CPU TEST worst case (MENU 6.2/s, TRACKS 8.2/s, VISUAL 7.0/s; 0 with a normal generated song): slow the ridge scroll further while load_tight.
+[3b, user 2026-10-25] DONE (3b task 1) Interim: hide JIANT's non-IDM GEN genres (techno, house, …), keep the closest (acid / IDM / ambient / electro-like), renamed where needed, until piece 6 replaces GEN with ACID / BRAINDANCE / DRILL'N'BASS / BOC / AMBIENT / GLITCH / EXPLORE.
 [3c, user 2026-10-25] MIDI page (decided): per track T1–T6: MIDI IN on/off, MIDI OUT on/off, CHANNEL 1–16 (replaces/extends JIANT's global ROUTE CH1-6/SEL, GLO › SYSTEM); CLOCK SOURCE INT/USB/TRS (exists: GLO › GLOBAL › CLOCK — follows external clock + start/stop) and CLOCK OUT on/off (exists inside MENU › MIDI › MIDI OUT KEYS/CLOCK/ALL/OFF, USB only — FM-1 TRS is input only); sync state visible on screen. New stored settings append-only (old projects/settings load). Code: midi_control.c (midi_channel/targets), midi_clock.c, seq.c MO_* out, menu_items.c MI_MIDIOUT, ui.c midi_out_mode.
+[3c]      Automation mark on the ux knob row (3b task 4, the user's question): a knob whose setting has recorded automation
+          (or a step lock on the step held) should show it in its column, as JIANT's cards marked it.

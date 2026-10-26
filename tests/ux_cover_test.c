@@ -199,6 +199,113 @@ static void uxc_dump(void)
     }
 }
 
+/* (3b task 10; spec 5's backlog) every value a 3b knob can show fits its knob column in UF_VAL (the knob row's big face):
+ * each section page's four knobs (EDIT on every engine one can pick, ENV LFO FX ARP SCL; MOD's four slots and DRUM-X's eight
+ * drums too), each id's whole range through the knob row's form (ux_section.c uxs_vtext), HOME's (LEVEL, BPM, MACRO) and the
+ * held layers' own (FX's glitchers and macros, MACRO's; EDIT's and SCL's are their sections' pages). UXC_WIDE: the knobs
+ * whose names were kept whole on purpose (3b task 7 fix: a MOD source or destination reads as the knob it moves, "CUTOFF";
+ * task 8: REVERB TYPE's SHIMMER): those fall back to UF_HDR, then UF_LBL (ux_widgets.c ux_val_face: NOTE RAND, CHO DEPTH)
+ * and must fit their column there. Any other value wider than its column in UF_VAL fails, printed once a knob */
+static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE"};   /* (page title, then the label's start) */
+static uint32_t uxc_wn, uxc_wbad, uxc_whdr;
+static void uxc_wfit(const char *where, const char *v)
+{
+    static uint32_t seen[256];
+    uint32_t h = str_hash(str_hash(7u, where), v), i, n = 0;
+    uxc_wn++;
+    if (str_len(v) + 1u < sizeof ((ux_knob_t *)0)->value) {
+        if (text_w(&UF_VAL, v) <= UX_COL_W - 4)
+            return;
+        for (i = 0; i < NELEM(UXC_WIDE); i++)
+            if (!strncmp(where, UXC_WIDE[i], str_len(UXC_WIDE[i])) && text_w(&UF_LBL, v) <= UX_COL_W - 4) {
+                uxc_whdr++;
+                return;
+            }
+    }
+    for (i = 0; i < uxc_wbad && i < NELEM(seen); i++)  /* (each wide value once a knob: MOD's four slots, the engines) */
+        n |= seen[i] == h;
+    if (uxc_wbad < NELEM(seen))
+        seen[uxc_wbad] = h;
+    uxc_wbad++;
+    if (!n)
+        printf("  %s: \"%s\" is %d px in UF_VAL, its column %d\n", where, v, (int)text_w(&UF_VAL, v), UX_COL_W - 4);
+}
+static int uxc_widths(void)
+{
+    static const uint8_t KEYS[] = {SEC_EDIT, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL};
+    uint8_t mo = mod_ui_slot, dl = dx_ui_lane, eng0 = TSEL->engine, req0 = TSEL->eng_req;
+    uint32_t e, s, i, sl, v;
+    int32_t x;
+    char b[32];
+    uxc_wn = uxc_wbad = uxc_whdr = 0;
+    for (e = 0; e < NENGINES; e++) {
+        if (!eng_ok(e))
+            continue;
+        set_engine_of(TSEL, e);
+        TSEL->engine = TSEL->eng_req;
+        for (s = 0; s < NELEM(KEYS); s++)
+            for (i = 0; i < NPAGES; i++) {
+                const page_t *pg = &PAGES[i];
+                if (pg->fam != SEC_FAM[KEYS[s]] || pg->graph == GR_MORE || (KEYS[s] != SEC_EDIT && e))
+                    continue;                           /* (the other sections the same on every engine: once) */
+                for (sl = 0; sl < 4u; sl++)
+                    for (v = 0; v < 8u; v++) {          /* (MOD's slot, DRUM-X's drum: every one) */
+                        int16_t *vp;
+                        const param_desc_t *d;
+                        mod_ui_slot = (uint8_t)(v & 3u);
+                        dx_ui_lane = (uint8_t)v;
+                        d = page_desc(pg, sl, &vp);
+                        if (!d || !vp || !d->label || d->label[0] == '-')
+                            continue;
+                        for (x = d->min; x <= d->max; x++) {
+                            char w[48];
+                            uxs_vtext(d, x, pg->scope == SC_GLOBAL, page_id(pg, sl), b, sizeof ((ux_knob_t *)0)->value);
+                            str_cpy(w, pg->title, sizeof w);
+                            str_cpy(w + str_len(w), " ", sizeof w - str_len(w));
+                            str_cpy(w + str_len(w), d->label, sizeof w - str_len(w));
+                            uxc_wfit(w, b);
+                        }
+                    }
+            }
+    }
+    TSEL->eng_req = req0; TSEL->engine = eng0;
+    mod_ui_slot = mo; dx_ui_lane = dl;
+    for (x = TP[P_LEVEL].min; x <= TP[P_LEVEL].max; x++) {   /* HOME: TRACKS' LEVELs (the number), its BPM; VISUAL's MACROs */
+        const char *u;
+        param_format(&TP[P_LEVEL], x, b, &u);
+        uxc_wfit("HOME LEVEL", b);
+    }
+    for (x = GP[G_BPM].min; x <= GP[G_BPM].max; x++) {
+        fmt_int(b, x);
+        uxc_wfit("HOME BPM", b);
+    }
+    for (x = 0; x <= 127; x++) {                        /* (and the MACRO layer's: the same) */
+        fmt_int(b, x * 100 / 127);
+        str_cpy(b + str_len(b), "%", sizeof b - str_len(b));
+        uxc_wfit("MACRO", b);
+    }
+    for (i = 0; i < 4u; i++)                            /* the FX layer: a glitcher's four, the macros */
+        for (sl = 0; sl < 4u; sl++) {
+            param_desc_t d = gx_desc(i, sl);
+            if (!d.label[0] || !d.max)
+                continue;
+            for (x = d.min; x <= d.max; x++) {
+                uxs_val(&d, x, b, sizeof ((ux_knob_t *)0)->value);
+                uxc_wfit(UXL_GX[i * 4u + sl], b);
+            }
+        }
+    for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
+    for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);
+    printf("ux widths: %u values a 3b knob can show, %u names kept whole in a smaller face (UXC_WIDE), %u too wide\n", (unsigned)uxc_wn,
+           (unsigned)uxc_whdr, (unsigned)uxc_wbad);
+    i = uxc_wbad;                                       /* (the check sees one: a value as wide as MOD's, on a knob not listed) */
+    uxc_wfit("(self-check, not a knob)", "CHO DEPTH");
+    s = uxc_wbad - i;
+    uxc_wbad = i;
+    return check("ux widths: every value a 3b knob can show (each id's range) fits its knob column in UF_VAL",
+                 uxc_wn > 5000u && !uxc_wbad && s == 1u);
+}
+
 int main(int argc, char **argv)
 {
     static uint8_t got[2][256];
@@ -286,6 +393,7 @@ int main(int argc, char **argv)
         ok &= got[TRK][P_AMODE] && got[TRK][P_AORDER];
     }
     bad += check("ux cover: the reach counts the pages' knobs (every step and slot) and the MORE rows, and sees a gap", ok);
+    bad += uxc_widths();
     printf("ux cover: %u settings JIANT reached, %u hidden on purpose\n", (unsigned)n, (unsigned)nh);
     if (bad)
         printf("ux cover: %d FAILED\n", bad);

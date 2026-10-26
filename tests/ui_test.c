@@ -128,6 +128,20 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #ifndef GFX_HOOK_SENT
 #define GFX_HOOK_SENT(n) (ui_sent_px += (n))
 #endif
+static uint32_t hc_built, hc_nf;                         /* (3b task 10) Huffman faces drawn (gfx.c GFX_HOOK_HC): decode tables */
+static const void *hc_face[8];                           /* .. built, the distinct faces */
+static void hc_note(const void *h, int built)
+{
+    uint32_t i;
+    hc_built += built != 0;
+    for (i = 0; i < hc_nf && hc_face[i] != h; i++)
+        ;
+    if (i == hc_nf && hc_nf < 8u)
+        hc_face[hc_nf++] = h;
+}
+#ifndef GFX_HOOK_HC
+#define GFX_HOOK_HC(h, built) hc_note(h, built)
+#endif
 #include "../firmware/src/gfx.c"
 #include "../firmware/src/ux_theme.c"
 #include "../firmware/src/panel.c"
@@ -10970,12 +10984,12 @@ static int test_ux_tracks(void)
     fm1_ms += UX_HOT_MS; frame();                                   /* the turn's moment over: the hint again */
     st = ux_home_status(&col);
     ok &= ux_knob_hot() < 0 && str_eq(st, "HOME AGAIN: VISUAL") && col == UX_MID;
-    track_select(4); frame();                                       /* T5 selected: KNOB 1..4 are T3..T6 */
+    track_select(4); frame();                                       /* T5 selected: KNOB 1..3 are T4..T6 (3b task 10) */
     for (c = 0; c < NTRK; c++) lv[c] = (uint32_t)trk[c].p[P_LEVEL];
     turn(EN_K1, -2); frame();
-    ok &= (uint32_t)trk[2].p[P_LEVEL] == lv[2] - 2u && (uint32_t)trk[0].p[P_LEVEL] == lv[0] &&
+    ok &= (uint32_t)trk[3].p[P_LEVEL] == lv[3] - 2u && (uint32_t)trk[2].p[P_LEVEL] == lv[2] &&
           (uint32_t)trk[4].p[P_LEVEL] == lv[4];
-    turn(EN_K4, 1); frame();
+    turn(EN_K3, 1); frame();
     ok &= (uint32_t)trk[5].p[P_LEVEL] == lv[5] + 1u;
     {   /* every LEVEL the mixer can show fits the ridges' number column; a name too long loses its vowels first */
         char v[16], nm[16];
@@ -10992,7 +11006,7 @@ static int test_ux_tracks(void)
         ux_fit_name(nm, 48);
         ok &= str_eq(nm, "T2 PAD");
     }
-    bad += check("3a TRACKS: KNOB 1..4 the levels of the four holding the selected track (T5: T3..T6); status the turn", ok);
+    bad += check("3a TRACKS: KNOB 1..3 the levels of the three holding the selected track (T5: T4..T6); status the turn", ok);
 
     ui_power_on(); ux_levels_reset(); frame();
     ok = 1;
@@ -11030,13 +11044,17 @@ static int test_ux_tracks(void)
         ok &= strstr(r, UX_GL_PLAY) != 0 && strstr(r, UX_GL_STOP) == 0;   /* (S_HOME_PLAY's header: playing) */
         ok &= text_w(&UF_HDR, UX_GL_PLAY) > text_w(&UF_HDR, " ") && text_w(&UF_HDR, UX_GL_STOP) > text_w(&UF_HDR, " ");
     }
-    ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(1)) == UX_SLIDE && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) == UX_ACCENT &&
+    ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(1)) == UX_SLIDE && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(2)) == UX_VIOLET &&
+          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) != UX_ACCENT && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) != UX_ACID &&
+          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) != UX_BG &&
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_SLIDE;
-    track_select(4); ui.force = 1; frame();                         /* T5: T3..T6 in the knobs' colours, T1 T2 dimmed */
-    ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(2)) == UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) == UX_VIOLET &&
-          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(5)) == UX_ACCENT && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(0)) != UX_ACID &&
+    track_select(4); ui.force = 1; frame();                         /* T5: T4..T6 in K1..K3's colours, T1..T3 dimmed */
+    ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) == UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(5)) == UX_VIOLET &&
+          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(2)) != UX_VIOLET && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(2)) != UX_ACID &&
+          ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(0)) != UX_ACID &&
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(0)) != UX_BG && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(1)) != UX_SLIDE;
-    bad += check("3a TRACKS: drawn (every strip); the four the knobs control in their colours (T5: T3..T6), the others dim", ok);
+    bad += check("3a TRACKS: drawn (every strip); the three the knobs control in K1..K3's colours (T5: T4..T6), the others dim",
+                 ok);
 
     ui_power_on(); frame();                                         /* GEN refused while a song plays: the page stays */
     press(B_HOME); frame();
@@ -11063,8 +11081,128 @@ static int test_ux_tracks(void)
     return bad;
 }
 
+/* (3b task 10, spec 5) TRACKS' KNOB 4: the tempo. KNOB 1..3 the LEVELs of the window of three holding the selected track (T1..T3
+ * for T1..T3, T4..T6 for T4..T6); KNOB 4 edits G_BPM as GLO > GLOBAL's BPM knob does (param_knob: 40..240, the acceleration,
+ * BPM LOCK leaves it free); with an external clock (G_CLOCK USB / TRS) the knob shows the tempo followed and a turn changes
+ * nothing, the status line says "CLOCK: USB" / "CLOCK: TRS"; a turn's status "TEMPO 128 BPM" */
+static int32_t bpm_fast(uint32_t role, int32_t s, uint32_t n)   /* n quick detents' worth (16 ms apart: accelerated) */
+{
+    int32_t b0 = song.g[G_BPM];
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        host_enc[panel.enc[role]] += s * panel.dir[role];
+        frame();
+    }
+    host_ticks += 200000u; fm1_ms += 1000u; frame();
+    return song.g[G_BPM] - b0;
+}
+static int test_ux_home_bpm(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t c, sel;
+    int32_t dh, dg;
+    ux_knob_t k[4];
+    char lbl[4][10];
+    uint16_t col;
+    const char *st;
+    for (sel = 0; sel < NTRK; sel++) {                  /* the window per selected track */
+        int32_t l[NTRK];
+        ui_power_on(); frame();
+        track_select(sel); frame();
+        for (c = 0; c < NTRK; c++) l[c] = trk[c].p[P_LEVEL];
+        turn(EN_K1, -1); frame();
+        turn(EN_K3, -2); frame();
+        ok &= ux_trk_first() == (sel < 3u ? 0u : 3u);
+        for (c = 0; c < NTRK; c++)
+            ok &= trk[c].p[P_LEVEL] == l[c] - (c == ux_trk_first() ? 1 : c == ux_trk_first() + 2u ? 2 : 0);
+        ux_home_knobs(k, lbl);
+        ok &= lbl[0][0] == 'T' && lbl[0][1] == (char)('1' + ux_trk_first()) && lbl[2][1] == (char)('3' + ux_trk_first()) &&
+              str_eq(k[3].label, "BPM");
+    }
+    bad += check("3b task 10 TRACKS: KNOB 1..3 the LEVELs of the three holding the selected track (T1..T3 / T4..T6), KNOB 4 BPM", ok);
+
+    ui_power_on(); frame();                             /* a turn: as GLO > GLOBAL's BPM knob */
+    song.g[G_BPM] = 120;
+    turn(EN_K4, 3); frame();
+    st = ux_home_status(&col);
+    ux_home_knobs(k, lbl);
+    ok = song.g[G_BPM] == 123 && str_eq(st, "TEMPO 123 BPM") && col == UX_TEXT && str_eq(k[3].value, "123") &&
+         k[3].bar == (uint8_t)((123 - 40) * 255 / 200) && ux_knob_hot() == 3 && ux_trk_hot() < 0;
+    {
+        char f[40];
+        ux_home_foot(f, sizeof f);
+        ok &= strstr(f, "LVL \xB7 LVL \xB7 LVL \xB7 BPM") != 0;
+    }
+    song.g[G_BPM] = 239; turn(EN_K4, 5); frame();
+    ok &= song.g[G_BPM] == 240;                         /* (the range, 40..240) */
+    song.g[G_BPM] = 41; turn(EN_K4, -5); frame();
+    ok &= song.g[G_BPM] == 40;
+    ui_prefs &= (uint8_t)~PREF_ACCEL_OFF;               /* (MENU KNOB ACCEL ON) */
+    song.g[G_BPM] = 120; ui.enc_t[EN_K4] = 0; fm1_ms += 1000u;
+    dh = bpm_fast(EN_K4, 1, 12);                         /* (accelerated as GLO's) */
+    go_title("GLOBAL"); frame();
+    song.g[G_BPM] = 120; ui.enc_t[EN_K1] = 0; fm1_ms += 1000u;
+    dg = bpm_fast(EN_K1, 1, 12);
+    ok &= dh == dg && dh > 12;
+    bad += check("3b task 10 TRACKS: KNOB 4 sets the tempo as GLO > GLOBAL does (40..240, accelerated), TEMPO n BPM", ok);
+    if (!ok) printf("  (HOME %d, GLO %d)\n", (int)dh, (int)dg);
+
+    ui_power_on(); frame();                             /* BPM LOCK: the tempo still the knob's (as GLO's, #58) */
+    ui_prefs |= PREF_BPM_LOCK;
+    song.g[G_BPM] = 100;
+    turn(EN_K4, 2); frame();
+    ok = song.g[G_BPM] == 102;
+    ui_prefs &= (uint8_t)~PREF_BPM_LOCK;
+    song.g[G_CLOCK] = 1; song.g[G_BPM] = 133;           /* USB clock: the tempo followed (midi_clock.c writes G_BPM) */
+    ui.msg_t = 0;
+    turn(EN_K4, 4); frame();
+    ux_home_knobs(k, lbl);
+    st = ux_home_status(&col);
+    ok &= song.g[G_BPM] == 133 && msg_is("CLOCK: USB") && str_eq(st, "CLOCK: USB") && str_eq(k[3].value, "133");
+    song.g[G_CLOCK] = 2; ui.msg_t = 0;
+    turn(EN_K4, -1); frame();
+    ok &= song.g[G_BPM] == 133 && msg_is("CLOCK: TRS");
+    song.g[G_CLOCK] = 0;
+    turn(EN_K4, -1); frame();
+    ok &= song.g[G_BPM] == 132;
+    bad += check("3b task 10 TRACKS: BPM LOCK leaves KNOB 4 free; an external clock: the tempo followed, a turn says CLOCK: USB / "
+                 "TRS", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* (3b task 10; the T2 review: T5's acid line rose into T4's row and looked like T4 playing) each ridgeline stays in its own
+ * row: track k at full level the whole history (the selected one, its line thick) changes no pixel above its row's top (the
+ * row over it ends at the line above's baseline), and still rises most of the row */
+static int test_ux_ridge_rows(void)
+{
+    static uint16_t was[240u * UX_H_PANEL];
+    int bad = 0, ok = 1;
+    uint32_t k, x, y, i;
+    int32_t row = UXR_BASE(1) - UXR_BASE(0);
+    for (k = 0; k < NTRK; k++) {
+        int32_t top = 1000;
+        ui_power_on(); ux_levels_reset(); frame();
+        track_select(k); ui.force = 1; frame();
+        memcpy(was, host_screen + UX_Y_PANEL * 240u, sizeof was);
+        for (i = 0; i < UXR_N; i++) uxr.h[k][i] = 255;
+        uxr.nz = UXR_N;
+        ui.force = 1; frame();
+        for (y = 0; y < UX_H_PANEL; y++)
+            for (x = UXR_X0; x < UXR_X0 + UXR_W; x++)
+                if (host_screen[(UX_Y_PANEL + y) * 240u + x] != was[y * 240u + x] && (int32_t)y < top)
+                    top = (int32_t)y;
+        ok &= top >= UXR_BASE(k) - row + 1 && top <= UXR_BASE(k) - row / 2;
+        if (!(top >= UXR_BASE(k) - row + 1)) printf("  T%u's ridge reaches y %d, its row's top %d\n", k + 1u, (int)top,
+                                                   (int)(UXR_BASE(k) - row + 1));
+    }
+    bad += check("3b task 10 TRACKS: a ridge at full level stays in its own row (no pixel above its top), rising most of it", ok);
+    ui_power_on();
+    return bad;
+}
+
 /* HOME TRACKS' pacing (fix wave I2; spec 5.3): the ridges as the load allows, through ux_pace_at: at most every UX_TRK_MS
- * (40 ms, 25 a second), every UX_TRK_SLOW_MS (100 ms) while load_tight or MENU LOAD LITE / ECO, frozen UX_SHED_HOLD_MS after
+ * (40 ms, 25 a second), every UX_TRK_SLOW_MS (200 ms, 3b task 10: was 100) while load_tight or MENU LOAD LITE / ECO, frozen UX_SHED_HOLD_MS after
  * the guard's last shed and while gov_lite (the last picture kept); the level history sampled all along (a point every
  * UXR_MS); the header, knob row and status line still answer in the frame of a turn. All six tracks loud the whole time */
 static void trk_loud(uint32_t i)
@@ -11103,20 +11241,20 @@ static int test_ux_tracks_pace(void)
     ok = ux_home_at(UXH_TRACKS) && n >= 30u && n <= 34u && gmin >= UX_TRK_MS && gmax < UX_TRK_MS + 16u;
     ok &= pxr <= 240u * (UX_H_PANEL + UX_H_STATUS + UX_H_KNOBS + UX_H_HEAD) && pxo <= 240u * (UX_H_STATUS + UX_H_HEAD);
     bad += check("I2 TRACKS: the ridges at most every 40 ms (25 a second), each frame's LCD send bounded", ok);
-    load_tight = 1;
+    load_tight = 1;                                                 /* (3b task 10, spec 5: half rate under load, 200 ms) */
     n = trk_gaps(1600, &gmin, &gmax, &pxr, &pxo, &bl);
-    ok = n >= 12u && n <= 17u && gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ok = n >= 6u && n <= 9u && gmin >= 200u && gmax < 200u + 16u;
     load_tight = 0;
     ui_load = LOAD_LITE; frame();
     n = trk_gaps(1600, &gmin, &gmax, &pxr, &pxo, &bl);
-    ok &= gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ok &= gmin >= 200u && gmax < 200u + 16u;
     ui_load = LOAD_ECO; frame();
     n = trk_gaps(1600, &gmin, &gmax, &pxr, &pxo, &bl);
-    ok &= gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ok &= gmin >= 200u && gmax < 200u + 16u;
     ui_load = LOAD_FULL; frame();
     n = trk_gaps(800, &gmin, &gmax, &pxr, &pxo, &bl);
     ok &= gmin >= UX_TRK_MS && gmax < UX_TRK_MS + 16u;
-    bad += check("I2 TRACKS: every 100 ms while load_tight or MENU LOAD LITE / ECO", ok);
+    bad += check("I2 TRACKS: every 200 ms (half rate) while load_tight or MENU LOAD LITE / ECO", ok);
     load_diag.shed++; trk_loud(0); frame();                         /* the guard shed a voice: frozen 400 ms */
     t0 = fm1_ms; n = ux_trk_draws; at0 = uxr.at;
     while (fm1_ms - t0 < 384u) { trk_loud(fm1_ms); frame(); }
@@ -11366,7 +11504,7 @@ static int test_ux_visual(void)
     }
     press(B_HOME); press(B_HOME); frame();                          /* (GEN, then TRACKS: its footer as before) */
     ux_home_foot(ft, sizeof ft);
-    ok &= ux_home_at(UXH_TRACKS) && str_eq(ft, "1 / 3 \xB7 LVL \xB7 LVL \xB7 LVL \xB7 LVL");
+    ok &= ux_home_at(UXH_TRACKS) && str_eq(ft, "1 / 3 \xB7 LVL \xB7 LVL \xB7 LVL \xB7 BPM");   /* (3b task 10: KNOB 4 the tempo) */
     bad += check("3a VISUAL: the name (ACID FM when none; fitted), SECTION . BAR, footer M1..M4, a macro's turn in the status", ok);
 
     {   /* (polish) ring k its track's (T1 outside .. T6 at the centre): bright on its hits, eased, a silent track's dim */
@@ -13772,6 +13910,90 @@ static int uxe_cells_ok(void)                            /* a forced redraw: wit
     if (dc_stale || cells > DC_MAX) printf("  %s: %u cells, stale %u\n", cur_page()->title, (unsigned)cells, (unsigned)dc_stale);
     return !dc_stale && cells <= DC_MAX;
 }
+/* (3b task 10; spec 5's backlog: HC font slot thrash) the Huffman-coded faces an EDIT page draws (gfx.c hc_lut: 4 slots + 1
+ * rebuilt; AF_M, AF_L, the icons, the keycaps, UF_TTL, UF_MARK): every EDIT page of every engine one can pick, MORE too,
+ * redrawn whole twice: at most two of them on a page, and no decode table built again once it is up (no thrash) */
+static int test_hc_edit(void)
+{
+    uint32_t e, i, maxf = 0, built = 0, pages = 0;
+    for (e = 0; e < NENGINES; e++) {
+        const char *t0;
+        if (!eng_ok(e))
+            continue;
+        uxe_on(e);
+        t0 = cur_page()->title;
+        for (i = 0; i < 12u; i++) {
+            ui.force = 1; frame();
+            hc_built = hc_nf = 0;
+            ui.force = 1; frame(); frame();
+            pages++;
+            if (hc_nf > maxf) maxf = hc_nf;
+            if (hc_built) printf("  EDIT %s (engine %u): %u decode tables built again\n", cur_page()->title, (unsigned)e,
+                                 (unsigned)hc_built);
+            built += hc_built;
+            press(B_EDIT); frame();
+            if (str_eq(cur_page()->title, t0) || ux_home_at(UXH_TRACKS) || !ux_section_owns(nav_sec()))
+                break;
+        }
+    }
+    printf("ui:   (EDIT: %u pages, at most %u Huffman faces a page, %u decode tables rebuilt in redraws)\n", (unsigned)pages,
+           (unsigned)maxf, (unsigned)built);
+    ui_power_on(); frame(); press(B_HOME); frame();      /* (the hook sees one: VISUAL's name in UF_TTL) */
+    hc_nf = 0; ui.force = 1; frame();
+    e = hc_nf;
+    ui_power_on();
+    return check("3b task 10: an EDIT page draws at most two Huffman faces and builds no decode table again (no slot thrash)",
+                 pages >= 14u && maxf <= 2u && !built && e >= 1u);
+}
+/* (3b task 10: CPU of the pictures) NOISE's DUST and DRUM-X's hit render 8,192 samples a picture (the engine's own code, in the
+ * main loop): a knob turning one detent a frame redraws them at most every UX_VIS_MS (100 ms, 200 under load; the knob row's
+ * value still at once), the last value drawn when the turn stops; a light picture (ENV) as before, every frame it changed;
+ * none idle */
+static uint32_t heavy_turn(uint32_t id, uint32_t frames_n)
+{
+    uint32_t i, n0 = uxs_panels;
+    for (i = 0; i < frames_n; i++) {
+        int16_t *vp;
+        (void)param_ref(TSEL, id, &vp);
+        *vp = (int16_t)(40 + (i & 7u));
+        frame();
+    }
+    return uxs_panels - n0;
+}
+static int test_heavy_pace(void)
+{
+    int bad = 0, ok;
+    uint32_t n, nd, ne, n0, i, id;
+    uxe_on(ENGI_NOISE); TSEL->p[P_E0] = 1; frame(); fm1_ms += 1000u; frame();   /* NOISE, SOURCE DUST */
+    n = heavy_turn(P_E2, 62);
+    frames(200);
+    {
+        int16_t *vp; (void)param_ref(TSEL, P_E2, &vp);
+        n0 = uxs_panels;
+        *vp = 99; frame();
+        ok = uxs_panels == n0 + 1u;                       /* (a change after a pause: drawn at once) */
+        *vp = 98; frame(); frame();
+        ok &= uxs_panels == n0 + 1u;                      /* (the next within 100 ms: waits) */
+        frames(120);
+        ok &= uxs_panels == n0 + 2u;                      /* (.. then drawn, once: the last value) */
+    }
+    uxe_on(ENGI_DRUM); fm1_ms += 1000u; frame();
+    nd = heavy_turn(P_E0, 62);
+    load_tight = 1; fm1_ms += 1000u; frame();
+    i = heavy_turn(P_E0, 62);
+    load_tight = 0;
+    uxs_syn_on(ENGI_ANALOG); go_title("ENV"); frame(); fm1_ms += 1000u; frame();
+    ne = heavy_turn(P_ATK, 62);
+    song.playing = 1; n0 = uxs_panels; frames(1000); song.playing = 0;
+    id = uxs_panels - n0;
+    printf("ui:   (a knob a frame for 1 s: DUST %u pictures, DRUM-X %u (tight %u), ENV %u; idle playing %u)\n", (unsigned)n,
+           (unsigned)nd, (unsigned)i, (unsigned)ne, (unsigned)id);
+    ok &= n >= 8u && n <= 11u && nd >= 8u && nd <= 11u && i >= 4u && i <= 6u && ne >= 60u && id == 0u;
+    bad += check("3b task 10: DUST's and DRUM-X's pictures (8,192 samples each) at most every 100 ms while a knob turns (200 "
+                 "under load), the last value drawn; ENV every change; none idle", ok);
+    ui_power_on();
+    return bad;
+}
 static int test_edit_fm6(void)
 {
     static const char *const NM[4] = {"SOUND", "OPERATOR", "OP ENV", "MORE"};
@@ -14275,6 +14497,21 @@ static int test_edit_t5_fix(void)
         ok &= dx_ui_lane == drum_lane(kb_note[k]);
         bad += check("3b task 5 fix: the drum picked follows a key struck on the track (on any page), not MIDI IN or the "
                      "sequencer playing", ok);
+    }
+    {   /* (3b task 10) a press shorter than a UI frame (down and up between two passes): the drum picked all the same, the press
+         * latched (seq.c kb_tog), once */
+        uint32_t k;
+        uxe_on(ENGI_DRUM);
+        turn(EN_SELECT, 1);
+        k = key_at(1, 3);
+        dx_ui_lane = 0; frame();
+        key_down(k); key_up(k); frame();
+        ok = dx_ui_lane == drum_lane(kb_note[k]) && dx_ui_lane != 0u;
+        dx_ui_lane = 0; frame(); frame();
+        ok &= dx_ui_lane == 0u;
+        key_down(k); frame(); frame(); key_up(k); frame();   /* (a long press: picked once, as before) */
+        ok &= dx_ui_lane == drum_lane(kb_note[k]);
+        bad += check("3b task 10: a key struck and let go within one UI frame still picks its drum (the press latched)", ok);
     }
     {   /* 9, 10. a step held on the DRUM grid: the drum is its lane's; KNOB 1 / 3 / 4 on SOUND say why they do not lock */
         ui_power_on();
@@ -15653,7 +15890,7 @@ static int test_t7_engine(void)
     return bad;
 }
 /* the pace (spec 2.3, 3a spec 5.3), on the host's frames with the LFO running (track_lfo_tick a frame's blocks each frame): the
- * wave redrawn as it moves, at most every UX_TRK_MS (HOME's ridges), every UX_TRK_SLOW_MS while load_tight or LOAD LITE / ECO,
+ * wave redrawn as it moves, at most every UX_TRK_MS (HOME's ridges), every UX_TRK_SLOW_MS (200 ms) while load_tight or LOAD LITE / ECO,
  * frozen UX_SHED_HOLD_MS after a shed and while gov_lite (a knob turn still drawn at once), not at all with ANIM OFF; a frame
  * changes no more of the LCD than the panel and the status */
 static uint32_t uxt7_run(uint32_t ms, uint32_t *gmin, uint32_t *gmax, uint32_t *px)
@@ -15686,13 +15923,13 @@ static int test_t7_pace(void)
     bad += check("ACID FM 3b task 7: LFO's wave scrolls as the LFO runs, at most every 40 ms (HOME's ridges)", ok);
     load_tight = 1;
     n = uxt7_run(1600, &gmin, &gmax, &px);
-    ok = n >= 12u && n <= 17u && gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ok = n >= 6u && n <= 9u && gmin >= 200u && gmax < 200u + 16u;   /* (3b task 10: HOME's ridges' half rate, 200 ms) */
     load_tight = 0;
     ui_load = LOAD_LITE; rp_apply(); frame();
     n = uxt7_run(1600, &gmin, &gmax, &px);
-    ok &= gmin >= UX_TRK_SLOW_MS && gmax < UX_TRK_SLOW_MS + 16u;
+    ok &= gmin >= 200u && gmax < 200u + 16u;
     ui_load = LOAD_FULL; rp_apply(); frame();
-    bad += check("ACID FM 3b task 7: LFO's wave every 100 ms while load_tight or LOAD LITE", ok);
+    bad += check("ACID FM 3b task 7: LFO's wave every 200 ms (as HOME's ridges) while load_tight or LOAD LITE", ok);
     load_diag.shed++; frame();                          /* the guard shed a voice: frozen 400 ms */
     t0 = fm1_ms; n = uxs_panels;
     (void)uxt7_run(384, &gmin, &gmax, &px);
@@ -16835,9 +17072,9 @@ static int test_t8_pace(void)
                  "panel", ok);
     load_tight = 1;
     n = uxt8_run(1600, &gmin, &gmax, 1);
-    ok = n >= 8u && n <= 17u && gmin >= UX_TRK_SLOW_MS;
+    ok = n >= 4u && n <= 9u && gmin >= 200u;          /* (3b task 10: HOME's ridges' half rate, 200 ms) */
     load_tight = 0;
-    bad += check("ACID FM 3b task 8: MASTER's meter every 100 ms while load_tight", ok);
+    bad += check("ACID FM 3b task 8: MASTER's meter every 200 ms (as HOME's ridges) while load_tight", ok);
     load_diag.shed++; frame();
     t0 = fm1_ms; n = uxs_panels;
     (void)uxt8_run(384, &gmin, &gmax, 1);
@@ -17391,6 +17628,10 @@ int main(void)
     bad += test_ux_nav_sections();
     bad += test_ux_nav_home();
     bad += test_ux_tracks();
+    bad += test_ux_home_bpm();
+    bad += test_hc_edit();
+    bad += test_heavy_pace();
+    bad += test_ux_ridge_rows();
     bad += test_ux_tracks_pace();
     bad += test_ux_home_head();
     bad += test_ux_visual();

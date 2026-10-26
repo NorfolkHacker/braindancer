@@ -656,7 +656,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_VOICE_WORDS_1, S_EDIT_VOICE_MORE_END, S_EDIT_PHASE_MORE_K3, S_EDIT_ANALOG_TURN, S_EDIT_FM6_1, S_EDIT_FM6_2,
        S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_FM6_ALG4, S_EDIT_FM6_TURN, S_EDIT_DRUM_1, S_EDIT_DRUM_2, S_EDIT_DRUM_3,
        S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL,
-       S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_COUNT };
+       S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo",
@@ -702,7 +702,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_voice_more_end", "edit_phase_more_k3", "edit_analog_turn", "edit_fm6_1", "edit_fm6_2", "edit_fm6_3",
     "edit_fm6_more", "edit_fm6_alg4", "edit_fm6_turn", "edit_drum_1", "edit_drum_2", "edit_drum_3", "edit_drum_more",
     "edit_drum_muted", "edit_drum_more_end", "layer_edit", "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state",
-    "roll_lock_more"};
+    "roll_lock_more", "home_bpm"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1018,7 +1018,8 @@ static void setup(int s)
     }
     case S_HOME_PLAY:                             /* (ACID FM 3a task 6) TRACKS playing: ~2 s of levels behind each line, */
     case S_HOME_T5:                               /* T1's acid line on its 5th step (an accent, a slide); T5: T3..T6 lit */
-    case S_HOME_TURN: {                           /* .. T5's LEVEL just turned (KNOB 3): its column, line and readout */
+    case S_HOME_TURN:                             /* .. T5's LEVEL just turned (3b task 10: KNOB 2 of T4..T6): its column, line, readout */
+    case S_HOME_BPM: {                            /* (3b task 10) .. KNOB 4, the tempo, just turned to 128: TEMPO 128 BPM */
         uint32_t i, c;
         static const uint8_t AN[16] = {36, 0, 48, 39, 43, 0, 36, 1, 46, 41, 0, 48, 36, 0, 43, 39};   /* (0 rest, 1 tie) */
         for (i = 0; i < NTRK; i++) trk[i].seq_idx = 4;
@@ -1041,7 +1042,8 @@ static void setup(int s)
             ux_levels_tick();
         }
         if (s != S_HOME_PLAY) track_select(4);
-        if (s == S_HOME_TURN) { trk[4].p[P_LEVEL] = 92; ux_knob_touch(2); }
+        if (s == S_HOME_TURN) { trk[4].p[P_LEVEL] = 92; ux_knob_touch(1); }
+        if (s == S_HOME_BPM) { song.g[G_BPM] = 128; ux_knob_touch(3); }
         break;
     }
     case S_HOME_REC:                              /* (fix wave I3) the header's marks at their longest: REC armed, OCT+1, BPM LOCK,

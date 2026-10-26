@@ -830,6 +830,8 @@ static uint32_t uxs_panels;                             /* the panels drawn (tes
 static uint32_t uxs_lfo_sc, uxs_lfo_ms;                 /* (3b task 7) LFO's wave: where it was drawn from, when (ms) */
 static int32_t uxs_mtr_px;                              /* (3b task 8) FX > MASTER's meter as drawn (px), SPACE's tempo key, */
 static uint32_t uxs_fx_ms, uxs_sp_win;                  /* .. when either was drawn (ms) */
+static uint32_t uxs_heavy_ms;                           /* (3b task 10) the panel's last drawing (ms) and its page: NOISE's and */
+static const page_t *uxs_heavy_pg;                      /* .. DRUM-X's pictures paced from it */
 
 /* the footer's left, "ARP . MORE"; its right's count, "3 / 3" (the chain's pages shown here, MORE too) */
 static const char *uxs_where(void)
@@ -2987,9 +2989,18 @@ static void ux_section_draw(void)
                   ux_pace_at(fm1_ms, uxs_fx_ms, load_tight, ux_since_shed(), gov_lite, sys_load, 0, UX_TRK_MS, UX_TRK_SLOW_MS).draw;
         }
     }
+    if (!all && sig != panel_sig && !due && pg == uxs_heavy_pg && pg->fam == FAM_EDIT && pg->graph != GR_MORE &&
+        (edit_kind() == 2u || (!edit_kind() && trk_eng(TSEL) == ENGI_NOISE)) &&
+        !ux_pace(fm1_ms, uxs_heavy_ms, load_tight, ux_since_shed(), gov_lite, sys_load, 0).draw)
+        sig = panel_sig;                                /* (3b task 10) NOISE's and DRUM-X's pictures render up to 8,192 samples
+                                                         * (DUST, a hit): a change redrawn at most every UX_VIS_MS (ux_pace: 200
+                                                         * ms under load, held while the guard sheds), the knob row's value at
+                                                         * once; the last change drawn when its time comes (panel_sig kept) */
     if (all || sig != panel_sig || due) {
         panel_sig = sig;
         uxs_panels++;
+        uxs_heavy_pg = pg;
+        uxs_heavy_ms = fm1_ms;
         if (pg->fam == FAM_LFO) {
             uxs_lfo_sc = scr;
             uxs_lfo_ms = fm1_ms;

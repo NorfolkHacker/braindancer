@@ -4,9 +4,10 @@
  * over the glow, the status line (spec 0: the screen says what the controls do; a knob turn shows its value at once; a
  * refusal says why), the footer HOME . page and n / 3.
  * TRACKS (3a task 6): six ridgelines, T1 at the top .. T6 at the bottom, each its track's level over the last ~2 s
- * scrolling right to left, the nearer (lower) lines hiding the ones behind, pulsar-plot style; the four tracks the knobs
- * control in their knobs' colours, the other two dimmed; the name at the left, the level 0..99 at the right; under them the
- * selected track's 16 steps, the playing one outlined and spelled out. KNOB 1..4: the levels of the four.
+ * scrolling right to left, the nearer (lower) lines hiding the ones behind, pulsar-plot style; the three tracks the knobs
+ * control in K1..K3's colours, the other three dimmed; the name at the left, the level at the right; under them the
+ * selected track's 16 steps, the playing one outlined and spelled out. KNOB 1..3: the levels of the three holding the
+ * selected track (T1..T3, T4..T6), KNOB 4 the tempo (3b task 10, spec 5).
  * VISUAL (task 7): the rings of the blend turning with the bar, the song's name over them; KNOB 1..4 MACRO 1..4.
  * Included after ux_widgets.c; ux_home_draw is called by ui_draw.c ui_draw_body,
  * ux_levels_tick by ui_draw every frame. */
@@ -92,7 +93,7 @@ static void ux_lbl_cpy(char *d, const char *s, uint32_t n)
 }
 
 /* ---- TRACKS */
-static uint32_t ux_trk_first(void) { return trk_base4(); }                     /* the knobs' four: from this track */
+static uint32_t ux_trk_first(void) { return song.sel < UXH_NLVL ? 0u : UXH_NLVL; }   /* the knobs' three: from this track */
 /* track c's LEVEL as the mixer shows it (params.c param_format, F_DB: "-2.1" and "dB", "OFF"): one scale everywhere */
 static const char *ux_lvl_fmt(uint32_t c, char val[16])
 {
@@ -134,7 +135,16 @@ static void ux_trk_name(uint32_t c, char *b, uint32_t n, int full)   /* "T3 ACID
 static int32_t ux_trk_hot(void)                         /* the track whose LEVEL was just turned, or -1 */
 {
     int32_t k = ux_knob_hot();
-    return k < 0 || ux_home_page() != UXH_TRACKS ? -1 : (int32_t)ux_trk_first() + k;
+    return k < 0 || k >= (int32_t)UXH_NLVL || ux_home_page() != UXH_TRACKS ? -1 : (int32_t)ux_trk_first() + k;
+}
+/* (3b task 10) TRACKS' KNOB 4 turned: the tempo, as GLO > GLOBAL's BPM knob (ui_input.c param_knob: 40..240, accelerated; BPM
+ * LOCK only keeps it from the dice). An external clock sets it (midi_clock.c): the turn changes nothing and says whose it is */
+static void ux_home_bpm(int32_t steps)
+{
+    if (song.g[G_CLOCK])
+        ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
+    else
+        param_knob(0, G_BPM, steps, 3u);
 }
 /* the strip's page: the playing step's while playing, else the one SEQ shows; its playing cell (-1: none) */
 static uint32_t ux_trk_page(int32_t *ph)
@@ -279,6 +289,13 @@ static const char *ux_home_status(uint16_t *col)
         *col = UX_MID;
         return ux_vis_legend();
     }
+    if (ux_home_page() == UXH_TRACKS && ux_knob_hot() == 3) {   /* "TEMPO 128 BPM" */
+        str_cpy(b, "TEMPO ", sizeof b);
+        fmt_int(b + str_len(b), song.g[G_BPM]);
+        str_cpy(b + str_len(b), " BPM", sizeof b - str_len(b));
+        *col = UX_TEXT;
+        return b;
+    }
     if (c >= 0) {
         char d[16];
         const char *u = ux_lvl_fmt((uint32_t)c, d);
@@ -306,7 +323,12 @@ static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])
             fmt_int(k[c].value, macro_v[c] * 100 / 127);
             str_cpy(k[c].value + str_len(k[c].value), "%", sizeof k[c].value - str_len(k[c].value));
             k[c].bar = (uint8_t)(macro_v[c] * 255u / 127u);
-        } else {                                        /* TRACKS: the four tracks' LEVELs */
+        } else if (c == 3u) {                           /* TRACKS' KNOB 4: the tempo (an external clock's: followed) */
+            str_cpy(lbl[c], "BPM", 10);
+            fmt_int(k[c].value, song.g[G_BPM]);
+            k[c].bar = (uint8_t)((uint32_t)clamp(song.g[G_BPM] - GP[G_BPM].min, 0, GP[G_BPM].max - GP[G_BPM].min) * 255u /
+                                 (uint32_t)(GP[G_BPM].max - GP[G_BPM].min));
+        } else {                                        /* TRACKS: the three tracks' LEVELs */
             lbl[c][0] = 'T'; lbl[c][1] = (char)('1' + f + c);
             str_cpy(lbl[c] + 2, " LEVEL", 8);
             char d[16];
@@ -351,13 +373,13 @@ static void ux_tracks_panel(void)
     const track_t *t = TSEL;
     memset(hz, UX_H_PANEL, sizeof hz);
     for (r = NTRK; r-- > 0u;) {                         /* the lines, the nearest (T6) first */
-        int kn = r >= f && r < f + 4u, sel = r == song.sel;
+        int kn = r >= f && r < f + UXH_NLVL, sel = r == song.sel;
         uint16_t col = kn ? ux_knob_col(r - f) : UX_DIM(UX_MID, 45);
         if (trk[r].p[P_MUTE]) col = UX_DIM(col, 55);
         ux_ridge(r, UXR_BASE(r), col, sel || (int32_t)r == hot, hz);
     }
     for (r = 0; r < NTRK; r++) {                        /* the names, the levels (in their columns: nothing over them) */
-        int kn = r >= f && r < f + 4u;
+        int kn = r >= f && r < f + UXH_NLVL;
         uint16_t col = kn ? ux_knob_col(r - f) : UX_DIM(UX_MID, 45);
         int32_t y = UXR_BASE(r) - UF_LBL_CAP_Y - UF_LBL_CAP_H, w;
         char d[16];
@@ -578,7 +600,7 @@ static void ux_home_foot(char *b, uint32_t n)
     uint32_t p = ux_home_page();
     str_cpy(b, ux_home_count(), n);
     if (p == UXH_TRACKS)
-        str_cpy(b + str_len(b), " \xB7 LVL \xB7 LVL \xB7 LVL \xB7 LVL", n - str_len(b));
+        str_cpy(b + str_len(b), " \xB7 LVL \xB7 LVL \xB7 LVL \xB7 BPM", n - str_len(b));
     else if (p == UXH_VISUAL)
         str_cpy(b + str_len(b), " \xB7 M1 \xB7 M2 \xB7 M3 \xB7 M4", n - str_len(b));
 }
