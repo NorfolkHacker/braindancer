@@ -1559,6 +1559,10 @@ function makeMockDevice(opt = {}) {
     D("MOD", F.PCT, 0, 127, 0),                       /* (0.6.86) G_DMOD 66: the delay's tape drift (WOW, FLUTTER) */
     E("TYPE", ["ANALOG", "DIGITAL"], 0), E("PING", ["OFF", "ON"], 0),   /* (0.6.90) G_DTYPE 67, G_DPING 68 */
     D("LEN", F.INT, 1, 64, 64), E("RES", ["1/8", "1/16", "1/32"], 1),   /* (0.6.99) G_PFXLEN 69, G_PFXRES 70: the punch-in lane */
+    /* (ACID FM 0.5) G_MRIN1 71 .. G_MRSEL 89: MIDI per track: T1..T6's IN, their OUT, their CHANNEL (1..6 by default);
+       KEYBOARD PLAYS SELECTED (a channel no track takes plays the selected track) */
+    ...Array.from({ length: 6 }, () => E("IN", ["OFF", "ON"], 1)), ...Array.from({ length: 6 }, () => E("OUT", ["OFF", "ON"], 1)),
+    ...Array.from({ length: 6 }, (_, k) => D("CHANNEL", F.INT, 1, 16, k + 1)), E("SELECTED", ["OFF", "ON"], 0),
   ];
   const NONE = D("-", F.INT, 0, 0, 0);
   const RATIO = [".5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "14", "16"];
@@ -1703,7 +1707,7 @@ function makeMockDevice(opt = {}) {
   for (let k = 0; k < 16; k++) TP.push(D("LEVEL", F.PCT, 0, 127, 0));                     /* 96..111: its levels */
   TP.push(E("TYPE", ["LP", "HP", "BP", "COMB"], 0),                                    /* 112: the FILTER's type (JIANT 0.5) */
     D("CUT", F.CUTOFF, 0, 127, 127), D("RES", F.PCT, 0, 127, 0));                       /* 113, 114: the other engines' */
-  const P_COUNT = 123, G_COUNT = 71, NSTEP = 64, P_E0 = 115, G_ENGSEL = 20, P_SLCR = 45;
+  const P_COUNT = 123, G_COUNT = 90, NSTEP = 64, P_E0 = 115, G_ENGSEL = 20, P_SLCR = 45;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const enumOrig = (d, v) => d.fmt === F.ENUM && d.names ? aliasOf(d.names, v - d.min) + d.min : v;   /* params.c enum_orig */
   /* tracks (firmware v3): four synth parts (1.0), six (JIANT 0.6); engine / preset / p / step below are the selected track's */
@@ -2747,7 +2751,7 @@ const stepEdit = new Map(); /* index -> time of the last edit */
 const EXPECT = { pcount: 91, gcount: 27, pe0: 83 };
 /* the same layout without the chord keys (P_COUNT 89, P_E0 81), the FM operator ENVs too (69, 61) or the matrix
    (firmware 1.0: 57, 49) */
-const knownLayout = (info) => [EXPECT.gcount, 32, 36, 37, 66, 67, 69, 71].includes(info.gcount) &&   /* (JIANT FUNB: 5, 9, then 10 more globals; 0.6.3: the SLICER's 29) */
+const knownLayout = (info) => [EXPECT.gcount, 32, 36, 37, 66, 67, 69, 71, 90].includes(info.gcount) &&   /* (JIANT FUNB: 5, 9, then 10 more globals; 0.6.3: the SLICER's 29; ACID FM 0.5: MIDI per track, 19) */
   [[120, 112], [99, 91], [91, 83], [89, 81], [69, 61], [57, 49]].some(([c, e]) => info.pcount === c && info.pe0 === e);
 const P = { LEVEL: 0, SLEN: 29 };
 const LAYOUT = (pe0) => [

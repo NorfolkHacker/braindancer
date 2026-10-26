@@ -416,11 +416,11 @@ static void test_midi(void)
     check("USB: CC1 ch 1 -> part 1, CC11 ch 3 -> part 3, AT ch 4 -> part 4",
           trk[0].mw == 100 && trk[2].ex_off == 127 - 40 && trk[3].at == 77 && trk[0].at == 0 && trk[0].ex_off == 0);
     check("USB: ROUT CH1-4: CC1 on ch 7 reaches no track", trk[1].mw == 0 && trk[2].mw == 0);
-    song.g[G_ROUTE] = 1;
+    host_route_sel(1);
     pkt(0xB6, 1, 55);                            /* ROUT SEL: ch 7 -> the selected track (2) */
     blocks(1);
     check("USB: ROUT SEL: CC1 on ch 7 -> the selected track (2)", trk[1].mw == 55 && trk[2].mw == 0);
-    song.g[G_ROUTE] = 0;
+    host_route_sel(0);
     pkt(0xB0, 121, 0);                           /* reset all controllers */
     blocks(1);
     check("CC121 resets MODW / AT / EXPR of the channel's track", trk[0].mw == 0 && trk[1].mw == 55);
@@ -432,11 +432,11 @@ static void test_midi(void)
     check("TRS: CC1, running status, realtime between, CC11, AT (1 data byte, running status) -> parts",
           trk[0].mw == 0x7F && trk[0].ex_off == 127 - 0x20 && trk[2].at == 0x34 && trk[0].at == 0);
     check("TRS: ROUT CH1-4: ch 5 is ignored", trk[1].mw == 0);
-    song.g[G_ROUTE] = 1;
+    host_route_sel(1);
     for (i = 14; i < sizeof TRS; i++)           /* the ch 5 CC1 again with ROUT SEL */
         um_byte(TRS[i]);
     blocks(1);
-    song.g[G_ROUTE] = 0;
+    host_route_sel(0);
     check("TRS: ROUT SEL: ch 5 -> the selected track (2)", trk[1].mw == 9);
     check("MODW -> PAN +63 through MIDI: the part is on the right (fresh FX)", in_child(pan_e2e));
 }

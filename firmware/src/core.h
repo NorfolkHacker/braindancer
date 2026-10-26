@@ -151,7 +151,7 @@ enum {                          /* global parameters */
     G_BPM, G_SWING, G_CLOCK, G_TUNE,
     G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX,
     G_RSIZE, G_RDAMP, G_CRATE, G_CDEPTH,
-    G_MIDI, G_DREL, G_ROUTE, G_INFO,   /* G_DREL (JIANT): DUCK's release; was G_SYNC, a placeholder ("--", 0..0) */   /* G_ROUTE: MIDI IN, 0 CH1-4 (channels 1..4 -> parts 1..4, 5..16 ignored), 1 SEL (seq.c) */
+    G_MIDI, G_DREL, G_ROUTE, G_INFO,   /* G_DREL (JIANT): DUCK's release; was G_SYNC, a placeholder ("--", 0..0) */   /* G_ROUTE: MIDI IN until ACID FM 0.5, 0 CH1-6, 1 SEL: now read only by a project's load without 'MR' (SEL: G_MRSEL), saved as G_MRSEL */
     G_SLOT, G_DJF, G_LOAD, G_SAVE,  /* G_DJF (0.9.1): GLO > MIXER KNOB 4, the master DJ FILTER (fx.c djf_block), -64 .. 63:
                                  * 0 out of the chain, below a low-pass sweeping down, above a high-pass sweeping up. Was
                                  * G_NAME, a placeholder ("--", 0..0, never set): every project before holds 0 there */
@@ -182,6 +182,10 @@ enum {                          /* global parameters */
     G_DTYPE, G_DPING,           /* (0.6.90) the delay's TYPE (ANALOG / DIGITAL) and PING-PONG (project.c: block 'DT') */
     G_PFXLEN, G_PFXRES,         /* (0.6.99) the punch-in lane's length (1..64 steps) and resolution (1/8 1/16 1/32)
                                  * (pfx.c; project.c: block 'PX') */
+    G_MRIN1, G_MRIN6 = G_MRIN1 + 5,     /* (ACID FM 0.5) MIDI per track (seq.c midi_in_mask, trk_midi_ch, trk_midi_out): */
+    G_MROUT1, G_MROUT6 = G_MROUT1 + 5,  /* each track's IN and OUT (OFF / ON, ON), its CHANNEL 1..16 (T1..T6: 1..6), */
+    G_MRCH1, G_MRCH6 = G_MRCH1 + 5,     /* KEYBOARD PLAYS SELECTED (a channel no track takes plays the selected one; */
+    G_MRSEL,                            /* OFF). project.c: block 'MR'; none (before 0.5): these, ROUTE SEL as G_MRSEL */
     G_COUNT
 };
 #define G_SL_N (G_SLP15 + 1 - G_SLMODE)     /* the SLICER's globals (stored together: project.c, song_chain.c) */

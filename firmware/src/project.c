@@ -584,6 +584,7 @@ static int proj_engines_ok(const project_t *q)
  * (its mode, pattern, rate, depth), the tracks whose SLICER was on go in, the effects' returns not (the old one cut the
  * dry sound before the sends); none on: the bus at its defaults (OFF, everything in) */
 static uint8_t proj_sl_found;                           /* proj_unpack_c read the SLICER's block */
+static uint8_t proj_mr_found;                           /* (ACID FM 0.5) .. the MIDI routing's ('M' 'R') */
 /* (JIANT 0.6.9) the old SLICER's slots are AUTO PAN's now (core.h): read by the migration, then AUTO PAN off */
 static void proj_ap_clear(project_t *q)
 {
@@ -618,11 +619,20 @@ static void proj_sl_migrate(project_t *q)
 }
 static int proj_import(project_t *q, const void *b, int n)
 {
-    proj_sl_found = 0;
+    proj_sl_found = proj_mr_found = 0;
     if (!proj_import_any(q, b, n) || !proj_engines_ok(q))
         return 0;
     if (!proj_sl_found) {
         proj_sl_migrate(q);
+        q->sum = proj_sum(q);
+    }
+    if (!proj_mr_found) {                               /* (ACID FM 0.5) a project of before: the routing at its
+                                                         * defaults (every format's import), ROUTE SEL as KEYBOARD PLAYS
+                                                         * SELECTED */
+        uint32_t i;
+        for (i = G_MRIN1; i < G_MRSEL; i++)
+            q->g[i] = GP[i].def;
+        q->g[G_MRSEL] = (int16_t)(q->g[G_ROUTE] != 0);
         q->sum = proj_sum(q);
     }
     proj_fm4(q);
@@ -649,7 +659,7 @@ static int proj_import_any(project_t *q, const void *b, int n)
         return proj_unpack(q, b, PROJ_STORE_V7);
     if (n == (int)sizeof *q && proj_ok((const project_t *)b)) {
         memcpy(q, b, sizeof *q);
-        proj_sl_found = 1;                              /* (today's own: its SLICER globals) */
+        proj_sl_found = proj_mr_found = 1;              /* (today's own: its SLICER globals, its routing) */
         proj_drums_to_part(q);
         proj_phys(q);
         return 1;
@@ -831,6 +841,25 @@ static uint32_t proj_bits(uint32_t m)
         n += m & 1u;
     return n;
 }
+/* (ACID FM 0.5) the MIDI routing (seq.c midi_in_mask): FUNC's 'M' 'R' block, the very last (after 'S' 'X'; firmware
+ * before stops reading there), written only when a track's IN, OUT or CHANNEL is not the default (T1..T6 on 1..6, IN
+ * and OUT on): a byte a track, IN | OUT << 1 | (CHANNEL - 1) << 4, then KEYBOARD PLAYS SELECTED. Without it (every
+ * project before): the defaults, and G_ROUTE's SEL (the header's) as KEYBOARD PLAYS SELECTED; the header's G_ROUTE
+ * is written as KEYBOARD PLAYS SELECTED, so firmware before plays such a project as SEL */
+#define PROJ_MR_N (NTRK + 1u)
+static uint32_t proj_mr_byte(const project_t *q, uint32_t t)
+{
+    return (q->g[G_MRIN1 + t] ? 1u : 0u) | (q->g[G_MROUT1 + t] ? 2u : 0u) |
+           ((uint32_t)(clamp(q->g[G_MRCH1 + t], 1, 16) - 1) << 4);
+}
+static int proj_mr_used(const project_t *q)
+{
+    uint32_t t;
+    for (t = 0; t < NTRK; t++)
+        if (proj_mr_byte(q, t) != (3u | t << 4))
+            return 1;
+    return 0;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
@@ -848,6 +877,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 4u;
     if (q->g[G_PFXLEN] != 64 || q->g[G_PFXRES] != 1)    /* (0.6.99) the punch-in lane's LEN and RES, when not the default */
         n += 4u;
+    if (proj_mr_used(q))                                /* (ACID FM 0.5) the MIDI routing's, when not the default */
+        n += 2u + PROJ_MR_N;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
@@ -888,6 +919,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
     memset(out, 0, sizeof *out); memcpy(b, &magic, 4); memcpy(b + 4, &size, 4);
     memcpy(b + 8, q->g, G_NSTORE * 2u); b[62] = q->sel; b[63] = q->parts; b[64] = q->phys; b[66] = P_COUNT;
     b[67] = NTRK;
+    {   /* (ACID FM 0.5) G_ROUTE: KEYBOARD PLAYS SELECTED's (see proj_mr_used) */
+        int16_t r = q->g[G_MRSEL] ? 1 : 0;
+        memcpy(b + 8u + 2u * G_ROUTE, &r, 2);
+    }
     for (t = 0; t < NTRK; t++) {
         uint32_t e = q->t[t].engine, map, fm = (uint32_t)proj_fm_kept(q, t);
         b[pos++] = (uint8_t)e; b[pos++] = q->t[t].preset; b[pos++] = (uint8_t)fm;
@@ -1016,6 +1051,12 @@ static int proj_pack(project_store_t *out, const project_t *q)
                 b[pos++] = 0;
             }
         }
+    }
+    if (proj_mr_used(q)) {                              /* (ACID FM 0.5) the MIDI routing, after 'S' 'X' */
+        b[pos++] = 'M'; b[pos++] = 'R';
+        for (t = 0; t < NTRK; t++)
+            b[pos++] = (uint8_t)proj_mr_byte(q, t);
+        b[pos++] = q->g[G_MRSEL] ? 1u : 0u;
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1296,6 +1337,18 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 if (s->comp2 == CP_ECHO) s->carg2 = (uint8_t)(s->carg2 | (x0 & 0x38u));
             }
         }
+    }
+    if (pos + 2u + PROJ_MR_N <= room && b[pos] == 'M' && b[pos + 1u] == 'R') {   /* (ACID FM 0.5) the MIDI routing
+                                                         * (else the defaults: proj_import) */
+        for (t = 0; t < NTRK; t++) {
+            uint32_t x = b[pos + 2u + t];
+            q->g[G_MRIN1 + t] = (int16_t)(x & 1u);
+            q->g[G_MROUT1 + t] = (int16_t)((x >> 1) & 1u);
+            q->g[G_MRCH1 + t] = (int16_t)((x >> 4) + 1u);
+        }
+        q->g[G_MRSEL] = (int16_t)(b[pos + 2u + NTRK] & 1u);
+        proj_mr_found = 1;
+        pos += 2u + PROJ_MR_N;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
@@ -1867,16 +1920,18 @@ static project_store_t undo_st[2] __attribute__((section(".lowbuf")));   /* (0.6
  * steps, automation or locks; the mix, the global effects, the tempo and the SLICER at their defaults; the song empty,
  * the macros at 0, the punch-in lane clear, the factory DRUM-X kit (X-MOD, TONE off, nothing muted), every FM6 patch
  * the init voice. What is saved (projects, user presets) and the setup (CLOCK, TUNE, MIDI, ROUTE, the project slot,
- * MENU) stay */
+ * MENU; ACID FM 0.5: the MIDI routing, G_MRIN1 .. G_MRSEL) stay */
 static void system_init(void)
 {
     static const uint8_t KEEP[5] = {G_CLOCK, G_TUNE, G_MIDI, G_ROUTE, G_SLOT};
-    int16_t kept[5];
+    int16_t kept[5], mr[G_MRSEL + 1 - G_MRIN1];         /* (ACID FM 0.5) and the MIDI routing (G_MRIN1 .. G_MRSEL) */
     uint32_t i;
     demo_end();                                         /* (ACID FM 3b) NEW PROJECT is empty, no demo */
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
+    memcpy(mr, &song.g[G_MRIN1], sizeof mr);
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
+    memcpy(&song.g[G_MRIN1], mr, sizeof mr);
     chain_defaults(&chain_config);
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
     memset(pfx_lane, 0, sizeof pfx_lane);

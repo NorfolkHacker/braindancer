@@ -73,7 +73,7 @@ static int sustain_test(void)
 }
 static int ownership_test(void)
 {
-    int bad = 0; midi_test_reset(); song.g[G_ROUTE] = 1; track_t *t = &trk[0];
+    int bad = 0; midi_test_reset(); host_route_sel(1); track_t *t = &trk[0];
     queued(0x94, 60, 100, 1); queued(0x95, 60, 100, 2);
     bad += check("USB/TRS channels can share one sounding note with independent owners", midi_owners[0] == 2u && gate_note(t, 60));
     queued(0x84, 60, 0, 1);
@@ -245,7 +245,7 @@ static int route_test(void)
 {
     int bad = 0; uint32_t ch, src, owned = 0;
     midi_test_reset(); song.sel = 2;
-    bad += check("ROUT defaults to CH1-6", song.g[G_ROUTE] == 0);
+    bad += check("ROUT defaults to CH1-6", !song.g[G_MRSEL]);
     for (src = 1; src <= 2u; src++)
         for (ch = 6; ch < 16u; ch++) queued(0x90 | ch, 60 + ch, 100, src);
     for (ch = 6; ch < 16u; ch++) owned |= mn_get(ch, 60 + ch);
@@ -266,14 +266,14 @@ static int route_test(void)
     queued(0xB1, 123, 0, 1); queued(0x83, 40, 0, 2);
     bad += check("CH1-6: panic on channel 2 still works", !gate_note(&trk[1], 62) && !midi_owners[1] && !midi_owners[3]);
 
-    midi_test_reset(); song.sel = 2; song.g[G_ROUTE] = 1; trk[2].p[P_VOICE] = V_POLY; trk[2].p[P_SUS] = 127; events_block(CTL);
+    midi_test_reset(); song.sel = 2; host_route_sel(1); trk[2].p[P_VOICE] = V_POLY; trk[2].p[P_SUS] = 127; events_block(CTL);
     queued(0x90, 60, 100, 1); queued(0x96, 62, 100, 2); queued(0x99, 64, 100, 1); queued(0x9F, 65, 100, 2);
     bad += check("SEL: channels 1, 7, 10, 16 all play the selected track", gate_note(&trk[2], 60) && gate_note(&trk[2], 62) && gate_note(&trk[2], 64) && gate_note(&trk[2], 65) && !gate_note(&trk[0], 60) && midi_owners[2] == 4u);
     queued(0xEF, 127, 127, 1); queued(0xB9, 1, 66, 2); queued(0xD6, 33, 0, 1);
     bad += check("SEL: bend, CC1 and aftertouch from channels 7..16 reach the selected track", midi_bend_target[2] == 512 && trk[2].mw == 66 && trk[2].at == 33);
     queued(0xB6, 64, 127, 1); queued(0x86, 62, 0, 2);
     bad += check("SEL: channel 7 pedal holds its note", gate_note(&trk[2], 62) && (mn_get(6, 62) & MIDI_PEDAL_NOTE));
-    song.g[G_ROUTE] = 0; events_block(CTL);
+    host_route_sel(0); events_block(CTL);
     bad += check("SEL -> CH1-6 releases channels 7..16's notes (pedal-held too), keeps channel 1's",
                  !gate_note(&trk[2], 62) && !gate_note(&trk[2], 64) && !gate_note(&trk[2], 65) && gate_note(&trk[2], 60) &&
                  !mn_get(6, 62) && !mn_get(9, 64) && !mn_get(15, 65) && midi_owners[2] == 1u && !midi_ch[6].pedal);
@@ -339,10 +339,10 @@ static int cc_map_test(void)
     queued(0xB6, 7, 5, 1); queued(0xB9, 74, 5, 2); queued(0xBF, 91, 5, 1);
     ok = !memcmp(before, trk[2].p, sizeof before) && trk[0].p[P_LEVEL] != 5 && trk[3].p[P_LEVEL] != 5;
     bad += check("ROUT CH1-6: mapped CCs on channels 7..16 reach no part", ok);
-    song.g[G_ROUTE] = 1; song.sel = 2; events_block(CTL);
+    host_route_sel(1); song.sel = 2; events_block(CTL);
     queued(0xB9, 7, 5, 2);
     bad += check("ROUT SEL: channel 10's CC7 sets the selected track's LEVEL", trk[2].p[P_LEVEL] == 5 && trk[0].p[P_LEVEL] != 5);
-    song.g[G_ROUTE] = 0; song.sel = 0; events_block(CTL);
+    host_route_sel(0); song.sel = 0; events_block(CTL);
 
     /* AUTOMATION: the selected track armed and playing records the CC as a knob move; else it is the new base */
     midi_test_reset();
@@ -359,9 +359,210 @@ static int cc_map_test(void)
     bad += check("not armed: the CC is the new value, no event", trk[0].p[P_E4] == 77 && motion.count == 1u);
     return bad;
 }
+/* (ACID FM 0.5, 3c-1 task 1) per-track MIDI: each track's IN, OUT and CHANNEL (G_MRIN1.., G_MROUT1.., G_MRCH1..) and
+ * KEYBOARD PLAYS SELECTED (G_MRSEL); NOTES OUT / CLOCK OUT are midi_out_mode's (mo_lvl) */
+static uint32_t mo_pk[256], mo_pn;
+static void mo_take(void)                          /* what MIDI OUT sent since the last mo_take (as usb.c drains it) */
+{
+    mo_pn = 0;
+    while (mo_r != mo_w) {
+        uint32_t p = midi_out_q[mo_r++ % MQ];
+        if (mo_pn < NELEM(mo_pk)) mo_pk[mo_pn++] = p;
+    }
+}
+static uint32_t mo_count(uint32_t status)          /* packets of this status byte (0x90 | ch, 0xF8 ..) taken */
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < mo_pn; i++) n += ((mo_pk[i] >> 8) & 0xFFu) == status;
+    return n;
+}
+static uint32_t mo_notes(void)                     /* note-ons and note-offs taken, any channel */
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < mo_pn; i++) n += ((mo_pk[i] >> 12) & 0xEu) == 0x8u;
+    return n;
+}
+static int route_track_test(void)
+{
+    int bad = 0, ok = 1; uint32_t ch, i;
+    midi_test_reset();
+    for (ch = 0; ch < 16u; ch++) ok &= midi_in_mask(ch) == (ch < NTRK ? 1u << ch : 0u);
+    for (i = 0; i < NTRK; i++) ok &= trk_midi_ch(i) == i && song.g[G_MRIN1 + i] == 1 && song.g[G_MROUT1 + i] == 1;
+    bad += check("routing defaults: T1..T6 receive and send on channels 1..6, nothing else receives", ok && !song.g[G_MRSEL]);
+    song.g[G_MRCH1 + 1] = 99; song.g[G_MRSEL] = 7; trk_midi_defaults();
+    bad += check("trk_midi_defaults: channels 1..6, IN / OUT on, KEYBOARD PLAYS SELECTED off",
+                 song.g[G_MRCH1 + 1] == 2 && !song.g[G_MRSEL] && midi_in_mask(1) == 2u);
+
+    midi_test_reset(); song.g[G_MRCH1 + 1] = 10; events_block(CTL);   /* T2 on channel 10 */
+    queued(0x99, 60, 100, 1);
+    bad += check("T2 on channel 10: a channel 10 note plays T2 only", gate_note(&trk[1], 60) && !gate_note(&trk[0], 60) &&
+                 !gate_note(&trk[2], 60) && midi_owners[1] == 1u && mn_get(9, 60) == 2u);
+    queued(0x91, 62, 100, 1);
+    bad += check("  a channel 2 note then plays nothing (IN by channel)", !mn_get(1, 62) && !gate_note(&trk[1], 62) && !midi_owners[0]);
+    queued(0x89, 60, 0, 1);
+    bad += check("  its note-off releases it", !gate_note(&trk[1], 60) && !midi_owners[1] && !mn_get(9, 60));
+    song.g[G_MRCH1 + 2] = 10; events_block(CTL);       /* T3 on channel 10 too */
+    queued(0x99, 64, 100, 1);
+    bad += check("two tracks on one channel both play its note", gate_note(&trk[1], 64) && gate_note(&trk[2], 64) &&
+                 midi_owners[1] == 1u && midi_owners[2] == 1u);
+    queued(0xB9, 7, 5, 1);
+    bad += check("  .. and both take its CCs", trk[1].p[P_LEVEL] == 5 && trk[2].p[P_LEVEL] == 5 && trk[0].p[P_LEVEL] != 5);
+    queued(0x89, 64, 0, 1);
+    bad += check("  one note-off releases it on both", !gate_note(&trk[1], 64) && !gate_note(&trk[2], 64) && !midi_owners[1] &&
+                 !midi_owners[2] && !mn_get(9, 64));
+    queued(0x99, 65, 100, 1); song.g[G_MRCH1 + 2] = 3; events_block(CTL);
+    bad += check("a routing change lets go of the notes its channels held (none hangs)", !gate_note(&trk[1], 65) &&
+                 !gate_note(&trk[2], 65) && !midi_owners[1] && !midi_owners[2] && !mn_get(9, 65));
+
+    midi_test_reset(); song.g[G_MRIN1 + 2] = 0; events_block(CTL);   /* T3's IN off */
+    queued(0x92, 60, 100, 1); queued(0xB2, 7, 9, 1);
+    bad += check("IN off on T3: channel 3's notes and CCs are ignored", !gate_note(&trk[2], 60) && !mn_get(2, 60) &&
+                 !midi_owners[2] && trk[2].p[P_LEVEL] != 9 && !midi_in_mask(2));
+
+    midi_test_reset(); song.g[G_MRCH1] = 16; events_block(CTL);       /* T1 on channel 16 */
+    queued(0x9F, 60, 100, 1);
+    bad += check("a track on channel 16 plays channel 16's notes", gate_note(&trk[0], 60) && mn_get(15, 60) == 1u);
+    queued(0x8F, 60, 0, 1);
+    midi_song_req = 0; memset((void *)midi_pc_req, 0, sizeof midi_pc_req);
+    queued(0xCF, 2, 0, 1);
+    bad += check("Program Change on channel 16 still selects a section / project, never T1's sound",
+                 midi_song_req == 3u && !midi_pc_req[0]);
+    midi_song_req = 0;
+    song.g[G_MRCH1 + 4] = 3; events_block(CTL);         /* T3 and T5 on channel 3 */
+    queued(0xC2, 4, 0, 1);
+    bad += check("Program Change on channel 3 loads a sound on every track receiving 3",
+                 midi_pc_req[2] == 5u && midi_pc_req[4] == 5u && !midi_pc_req[0] && !midi_pc_req[1] && !midi_pc_req[3] && !midi_song_req);
+    memset((void *)midi_pc_req, 0, sizeof midi_pc_req);
+
+    midi_test_reset(); song.g[G_MRSEL] = 1; song.sel = 2; trk[2].p[P_VOICE] = V_POLY; trk[2].p[P_SUS] = 127;
+    events_block(CTL);                                  /* KEYBOARD PLAYS SELECTED, T3 selected */
+    queued(0x9B, 60, 100, 1);
+    bad += check("KEYBOARD PLAYS SELECTED: a note on an unclaimed channel (12) plays the selected track",
+                 gate_note(&trk[2], 60) && mn_get(11, 60) == 3u && midi_owners[2] == 1u && midi_in_mask(11) == 1u << 2);
+    queued(0x90, 62, 100, 1);
+    bad += check("  on a claimed channel (1) it plays the claiming track only", gate_note(&trk[0], 62) && !gate_note(&trk[2], 62) &&
+                 midi_in_mask(0) == 1u && mn_get(0, 62) == 1u);
+    song.sel = 1; queued(0x8B, 60, 0, 1);
+    bad += check("  its note-off follows the note across a selection change", !gate_note(&trk[2], 60) && !mn_get(11, 60) &&
+                 !midi_owners[2]);
+    song.g[G_MRSEL] = 0; queued(0x9B, 60, 100, 1);
+    bad += check("  off: an unclaimed channel plays nothing", !mn_get(11, 60) && !gate_note(&trk[1], 60) && !midi_in_mask(11));
+    queued(0x80, 62, 0, 1);
+
+    /* MIDI OUT: a track's notes on its CHANNEL when its OUT and NOTES OUT are on */
+    midi_test_reset(); usb.config = 1; mo_lvl = MO_ALL; events_block(CTL); mo_take();
+    song.g[G_MRCH1 + 1] = 10; events_block(CTL); mo_take();
+    seq_note_on(&trk[1], 60, 100); seq_note_off(&trk[1], 60); mo_take();
+    bad += check("MIDI OUT: T2 on channel 10 sends its sequenced notes on channel 10", mo_count(0x99) == 1u && mo_count(0x89) == 1u &&
+                 mo_notes() == 2u && trk_midi_ch(1) == 9u);
+    song.sel = 3; fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL); mo_take();
+    seq_note_on(&trk[3], 38, 100); seq_note_off(&trk[3], 38); mo_take();
+    ok = mo_count(0x93) == 1u && mo_count(0x83) == 1u;
+    fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL); mo_take();
+    ok &= mo_count(0x93) == 1u && mo_count(0x83) == 1u;
+    bad += check("  T4 OUT on: its played and sequenced notes are sent on channel 4", ok && trk_midi_out(3));
+    song.g[G_MROUT1 + 3] = 0; events_block(CTL); mo_take();
+    fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL);
+    seq_note_on(&trk[3], 38, 100); seq_note_off(&trk[3], 38); mo_take();
+    bad += check("  T4 OUT off: its played and sequenced notes send nothing", !mo_notes() && !trk_midi_out(3) && trk_midi_out(2));
+    song.g[G_MROUT1 + 3] = 1; mo_lvl = MO_OFF; events_block(CTL); mo_take();
+    for (i = 0, ok = 1; i < NTRK; i++) ok &= !trk_midi_out(i);
+    seq_note_on(&trk[1], 60, 100); seq_note_off(&trk[1], 60);
+    fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL); mo_take();
+    bad += check("  NOTES OUT off: no track sends", ok && !mo_notes());
+    mo_lvl = MO_ALL; events_block(CTL); seq_note_on(&trk[1], 61, 100); song.g[G_MRCH1 + 1] = 11; events_block(CTL); mo_take();
+    bad += check("  a CHANNEL change ends the notes sent on the old channel", mo_count(0x99) == 1u && mo_count(0x89) == 1u);
+    seq_note_off(&trk[1], 61); mo_take();
+    bad += check("  .. and its later note-off sends nothing more", !mo_notes());
+    mo_lvl = MO_CLOCK; song.g[G_CLOCK] = 0; events_block(CTL); mo_take();
+    for (i = 0; i < 400u; i++) events_block(CTL);
+    mo_take(); ok = mo_count(0xF8) > 4u;
+    song.g[G_CLOCK] = 1; events_block(CTL); mo_take();
+    for (i = 0; i < 400u; i++) events_block(CTL);
+    mo_take();
+    bad += check("CLOCK OUT sends the clock (24 a beat) only with CLOCK INT", ok && !mo_count(0xF8));
+    song.g[G_CLOCK] = 0; mo_lvl = MO_KEYS; usb.config = 0; events_block(CTL);
+    return bad;
+}
+/* the routing is saved with the project, appended ('M' 'R' after the blocks before): a project of before (no block)
+ * loads to the defaults, its ROUTE SEL as KEYBOARD PLAYS SELECTED; NEW PROJECT keeps the routing */
+static void route_odd(void)                        /* a routing not the defaults */
+{
+    song.g[G_MRCH1 + 1] = 10; song.g[G_MRIN1 + 2] = 0; song.g[G_MROUT1 + 3] = 0; song.g[G_MRCH1 + 5] = 16;
+    song.g[G_MRCH1 + 4] = 1; song.g[G_MRSEL] = 1;
+}
+static int route_is_odd(void)
+{
+    return song.g[G_MRCH1 + 1] == 10 && !song.g[G_MRIN1 + 2] && !song.g[G_MROUT1 + 3] && song.g[G_MRCH1 + 5] == 16 &&
+           song.g[G_MRCH1 + 4] == 1 && song.g[G_MRSEL] == 1 && song.g[G_MRIN1] == 1 && song.g[G_MROUT1 + 1] == 1 &&
+           song.g[G_MRCH1] == 1 && song.g[G_MRCH1 + 2] == 3;
+}
+static int route_is_def(void)
+{
+    int ok = 1; uint32_t i;
+    for (i = 0; i < NTRK; i++)
+        ok &= song.g[G_MRIN1 + i] == 1 && song.g[G_MROUT1 + i] == 1 && song.g[G_MRCH1 + i] == (int16_t)(i + 1u);
+    return ok;
+}
+static void store_rehash(project_store_t *s)
+{
+    uint32_t sum = proj_hash(s->raw, PROJ_STORE_SIZE - 4u);
+    memcpy(s->raw + PROJ_STORE_SIZE - 4u, &sum, 4);
+}
+static int store_load(const project_store_t *s)
+{
+    return proj_import(&proj_scratch, s, sizeof *s) && !project_restore_runtime(&proj_scratch);
+}
+static int route_store_test(void)
+{
+    static project_store_t s0, s1, ssel, s2, s3;
+    static int16_t g0[G_COUNT];
+    int bad = 0, ok; uint32_t i, d;
+    int16_t one = 1;
+    midi_test_reset();
+    project_capture(&proj_scratch); ok = proj_pack(&s0, &proj_scratch) && store_load(&s0);   /* (once through a load: the
+                                                         * power-on FM6 patches' names then as a load leaves them) */
+    project_capture(&proj_scratch); memcpy(g0, proj_scratch.g, sizeof g0);
+    ok &= proj_pack(&s0, &proj_scratch);                /* the routing at its defaults: as 0.4 wrote it */
+    memcpy(&ssel, &s0, sizeof ssel);                    /* .. and with ROUTE SEL in its header */
+    memcpy(ssel.raw + 8u + 2u * G_ROUTE, &one, 2); store_rehash(&ssel);
+    route_odd(); events_block(CTL);
+    ok &= store_load(&s0);
+    bad += check("a project of before (no 'M' 'R', ROUTE CH1-6) loads to the defaults", ok && route_is_def() && !song.g[G_MRSEL]);
+    for (i = 0, ok = 1; i < G_COUNT; i++) ok &= i == G_SLOT || i == G_LOAD || i == G_SAVE || song.g[i] == g0[i];
+    project_capture(&proj_scratch);
+    ok &= proj_pack(&s1, &proj_scratch) && !memcmp(&s0, &s1, sizeof s0);
+    bad += check("  .. every other global as stored, and it saves again byte for byte the same", ok);
+    route_odd(); song.g[G_MRSEL] = 0; events_block(CTL);
+    ok = store_load(&ssel);
+    bad += check("a project of before with ROUTE SEL loads with KEYBOARD PLAYS SELECTED on, the tracks at their defaults",
+                 ok && route_is_def() && song.g[G_MRSEL] == 1);
+    project_capture(&proj_scratch);
+    bad += check("  .. and saves again byte for byte the same (ROUTE kept as KEYBOARD PLAYS SELECTED)",
+                 proj_pack(&s1, &proj_scratch) && !memcmp(&ssel, &s1, sizeof s1));
+
+    trk_midi_defaults(); route_odd(); events_block(CTL);
+    project_capture(&proj_scratch); ok = proj_pack(&s2, &proj_scratch);
+    trk_midi_defaults(); events_block(CTL);
+    ok &= store_load(&s2) && route_is_odd();
+    project_capture(&proj_scratch);
+    ok &= proj_pack(&s3, &proj_scratch) && !memcmp(&s2, &s3, sizeof s2);
+    bad += check("a project with its routing changed round-trips (and saves again byte for byte the same)", ok);
+    for (d = 0; d < PROJ_STORE_SIZE && s2.raw[d] == ssel.raw[d]; d++)
+        ;
+    ok = d < PROJC_PFX_OFF && s2.raw[d] == 'M' && s2.raw[d + 1u] == 'R' &&
+         !memcmp(s2.raw + d + 9u, ssel.raw + d, PROJC_PFX_OFF - d - 9u) &&
+         !memcmp(s2.raw + PROJC_PFX_OFF, ssel.raw + PROJC_PFX_OFF, PROJ_STORE_SIZE - 4u - PROJC_PFX_OFF);
+    bad += check("  its store is the one of before with 'M' 'R' (9 bytes) appended after the last block", ok);
+    route_odd(); song.g[G_BPM] = 99; events_block(CTL);
+    system_init(); events_block(CTL);
+    bad += check("NEW PROJECT keeps the MIDI routing", route_is_odd() && song.g[G_BPM] == GP[G_BPM].def);
+    trk_midi_defaults(); events_block(CTL);
+    return bad;
+}
 int main(void)
 {
     int bad = controls_test() + sustain_test() + ownership_test() + clock_test(1) + clock_test(2) + clock_arp_and_boundaries() +
-              arp_ext_stop_test() + usb_burst_test() + route_test() + cc_map_test();
+              arp_ext_stop_test() + usb_burst_test() + route_test() + cc_map_test() + route_track_test() + route_store_test();
     printf("%s\n", bad ? "MIDI CONTROL/CLOCK TEST FAILED" : "MIDI control/clock integration tests passed"); return bad != 0;
 }

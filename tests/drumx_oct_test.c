@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* (JIANT 0.8.5) DRUM-X OCTAVES (eng_drum.c DXO_*, seq.c dxo_*): the kit in every octave of the keys, on the real
  * sequencer, MIDI, project and UI sources (with the stubs of tests/ui_test.c):
  *   CENTRE     OCT 0: the keys' notes and hits as before (key 7 the kick, 36), no ratchet, no TOUCH, a hit bit for bit
@@ -46,7 +47,7 @@ static track_t *drum_setup(void)
     dt->p[P_SLEN] = 16;
     dt->p[P_SSWING] = 0;
     song.g[G_SWING] = 0;
-    song.g[G_ROUTE] = 0;
+    host_route_sel(0);
     memset(dxo_n, 0, sizeof dxo_n);
     kb_prev = fm1_in.notes = 0;
     events_block(CTL);                                  /* (the sound load's panic, as the ISR takes it) */

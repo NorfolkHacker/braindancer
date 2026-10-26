@@ -51,7 +51,9 @@ static volatile uint8_t midi_hint;       /* MIDI IN played track n - 1, which is
 
 static uint32_t trk_index(const track_t *t) { return (uint32_t)(t - trk); }
 
-static uint32_t trk_midi_ch(uint32_t i) { return i % NTRK; }   /* MIDI channel 0..15 of track i (keys -> MIDI out) */
+/* (ACID FM 0.5) MIDI channel 0..15 of track i, its CHANNEL (G_MRCH1..: MIDI in and out; was i % NTRK) */
+static uint32_t trk_midi_ch(uint32_t i) { return (uint32_t)(song.g[G_MRCH1 + i % NTRK] - 1) & 15u; }
+typedef char mr_ids_fit[G_MRIN6 - G_MRIN1 + 1 == NTRK && G_MROUT6 - G_MROUT1 + 1 == NTRK && G_MRCH6 - G_MRCH1 + 1 == NTRK ? 1 : -1];
 
 static int drum_track(const track_t *t) { return ENGINES[eng_idx(t->eng_req)] == &ENG_DRUM; }
 
@@ -65,6 +67,18 @@ static volatile uint8_t mo_lvl;                    /* the setting (ui.c sets it 
 static uint8_t mo_last;                            /* .. as the ISR last saw it */
 static uint8_t mo_out[NTRK][128];                  /* a played note's note sent on, + 1 (0: none) */
 static uint32_t mo_pulse_acc;                      /* (samples towards the next clock) */
+static uint8_t mo_tch[NTRK];                       /* (ACID FM 0.5) each track's CHANNEL | OUT << 4 as the ISR last saw it
+                                                    * (mo_block): the sequencer's notes go out on it, end on it */
+/* (ACID FM 0.5) track i's notes are sent: its OUT and NOTES OUT (every MIDI OUT setting but OFF) */
+static int trk_midi_out(uint32_t i) { return song.g[G_MROUT1 + i % NTRK] && mo_lvl != MO_OFF; }
+/* (ACID FM 0.5) the MIDI routing's defaults (as before it): T1..T6 receive and send on channels 1..6, KEYBOARD PLAYS
+ * SELECTED off */
+static void trk_midi_defaults(void)
+{
+    uint32_t i;
+    for (i = G_MRIN1; i <= G_MRSEL; i++)
+        song.g[i] = GP[i].def;
+}
 static void mo_send(uint32_t st, uint32_t d1, uint32_t d2)
 {
     midi_out_event((st >> 4) | st << 8 | d1 << 16 | d2 << 24);
@@ -78,21 +92,22 @@ static int mo_plays(const track_t *t, uint32_t note)   /* trk_note_on would soun
  * on it (pfx.c pfx_pit, pfx_rpit: drawn by trk_note_on) */
 static void seq_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
-    uint32_t i = trk_index(t) % NTRK, send = mo_lvl == MO_ALL && note < 128u && mo_plays(t, note) && !pfx_holds(t);
+    uint32_t i = trk_index(t) % NTRK, send = mo_lvl == MO_ALL && (mo_tch[i] & 16u) && note < 128u && mo_plays(t, note) &&
+                                             !pfx_holds(t);
     trk_note_on(t, note, vel);
     if (send) {
         uint32_t x = (uint32_t)clamp((int32_t)note + (t->pfx_pit + t->pfx_rpit) / 16, 0, 127);
         if (mo_out[i][note])
-            mo_send(0x80u | trk_midi_ch(i), mo_out[i][note] - 1u, 0);   /* (struck again: its last one ends first) */
+            mo_send(0x80u | (mo_tch[i] & 15u), mo_out[i][note] - 1u, 0);   /* (struck again: its last one ends first) */
         mo_out[i][note] = (uint8_t)(x + 1u);
-        mo_send(0x90u | trk_midi_ch(i), x, vel ? vel : 1u);
+        mo_send(0x90u | (mo_tch[i] & 15u), x, vel ? vel : 1u);
     }
 }
 static void seq_note_off(track_t *t, uint32_t note)
 {
     uint32_t i = trk_index(t) % NTRK;
     if (note < 128u && mo_out[i][note]) {
-        mo_send(0x80u | trk_midi_ch(i), mo_out[i][note] - 1u, 0);
+        mo_send(0x80u | (mo_tch[i] & 15u), mo_out[i][note] - 1u, 0);
         mo_out[i][note] = 0;
     }
     trk_note_off(t, note);
@@ -104,14 +119,15 @@ static __attribute__((noinline)) void mo_flush_of(uint32_t mask)   /* the notes 
         if ((mask >> i) & 1u)
             for (n = 0; n < 128u; n++)
                 if (mo_out[i][n]) {
-                    mo_send(0x80u | trk_midi_ch(i), mo_out[i][n] - 1u, 0);
+                    mo_send(0x80u | (mo_tch[i] & 15u), mo_out[i][n] - 1u, 0);
                     mo_out[i][n] = 0;
                 }
 }
 #define mo_flush() mo_flush_of(0xFFu)
-static void mo_key(const track_t *t, uint32_t pkt)   /* a key's note: not with OFF; with ALL, an arp sends its own */
+static void mo_key(const track_t *t, uint32_t pkt)   /* a key's note: not with OFF (nor the track's OUT off: ACID FM
+                                                     * 0.5); with ALL, an arp sends its own */
 {
-    if (mo_lvl != MO_OFF && !(mo_lvl == MO_ALL && t->p[P_AMODE]))
+    if (trk_midi_out(trk_index(t)) && !(mo_lvl == MO_ALL && t->p[P_AMODE]))
         midi_out_event(pkt);
 }
 static int mo_clock_on(void) { return (mo_lvl == MO_CLOCK || mo_lvl == MO_ALL) && !song.g[G_CLOCK]; }
@@ -124,6 +140,16 @@ static __attribute__((noinline)) void mo_block(uint32_t n)   /* events_block: th
             !song.g[G_CLOCK])
             mo_send(0xFCu, 0, 0);                    /* (the clock leaves: whatever follows it stops) */
         mo_last = mo_lvl;
+    }
+    {   /* (ACID FM 0.5) a track's CHANNEL or OUT changed: the notes it sent end on the channel they went out on */
+        uint32_t i;
+        for (i = 0; i < NTRK; i++) {
+            uint8_t c = (uint8_t)(trk_midi_ch(i) | (song.g[G_MROUT1 + i] ? 16u : 0u));
+            if (c != mo_tch[i]) {
+                mo_flush_of(1u << i);
+                mo_tch[i] = c;
+            }
+        }
     }
     if (mo_clock_on()) {                             /* 24 a beat, also while stopped (a follower holds the tempo) */
         uint32_t len = beat_samples() / 24u;
@@ -1793,15 +1819,15 @@ static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32
                 if (t->v[k].active && t->v[k].gate && t->v[k].note == o[i]) { v = &t->v[k]; break; }
         if (i < a && i < b && v) {                      /* a pair: the old note glides to the new */
             int32_t d;
-            if (mo_out[ti][o[i]]) { mo_send(0x80u | trk_midi_ch(ti), mo_out[ti][o[i]] - 1u, 0); mo_out[ti][o[i]] = 0; }
+            if (mo_out[ti][o[i]]) { mo_send(0x80u | (mo_tch[ti] & 15u), mo_out[ti][o[i]] - 1u, 0); mo_out[ti][o[i]] = 0; }
             v->note = n[i];
             glide_from_trk(t, v);                       /* (0.9.8) VOICE's S-curve from where it sounds */
             v->pitch16 = ((int32_t)n[i] + tr) * 16 + t->pfx_rpit;
             d = v->pitch16 - v->pitch_cur;
             v->gstep = glide_q8(d, ticks);
-            if (mo_lvl == MO_ALL && mo_plays(t, n[i])) {
+            if (mo_lvl == MO_ALL && (mo_tch[ti] & 16u) && mo_plays(t, n[i])) {
                 mo_out[ti][n[i]] = (uint8_t)(n[i] + 1u);
-                mo_send(0x90u | trk_midi_ch(ti), n[i], nv[i] ? nv[i] : 1u);
+                mo_send(0x90u | (mo_tch[ti] & 15u), n[i], nv[i] ? nv[i] : 1u);
             }
         } else if (i < b) {                             /* a new one: from the nearest old note, fading in */
             uint32_t a0 = vage;
@@ -2211,10 +2237,24 @@ static void seq_tick(track_t *t, uint32_t n)
     fugue_tick(t, n, period, len);                      /* (0.6.52) */
 }
 
-/* MIDI in: the track a channel plays (0..15): G_ROUTE CH1-4 (0) channels 1..4 their parts (5..16 never get
- * here: midi_event drops them), SEL (1) every channel the selected track */
-static uint8_t midi_route;                 /* the G_ROUTE events_block last saw (a change to CH1-4: midi_route_ch14) */
-static track_t *midi_track(uint32_t ch) { return ch < NPART && !song.g[G_ROUTE] ? &trk[ch] : TSEL; }
+/* (ACID FM 0.5) MIDI in, per track: channel ch (0..15) plays every track whose IN is on and whose CHANNEL is ch + 1
+ * (midi_claims); a channel no track takes plays the selected track with KEYBOARD PLAYS SELECTED (G_MRSEL), else
+ * nothing (midi_event drops it). Was G_ROUTE: CH1-6 = these defaults, SEL every channel the selected track */
+static uint32_t midi_claims(uint32_t ch)
+{
+    uint32_t i, m = 0;
+    for (i = 0; i < NTRK; i++)
+        if (song.g[G_MRIN1 + i] && trk_midi_ch(i) == ch)
+            m |= 1u << i;
+    return m;
+}
+static uint32_t midi_in_mask(uint32_t ch)    /* bit i: track i receives channel ch */
+{
+    uint32_t m = midi_claims(ch & 15u);
+    return m ? m : song.g[G_MRSEL] ? 1u << (song.sel % NTRK) : 0u;
+}
+static uint32_t midi_rsig = ~0u;           /* the routing events_block last saw (a change: midi_reroute) */
+static uint8_t midi_heard[16];             /* .. each channel's tracks then (bit 7: the selected one's) */
 
 #include "midi_control.c"
 #include "midi_clock.c"
@@ -2330,10 +2370,15 @@ static void events_block(uint32_t n)
         }
         transport_req = 0;
     }
-    if (midi_route != (uint8_t)song.g[G_ROUTE]) {     /* ROUT changed: CH1-4 lets go of channels 5..16 */
-        midi_route = (uint8_t)song.g[G_ROUTE];
-        if (!midi_route)
-            midi_route_ch14();
+    {   /* (ACID FM 0.5) the MIDI routing changed (a track's IN or CHANNEL, KEYBOARD PLAYS SELECTED): a channel heard
+         * otherwise lets go of what it held */
+        uint32_t sig = song.g[G_MRSEL] ? 1u : 0u;
+        for (i = 0; i < NTRK; i++)
+            sig = sig << 5 | (song.g[G_MRIN1 + i] ? trk_midi_ch(i) : 16u);
+        if (sig != midi_rsig) {
+            midi_rsig = sig;
+            midi_reroute();
+        }
     }
     pr = panic_req;
     panic_req = 0;

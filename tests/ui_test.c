@@ -1478,18 +1478,18 @@ static int test_midi(void)
     midi_hint = 0;
     midi_event(0x90, 0, 60, 100); midi_event(0x90, 9, 61, 100);
     bad += check("ROUT CH1-4 (default): channel 1 -> part 1, channel 10 ignored",
-                 song.g[G_ROUTE] == 0 && mn_get(0, 60) == 1u && !mn_get(9, 61) && !gated_notes(&trk[2]));
+                 !song.g[G_MRSEL] && mn_get(0, 60) == 1u && !mn_get(9, 61) && !gated_notes(&trk[2]));
     bad += check("a note into another track tells the UI", midi_hint == 1u);
     frame(); bad += check("MIDI IN -> T1 shown", msg_is("MIDI IN -> T1"));
-    song.g[G_ROUTE] = 1;
+    host_route_sel(1);
     midi_event(0x80, 0, 60, 0); midi_event(0x90, 0, 62, 100);
     bad += check("ROUT changes: note-off releases original owner, new note uses selection",
-                 !gated_notes(&trk[0]) && mn_get(0, 62) == 3u && midi_track(3) == &trk[2]);
+                 !gated_notes(&trk[0]) && mn_get(0, 62) == 3u && midi_in_mask(3) == 1u << 2);
     song.sel = 1; midi_event(0x80, 0, 62, 0);
     bad += check("note-off after selection follows the note-on's track", !mn_get(0, 62));
     midi_event(0x80, 9, 61, 0);
     ui_power_on();
-    song.g[G_ROUTE] = 1;
+    host_route_sel(1);
     midi_event(0x90, 0, 60, 100);
     song.sel = 1;
     midi_event(0x90, 0, 60, 100);
@@ -1500,9 +1500,9 @@ static int test_midi(void)
     bad += check("both note-offs after a MIDI ownership change leave neither track held",
                  !gated_notes(&trk[0]) && !gated_notes(&trk[1]) && !mn_get(0, 60));
     ui_power_on();
-    song.sel = 2; song.g[G_ROUTE] = 1;
+    song.sel = 2; host_route_sel(1);
     midi_event(0x90, 0, 61, 100);
-    song.g[G_ROUTE] = 0;
+    host_route_sel(0);
     midi_event(0x90, 0, 61, 100);
     midi_event(0x80, 0, 61, 0);
     bad += check("same channel/pitch across a ROUT change cannot leave its previous part held",
@@ -1511,7 +1511,7 @@ static int test_midi(void)
         uint32_t hold;
         for (hold = 0; hold < 2u; hold++) {
             ui_power_on();
-            song.g[G_ROUTE] = 1;
+            host_route_sel(1);
             trk[0].p[P_AMODE] = 1; trk[0].p[P_AHOLD] = (int16_t)hold;
             midi_event(0x90, 0, 60, 100);
             song.sel = 1;
@@ -2770,9 +2770,9 @@ static int test_midi_learn(void)
         ok &= ml_free_cc(2) && ml_free_cc(24) && ml_free_cc(70) && ml_free_cc(119) && ml_count() == 2u;
         go_title("MIXER");
         turn(EN_K2, 1);                                 /* PAN picked, CC7 (the map's LEVEL) sent: refused, LEVEL set */
-        v0 = midi_track(0)->p[P_LEVEL];
+        v0 = trk[0].p[P_LEVEL];
         ml_cc(0, 7, v0 > 60 ? 10 : 120, 0); frame();
-        ok &= msg_is("CC7 RESERVED") && ml.pick && ml_count() == 2u && midi_track(0)->p[P_LEVEL] != v0;
+        ok &= msg_is("CC7 RESERVED") && ml.pick && ml_count() == 2u && trk[0].p[P_LEVEL] != v0;
         bad += check("0.9.12 MIDI LEARN: CC0 1 6 11 32 38 64 96..101 120..127 and the standard map's refused, still doing their own", ok);
     }
     {   /* ten at most */
@@ -5822,12 +5822,12 @@ static int test_midi_leds(void)
     ok = key_leds(0) == 1u << 11;
     trs_note(0x80, 64, 0);
     bad += check("  TRS MIDI IN: E4 lights key 12 while held", ok && key_leds(0) == 0u);
-    song.g[G_ROUTE] = 1;                               /* ROUT SEL: every channel to the selected track */
+    host_route_sel(1);                               /* ROUT SEL: every channel to the selected track */
     song.sel = 2;
     usb_note(9, 62, 100);
     ok = mn_get(9, 62) == 3u && key_leds(0) == 1u << 9;
     usb_note(9, 62, 0);
-    song.g[G_ROUTE] = 0;
+    host_route_sel(0);
     song.sel = 0;
     bad += check("  ROUT SEL: channel 10 into the selected track lights its key", ok && key_leds(0) == 0u);
     usb_note(0, 60, 100);
@@ -9071,7 +9071,7 @@ static int test_midi_song_pc(void)
     uint32_t eng[NTRK], kk, s0;
     ui_power_on();
     s0 = song_cur;
-    song.g[G_ROUTE] = 1;                                /* (SEL: every channel to the selected track, but not 16's PC) */
+    host_route_sel(1);                                /* (SEL: every channel to the selected track, but not 16's PC) */
     sl_steps(70); section_store(1);                     /* section B: notes 70.. */
     sl_steps(80);                                       /* the music now: 80.. */
     for (kk = 0; kk < NTRK; kk++) eng[kk] = trk[kk].eng_req;
@@ -9088,7 +9088,7 @@ static int test_midi_song_pc(void)
     bad += check("PROGRAM CHANGE on channel 16: 0..3 a section (no track's sound), 16 + n project n + 1", ok);
     memset(proj_slot[1].raw, 0, 4);                     /* (section B emptied again) */
     live.cur = -1;
-    song.g[G_ROUTE] = 0;
+    host_route_sel(0);
     ui_power_on();
     return bad;
 }

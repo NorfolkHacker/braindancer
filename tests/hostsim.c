@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Host-side render of the FELUCCA DSP (engines, voices, FX, sequencer) to a WAV,
  * for debugging sound without hardware. Same sources as the firmware.
  *   tests/run_tests.sh builds it into build/host/;
@@ -40,6 +41,15 @@ static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 #include "../firmware/src/midi_uart.c"                /* TRS MIDI IN: its parser (um_byte) feeds midi_in_q */
 #include "../firmware/src/song_chain.c"
 #include "../firmware/src/seq.c"
+/* (ACID FM 0.5) the tests of ROUT (G_ROUTE, MIDI IN until 0.5) on today's per-track routing: SEL, every channel the
+ * selected track (no track's IN on, KEYBOARD PLAYS SELECTED), or CH1-6 (each track's IN on: the default channels) */
+static void host_route_sel(int on)
+{
+    uint32_t i;
+    for (i = 0; i < NTRK; i++)
+        song.g[G_MRIN1 + i] = (int16_t)!on;
+    song.g[G_MRSEL] = (int16_t)(on != 0);
+}
 #define inst (trk[0])                   /* the single-part renders below: part 1 */
 
 static void wav_hdr(FILE *f, uint32_t frames)
@@ -699,7 +709,7 @@ static int trs_test(void)
     /* ROUT CH1-4 (the default): ch 10 and ch 5 are not heard at all (kept free for other instruments) */
     ok_ch10 = !trs_held(&trk[1], 36) && !trs_held(&trk[3], 36);  /* ch 10: no drum channel any more */
     ok_sel = !trs_held(&trk[1], 67) && !trs_held(&trk[0], 67);
-    song.g[G_ROUTE] = 1;                            /* ROUT SEL: every channel -> the selected track */
+    host_route_sel(1);                            /* ROUT SEL: every channel -> the selected track */
     trs_bytes((const uint8_t[]){0x99, 36, 110, 0x94, 67, 90}, 6);
     ok_ch10 &= trs_held(&trk[1], 36) && !trs_held(&trk[3], 36);
     ok_sel &= trs_held(&trk[1], 67) && !trs_held(&trk[0], 67);

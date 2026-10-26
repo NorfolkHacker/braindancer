@@ -370,8 +370,17 @@ async function editorMock() {
     const rd = E.parse[E.CMD.DESC](await rq(E.req.desc(1, 14)));
     const r1 = E.parse[E.CMD.SET](await rq(E.req.set(1, 14, 5)));
     const r0 = E.parse[E.CMD.SET](await rq(E.req.set(1, 14, 0)));
-    ok(rd.label === "ROUTE" && rd.def === 0 && eq(rd.names, ["CH1-6", "SEL"]) && r1.value === 1 && r0.value === 0 && info.gcount === 71,
+    ok(rd.label === "ROUTE" && rd.def === 0 && eq(rd.names, ["CH1-6", "SEL"]) && r1.value === 1 && r0.value === 0 && info.gcount === 90,
       "editor: MIDI IN routing (ROUT CH1-6 / SEL, global id 14)");
+  }
+  {
+    /* (ACID FM 0.5) MIDI per track: G 71..76 IN, 77..82 OUT, 83..88 CHANNEL (T1..T6: 1..6), 89 KEYBOARD PLAYS SELECTED */
+    const [i1, o1, c1, c6, ks] = await Promise.all([71, 77, 83, 88, 89].map(async (id) => E.parse[E.CMD.DESC](await rq(E.req.desc(1, id)))));
+    const cs = E.parse[E.CMD.SET](await rq(E.req.set(1, 84, 20)));
+    const c0 = E.parse[E.CMD.SET](await rq(E.req.set(1, 84, 2)));
+    ok(i1.label === "IN" && i1.def === 1 && o1.label === "OUT" && o1.def === 1 && c1.label === "CHANNEL" && c1.min === 1 &&
+       c1.max === 16 && c1.def === 1 && c6.def === 6 && ks.label === "SELECTED" && ks.def === 0 && cs.value === 16 && c0.value === 2,
+      "editor: MIDI per track (IN OUT CHANNEL per track, KEYBOARD PLAYS SELECTED: globals 71..89)");
   }
   {
     /* FX > REVERB TYPE (G_RTYPE 24, the old drum channel's id): ROOM (0, the default) / SPRING (1) / SHIMR RESO CLOUD (JIANT 0.5); G_COUNT unchanged */
@@ -381,7 +390,7 @@ async function editorMock() {
     const inert = [25, 26].map(async (id) => E.parse[E.CMD.DESC](await rq(E.req.desc(1, id))));
     const [d25, d26] = await Promise.all(inert);
     ok(rd.label === "TYPE" && rd.def === 0 && eq(rd.names, ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"]) && r1.value === 4 && r0.value === 0 &&
-       d25.label === "PUNCH" && d26.label === "DUCK" && d25.max === 100 && info.gcount === 71,
+       d25.label === "PUNCH" && d26.label === "DUCK" && d25.max === 100 && info.gcount === 90,
       "editor: REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD, set 10 clamps to 4, global id 24; 25, 26 PNCH and DUCK, JIANT's master)");
   }
   const st = E.parse[E.CMD.STEP_SET](await rq(E.req.stepSet(5, { n: 2, notes: [60, 64], time: 0, flags: 1, vel: 100 })));

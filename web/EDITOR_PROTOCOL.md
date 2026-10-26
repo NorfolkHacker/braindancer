@@ -107,6 +107,12 @@ is INT, osc 2's interval −24..24 (was KTR). A project (kit marker below 3, or 
 mark) stored before loads LOFI's TONE as CUT, BEND MASK 0, and ANALOG's KTR as INT 0. VOICE 2 (ALLOC DETUNE PAN MUTE)
 is no page any more: PAN and MUTE on MIXER, the others at their stored values.
 
+**ACID FM 0.5: 90 globals**: G 71..76 each track's MIDI IN (OFF / ON, ON), 77..82 its OUT (OFF / ON, ON), 83..88 its
+CHANNEL (1..16, T1..T6: 1..6), 89 KEYBOARD PLAYS SELECTED (OFF / ON: a channel no track takes plays the selected track).
+They replace ROUTE (G 14, still answered and stored, no longer read but by a project's load: SEL = KEYBOARD PLAYS SELECTED
+ON). Saved in FUNC's 'M' 'R' block (after every other) when a track's differs from its default. **(0.6.86 .. 0.6.99:
+G 66..70 the delay's MOD, TYPE, PING-PONG, the punch-in lane's LEN, RES: 71 globals.)**
+
 **JIANT 0.6.3: 66 globals**: G 37..65 the SLICER bus (37 SLCR, 38 PAT, 39 RATE, 40 DEPTH, 41..46 T1..T6 and 47 FX ON/OFF, 48 LEN, 49 QNT, 50..65 the pitch steps, -24..24); the track parameters P_SLCR..P_SLDEPTH stay, unused. **JIANT 0.4: 37 globals** (G 36 STRN, stored behind a 3). **JIANT 0.3: 36 globals.** G_COUNT 36 (G 32..35 above). DRUM's E6 (id P_E0 + 5) is FM, 0..127 (once ACC): its sounds through
 harmonic FM, eight ratio bands; a project or user preset saved before loads its DRUM tracks with FM 0.
 

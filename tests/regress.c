@@ -957,7 +957,7 @@ static int chk_hang(char *msg, uint32_t n)
     int bad = 0;
     for (round = 0; round < 3u && !bad; round++) {
         host_tracks_init();
-        song.g[G_ROUTE] = round ? 1 : 0;
+        host_route_sel(round ? 1 : 0);
         for (k = 0; k < NPART; k++) {
             host_preset(&trk[k], rnd(NENGINES), rnd(4));
             trk[k].p[P_VOICE] = (int16_t)rnd(4);
@@ -968,7 +968,7 @@ static int chk_hang(char *msg, uint32_t n)
         for (k = 0; k < 6u * FS / CTL; k++) {
             uint32_t r = rnd(16);
             if (round == 2u && k % (FS / CTL / 2u) == 0u)
-                song.g[G_ROUTE] ^= 1;              /* ROUT changed with notes held */
+                host_route_sel(!song.g[G_MRSEL]);              /* ROUT changed with notes held */
             if (r < 6u) {                          /* MIDI */
                 uint32_t ci = rnd(7), note = 36u + rnd(36);
                 if (on[ci][note]) {

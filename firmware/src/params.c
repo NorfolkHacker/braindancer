@@ -232,6 +232,12 @@ static const param_desc_t GP[G_COUNT] = {
     [G_SLP0 + 10] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 11] = PD("PITCH", F_SEMI, -24, 24, 0),
     [G_SLP0 + 12] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 13] = PD("PITCH", F_SEMI, -24, 24, 0),
     [G_SLP0 + 14] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP15] = PD("PITCH", F_SEMI, -24, 24, 0),
+    /* (ACID FM 0.5) MIDI per track (seq.c): IN, OUT, CHANNEL; KEYBOARD PLAYS SELECTED (project.c: block 'MR') */
+#define MRT(k) [G_MRIN1 + (k)] = PE("IN", N_ONOFF, 1), [G_MROUT1 + (k)] = PE("OUT", N_ONOFF, 1), \
+               [G_MRCH1 + (k)] = PD("CHANNEL", F_INT, 1, 16, (k) + 1)
+    MRT(0), MRT(1), MRT(2), MRT(3), MRT(4), MRT(5),
+#undef MRT
+    [G_MRSEL] = PE("SELECTED", N_ONOFF, 0),
 };
 
 static const param_desc_t LOFI_RTRG = {"RTRG", F_ONOFF, 0, 1, 0, 0, 0};   /* (0.6.12) P_LRTRG on a LOFI track */
