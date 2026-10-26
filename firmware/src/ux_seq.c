@@ -13,7 +13,8 @@
  *            32 / 64 steps: SELECT on the strip's last cell the next 16, on its first the 16 before (uxq_select); the header
  *            says which 16 ("2/4"), before the transport.
  *   STEP EXTRAS (3c-1 spec 2.2; task 3) the step picked on STEPS (one state, ui.cursor): knobs RATCHET . CHANCE . CONDITION . MICRO
- *            (the inherited CHANCE page's RATCH x1..x4 and CHANCE, COMP's EVERY, NOTE's MICRO: ui_input.c edit_param's GR_CHANCE).
+ *            (the inherited CHANCE page's RATCH x1..x4 and CHANCE, COMP's TRIG: the step's condition, NOTE's MICRO: ui_input.c
+ *            edit_param's GR_CHANCE).
  *            Top: the 16 shown as columns, each step's chance its fill height, its ratchets the parts it is cut in, its micro
  *            timing a mark from the column's middle (late right, early left); under them the strip, then the picked step's
  *            condition spelled ("5 . 1ST OF 4").
@@ -47,12 +48,13 @@ enum { UXQ_W_STEP, UXQ_W_DOT, UXQ_W_STEPS, UXQ_W_ACCENT, UXQ_W_ON, UXQ_W_OFF, UX
 static const char *const UXQ_LABEL[11] = {"STEP", "NOTE", "ACC/SLD", "GATE", "LANE", "HIT", "ACC", "RATCHET", "CHANCE", "CONDITION",
                                           "MICRO"};
 enum { UXQ_L_STEP, UXQ_L_NOTE, UXQ_L_FLAG, UXQ_L_GATE, UXQ_L_LANE, UXQ_L_HIT, UXQ_L_ACC, UXQ_L_RATCH };
-/* (task 3) STEP EXTRAS' CONDITION, an EVERY code's (core.h EV_*: on which loops of the pattern the step's components play) in
- * words: a of b loops, the first loop alone or all but it, never */
-static const char *const UXQ_COND[EV_N] = {"ALWAYS", "1ST OF 2", "EVERY 2ND", "NEVER", "1ST OF 3", "2ND OF 3", "EVERY 3RD", "1ST OF 4",
-                                           "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY", "NOT 1ST"};
-static const char *const UXQ_XW[5] = {"X", "%", "GRID", "/64", "-"};   /* (a ratchet's X2, a chance's 65%, MICRO on the grid, its
-                                                         * 64ths, early) */
+/* (task 3; pre-review fix) STEP EXTRAS' CONDITION: the step's TRIG component (core.h CP_TRIGS: on which loops of the pattern the
+ * note plays, seq.c cp_trig_ok), in words: ALWAYS (none), then CP_TRIGS' a of b loops, the first loop alone, all but it */
+#define UXQ_FULL (CP_NTRIG + 1u)                         /* (no TRIG and both component slots another's: none can be put) */
+static const char *const UXQ_COND[CP_NTRIG + 1u] = {"ALWAYS", "1ST OF 2", "EVERY 2ND", "1ST OF 3", "2ND OF 3", "EVERY 3RD", "1ST OF 4",
+                                                    "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY", "NOT 1ST"};
+static const char *const UXQ_XW[6] = {"X", "%", "GRID", "/64", "-", "FULL"};   /* (a ratchet's X2, a chance's 65%, MICRO on the
+                                                         * grid, its 64ths, early; CONDITION with no slot free) */
 static int32_t uxq_ph_drawn = -1;                       /* the playing cell drawn (-1: none), when (ms): ux_section_draw's pace */
 static uint32_t uxq_ph_ms;
 
@@ -231,12 +233,41 @@ static void uxq_lock_knobs(ux_knob_t k[4])
     }
 }
 static int uxq_on(const step_t *st) { return st->time == ST_NOTE && (st->n || st->hit); }   /* (the step plays something) */
+/* (pre-review fix) CONDITION: the step's TRIG's slot (0 comp, 1 comp2; -1 none); its place in UXQ_COND (0 ALWAYS), UXQ_FULL */
+static int32_t uxq_trig(const step_t *st) { return st->comp == CP_TRIG ? 0 : st->comp2 == CP_TRIG ? 1 : -1; }
+static uint32_t uxq_cond(const step_t *st)
+{
+    int32_t k = uxq_trig(st);
+    if (k >= 0)
+        return 1u + (k ? st->carg2 : st->carg) % CP_NTRIG;
+    return st->comp != CP_NONE && st->comp2 != CP_NONE ? UXQ_FULL : 0u;
+}
+/* .. a detent on (e +-1): the TRIG there edited in place, else one put in the first free slot (comp, then comp2); ALWAYS takes it
+ * away (its slot emptied); no slot free: nothing written, FULL shown (never another component overwritten) */
+static void uxq_cond_turn(step_t *st, int32_t e)
+{
+    uint32_t c = uxq_cond(st);
+    int32_t k = uxq_trig(st);
+    uint8_t *cp, *ap;
+    if (c == UXQ_FULL)
+        return;
+    c = (uint32_t)clamp((int32_t)c + e, 0, CP_NTRIG);
+    if (k < 0) {
+        if (!c)
+            return;
+        k = st->comp == CP_NONE ? 0 : 1;
+    }
+    cp = k ? &st->comp2 : &st->comp;
+    ap = k ? &st->carg2 : &st->carg;
+    *cp = (uint8_t)(c ? CP_TRIG : CP_NONE);
+    *ap = (uint8_t)(c ? c - 1u : 0u);
+}
 /* (task 3) STEP EXTRAS': RATCHET X1..X4, CHANCE 0..100%, CONDITION in words, MICRO +-n (64ths; GRID on it); a step with nothing to
  * play: its values dim, MICRO -- (micro_edit refuses it) */
 static void uxq_extras_knobs(ux_knob_t k[4])
 {
     const step_t *st = &TSEL->step[uxq_step()];
-    uint32_t r = step_ratchet(st), ch = step_chance(st), ev = ST_EVERY(st) % EV_N, i, c;
+    uint32_t r = step_ratchet(st), ch = step_chance(st), cd = uxq_cond(st), c;
     int32_t m = ST_MICRO(st);
     int on = uxq_on(st);
     for (c = 0; c < 4u; c++) {
@@ -249,9 +280,9 @@ static void uxq_extras_knobs(ux_knob_t k[4])
     uxq_num(k[1].value, sizeof k[1].value, (int32_t)ch);
     uxq_cat(k[1].value, sizeof k[1].value, UXQ_XW[1]);
     k[1].bar = (uint8_t)(ch * 255u / 100u);
-    uxq_cat(k[2].value, sizeof k[2].value, UXQ_COND[ev]);
-    for (i = 0; i < EV_N && EV_ORD[i] != ev; i++) {}
-    k[2].bar = (uint8_t)(i * 255u / (EV_N - 1u));
+    uxq_cat(k[2].value, sizeof k[2].value, cd == UXQ_FULL ? UXQ_XW[5] : UXQ_COND[cd]);
+    k[2].bar = (uint8_t)(cd == UXQ_FULL ? 0u : cd * 255u / CP_NTRIG);
+    k[2].off = (uint8_t)(!on || cd == UXQ_FULL);
     if (!on)
         uxq_cat(k[3].value, sizeof k[3].value, UXQ_WORD[UXQ_W_NONE]);
     else if (!m)
@@ -551,6 +582,15 @@ static __attribute__((noinline)) void uxq_pattern(void)
         cv_rect(x + (i & 1u ? sw : 0), y, w, UXQ_PH, c);
     }
 }
+static void uxq_extras_line(char *b, uint32_t n)        /* STEP EXTRAS' line: the picked step's condition, "5 . 1ST OF 4" */
+{
+    uxq_stepn(b, n, 0);
+    uxq_cat(b, n, UXQ_WORD[UXQ_W_DOT]);
+    {
+        uint32_t cd = uxq_cond(&TSEL->step[uxq_step()]);
+        uxq_cat(b, n, cd == UXQ_FULL ? UXQ_XW[5] : UXQ_COND[cd]);
+    }
+}
 static __attribute__((noinline)) void uxq_picture(const page_t *pg)
 {
     char b[40];
@@ -571,11 +611,9 @@ static __attribute__((noinline)) void uxq_picture(const page_t *pg)
         else
             uxq_roll(UXQ_RY0, UXQ_RH);
         uxq_strip(UXQ_STRIP_Y, uxq_first());
-        if (kind == UXQ_EXTRAS) {                       /* "5 . 1ST OF 4" */
-            uxq_stepn(b, sizeof b, 0);
-            uxq_cat(b, sizeof b, UXQ_WORD[UXQ_W_DOT]);
-            uxq_cat(b, sizeof b, UXQ_COND[ST_EVERY(&TSEL->step[uxq_step()]) % EV_N]);
-        } else
+        if (kind == UXQ_EXTRAS)
+            uxq_extras_line(b, sizeof b);
+        else
             uxq_spell(b, sizeof b);
     }
     GFX_HOOK_ALIGN(0, UXQ_SAY_Y + UF_HDR_CAP_Y, 0, UXQ_SAY_Y + UF_HDR_CAP_Y + UF_HDR_CAP_H, AL_V | AL_PASS, "SEQ's line spelled");
@@ -592,8 +630,11 @@ static __attribute__((noinline)) uint32_t uxq_sig(void)
                  (uint32_t)(locks ^ (locks >> 32)) * 977u +
                  (ui.entry_open * 2u + ui.ent_arp + ui.ent_nn * 4u + ui.ent_len * 64u) * 40503u,   /* (the chord's length outlined) */
              i;
-    if (uxq_owns() == UXQ_EXTRAS)                       /* (task 3) the chances, the conditions (not in steps_hash) */
-        for (i = 0; i < NSTEP; i++)
-            h = (h ^ (t->step[i].probability | (uint32_t)t->step[i].cwhen << 8)) * 16777619u;
+    if (uxq_owns() == UXQ_EXTRAS)                       /* (task 3) the chances, the conditions: the components (not in steps_hash) */
+        for (i = 0; i < NSTEP; i++) {
+            const step_t *st = &t->step[i];
+            h = (h ^ (st->probability | (uint32_t)st->comp << 8 | (uint32_t)st->carg << 16 | (uint32_t)st->comp2 << 24)) * 16777619u;
+            h = (h ^ st->carg2) * 16777619u;
+        }
     return h * 31u + (uint32_t)t->p[P_SSWING] * 131u + (uint32_t)t->p[P_SGATE] * 7u + (uint32_t)t->p[P_SDIV];   /* (PATTERN's) */
 }

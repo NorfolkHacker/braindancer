@@ -18109,10 +18109,13 @@ static int test_t33_extras(void)
     ok &= step_chance(&a) == 65u && uxq_t_same("CHANCE", &a, &b);
     TSEL->step[4] = s0;
     uxq_t_at("STEP EXTRAS"); for (i = 0; i < 4u; i++) { turn(EN_K3, 1); frames(200); } a = TSEL->step[4];
-    ok &= ST_EVERY(&a) == EV_2_3 && uxq_t_is("CONDITION value", uxe_value(2), "2ND OF 3") &&
+    ok &= a.comp == CP_TRIG && a.carg == 3u && !ST_EVERY(&a) && uxq_t_is("CONDITION value", uxe_value(2), "2ND OF 3") &&
           uxq_t_is("CONDITION say", uxq_t_say(), "CONDITION 2ND OF 3");
-    TSEL->step[4] = s0; ui.comp_at = 0;
-    uxq_t_at("COMP"); for (i = 0; i < 4u; i++) { turn(EN_K4, 1); frames(200); } b = TSEL->step[4];
+    TSEL->step[4] = s0; ui.comp_at = 0;                 /* (pre-review fix: COMP's TRIG, TYPE then KNOB 3; not EVERY) */
+    uxq_t_at("COMP"); turn(EN_K2, 4); frames(200); turn(EN_K2, 4); frames(200); turn(EN_K2, 4); frames(200);
+    turn(EN_K2, 1); frames(200);
+    for (i = 0; i < 3u; i++) { turn(EN_K3, 1); frames(200); }
+    b = TSEL->step[4];
     ok &= uxq_t_same("CONDITION", &a, &b);
     TSEL->step[4] = s0;
     uxq_t_at("STEP EXTRAS"); turn(EN_K4, 3); frames(200); turn(EN_K4, -1); frames(200); a = TSEL->step[4];
@@ -18120,7 +18123,7 @@ static int test_t33_extras(void)
     TSEL->step[4] = s0;
     uxq_t_at("NOTE"); turn(EN_K4, 3); frames(200); turn(EN_K4, -1); frames(200); b = TSEL->step[4];
     ok &= uxq_t_same("MICRO", &a, &b);
-    bad += check("ACID FM 3c-1 task 3: STEP EXTRAS' knobs write what the inherited pages did (COMP's RATCH x1..x4, CHANCE, EVERY; "
+    bad += check("ACID FM 3c-1 task 3: STEP EXTRAS' knobs write what the inherited pages did (COMP's RATCH x1..x4, CHANCE, TRIG; "
                  "NOTE's MICRO); values X4, 65%, 2ND OF 3, +2; the status line RATCHET X4, CHANCE 65%, CONDITION 2ND OF 3, "
                  "MICRO +2/64", ok);
     TSEL->step[4] = s0;
@@ -18145,11 +18148,12 @@ static int test_t33_extras(void)
 /* the conditions in plain words (no ':' or '!'), each its own, each fitting the knob column (the smaller face at worst) */
 static int test_t33_cond_words(void)
 {
-    static const char *const WANT[EV_N] = {"ALWAYS", "1ST OF 2", "EVERY 2ND", "NEVER", "1ST OF 3", "2ND OF 3", "EVERY 3RD",
-                                           "1ST OF 4", "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY", "NOT 1ST"};
+    static const char *const WANT[CP_NTRIG + 1u] = {"ALWAYS", "1ST OF 2", "EVERY 2ND", "1ST OF 3", "2ND OF 3", "EVERY 3RD",
+                                                    "1ST OF 4", "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY",
+                                                    "NOT 1ST"};   /* (pre-review fix: ALWAYS, then CP_TRIGS' twelve) */
     int ok = 1;
     uint32_t i, j;
-    for (i = 0; i < EV_N; i++) {
+    for (i = 0; i < CP_NTRIG + 1u; i++) {
         const char *p = UXQ_COND[i];
         ok &= uxq_t_is("condition", p, WANT[i]) && text_w(&UF_LBL, p) <= UX_COL_W - 4;
         for (; *p; p++)
@@ -18159,6 +18163,57 @@ static int test_t33_cond_words(void)
     }
     return check("ACID FM 3c-1 task 3: the conditions in plain words (ALWAYS, 1ST OF 2, EVERY 2ND .. NOT 1ST), each its own, each "
                  "fits the knob column", ok);
+}
+/* (pre-review fix) CONDITION is the step's TRIG component: the note itself plays on its loops (seq.c step_rolls: cp_trig_ok);
+ * ALWAYS takes the TRIG away; a TRIG already there (either slot) edited in place; both slots another component's: FULL, nothing
+ * written; the picture spells it */
+static int test_t33_trig(void)
+{
+    int bad = 0, ok;
+    uint32_t i;
+    track_t *t;
+    step_t *st;
+    char b[40];
+    uxq_t_open(16, ENGI_ANALOG);
+    t = TSEL; st = &t->step[4];
+    uxq_t_note(4, 43, 0);
+    uxq_t_at("STEP EXTRAS");
+    turn(EN_K3, 1); frames(200);
+    t->loops = 0;
+    ok = st->comp == CP_TRIG && st->carg == 0u && step_rolls(t, st);
+    t->loops = 1;
+    ok &= !step_rolls(t, st);
+    t->loops = 2;
+    ok &= step_rolls(t, st) && uxq_t_is("1ST OF 2", uxe_value(2), "1ST OF 2");
+    uxq_extras_line(b, sizeof b);
+    ok &= uxq_t_is("spelled", b, "5 \xB7 1ST OF 2");
+    bad += check("ACID FM 3c-1 task 3 pre-review fix: CONDITION 1ST OF 2 on a plain note: the sequencer plays it on loop 0, not "
+                 "loop 1 (the step's TRIG); the picture spells 5 . 1ST OF 2", ok);
+    turn(EN_K3, -1); frames(200);
+    t->loops = 1;
+    ok = st->comp == CP_NONE && st->carg == 0u && step_rolls(t, st) && uxq_t_is("ALWAYS", uxe_value(2), "ALWAYS");
+    bad += check("  ALWAYS takes the TRIG away (the slot empty, the note every loop)", ok);
+    st->comp = CP_RAND; st->carg = 1; st->comp2 = CP_TRIG; st->carg2 = 5;
+    frames(200);
+    ok = uxq_t_is("comp2's", uxe_value(2), "1ST OF 4");
+    turn(EN_K3, 1); frames(200);
+    ok &= st->comp == CP_RAND && st->carg == 1u && st->comp2 == CP_TRIG && st->carg2 == 6u && uxq_t_is("edited", uxe_value(2), "2ND OF 4");
+    for (i = 0; i < 8u; i++) { turn(EN_K3, -1); frames(200); }   /* (a detent a turn: 7 to ALWAYS, one past) */
+    ok &= st->comp == CP_RAND && st->carg == 1u && st->comp2 == CP_NONE;
+    bad += check("  a TRIG in the second slot edited in place (the first's RAND kept); ALWAYS clears that slot alone", ok);
+    st->comp = CP_ARPN; st->carg = 7; st->comp2 = CP_RAND; st->carg2 = 2;
+    {
+        step_t k0 = *st;
+        ux_knob_t kn[4];
+        frames(200);
+        uxs_knobs(cur_page(), kn);
+        ok = uxq_t_is("full", kn[2].value, "FULL") && kn[2].off;
+        turn(EN_K3, 1); frames(200);
+        ok &= !memcmp(&k0, st, sizeof k0) && uxq_t_is("full say", uxq_t_say(), "CONDITION FULL");
+    }
+    bad += check("  both slots another component's: CONDITION FULL (dim), a turn writes nothing", ok);
+    ui_power_on();
+    return bad;
 }
 /* PATTERN: the knobs write P_SLEN P_SDIV P_SSWING P_SGATE as the inherited page did; the picture: LEN cells, the offbeats late with
  * swing, the cells as wide as the gate */
@@ -18400,6 +18455,7 @@ int main(void)
     bad += test_t33_nav();                              /* (ACID FM 3c-1 task 3) */
     bad += test_t33_extras();
     bad += test_t33_cond_words();
+    bad += test_t33_trig();
     bad += test_t33_pattern();
     bad += test_t33_extras_pic();
     bad += test_edit_syn_is_sound();

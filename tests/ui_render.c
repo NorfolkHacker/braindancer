@@ -1991,7 +1991,8 @@ static void setup(int s)
         }
         if (s == S_SEQ_EXTRAS) {
             step_set_ratchet(&t->step[3], 2); step_set_ratchet(&t->step[8], 3); step_set_ratchet(&t->step[12], 4);
-            ST_EVERY_SET(&t->step[4], EV_1_4); ST_EVERY_SET(&t->step[10], EV_2_2);
+            t->step[4].comp = CP_TRIG; t->step[4].carg = 5;    /* (1ST OF 4; EVERY 2ND) */
+            t->step[10].comp = CP_TRIG; t->step[10].carg = 1;
             ST_MICRO_SET(&t->step[4], 12); ST_MICRO_SET(&t->step[14], -20);
         }
         if (s == S_SEQ_PATTERN_32) { t->p[P_SSWING] = 60; t->p[P_SGATE] = 40; }
@@ -2005,7 +2006,7 @@ static void setup(int s)
     case S_SEQ_EXTRAS_DRUM:
         drum(0);
         step_set_chance(&trk[3].step[2], 50); step_set_ratchet(&trk[3].step[6], 3);
-        ST_EVERY_SET(&trk[3].step[4], EV_NOT1); ST_MICRO_SET(&trk[3].step[4], -8);
+        trk[3].step[4].comp = CP_TRIG; trk[3].step[4].carg = 11; ST_MICRO_SET(&trk[3].step[4], -8);   /* (NOT 1ST) */
         nav_scene(SEC_SEQ, "STEP EXTRAS");
         cursor_set(4);
         break;

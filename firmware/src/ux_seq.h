@@ -14,6 +14,8 @@ static void uxq_roll(int y0, int h);            /* the roll of the current 16 (p
 static void uxq_grid(int y0, int h);            /* DRUM: 8 lanes x the current 16, rows y0..y0+h-1 */
 static int uxq_owns(void);                      /* the SEQ page shown is drawn by ux_seq.c: STEPS, (task 3) STEP EXTRAS,
                                                  * PATTERN (its UXQ_*; 0: none) */
+static void uxq_cond_turn(step_t *st, int32_t e);   /* STEP EXTRAS' CONDITION a detent on: the step's TRIG put, edited or taken
+                                                 * away (ui_input.c; never another component overwritten) */
 static int uxq_select(int32_t s);               /* SELECT turned s on STEPS: on the strip's last cell the next 16, on its
                                                  * first the 16 before (1: taken; 0: the chain's, ui_lens.c nav_select) */
 

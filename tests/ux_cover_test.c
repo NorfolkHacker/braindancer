@@ -412,7 +412,7 @@ static int uxc_widths(void)
         *TSEL = keep;
         ui.lane = 0; ui.cursor = 0;
     }
-    {   /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS: RATCHET (X1 .. X4), CHANCE (0 .. 100%), CONDITION (each), MICRO (-32 .. +31, GRID,
+    {   /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS: RATCHET (X1 .. X4), CHANCE (0 .. 100%), CONDITION (each, FULL), MICRO (-32 .. +31, GRID,
          * --); PATTERN: LENGTH, DIVISION, SWING, GATE over their ranges (ux_seq.c uxq_knobs, ux_section.c uxs_knobs) */
         track_t keep = *TSEL;
         ux_knob_t k[4];
@@ -429,7 +429,10 @@ static int uxc_widths(void)
         for (v = 0; ex && v <= 100; v++) {
             step_set_ratchet(&TSEL->step[0], 1u + (uint32_t)v % 4u);
             step_set_chance(&TSEL->step[0], (uint32_t)v);
-            ST_EVERY_SET(&TSEL->step[0], (uint32_t)v % EV_N);
+            TSEL->step[0].comp = (uint8_t)(v % 14 < 12 ? CP_TRIG : v % 14 == 12 ? CP_NONE : CP_RAND);   /* (CONDITION: each TRIG,
+                                                         * ALWAYS, FULL) */
+            TSEL->step[0].carg = (uint8_t)(v % 12);
+            TSEL->step[0].comp2 = (uint8_t)(v % 14 == 13 ? CP_ARPN : CP_NONE);
             ST_MICRO_SET(&TSEL->step[0], MICRO_MIN + v % (MICRO_MAX - MICRO_MIN + 1));
             uxs_knobs(ex, k);
             uxc_wfit("EXTRAS RATCHET", k[0].value);

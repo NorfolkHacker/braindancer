@@ -914,15 +914,6 @@ static void step_edit(uint32_t slot, int32_t steps)
  * (x2..x8, a shape, a pitch step: ui.c rat_ui_set); a component is one at a time: turning to OFF or CHANCE takes it
  * away. (0.6.82) COMP 2: the step's second component the same way (no CHANCE there; its RATCH an ECHO). KNOB 4: EVERY
  * (0.6.92), but an ARP's LAP (0.9.17), RATCH's DIV x PITCH (0.9.18) and WALK's RATE (0.6.98) */
-/* (0.6.92) EVERY: the step's components' loops, a detent (e: +-1) on in the knob's order (EV_ORD); COMP's KNOB 4, (ACID FM 3c-1
- * task 3) STEP EXTRAS' CONDITION */
-static void every_turn(step_t *st, int32_t e)
-{
-    uint32_t i;
-    for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
-    i = (uint32_t)clamp((int32_t)i + e, 0, EV_N - 1);
-    ST_EVERY_SET(st, EV_ORD[i]);
-}
 static void comp_knob(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
@@ -933,7 +924,10 @@ static void comp_knob(uint32_t slot, int32_t steps)
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
     if (slot == 3u && !(v == COMP_ARPQ && k == 0u) && v != COMP_ARPN && v != COMP_RATCH && v != COMP_WALK &&
         v != COMP_OCT) {
-        every_turn(st, e);                              /* (0.6.92) EVERY */
+        uint32_t i;                                     /* (0.6.92) EVERY: the step's components' loops, in the knob's order */
+        for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
+        i = (uint32_t)clamp((int32_t)i + e, 0, EV_N - 1);
+        ST_EVERY_SET(st, EV_ORD[i]);
         return;
     }
     if (slot == 1u) {
@@ -1134,13 +1128,13 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->graph == GR_CHANCE) {                       /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS, the step picked on STEPS: */
         step_t *st = &TSEL->step[ui.cursor];            /* RATCHET (the inherited CHANCE page's RATCH x1..x4), CHANCE (its */
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }   /* CHANCE), CONDITION (COMP's EVERY), MICRO (NOTE's) */
+        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }   /* CHANCE), CONDITION (COMP's TRIG), MICRO (NOTE's) */
         if (slot == 0u)
             step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + steps, 1, 4));
         else if (slot == 1u)
             step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
-        else if (slot == 2u)
-            every_turn(st, steps > 0 ? 1 : -1);
+        else if (slot == 2u)                            /* (pre-review fix: the step's TRIG, the note on its loops) */
+            uxq_cond_turn(st, steps > 0 ? 1 : -1);
         else
             micro_edit(steps);
         return;
