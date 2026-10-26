@@ -2016,7 +2016,7 @@ static void draw(int s)
         ux_header(3, "ACID 303", "128 BPM");
         ux_knobs(K, 0);
         ux_panel_begin(3);
-        ux_strip(110, st, 16, 4, 7);
+        ux_strip(110, st, 16, 4, 7, UX_EMPTY, 0);
         ux_panel_end();
         if (s == S_UX_DEMO) ux_status("5 \xB7 G2 \xB7 ACC", UX_TEXT);
         else ux_status("NOT A SLIDE STEP", UX_ACCENT);

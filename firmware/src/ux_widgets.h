@@ -72,7 +72,8 @@ static void ux_footer(const char *where, const char *right);
 #define UX_GL_STOP "\x88"
 static void ux_transport(char *b, uint32_t n);
 /* a strip of 16 cells at canvas y in the panel: the first n16 are the pattern's (steps[0..n16-1]), the rest drawn
- * dim (BG2); a tie after a rest or an empty step stays EMPTY (nothing to hold); edit / play: the cell to outline / lighten, or -1 */
-static void ux_strip(int32_t y, const step_t *steps, uint32_t n16, int32_t edit, int32_t play);
+ * dim (BG2); a tie after a rest or an empty step stays EMPTY (nothing to hold); edit / play: the cell to outline / lighten, or -1;
+ * (3c-1 task 2 fix 1) prev: the colour a TIE in the first cell carries (UX_EMPTY: none), drum: the steps a DRUM track's (hits) */
+static void ux_strip(int32_t y, const step_t *steps, uint32_t n16, int32_t edit, int32_t play, uint16_t prev, int drum);
 
 #endif

@@ -2027,7 +2027,7 @@ static void ui_draw_body(uint32_t counting)
         ui.page = (uint8_t)page_first(FAM_EDIT);
         page_entered();
     }
-    if (ux_section_owns(nav_sec())) {                   /* (ACID FM 3b) a section moved to the ux pages (ux_section.c), its
+    if (ux_page_owns()) {                               /* (ACID FM 3b) a section moved to the ux pages (ux_section.c), its
                                                          * own strips as HOME's */
         uint32_t k;
         cursor_fix();                                   /* (3c-1 task 2: SEQ > STEPS, LEN shorter: onto its last step) */

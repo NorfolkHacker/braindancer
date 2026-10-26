@@ -188,22 +188,25 @@ static void ux_footer(const char *where, const char *right)
     cv_blit_cells(0, UX_Y_FOOT);
 }
 
-static uint16_t ux_step_col(const step_t *s, uint16_t prev)
+/* (3c-1 task 2 fix 1: drum, a DRUM track's step: its hits, ACCENT with an accent) */
+static uint16_t ux_step_col(const step_t *s, uint16_t prev, int drum)
 {
     if (s->time == ST_TIE)
         return prev == UX_EMPTY ? UX_EMPTY : UX_DIM(prev, 45);
+    if (drum)
+        return s->time == ST_NOTE && (s->hit || s->n) ? (s->acc || (s->n && (s->flags & SF_ACCENT)) ? UX_ACCENT : UX_ACID) :
+               UX_EMPTY;                                /* (a hit or a GM note on its lane; its accent) */
     if (s->time != ST_NOTE || !s->n)
         return UX_EMPTY;
     return s->flags & SF_ACCENT ? UX_ACCENT : s->flags & SF_SLIDE ? UX_SLIDE : UX_ACID;
 }
 
-static void ux_strip(int32_t y, const step_t *steps, uint32_t n16, int32_t edit, int32_t play)
+static void ux_strip(int32_t y, const step_t *steps, uint32_t n16, int32_t edit, int32_t play, uint16_t prev, int drum)
 {
     uint32_t i;
-    uint16_t prev = UX_EMPTY;
     for (i = 0; i < 16u; i++) {
         int32_t x = UX_STRIP_X + (int32_t)i * UX_STRIP_PITCH;
-        uint16_t c = i < n16 ? ux_step_col(&steps[i], prev) : UX_BG2;
+        uint16_t c = i < n16 ? ux_step_col(&steps[i], prev, drum) : UX_BG2;
         if (i < n16 && steps[i].time != ST_TIE)
             prev = c;                                   /* (a held run keeps its note's colour) */
         if ((int32_t)i == play)

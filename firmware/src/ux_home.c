@@ -435,7 +435,7 @@ static void ux_tracks_panel(void)
             cv_text_on(232 - text_w(&UF_LBL, b), UXR_CAP_Y, &UF_LBL, b, UX_TEXT, ux_under(200, UXR_CAP_Y + 5));
         }
     }
-    ux_strip(UXR_STRIP_Y, st, n16, ph, ph);
+    ux_strip(UXR_STRIP_Y, st, n16, ph, ph, UX_EMPTY, 0);
 }
 static uint32_t ux_trk_draws, ux_trk_ms;              /* TRACKS panels drawn (the host tests count them), the last one's time */
 static uint8_t ux_trk_glow;                             /* .. its glow level */

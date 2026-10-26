@@ -10,8 +10,7 @@
 
 /* the sections drawn by ux_section_draw, a bit per SEC_* (ui_lens.c; ux_section.c checks the numbers): EDIT (1) on a synth,
  * FM6 or DRUM-X track (ui_lens.c edit_kind 0..2: 3b tasks 4 and 5; DIGITAL, FELUCCA_FM4's, keeps JIANT's pages); (task 6) ENV (5),
- * SCL (7), ARP (8); (task 7) LFO (6); (task 8) FX (3); (3c-1 task 2) SEQ (2), its pages ux_seq.c draws (uxq_owns: STEPS; the
- * inherited SEQ pages JIANT's until tasks 3 and 4 move them) */
+ * SCL (7), ARP (8); (task 7) LFO (6); (task 8) FX (3); (3c-1 task 2) SEQ (2): its pages drawn here are ux_page_owns' (below) */
 #include "ux_seq.h"
 #define UXS_SEC_EDIT 1u
 #define UXS_SEC_SEQ 2u
@@ -20,16 +19,24 @@
 #define UXS_SEC_LFO 6u
 #define UXS_SEC_SCL 7u
 #define UXS_SEC_ARP 8u
-#define UXS_OWN (1u << UXS_SEC_EDIT | 1u << UXS_SEC_FX | 1u << UXS_SEC_ENV | 1u << UXS_SEC_LFO | 1u << UXS_SEC_SCL | \
-                 1u << UXS_SEC_ARP)
+#define UXS_OWN (1u << UXS_SEC_EDIT | 1u << UXS_SEC_SEQ | 1u << UXS_SEC_FX | 1u << UXS_SEC_ENV | 1u << UXS_SEC_LFO | \
+                 1u << UXS_SEC_SCL | 1u << UXS_SEC_ARP)
 static uint32_t edit_kind(void);  /* (ui_lens.c) 0 a synth, 1 FM6, 2 DRUM, 3 DIGITAL */
+/* section sec is on the ux engine (ui.c page_jiant: its MORE page shown, from any of its pages) */
 static int ux_section_owns(uint32_t sec)
 {
-    if (sec == UXS_SEC_SEQ)
-        return uxq_owns();
     return sec < 16u && ((UXS_OWN >> sec) & 1u) && (sec != UXS_SEC_EDIT || edit_kind() <= 2u);
 }
 
+/* (3c-1 task 2 fix 1) the page shown is drawn by ux_section_draw (ui_draw.c routes it, ui_input.c lights its knob column): its
+ * section's on the ux engine, and on SEQ one of the pages ux_seq.c draws (uxq_owns: STEPS; the inherited SEQ pages JIANT's until
+ * tasks 3 and 4 move them) */
+static uint32_t nav_sec(void);
+static int ux_page_owns(void)
+{
+    uint32_t sec = nav_sec();
+    return ux_section_owns(sec) && (sec != UXS_SEC_SEQ || uxq_owns());
+}
 static void ux_section_draw(void);   /* cur_page(): header, knobs from its PAGES row, its picture, status, footer */
 /* the panel's list (between ux_panel_begin / ux_panel_end): each shown row's name and value, the picked one (sel, a
  * row index) lit, from row top */

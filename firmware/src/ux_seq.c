@@ -300,54 +300,26 @@ static __attribute__((noinline)) const char *uxq_say(uint32_t c, char *b, uint32
 
 /* ------------------------------------------------------------------------------------------------------- the pictures --- */
 static uint16_t uxq_lane_col(uint32_t l) { return UX_BLEND[(l % NLANE) * 255u / (NLANE - 1u)]; }
-static uint16_t uxq_cell_col(const step_t *st, uint16_t prev, int drum)
-{
-    if (st->time == ST_TIE)
-        return prev == UX_EMPTY ? UX_EMPTY : UX_DIM(prev, 45);
-    if (!step_on(st))
-        return UX_EMPTY;
-    if (drum)
-        return step_accents(st) ? UX_ACCENT : UX_ACID;
-    return st->flags & SF_ACCENT ? UX_ACCENT : st->flags & SF_SLIDE ? UX_SLIDE : UX_ACID;
-}
-static __attribute__((noinline)) void uxq_strip(int y, uint32_t first)
+/* the strip (ux_widgets.c ux_strip) for steps first..first+15: a TIE first carries its note's colour from before; the step playing
+ * lit and the picked one outlined where they are in these 16; a chord being entered in step recording, KNOB 1 its length: the
+ * steps it will hold outlined in ACCENT (the inherited roll's) */
+static void uxq_strip(int y, uint32_t first)
 {
     const track_t *t = TSEL;
-    uint32_t len = uxq_len(), i, pick = uxq_step();
-    int32_t ph = uxq_ph(), f0 = (int32_t)uxq_first();
+    uint32_t len = uxq_len(), i, pick = uxq_step(), s = seq_src(t, t->seq_idx), n16 = first < len ? len - first : 0u;
     int drum = drum_track(t);
     uint16_t prev = UX_EMPTY;
-    if (first && first < len && t->step[first].time == ST_TIE) {   /* (a TIE first: its note's colour from before) */
-        uint32_t s = pr_src(t, first, len);
-        prev = s < NSTEP ? uxq_cell_col(&t->step[s], UX_EMPTY, drum) : UX_EMPTY;
+    if (first && first < len && t->step[first].time == ST_TIE) {
+        uint32_t src = pr_src(t, first, len);
+        prev = src < NSTEP ? ux_step_col(&t->step[src], UX_EMPTY, drum) : UX_EMPTY;
     }
-    for (i = 0; i < 16u; i++) {
+    ux_strip(y, &t->step[first < NSTEP ? first : 0u], n16 < 16u ? n16 : 16u, pick >= first && pick < first + 16u ? (int32_t)(pick - first) : -1,
+             song.playing && s < len && s >= first && s < first + 16u ? (int32_t)(s - first) : -1, prev, drum);
+    for (i = 0; ui.entry_open && !ui.ent_arp && ui.ent_nn && ui.ent_len > 1u && i < 16u; i++) {
         uint32_t si = first + i;
-        int32_t x = UXQ_X(i);
-        uint16_t c = si < len ? uxq_cell_col(&t->step[si], prev, drum) : UX_BG2;
-        if (si < len && t->step[si].time != ST_TIE)
-            prev = c;                                   /* (a held run keeps its note's colour) */
-        if ((int32_t)si == f0 + ph && ph >= 0)
-            c = c == UX_EMPTY ? UX_LINE : ux_mix(c, UX_TEXT, 45);
-        cv_rect(x, y, UX_STRIP_W, UX_STRIP_H, c);
-        if (si == pick)
-            cv_frame(x, y, UX_STRIP_W, UX_STRIP_H, UX_TEXT);
-        else if (ui.entry_open && !ui.ent_arp && ui.ent_nn && ui.ent_len > 1u && si < len &&
-                 (si + len - pick) % len < ui.ent_len)   /* (a chord held in step recording, KNOB 1 its length: the steps it */
-            cv_frame(x, y, UX_STRIP_W, UX_STRIP_H, UX_ACCENT);   /* will hold, as the inherited roll outlined them) */
+        if (si != pick && si < len && (si + len - pick) % len < ui.ent_len)
+            cv_frame(UXQ_X(i), y, UX_STRIP_W, UX_STRIP_H, UX_ACCENT);
     }
-}
-/* a bar w px wide in hits equal parts, 1 px apart (a RATCH step's; 1: the bar), as ui_graph.c pr_split */
-static void uxq_bar(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uint32_t hits)
-{
-    int32_t k, pw;
-    if (hits < 2u) {
-        cv_rect(x, y, w, h, c);
-        return;
-    }
-    pw = (w - (int32_t)hits + 1) / (int32_t)hits;
-    for (k = 0; k < (int32_t)hits; k++)
-        cv_rect(x + k * (pw + 1), y, pw, h, c);
 }
 /* the columns' common parts: past LEN dark, the playing step a light column, the beats a line before them */
 static void uxq_cols(int32_t y0, int32_t h, uint32_t ncol, int32_t ph)
@@ -386,7 +358,8 @@ static __attribute__((noinline)) void uxq_roll(int y0, int h)
         }
     }
     if (hi < 0)
-        lo = hi = last_note;
+        lo = hi = 60;                                   /* (none shown: no row is drawn, the view is moot; fix 1: not last_note,
+                                                         * which every key played moves) */
     span = hi - lo + 1;
     if (span < 12) {                                    /* (an octave at least, the notes centred) */
         lo -= (12 - span) / 2;
@@ -427,7 +400,7 @@ static __attribute__((noinline)) void uxq_roll(int y0, int h)
             if (n < 0)
                 continue;
             y = top + (lo + span - 1 - clamp(n, lo, lo + span - 1)) * rh;
-            uxq_bar(x, y, w, rh > 2 ? rh - 1 : rh, (n < lo || n >= lo + span) ? UX_DIM(c, 50) : c, s == si ? step_ratchet(st) : 1u);
+            pr_split(x, y, w, rh > 2 ? rh - 1 : rh, (n < lo || n >= lo + span) ? UX_DIM(c, 50) : c, s == si ? step_ratchet(st) : 1u);
             if (slide && j == 0u) {                     /* (a slide: joined to the next note, in SLIDE) */
                 int32_t yn = top + (lo + span - 1 - clamp((int32_t)ns->note[0], lo, lo + span - 1)) * rh, a = y < yn ? y : yn,
                         b = y < yn ? yn : y;
@@ -451,7 +424,7 @@ static __attribute__((noinline)) void uxq_grid(int y0, int h)
             const step_t *st = &t->step[f + i];
             int32_t x = UXQ_X(i);
             if ((step_lanes(st) >> l) & 1u)
-                uxq_bar(x + 1, y, UX_STRIP_W - 2, lp - 2, (step_accents(st) >> l) & 1u ? ux_mix(c, UX_TEXT, 55) : c, step_ratchet(st));
+                pr_split(x + 1, y, UX_STRIP_W - 2, lp - 2, (step_accents(st) >> l) & 1u ? ux_mix(c, UX_TEXT, 55) : c, step_ratchet(st));
             else
                 cv_rect(x + UX_STRIP_W / 2 - 1, y + lp / 2 - 2, 2, 2, l == sel || i % 4u == 0u ? UX_MID : UX_LINE);
         }
@@ -473,12 +446,13 @@ static __attribute__((noinline)) void uxq_picture(const page_t *pg)
     cv_text_on(x, UXQ_SAY_Y, &UF_HDR, b, UX_TEXT, ux_under(x, UXQ_SAY_Y + 4));
 }
 /* what the picture is drawn from but the playhead (that one paced: ux_section_draw): the steps, LEN, the step picked and its 16,
- * the lane, the locks, a DRUM track or not, the notes' view (last_note: an empty 16's), a chord being entered */
+ * the lane, the locks, a DRUM track or not, a chord being entered (fix 1: not last_note, which a key played moves and an empty
+ * 16 never shows) */
 static __attribute__((noinline)) uint32_t uxq_sig(void)
 {
     const track_t *t = TSEL;
     uint64_t locks = motion_lock_steps(trk_index(t));
     return ((steps_hash(t) * 31u + uxq_len()) * 131u + uxq_step()) * 257u + ui.lane * 7u + (uint32_t)drum_track(t) * 3u +
-           (uint32_t)(locks ^ (locks >> 32)) * 977u + last_note * 65537u +
+           (uint32_t)(locks ^ (locks >> 32)) * 977u +
            (ui.entry_open * 2u + ui.ent_arp + ui.ent_nn * 4u + ui.ent_len * 64u) * 40503u;   /* (the chord's length outlined) */
 }

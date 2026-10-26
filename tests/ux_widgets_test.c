@@ -60,7 +60,7 @@ int main(void)
         st[6].time = ST_TIE;
         st[7].n = 1; st[7].time = ST_NOTE;
         cv_begin(240, 150, UX_BG);
-        ux_strip(cy, st, 8, 7, 0);
+        ux_strip(cy, st, 8, 7, 0, UX_EMPTY, 0);
 #define CELL(i) px(UX_STRIP_X + (i) * UX_STRIP_PITCH + UX_STRIP_W / 2, cy + mid)
         ck("strip: a play cell is its note's colour lightened (not the plain ACID)", CELL(0) != UX_ACID && CELL(0) != UX_EMPTY);
         ck("strip: accent is ACCENT", CELL(1) == UX_ACCENT);

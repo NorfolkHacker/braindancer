@@ -3157,7 +3157,7 @@ static int test_soak_cards(void)
             old += ui.roll[c].from[0] && (uint8_t)(ui.frame - ui.roll[c].t0) >= ROLL_FRAMES;
         if (quiet > 45u && !was_hot && !ui.bpm_t && !ui.msg_t && SOAK_RND(8u) == 0u) {
             uint32_t cy = card_y(), ch = card_h() < CARD_H ? card_h() : CARD_H;
-            if (ux_section_owns(nav_sec())) {           /* (ACID FM 3c-1 task 2: a ux page's cards are its knob row; SEQ > STEPS
+            if (ux_page_owns()) {                       /* (ACID FM 3c-1 task 2: a ux page's cards are its knob row; SEQ > STEPS
                                                          * sits in the SEQ lens' geometry, whose card rows cross its roll, the
                                                          * playhead there paced) */
                 cy = UX_Y_KNOBS;
@@ -7003,7 +7003,7 @@ static int test_lente(void)
     ui_power_on();
     TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
-    ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && ux_section_owns(SEC_SEQ) &&
+    ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && ux_page_owns() &&
          str_eq(uxs_count(), "1 / 11");                /* (3c-1 task 2: STEPS, the ux page, first) */
     turn(EN_SELECT, -1); frames(32);
     ok &= str_eq(cur_page()->title, "STEP");
@@ -17795,7 +17795,7 @@ static int test_t32_nav(void)
     char b[48];
     ui_power_on(); frame();
     press(B_SEQ); frame();
-    ok = str_eq(cur_page()->title, "STEP") && ux_section_owns(SEC_SEQ) && uxq_t_is("where", uxs_where(), "SEQ \xB7 STEPS");
+    ok = str_eq(cur_page()->title, "STEP") && ux_page_owns() && uxq_t_is("where", uxs_where(), "SEQ \xB7 STEPS");
     uxs_knobs(cur_page(), k);
     uxs_foot(uxs_where(), k, uxs_count(), uxs_next(), b, sizeof b);
     ok &= uxq_t_is("footer", b, "1 / 11 \xB7 NEXT PATTERN");
@@ -17803,20 +17803,21 @@ static int test_t32_nav(void)
                  "hidden until tasks 3, 4)", ok && !nav_put(SEC_SEQ, "STEP EXTRAS") && !nav_put(SEC_SEQ, "MORE"));
     ok = 1;
     for (i = 0; i < NELEM(OLD); i++) {
-        if (!nav_put(SEC_SEQ, OLD[i]) || !str_eq(cur_page()->title, OLD[i]) || ux_section_owns(SEC_SEQ)) {
+        if (!nav_put(SEC_SEQ, OLD[i]) || !str_eq(cur_page()->title, OLD[i]) || ux_page_owns() || !ux_section_owns(SEC_SEQ)) {
             printf("  %s: not reached (%s)\n", OLD[i], cur_page()->title);
             ok = 0;
         }
         frame();
     }
-    bad += check("  every inherited SEQ page still reached in the chain (PATTERN .. AUTO LIST), drawn as before", ok);
+    bad += check("  every inherited SEQ page still reached in the chain (PATTERN .. AUTO LIST), drawn as before; SEQ on the ux "
+                 "engine from each (fix 1: a SEQ MORE page, ui.c page_jiant, shows from any SEQ page)", ok);
     ui_power_on(); frame();
     press(B_SEQ); frame(); frames(320);
     ok = str_eq(cur_page()->title, "STEP");
     press(B_SEQ); frame();
     ok &= str_eq(cur_page()->title, "PATTERN");
     turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "STEP") && ux_section_owns(SEC_SEQ);
+    ok &= str_eq(cur_page()->title, "STEP") && ux_page_owns();
     bad += check("  SEQ's button: STEPS -> PATTERN; SELECT back: STEPS", ok);
     ui_power_on();
     return bad;
@@ -17876,7 +17877,7 @@ static int test_t32_drum(void)
     int bad = 0, ok;
     uxq_t_open(16, ENGI_DRUM);
     ui.lane = 0;
-    ok = grid_on() && ux_section_owns(SEC_SEQ) && uxq_t_is("labels", uxe_labels(), "STEP|LANE|HIT|ACC");
+    ok = grid_on() && ux_page_owns() && uxq_t_is("labels", uxe_labels(), "STEP|LANE|HIT|ACC");
     turn(EN_K2, 1);
     ok &= ui.lane == 1u && uxq_t_is("LANE", uxe_value(1), "SNARE") && uxq_t_is("LANE say", uxq_t_say(), "LANE SNARE");
     turn(EN_K3, 1);
@@ -17962,6 +17963,26 @@ static int test_t32_ratchet(void)
     ui_power_on();
     return bad;
 }
+/* (fix 1) uxq_strip(y, first) for any 16: the playing cell and the picked one where those steps are, not where STEPS' 16 is */
+static int test_t32_strip_first(void)
+{
+    int ok;
+    uint32_t y = 104u, cy = y + UX_STRIP_H / 2u;
+    uxq_t_open(32, ENGI_ANALOG);
+    cursor_set(18); frame();                            /* (STEPS shows 16..31) */
+    song.playing = 1; TSEL->seq_idx = 4;
+    ux_panel_begin(0);
+    uxq_strip((int)y, 0);
+    ok = ux_under(UXQ_X(4) + 6, (int32_t)cy) == UX_LINE && ux_under(UXQ_X(3) + 6, (int32_t)cy) == UX_EMPTY &&
+         ux_under(UXQ_X(2), (int32_t)cy) == UX_EMPTY;   /* (step 5 playing, lit; step 19 picked is not in 0..15) */
+    uxq_strip((int)y, 16);
+    ok &= ux_under(UXQ_X(4) + 6, (int32_t)cy) == UX_EMPTY && ux_under(UXQ_X(2), (int32_t)cy) == UX_TEXT;   /* (step 19 outlined) */
+    ux_panel_end();
+    song.playing = 0;
+    ui_power_on();
+    return check("ACID FM 3c-1 task 2 fix 1: uxq_strip(y, first) lights the playing step and outlines the picked one of the 16 "
+                 "it is given", ok);
+}
 /* the roll paced: nothing drawn while nothing changes (stopped or playing), at most one panel a played step */
 static int test_t32_pace(void)
 {
@@ -17987,6 +18008,11 @@ static int test_t32_pace(void)
     ok &= uxs_panels == n0;
     song.playing = 0;
     if (!ok) printf("  panels a played step: %u for 15 steps\n", (unsigned)n1);
+    frames(400);                                        /* (stopped: the playhead gone, drawn once) */
+    n0 = uxs_panels;                                    /* (fix 1) a key played (last_note) redraws nothing */
+    for (i = 0; i < 8u; i++) { last_note = (uint8_t)(40u + i * 3u); frames(64); }
+    ok &= uxs_panels == n0;
+    if (uxs_panels != n0) printf("  last_note: %u panels\n", (unsigned)(uxs_panels - n0));
     bad += check("ACID FM 3c-1 task 2: STEPS' roll paced: no panel idle (stopped, playing on one step), at most one a played step", ok);
     ui_power_on();
     return bad;
@@ -18166,6 +18192,7 @@ int main(void)
     bad += test_t32_drum();
     bad += test_t32_paging();
     bad += test_t32_ratchet();
+    bad += test_t32_strip_first();
     bad += test_t32_pace();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();

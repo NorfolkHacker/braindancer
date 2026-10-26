@@ -2558,7 +2558,7 @@ static void ui_input_frame(void)
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }
-        if (ui.home || ux_section_owns(nav_sec()))
+        if (ui.home || ux_page_owns())
             ux_knob_touch(k);                           /* (ACID FM 3a) its column (TRACKS: its line) lit UX_HOT_MS; (3b) a
                                                          * section page's too */
         if (home_macros()) {                            /* (ACID FM 3a) HOME's VISUAL: M1..M4 */
