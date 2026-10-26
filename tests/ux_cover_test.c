@@ -206,8 +206,12 @@ static void uxc_dump(void)
  * whose names were kept whole on purpose (3b task 7 fix: a MOD source or destination reads as the knob it moves, "CUTOFF";
  * task 8: REVERB TYPE's SHIMMER): those fall back to UF_HDR, then UF_LBL (ux_widgets.c ux_val_face: NOTE RAND, CHO DEPTH)
  * and must fit their column there. Any other value wider than its column in UF_VAL fails, printed once a knob */
-static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE"};   /* (page title, then the label's start) */
-static uint32_t uxc_wn, uxc_wbad, uxc_whdr;
+/* (fix round 1, M2) MORE pages too: KNOB 1's "n/m" (every count of rows one can pick, each engine) and KNOB 2's value (each
+ * row's whole range through uxm_row_text, "GO" for an action), as ux_section.c's knob row draws them */
+static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",   /* (page title, then the label's start) */
+                                       "MORE DIST TYPE", "MORE DLY TYPE", "MORE SLICE MODE"};   /* (fix round 1, M2: MORE's
+                                                         * KNOB 2, JIANT's words kept: RECTIFY, ANALOG, DIGITAL, STUTTER) */
+static uint32_t uxc_wn, uxc_wbad, uxc_whdr, uxc_wmore;
 static void uxc_wfit(const char *where, const char *v)
 {
     static uint32_t seen[256];
@@ -237,7 +241,7 @@ static int uxc_widths(void)
     uint32_t e, s, i, sl, v;
     int32_t x;
     char b[32];
-    uxc_wn = uxc_wbad = uxc_whdr = 0;
+    uxc_wn = uxc_wbad = uxc_whdr = uxc_wmore = 0;
     for (e = 0; e < NENGINES; e++) {
         if (!eng_ok(e))
             continue;
@@ -268,6 +272,63 @@ static int uxc_widths(void)
                     }
             }
     }
+    for (e = 0; e < NENGINES; e++) {                   /* (fix round 1, M2) MORE pages: KNOB 1 "n/m", KNOB 2 the row's value */
+        if (!eng_ok(e))                                 /* (ux_section.c uxs_knobs: uxm_row_text, "GO" for an action) */
+            continue;
+        set_engine_of(TSEL, e);
+        TSEL->engine = TSEL->eng_req;
+        for (s = 0; s < NELEM(KEYS); s++)
+            for (i = 0; i < NPAGES; i++) {
+                const page_t *pg = &PAGES[i];
+                uint64_t m;
+                uint32_t r, n, a, cnt;
+                if (pg->fam != SEC_FAM[KEYS[s]] || pg->graph != GR_MORE || !pg->more || (KEYS[s] != SEC_EDIT && e))
+                    continue;
+                m = uxm_mask(pg->more);
+                n = uxm_n(pg->more);
+                for (r = cnt = 0; r < n; r++)
+                    cnt += uxm_pick_ok(pg->more, m, r) != 0;
+                for (a = 1; a <= cnt; a++) {
+                    fmt_int(b, (int32_t)a);
+                    str_cpy(b + str_len(b), "/", sizeof b - str_len(b));
+                    fmt_int(b + str_len(b), (int32_t)cnt);
+                    uxc_wfit("MORE PICK", b);
+                    uxc_wmore++;
+                }
+                for (r = 0; r < n; r++) {
+                    const ux_row_t *rw = &pg->more->rows[r];
+                    char v[24], w[48];
+                    uint8_t bar;
+                    const char *nm;
+                    if (!uxm_pick_ok(pg->more, m, r))
+                        continue;
+                    if (rw->kind == UXR_ACTION) {
+                        uxc_wfit("MORE GO", "GO");
+                        uxc_wmore++;
+                        continue;
+                    }
+                    for (v[0] = 0, sl = 0; sl < 8u; sl++) {   /* (MOD's slot, DRUM-X's drum: every one) */
+                        int16_t *vp, keep;
+                        const param_desc_t *d;
+                        mod_ui_slot = (uint8_t)(sl & 3u);
+                        dx_ui_lane = (uint8_t)sl;
+                        d = param_ref(rw->kind == UXR_GLOBAL ? 0 : TSEL, rw->id, &vp);
+                        if (!d || !vp || (rw->kind != UXR_TRACK && rw->kind != UXR_GLOBAL))
+                            continue;
+                        keep = *vp;
+                        for (x = d->min; x <= d->max; x++) {
+                            *vp = (int16_t)x;
+                            nm = uxm_row_text(rw, v, sizeof v, &bar);
+                            str_cpy(w, "MORE ", sizeof w);
+                            str_cpy(w + str_len(w), nm ? nm : "?", sizeof w - str_len(w));
+                            uxc_wfit(w, v);
+                            uxc_wmore++;
+                        }
+                        *vp = keep;
+                    }
+                }
+            }
+    }
     TSEL->eng_req = req0; TSEL->engine = eng0;
     mod_ui_slot = mo; dx_ui_lane = dl;
     for (x = TP[P_LEVEL].min; x <= TP[P_LEVEL].max; x++) {   /* HOME: TRACKS' LEVELs (the number), its BPM; VISUAL's MACROs */
@@ -296,14 +357,14 @@ static int uxc_widths(void)
         }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);
-    printf("ux widths: %u values a 3b knob can show, %u names kept whole in a smaller face (UXC_WIDE), %u too wide\n", (unsigned)uxc_wn,
-           (unsigned)uxc_whdr, (unsigned)uxc_wbad);
+    printf("ux widths: %u values a 3b knob can show (%u on MORE pages' knob rows), %u names kept whole in a smaller face "
+           "(UXC_WIDE), %u too wide\n", (unsigned)uxc_wn, (unsigned)uxc_wmore, (unsigned)uxc_whdr, (unsigned)uxc_wbad);
     i = uxc_wbad;                                       /* (the check sees one: a value as wide as MOD's, on a knob not listed) */
     uxc_wfit("(self-check, not a knob)", "CHO DEPTH");
     s = uxc_wbad - i;
     uxc_wbad = i;
     return check("ux widths: every value a 3b knob can show (each id's range) fits its knob column in UF_VAL",
-                 uxc_wn > 5000u && !uxc_wbad && s == 1u);
+                 uxc_wn > 5000u && uxc_wmore > 1000u && !uxc_wbad && s == 1u);
 }
 
 int main(int argc, char **argv)

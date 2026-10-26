@@ -46,8 +46,11 @@ TOL = 0.10                      # exact (no noise): small edits pass, a grown re
 # functions address them (slicer_bus 788 .. 825 with no change to the sound). tools/build.py now gives every variable an
 # interrupt reaches a section of its own (.data.a / .bss.a: not merged, first in RAM), the sound's code no longer
 # changes with the UI (two UI probes: the 444 audio functions identical but for addresses), and the budgets are that
-# build's: fm1_alnk0_irq 300 (+3 for the variables' own addresses), TIMER5 2170 (its static count follows where the
-# compiler puts a long backward branch: 766 .. 2170 for the same code)
+# build's: fm1_alnk0_irq 300, TIMER5 2170 (its static count follows where the compiler puts a long backward branch:
+# 766 .. 2170 for the same code). The pin is not free: losing GlobalMerge's shared base address costs a few address
+# loads in the hot loops. Against the best unpinned build (c8dd5ea) the pinned layout costs +33 on slicer_bus (788 ->
+# 821; 257 -> 263 instructions in its loops) and +3 on the ISR (fm1_alnk0_irq 297 -> 300): stable costs, bought with a
+# few instructions
 DIV_W = 8                       # a divide weighs 1 + 8 instructions
 NEST = 4                        # an instruction in a loop inside a loop weighs 4, two deep 16, ...
 MAXD = 4

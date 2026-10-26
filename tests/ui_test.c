@@ -10984,6 +10984,7 @@ static int test_ux_tracks(void)
     fm1_ms += UX_HOT_MS; frame();                                   /* the turn's moment over: the hint again */
     st = ux_home_status(&col);
     ok &= ux_knob_hot() < 0 && str_eq(st, "HOME AGAIN: VISUAL") && col == UX_MID;
+    trks_put(1);                                                    /* (MENU TRACKS 6: T5 awake; TRACKS 4's window below) */
     track_select(4); frame();                                       /* T5 selected: KNOB 1..3 are T4..T6 (3b task 10) */
     for (c = 0; c < NTRK; c++) lv[c] = (uint32_t)trk[c].p[P_LEVEL];
     turn(EN_K1, -2); frame();
@@ -11048,7 +11049,7 @@ static int test_ux_tracks(void)
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) != UX_ACCENT && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) != UX_ACID &&
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) != UX_BG &&
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(4)) != UX_SLIDE;
-    track_select(4); ui.force = 1; frame();                         /* T5: T4..T6 in K1..K3's colours, T1..T3 dimmed */
+    trks_put(1); track_select(4); ui.force = 1; frame();            /* T5: T4..T6 in K1..K3's colours, T1..T3 dimmed */
     ok &= ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(3)) == UX_ACID && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(5)) == UX_VIOLET &&
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(2)) != UX_VIOLET && ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(2)) != UX_ACID &&
           ux_px(UXR_X0 + 60u, UX_Y_PANEL + UXR_BASE(0)) != UX_ACID &&
@@ -11108,6 +11109,7 @@ static int test_ux_home_bpm(void)
     for (sel = 0; sel < NTRK; sel++) {                  /* the window per selected track */
         int32_t l[NTRK];
         ui_power_on(); frame();
+        trks_put(1);                                    /* (MENU TRACKS 6; TRACKS 4 below) */
         track_select(sel); frame();
         for (c = 0; c < NTRK; c++) l[c] = trk[c].p[P_LEVEL];
         turn(EN_K1, -1); frame();
@@ -11120,6 +11122,26 @@ static int test_ux_home_bpm(void)
               str_eq(k[3].label, "BPM");
     }
     bad += check("3b task 10 TRACKS: KNOB 1..3 the LEVELs of the three holding the selected track (T1..T3 / T4..T6), KNOB 4 BPM", ok);
+    {   /* (fix round 1, M1) MENU TRACKS 4: T5 / T6 asleep; T4 selected, the window T2..T4 (no knob moves a sleeping track) */
+        int32_t l[NTRK];
+        ui_power_on(); frame();
+        trks_put(0); frame();
+        track_select(3); frame();
+        for (c = 0; c < NTRK; c++) l[c] = trk[c].p[P_LEVEL];
+        turn(EN_K1, -1); frame();
+        turn(EN_K2, -2); frame();
+        turn(EN_K3, -3); frame();
+        ux_home_knobs(k, lbl);
+        ok = trk_live == 4u && song.sel == 3u && ux_trk_first() == 1u && lbl[0][1] == '2' && lbl[2][1] == '4' &&
+             trk[0].p[P_LEVEL] == l[0] && trk[1].p[P_LEVEL] == l[1] - 1 && trk[2].p[P_LEVEL] == l[2] - 2 &&
+             trk[3].p[P_LEVEL] == l[3] - 3 && trk[4].p[P_LEVEL] == l[4] && trk[5].p[P_LEVEL] == l[5];
+        track_select(2); frame();
+        ok &= ux_trk_first() == 0u;                     /* (T1..T3 as before) */
+        trks_put(1); frame();
+        track_select(3); frame();
+        ok &= ux_trk_first() == 3u;                     /* (TRACKS 6: T4..T6) */
+        bad += check("3b task 10 fix TRACKS: with MENU TRACKS 4 the window holds only awake tracks (T4 selected: T2..T4)", ok);
+    }
 
     ui_power_on(); frame();                             /* a turn: as GLO > GLOBAL's BPM knob */
     song.g[G_BPM] = 120;
@@ -11166,6 +11188,23 @@ static int test_ux_home_bpm(void)
     turn(EN_K4, -1); frame();
     ok &= song.g[G_BPM] == 132;
     bad += check("3b task 10 TRACKS: BPM LOCK leaves KNOB 4 free; an external clock: the tempo followed, a turn says CLOCK: USB / "
+                 "TRS", ok);
+
+    ui_power_on(); frame();                             /* (fix round 1, ruling 1) GLO > GLOBAL's BPM: as HOME's */
+    go_title("GLOBAL"); frame();
+    ok = str_eq(cur_page()->title, "GLOBAL") && page_id(cur_page(), 0) == G_BPM;
+    song.g[G_CLOCK] = 1; song.g[G_BPM] = 133; ui.msg_t = 0;
+    turn(EN_K1, 4); frame();
+    st = uxs_status(cur_page(), &col);
+    ok &= song.g[G_BPM] == 133 && msg_is("CLOCK: USB") && str_eq(st, "CLOCK: USB");
+    song.g[G_CLOCK] = 2; ui.msg_t = 0;
+    turn(EN_K1, -3); frame();
+    st = uxs_status(cur_page(), &col);
+    ok &= song.g[G_BPM] == 133 && msg_is("CLOCK: TRS") && str_eq(st, "CLOCK: TRS");
+    song.g[G_CLOCK] = 0; ui.msg_t = 0;
+    turn(EN_K1, 2); frame();
+    ok &= song.g[G_BPM] == 135 && !msg_is("CLOCK: TRS");
+    bad += check("3b task 10 fix: GLO > GLOBAL's BPM under an external clock as HOME's: a turn changes nothing, says CLOCK: USB / "
                  "TRS", ok);
     ui_power_on();
     return bad;
@@ -13976,6 +14015,26 @@ static int test_heavy_pace(void)
         ok &= uxs_panels == n0 + 1u;                      /* (the next within 100 ms: waits) */
         frames(120);
         ok &= uxs_panels == n0 + 2u;                      /* (.. then drawn, once: the last value) */
+        if (!ok) printf("  DUST: a change after a pause %u pictures\n", (unsigned)(uxs_panels - n0));
+        /* (fix round 1, I1) LOAD LITE and the guard's shed: paced by the interval alone (200 ms), never frozen */
+        gov_lite = LOAD_LITE; frames(300);
+        n0 = uxs_panels;
+        *vp = 97; frame();
+        *vp = 96; frame();
+        frames(112);
+        ok &= uxs_panels == n0 + 1u;                      /* (LOAD LITE is "slow": 200 ms, not 100) */
+        frames(112);
+        ok &= uxs_panels == n0 + 2u;                      /* (.. then the last value drawn) */
+        if (uxs_panels < n0 + 2u) printf("  DUST with gov_lite: %u pictures in 250 ms\n", (unsigned)(uxs_panels - n0));
+        gov_lite = 0; frames(300);
+        load_diag.shed++; frame();                        /* (the guard shed a voice: 400 ms hold for HOME's ridges) */
+        n0 = uxs_panels;
+        *vp = 95; frame();
+        *vp = 94; frame();
+        frames(220);
+        ok &= uxs_panels == n0 + 2u;                      /* (within the shed's 400 ms hold: drawn all the same) */
+        if (uxs_panels < n0 + 2u) printf("  DUST after a shed: %u pictures in 250 ms\n", (unsigned)(uxs_panels - n0));
+        frames(500);
     }
     uxe_on(ENGI_DRUM); fm1_ms += 1000u; frame();
     nd = heavy_turn(P_E0, 62);
@@ -13990,7 +14049,7 @@ static int test_heavy_pace(void)
            (unsigned)nd, (unsigned)i, (unsigned)ne, (unsigned)id);
     ok &= n >= 8u && n <= 11u && nd >= 8u && nd <= 11u && i >= 4u && i <= 6u && ne >= 60u && id == 0u;
     bad += check("3b task 10: DUST's and DRUM-X's pictures (8,192 samples each) at most every 100 ms while a knob turns (200 "
-                 "under load), the last value drawn; ENV every change; none idle", ok);
+                 "under load, LOAD LITE too; never frozen by a shed), the last value drawn; ENV every change; none idle", ok);
     ui_power_on();
     return bad;
 }
@@ -14512,6 +14571,23 @@ static int test_edit_t5_fix(void)
         key_down(k); frame(); frame(); key_up(k); frame();   /* (a long press: picked once, as before) */
         ok &= dx_ui_lane == drum_lane(kb_note[k]);
         bad += check("3b task 10: a key struck and let go within one UI frame still picks its drum (the press latched)", ok);
+        /* (fix round 1, M4) a key struck while MENU, a dialog or NAME is open: no drum picked on the way back */
+        for (i = 0; i < 3u; i++) {
+            dx_ui_lane = 0; frame();
+            if (i == 0u) ui.menu = 1;
+            else if (i == 1u) ui.confirm = CF_CLEAR_SEQ;
+            else name_open(NK_USER_SAVE, 6);
+            frame();
+            key_down(k); frame(); key_up(k); frame();     /* (one press: an odd count, its bit flipped) */
+            if (i == 0u) ui.menu = 0;
+            else if (i == 1u) ui.confirm = 0;
+            else name_close();
+            ui.force = 1; frame(); frame();
+            if (dx_ui_lane != 0u) { printf("  case %u: drum %u picked on the way back\n", (unsigned)i, (unsigned)dx_ui_lane); ok = 0; }
+        }
+        key_down(k); key_up(k); frame();
+        ok &= dx_ui_lane == drum_lane(kb_note[k]);        /* (back: a key struck picks again) */
+        bad += check("3b task 10 fix: a key struck while MENU, a dialog or NAME is open picks no drum on the way back", ok);
     }
     {   /* 9, 10. a step held on the DRUM grid: the drum is its lane's; KNOB 1 / 3 / 4 on SOUND say why they do not lock */
         ui_power_on();

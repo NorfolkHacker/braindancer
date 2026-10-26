@@ -251,6 +251,40 @@ def audio_sections(ir, reach):
     return ir, nf, nc, nv
 
 
+# (ACID FM 3b task 10 fix) the pin's guard: audio_sections' var() reads one form of a variable's definition ([internal]
+# [local_unnamed_addr | unnamed_addr] global). A reached variable written any other way (common, hidden, weak, dso_local,
+# private, thread_local, an addrspace ..) would silently stay with GlobalMerge and the sound's costs drift again with the
+# UI (tests/target_budget.py). Every defined, non-constant variable an interrupt reaches, without a section of its own
+# after the pin, stops the build (as HOT_FNS' count does)
+VAR_DEF = re.compile(r'^@"?([\w.]+)"? = ((?:[\w]+(?:\([^)\n]*\))? )*?)(global|constant) ([^\n]*)$', re.M)
+
+
+def unpinned_vars(ir, reach):
+    """reached variables defined in ir (any linkage) left without a section: [(name, its definition)]"""
+    def reached(name):
+        return name in reach or (re.fullmatch(r"(.+)\.\d+", name) is not None and name.rsplit(".", 1)[0] in reach)
+    out = []
+    for m in VAR_DEF.finditer(ir):
+        words = m.group(2).split()
+        if m.group(3) != "global" or "external" in words or "extern_weak" in words:
+            continue                                    # (a constant: .rodata.a; a declaration: defined elsewhere)
+        if reached(m.group(1)) and ' section "' not in m.group(0):
+            out.append((m.group(1), m.group(0)[:120]))
+    return out
+
+
+def unpinned_selfcheck():
+    """the guard sees each linkage form var() does not read, and passes the pinned and the unreached"""
+    ir = "\n".join(['@a = common global i32 0, align 4', '@b = hidden global i32 1, align 4',
+                    '@c = weak global [2 x i8] zeroinitializer, align 1', '@d = dso_local local_unnamed_addr global i32 0, align 4',
+                    '@e.0 = internal thread_local(initialexec) global i32 0, align 4', '@f = external global i32, align 4',
+                    '@g = internal global i32 0, section ".bss.a.g", align 4', '@h = internal constant i32 3, align 4',
+                    '@ui = internal global i32 0, align 4'])
+    got = sorted(n for n, _ in unpinned_vars(ir, {"a", "b", "c", "d", "e", "f", "g", "h"}))
+    if got != ["a", "b", "c", "d", "e.0"]:
+        raise SystemExit(f"the pin's guard (tools/build.py unpinned_vars) fails its self-check: {got}")
+
+
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_OTA_RAMONLY", "FELUCCA_CDC",
@@ -295,7 +329,14 @@ def build_app():
             ir, n = hot_sections((OUT / "felucca_opt.ll").read_text())
             if n != len(HOT_FNS):
                 raise SystemExit(f"hot RAM code: {n} of the {len(HOT_FNS)} functions found in the IR ({HOT_FNS})")
-            ir, nf, nc, nv = audio_sections(ir, size_fns.isr_reach((OUT / "felucca_size.ll").read_text(), True))
+            reach = size_fns.isr_reach((OUT / "felucca_size.ll").read_text(), True)
+            ir, nf, nc, nv = audio_sections(ir, reach)
+            unpinned_selfcheck()
+            miss = unpinned_vars(ir, reach)
+            if miss:
+                raise SystemExit(f"layout: {len(miss)} variables an interrupt reaches not pinned (tools/build.py "
+                                 f"audio_sections var(): a linkage form it does not read; GlobalMerge would take them):\n  "
+                                 + "\n  ".join(d for _, d in miss))
             print(f"layout: {nf} functions and {nc} constant tables an interrupt reaches first in the image, {nv} variables first in RAM")
             (OUT / "felucca_hot.ll").write_text(ir)
             tc("cc", *cf, "-Xclang", "-disable-llvm-optzns", "-c", OUT / "felucca_hot.ll", "-o", OUT / "felucca.o")

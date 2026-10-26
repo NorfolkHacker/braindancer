@@ -93,7 +93,14 @@ static void ux_lbl_cpy(char *d, const char *s, uint32_t n)
 }
 
 /* ---- TRACKS */
-static uint32_t ux_trk_first(void) { return song.sel < UXH_NLVL ? 0u : UXH_NLVL; }   /* the knobs' three: from this track */
+static uint32_t ux_trk_first(void)                     /* the knobs' three: from this track. (3b task 10 fix) Only awake ones:
+                                                         * MENU TRACKS 4 (trk_live) with T4 selected gives T2..T4, not T4..T6 */
+{
+    uint32_t f = song.sel < UXH_NLVL ? 0u : UXH_NLVL;
+    if (f + UXH_NLVL > trk_live)
+        f = trk_live > UXH_NLVL ? trk_live - UXH_NLVL : 0u;
+    return f;
+}
 /* track c's LEVEL as the mixer shows it (params.c param_format, F_DB: "-2.1" and "dB", "OFF"): one scale everywhere */
 static const char *ux_lvl_fmt(uint32_t c, char val[16])
 {
@@ -138,14 +145,9 @@ static int32_t ux_trk_hot(void)                         /* the track whose LEVEL
     return k < 0 || k >= (int32_t)UXH_NLVL || ux_home_page() != UXH_TRACKS ? -1 : (int32_t)ux_trk_first() + k;
 }
 /* (3b task 10) TRACKS' KNOB 4 turned: the tempo, as GLO > GLOBAL's BPM knob (ui_input.c param_knob: 40..240, accelerated; BPM
- * LOCK only keeps it from the dice). An external clock sets it (midi_clock.c): the turn changes nothing and says whose it is */
-static void ux_home_bpm(int32_t steps)
-{
-    if (song.g[G_CLOCK])
-        ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
-    else
-        param_knob(0, G_BPM, steps, 3u);
-}
+ * LOCK only keeps it from the dice). An external clock sets it (midi_clock.c): the turn changes nothing and says whose it is
+ * (param_knob, GLO's the same) */
+static void ux_home_bpm(int32_t steps) { param_knob(0, G_BPM, steps, 3u); }
 /* the strip's page: the playing step's while playing, else the one SEQ shows; its playing cell (-1: none) */
 static uint32_t ux_trk_page(int32_t *ph)
 {

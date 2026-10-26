@@ -17,6 +17,7 @@
  *   the kit's: METAL (TONE's BP, a band-pass on the hats, rim and bell), FEEDBACK, HANDS (the clap's); MORPH LFO (X-MOD:
  *   RATE DEPTH SHAPE RANDOM) */
 static uint32_t dx_kb_seen;                          /* seq.c kb_tog at the last look: a bit that flipped since, a key struck */
+static uint8_t dx_kb_looked;                         /* (3b task 10 fix) dx_follow ran this UI pass */
 static uint32_t dx_lane_picked(void) { return dx_ui_lane & 7u; }   /* (params.c page_id) */
 
 /* (3b task 5 fix) each UI pass (ui_input.c): the drum picked follows the user's own hands only, never MIDI IN or the
@@ -28,11 +29,20 @@ static void dx_follow(void)
 {
     uint32_t cur = kb_tog, up = cur ^ dx_kb_seen, k;
     dx_kb_seen = cur;
+    dx_kb_looked = 1;
     for (k = 0; up && k < 27u; k++)
         if (((up >> k) & 1u) && kb_note[k] != KB_SILENT && drum_track(&trk[kb_trk[k] % NTRK]))
             dx_ui_lane_tr[kb_trk[k] % NTRK] = (uint8_t)drum_lane(kb_note[k]);
     if (grid_on() && drum_track(TSEL) && lock_held())
         dx_ui_lane = (uint8_t)(ui.lane % NLANE);
+}
+/* (3b task 10 fix) the end of each UI pass (ui_input.c ui_input): a pass that returned before dx_follow (MENU, a dialog,
+ * NAME, SCREEN OFF's swallowed keys) took the keys struck meanwhile as its own: they pick no drum on the way back */
+static void dx_pass_end(void)
+{
+    if (!dx_kb_looked)
+        dx_kb_seen = kb_tog;
+    dx_kb_looked = 0;
 }
 static int32_t dx_step(int32_t s) { return s > 0 ? 1 : -1; }   /* (JIANT: a detent a step on the small ranges) */
 /* the drum picked's side's values (PITCH .. COLOR: drumx_voice.c DXP_*) */

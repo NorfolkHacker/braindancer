@@ -2991,11 +2991,13 @@ static void ux_section_draw(void)
     }
     if (!all && sig != panel_sig && !due && pg == uxs_heavy_pg && pg->fam == FAM_EDIT && pg->graph != GR_MORE &&
         (edit_kind() == 2u || (!edit_kind() && trk_eng(TSEL) == ENGI_NOISE)) &&
-        !ux_pace(fm1_ms, uxs_heavy_ms, load_tight, ux_since_shed(), gov_lite, sys_load, 0).draw)
+        !ux_pace_at(fm1_ms, uxs_heavy_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_VIS_MS, UX_VIS_SLOW_MS).draw)
         sig = panel_sig;                                /* (3b task 10) NOISE's and DRUM-X's pictures render up to 8,192 samples
-                                                         * (DUST, a hit): a change redrawn at most every UX_VIS_MS (ux_pace: 200
-                                                         * ms under load, held while the guard sheds), the knob row's value at
-                                                         * once; the last change drawn when its time comes (panel_sig kept) */
+                                                         * (DUST, a hit): a change redrawn at most every UX_VIS_MS (UX_VIS_SLOW_MS
+                                                         * under load, LOAD LITE too), the knob row's value at once; the last
+                                                         * change drawn when its time comes (panel_sig kept). Paced by the
+                                                         * interval only (fix: never frozen by gov_lite or a shed's hold: these
+                                                         * renders run in the main loop, which the audio ISR pre-empts) */
     if (all || sig != panel_sig || due) {
         panel_sig = sig;
         uxs_panels++;

@@ -1052,6 +1052,12 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
     int16_t *vp;
     int32_t v;
     const param_desc_t *d;
+    if (!t && id == G_BPM && song.g[G_CLOCK]) {         /* (3b task 10 fix, ruling 1) an external clock sets the tempo
+                                                         * (midi_clock.c): a turn changes nothing and says whose it is, on GLO >
+                                                         * GLOBAL, HOME's TRACKS (ux_home.c) and a MORE row alike */
+        ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
+        return;
+    }
     if (t && fld_is(id)) {                              /* (3b task 5) FM6's operator, DRUM-X's kit: as JIANT's pages wrote */
         fld_turn(id, steps, knob);
         return;
@@ -1992,11 +1998,13 @@ static void scale_link(void)
 
 static void ui_input_frame(void);
 static void dx_follow(void);                            /* (ui_dx.c) the drum picked follows the keys, the step held */
+static void dx_pass_end(void);                          /* (ui_dx.c) keys struck in a pass that returned early: no pick */
 static void ui_input(void)
 {
     cpt_poll();                                         /* (0.9.14) CPU TEST measured as it plays (ui_menu.c) */
     demo_watch();                                       /* (ACID FM 3b) the power-on demo ends at the first edit or PLAY -> STOP */
     ui_input_frame();
+    dx_pass_end();
     scale_link();                                       /* (JIANT 0.4) one scale for every melodic track (after the
                                                          * frame's edits) */
 }
