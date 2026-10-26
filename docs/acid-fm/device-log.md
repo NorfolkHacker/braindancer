@@ -52,3 +52,18 @@
   HOME TRACKS 8.2; no clicks heard. VISUAL adds nothing over TRACKS (requirement met); TRACKS +2/s over a static page
   under the worst case → reduce in 3b
 - Proven commit: 7a2f647a2d41835acb111b671c876abfdf18bf42
+
+## 2026-10-26 — piece 3b, ACID FM 0.4 (sound sections, genres, demo)
+
+- Backup before: ~/fm1-backups/2026-10-26-acid-fm-0.3/fm1-recovery-20261026-182811/full-flash-before.bin, sha256
+  f13cc80e07185dcab5b9f8bdaf338c2109431f76c0afb9f5f2bf1699a8862cff, both reads identical
+- Release built on clean HEAD 041f010: acid-fm-0.4.fwsc, 610122 B, identity FM-1_904, sha256
+  d7f985b92c09db844924b6d71b920caa3fd12c4597596f1b7641ab0484329677; installed over 0.3: `done: the FM-1 runs FM-1_904`
+- Console after install: acid-fm v0.4, CORES 2, idle cpu_pct 6 %, bpm 124 (the power-on demo loaded)
+- User checks, all passed ("all seems good"): first 0.4 boot turns TRACKS 6 on once and PLAY plays the demo (beat,
+  acid line, pad); no-manual tasks (T5 brighter, delay on T3, scale to minor, PLAY on a fresh boot); TRACKS 4 survives
+  a reboot; CPU TEST song on MENU, TRACKS, an EDIT page and LFO with no clicks; fast NOISE DUST turns while playing;
+  GEN RANDOM names come from the shown genre list
+- Console under the CPU TEST song (worst case, ~11 min uptime): cpu_pct 50, audio_max 3277 us, audio_lost 0; the
+  governor sheds voices as designed (per-page late blocks/s not read this time)
+- Proven commit: 041f010
