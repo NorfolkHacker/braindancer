@@ -61,9 +61,9 @@ static const layer_t LAYERS[LAYER_N] = {
     {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{KC_PLAY, "RESTART"}, {KC_GLO, "DONE"}, {0, 0}}},
     {B_SCL, LK_SET, FAM_SCL, "[SCL] SET", {{KC_KEYS, "ROOT"}, {KC_SCL, "DONE"}, {0, 0}}},
     {B_EDIT, LK_SET, FAM_EDIT, "[EDIT] SET", {{KC_KEYS, "INIT / RECALL"}, {KC_EDIT, "DONE"}, {0, 0}}},
-    {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS", {{KC_REC, "CLEAR ALL"}, {KC_SEQ, "DONE"}, {0, 0}}},   /* (0.6.14: REC, all six
-                                                                     * tracks cleared, shown: it was nowhere) */
-    {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{KC_KEYS, "RECORDING"}, {KC_REC, "DONE"}, {0, 0}}},
+    {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS", {{0, 0}, {0, 0}, {0, 0}}},   /* (3c-1: drawn by ux_layer.c, its status
+                                                                     * line says REC CLEARS ALL) */
+    {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{0, 0}, {0, 0}, {0, 0}}},
     {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SONG", {{KC_KEYS, "PLAY"}, {KC_OCTUP, "STORE"}, {KC_OCTDN, "RECALL"}}},
     {B_LFO, LK_SET, FAM_HOME, "[LFO] MACRO", {{KC_K14, "M1-M4"}, {KC_SELECT, "DICE"}, {KC_KEYS, "DICE / CLEAR"}}},   /* JIANT (mod.c macro_v; SELECT, F3: macro_dice, G3 clears) */
 };
@@ -657,7 +657,7 @@ static void layer_knob(uint32_t k, int32_t s)
 {
     uint32_t l = layer_open();
     lys.used = 1;
-    if (ux_layer_owns(l))
+    if (ux_layer_owns(l) && (l != LAYER_REC || k < RL_N))
         ux_knob_touch(k);                               /* (3b task 9: its column lit, its readout on the status line) */
     if (l == LAYER_FX) {                                /* (0.9.14) the performance macros (perform.c perf_m), not recorded; */
         uint32_t g = perf_gfocus();                     /* (0.9.17) a glitcher's key down: its own */

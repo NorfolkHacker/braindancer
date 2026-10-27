@@ -42,8 +42,8 @@ static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK K
                                              "SCL: A KEY SETS THE ROOT \xB7 NO OCTAVE", "LFO: F3 DICE \xB7 G3 CLEAR \xB7 SELECT DICE",
                                              "MACROS LATCHED: PRESS LFO TO CLOSE",
                                              "SEQ TOOLS: WHITE KEYS \xB7 REC CLEARS ALL",
-                                             "SEQ TOOLS: BLACK KEYS PICK THE LANE",
-                                             "SEQ TOOLS: STOP TO EDIT",
+                                             "SEQ TOOLS: LANES ON BLACK \xB7 REC CLEARS ALL",
+                                             "STOP TO EDIT \xB7 REC CLEARS ALL",
                                              "REC: F3 CLEAR \xB7 G3 CLICK \xB7 KNOB 1 CLICK"};
 static const char *const UXL_GXSAY[4] = {"GLITCH HELD: ITS FOUR KNOBS", "TAPE STOP HELD: KNOB 1 SCRATCHES",
                                          "SHUFFLE HELD: ITS FOUR KNOBS", "FREEZE HELD: ITS FOUR KNOBS"};

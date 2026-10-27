@@ -281,9 +281,9 @@ static struct {
     uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
     uint8_t menu_sel;            /* MENU: the setting turned last (menu_items.c MI_*; its page MPAGE), kept while it runs */
     uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
-    uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held); GLO, SEQ
-                                  * TOOLS, REC, SAVE (JIANT's overlay) */
-    uint16_t uxlv;               /* (3b task 9 fix) the ACID layers' (EDIT MACRO FX SCL, ux_layer.c) own: a bit a layer
+    uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held); GLO, SAVE
+                                  * (JIANT's overlay; the ACID layers keep uxlv) */
+    uint16_t uxlv;               /* (3b task 9 fix) the ACID layers' (EDIT MACRO FX SCL SEQ REC, ux_layer.c) own: a bit a layer
                                   * (1 << LAYER_*), STATE; clear MAP */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */
     uint32_t menu_sig, home_t0;  /* HOME press time (btn_hold) */

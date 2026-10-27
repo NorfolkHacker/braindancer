@@ -17393,7 +17393,7 @@ static int test_t9_knobs(void)
     bad += check("  FX: the status line says its keys, a turn its readout (STEP LOOP . 1/2), one panel; ALGORITHM MAP <-> STATE", ok);
     {   /* widths: knob names in their column, the status lines within 224 px, the list's names in their column, the footer */
         int okw = 1;
-        uint32_t l, k, s;
+        uint32_t l, k, s, dm;
         for (k = 0; k < 4u; k++) okw &= text_w(&UF_LBL, UXL_PM[k]) <= UX_COL_W - 4 && text_w(&UF_LBL, UXL_MAC[k]) <= UX_COL_W - 4;
         for (k = 0; k < 16u; k++) okw &= text_w(&UF_LBL, UXL_GX[k]) <= UX_COL_W - 4;
         for (k = 0; k < 5u; k++) okw &= text_w(&UF_VAL, UXL_LOOP[k]) <= UX_COL_W - 4;
@@ -17402,9 +17402,12 @@ static int test_t9_knobs(void)
         for (k = 0; k < 4u; k++) if (text_w(&UF_HDR, UXL_GXSAY[k]) > 224) { printf("  \"%s\" %d px\n", UXL_GXSAY[k], (int)text_w(&UF_HDR, UXL_GXSAY[k])); okw = 0; }
         for (k = 0; k < UXL_W_N; k++)
             for (s = 0; s < 2u; s++) okw &= 8 + uxf_w(UXL_WHERE[k]) + 16 + uxf_w(UXL_ALGO[s]) <= 232;
+        for (dm = 0; dm < 3u; dm++) {                    /* (3c-1 task 5: a synth, a DRUM track on each kit: CLEAR <lane>) */
+        set_engine_of(TSEL, dm ? ENGI_DRUM : ENGI_ANALOG); TSEL->engine = TSEL->eng_req; TSEL->p[P_E0] = (int16_t)(dm ? dm - 1u : 0u);
         for (l = 0; l < 6u; l++)                         /* every key's name a layer can show, in the list's column */
             for (s = 0; s < 3u; s++) {
                 pfx_tgt = (uint8_t)s;
+                rp_put(RP_CLICK, s);                     /* (CLICK OFF / REC / ON on REC's G3) */
                 for (k = 0; k < 27u; k++) {
                     char nm[12], nt[4];
                     int blk;
@@ -17416,6 +17419,8 @@ static int test_t9_knobs(void)
                     okw &= text_w(&UF_LBL, nt) <= UXL_LS_NM - 3;
                 }
             }
+        }
+        rp_put(RP_CLICK, 0);
         pfx_tgt = 0;
         bad += check("  widths: knob names and values in their columns, status lines <= 224 px, the keys' names in the list", okw);
     }
@@ -17437,12 +17442,12 @@ static int test_t9_knobs(void)
 static int test_c5_layers(void)
 {
     static const char *const PG[2] = {"STEP", "PATTERN"};
-    int bad = 0, ok = 1, own = 1;
-    uint32_t i, d, c;
+    int bad = 0, ok = 1, own;
+    uint32_t d, c;
     char nm[12];
     ux_knob_t k[4];
-    ok = ux_layer_owns(LAYER_SEQ) && ux_layer_owns(LAYER_REC);
-    own = ok;
+    uint16_t sc;
+    own = ux_layer_owns(LAYER_SEQ) && ux_layer_owns(LAYER_REC);
     for (d = 0; d < 2u; d++) {                           /* SEQ TOOLS: a synth track, a DRUM track */
         uint32_t st;
         uint16_t f;
@@ -17464,11 +17469,15 @@ static int test_c5_layers(void)
         }
         st = ly_keyname(LAYER_SEQ, 0, 0u, nm);           /* F3 CLEAR: a key that does something, in the ux fill */
         f = ux_px(11u, UX_Y_PANEL + UXL_KB_Y + 25u);
-        if (f != uxl_fill(st, nm[0] != 0, 0)) { printf("  SEQ %u: F3 %04x\n", (unsigned)d, f); ok = 0; }
+        if (st != LS_OFF || !nm[0] || f != ux_mix(UX_BG, UX_MID, 55)) { printf("  SEQ %u: F3 %04x\n", (unsigned)d, f); ok = 0; }
+        if (!strstr(uxl_status(LAYER_SEQ, k, &sc), "REC CLEARS ALL")) { printf("  SEQ %u: no REC hint\n", (unsigned)d); ok = 0; }
         if (!str_eq(uxl_word("CLR AUTO"), "CLEAR AUTO") || !str_eq(uxl_word("CLR STEP"), "CLEAR STEP")) { printf("  words\n"); ok = 0; }
         ui.lylv = 0; ui.uxlv = 0;                        /* ALGORITHM: this layer's own view bit, not GLO's lens */
         turn(EN_ALGO, 1); frame();
         if (!((ui.uxlv >> LAYER_SEQ) & 1u) || ui.lylv) { printf("  SEQ %u: uxlv %x lylv %u\n", (unsigned)d, ui.uxlv, ui.lylv); ok = 0; }
+        chain.running = 1;                               /* a song playing: STOP TO EDIT, the REC hint stays */
+        if (!strstr(uxl_status(LAYER_SEQ, k, &sc), "REC CLEARS ALL") || !strstr(uxl_status(LAYER_SEQ, k, &sc), "STOP")) { printf("  SEQ %u: busy hint\n", (unsigned)d); ok = 0; }
+        chain.running = 0;
         turn(EN_ALGO, -1); frame();
         if ((ui.uxlv >> LAYER_SEQ) & 1u) { printf("  SEQ %u: STATE stuck\n", (unsigned)d); ok = 0; }
         btn_up(B_SEQ); frames(400);
@@ -17480,8 +17489,12 @@ static int test_c5_layers(void)
     go_title(PG[0]); frame();
     btn_down(B_REC); frames(800);
     if (ui.layer != LAYER_REC) { printf("  REC not open\n"); ok = 0; }
-    ui.force = 1; frame();
+    rp_put(RP_CLICK, 1u); ui.force = 1; frame();
     if (!uxt9_blend(ux_px(120, 0)) || !uxt9_blend(ux_px(2, 238))) { printf("  REC: no blend\n"); ok = 0; }
+    if (ux_px(236, UX_Y_STATUS + 10u) != UX_BG) { printf("  REC: status not on BG\n"); ok = 0; }
+    if (ux_px(8u + UXL_KB_W + 3u, UX_Y_PANEL + UXL_KB_Y + 25u) != UX_ACID) { printf("  REC: G3 CLICK not ACID (%04x)\n", ux_px(8u + UXL_KB_W + 3u, UX_Y_PANEL + UXL_KB_Y + 25u)); ok = 0; }
+    {   uint32_t x = UX_COL_X0; uint16_t r = ux_px(x + 20u, UX_Y_KNOBS);
+        if (r != UX_LINE && r != ux_knob_col(0)) { printf("  REC: K1 rule %04x\n", r); ok = 0; } }
     uxl_knobs(LAYER_REC, k);
     ok &= str_eq(k[0].label, "CLICK") && !k[1].label[0] && !k[3].label[0] && k[0].value[0];
     ui.uxlv = 0;
@@ -17489,9 +17502,9 @@ static int test_c5_layers(void)
     ok &= ((ui.uxlv >> LAYER_REC) & 1u) && !ui.lylv;
     turn(EN_ALGO, -1); frame();
     btn_up(B_REC); frames(400);
+    rp_put(RP_CLICK, 0u);
     ui.uxlv = 0;
     bad += check("  .. REC: the knob row (K1 CLICK), the blend, its own view bit", ok);
-    (void)i;
     bad += check("  .. SEQ and REC are drawn by ux_layer.c", own);
     ui_power_on();
     return bad;
