@@ -70,13 +70,25 @@
 
 ## 2026-10-27 — piece 3c-1, ACID FM 0.5 (SEQ, GLO, MIDI page)
 
-Pending (Step 2, run with the user; nothing below has been done yet):
+- Backup before: ~/fm1-backups/2026-10-27-acid-fm-0.4/fm1-recovery-20261027-202428/full-flash-before.bin, sha256
+  3df19dd664bd8f03b094281be5e14c6a5ff9e9e95b6b071f8054532641718814 (1 MiB, 0 of 143 firmware sectors blank).
+- First install (79d5acd), FM-1_905: status v0.5, cpu_pct 26, audio_max_us 1995, audio_late 0 at 20 s.
+- Found on the device: following a Korg SQ-1's clock over TRS at 120, the FM-1 read 117..123 and re-tempoed four
+  times a beat (audible drift). The inherited follower (Felucca 1.1.5) measured six clocks at a millisecond's
+  resolution and applied each reading raw. Fixed in 9962f2d (a line fitted through a beat of clocks, smoothed,
+  applied past 0.25 %; a jump over 4 % re-measured from the last quarter beat); test with +-3 ms jitter.
+- Reinstalled (9962f2d), FM-1_905, fwsc sha256 ce2b5a70599975e6b848f66ac652ff75869bff3f61886924422382191d316a34:
+  following the SQ-1 over TRS, 20 readings stopped and 16 playing all steady (120, then 121 after the user moved the
+  SQ-1's tempo knob; the follower tracked the move and settled). The user: "steady". audio_late +0.5..2/s while
+  playing (109 at start-up, not rising while stopped).
+- CPU TEST song (worst case, 160 BPM), console over 10-16 s: TRACKS 6 on SEQ STEPS cpu 72-76 %, ~68 late blocks/s,
+  ~91 voices shed/s, audio_max 4463 us; TRACKS 6 on HOME ~70 late/s (the same: not the page); TRACKS 4 on HOME cpu
+  58-60 %, 3.8 late/s, 0 shed (0.3 measured 6-8/s on this song). No drops heard (user). The 6-track figure is the
+  worst-case song past what the chip renders, absorbed by the voice governor; 0.5 is not heavier than before.
 
-- Backup before (`softkey --port "ACID FM" --yes`, then `fm1_unbrick.py backup`): pending
-- Release build `./build.sh --release 0.5` on the clean HEAD, then `tools/fm1_install.py build/acid-fm-0.5.fwsc --port "ACID FM" --yes`: pending
-- Serial `status` (version v0.5, cpu_pct, audio_late): pending
-- No-manual checks: make step 5 a ratchet; make T5's notes play only every other bar; send T2 to MIDI channel 10; follow
-  the clock from USB; loop the last bar live and let it go: pending
-- CPU TEST song, late audio blocks per second on SEQ STEPS, GLO LIVE with tricks, and the MIDI page: pending
-- A DAW or second device on USB sending clock and notes: pending
+Still pending:
+
+- No-manual checks: make step 5 a ratchet; make T5's notes play only every other bar; send T2 to MIDI channel 10;
+  follow the clock (done above, over TRS); loop the last bar live and let it go: user feedback pending
+- USB MIDI out (NOTES OUT KEYS) to a computer or device: deferred by the user ("I'll check midi to keys later")
 - Merge ff to main and push, on the user's go-ahead: pending
