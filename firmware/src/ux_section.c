@@ -59,6 +59,8 @@ static const uxs_name_t UXS_NAME[] = {
     {UXS_ALL, UXS_ALL, 0, P_SDIV, "DIVISION"},          /* (3c-1 task 3) SEQ > PATTERN's DIV: a step's length */
     {UXS_ALL, UXS_ALL, 0, P_POFS, "SEQ PITCH"},         /* .. SEQ > TRACK's PITCH: the sequence's notes, semitones */
     {UXS_ALL, UXS_ALL, 0, P_TRANS, "TRANSPOSE"},        /* .. TRANS: every note the track plays, semitones */
+    {UXS_ALL, UXS_ALL, 0, P_HRQ, "REC SNAP"},           /* (3c-1 task 4) SEQ > MORE's REC Q: live notes snapped to the grid (the
+                                                         * spec's REC QUANTISE is 61 px; SNAP is QUANT's word, SCL's, the slicer's) */
     /* (3b task 7) LFO's: MOD MATRIX's SRC1 DEST1 AMT1 .. are SOURCE DEST AMOUNT, the STEPS' LEVELs STEP 1 .. 16 (uxs_label) */
     {UXS_ALL, UXS_ALL, 0, P_MSDIV, "STEP RATE"},        /* MSEQ's DIV: a step's length (3b task 7 fix: not RATE, the LFO's) */
     {UXS_ALL, UXS_ALL, 0, P_MSSLW, "SMOOTH"},           /* .. SLEW: gliding from one step's level to the next */
@@ -998,12 +1000,18 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
             return b;
         }
     }
+    if (pg->fam == FAM_SEQ && uxq_lock_line(b, sizeof b)) {   /* (3c-1 task 4) a step held: its lock card's line */
+        *col = UX_TEXT;
+        return b;
+    }
     *col = UX_MID;
     if (sec == uxs_hint_sec) {
         str_cpy(b, SEC_NAME[sec], sizeof b);
         str_cpy(b + str_len(b), UXS_HINT, sizeof b - str_len(b));
         return b;
     }
+    if (pg->more == &UXM_SEQ && uxq_more_say())         /* (3c-1 task 4) SEQ > MORE: what OCT+ does on the row picked */
+        return uxq_more_say();
     if (pg->graph == GR_MORE && pg->more) {             /* (3b task 8) a PUNCH LANE row picked: how a lane is recorded */
         uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
         uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
@@ -2910,6 +2918,20 @@ static void ux_section_draw(void)
                     sig = sig * 33u + (uint16_t)*vp;
             }
     }
+    if (pg->more == &UXM_SEQ) {                         /* (3c-1 task 4) SEQ > MORE's views: what they are read from (the step
+                                                         * picked, STRETCH's picks, the heads, the automation and the list's place) */
+        const uint8_t *sp = (const uint8_t *)&TSEL->step[ui.cursor % NSTEP];
+        const fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
+        for (c = 0; c < sizeof(step_t); c++)
+            sig = sig * 31u + sp[c];
+        sig = sig * 31u + shp_i * 7u + shp_r + fg_ui * 131u + f->rate * 17u + f->dir * 5u + (uint32_t)(f->ivl + 14) * 257u;
+        sig = sig * 31u + motion_count(TSEL) * 7u + motion_lock_count(TSEL) + (uint32_t)motion_enabled(TSEL) * 977u +
+              ui.ev_row * 131u + ui.ev_step * 7u + ui.ev_id * 65537u + ui.pr_focus * 3u + ui.cursor * 101u + comp_view1() * 13u;
+        for (c = 0; c < motion.count && c < MOTION_MAX; c++)   /* (the list's records: its values) */
+            sig = sig * 31u + motion.event[c].place * 7u + motion.event[c].param * 131u + (uint16_t)motion.event[c].value;
+        if (song.playing)                               /* (SEQ's LAP: the note this pass) */
+            sig = sig * 31u + TSEL->loops;
+    }
     if (pg->fam == FAM_EDIT && edit_kind() == 1u) {     /* (3b task 5) FM6: the patch, the knobs, the operator and stage */
         const uint8_t *pp = fm6_patch[song.sel % NTRK];
         for (c = 0; c < FP_SIZE; c++)
@@ -3047,7 +3069,11 @@ static void ux_section_draw(void)
     }
     {   /* the footer: where, n / N and NEXT the next page (MORE: its knobs' names), when they fit */
         const char *w = uxs_where();
-        uxs_foot(w, k, uxs_count(), uxs_next(), b, sizeof b);
+        char lw[32];
+        if (pg->fam == FAM_SEQ && uxq_lock_foot(lw, sizeof lw, b, sizeof b))   /* (3c-1 task 4) a step held: LOCK . the page */
+            w = lw;
+        else
+            uxs_foot(w, k, uxs_count(), uxs_next(), b, sizeof b);
         sig = str_hash(str_hash(1u, w), b);
         if (all || sig != foot_sig) {
             foot_sig = sig;

@@ -226,62 +226,7 @@ static int play(void)
     return bad;
 }
 
-/* (0.9.18) SEQ > COMP marks on the roll and the grid (ui_graph.c seq_overlay): the step the component goes on framed
- * THEME with a tab at its foot, following KNOB 1 at once; the steps with the same component a 3 px ACCENT bar on top
- * (a RATCH of the flags the same as an ECHO), another component a 1 px MID one; a JUMP's step framed ACCENT, following
- * KNOB 3 */
-static uint16_t gpx(int32_t x, int32_t y) { return swap16(host_screen[(uint32_t)(y + (int32_t)graph_y()) * 240u + (uint32_t)x]); }
-static int comp_marks(void)
-{
-    int bad = 0, ok, dr;
-    uint32_t i;
-    track_t *t;
-    for (dr = 0; dr < 2; dr++) {
-        int32_t x, w, top, bot, y;
-        ui_power_on();
-        song.sel = dr ? 3u : 0u;
-        t = TSEL;
-        if (dr) { set_engine_of(t, ENGI_DRUM); t->engine = t->eng_req; }
-        track_defaults_steps(t);
-        t->p[P_SLEN] = 16;
-        for (i = 0; i < 16u; i++)
-            t->step[i] = dr ? (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC} : (step_t){{(uint8_t)(52u + i)}, 1, ST_NOTE, 0, 100};
-        t->step[2].comp = CP_ECHO; t->step[2].carg = 1;
-        step_set_ratchet(&t->step[7], 3);
-        t->step[12].comp = CP_ECHO;
-        t->step[4].comp = CP_RAND; t->step[4].carg = 2;
-        go_page(GR_COMP);
-        cursor_set(12);
-        ui.force = 1; frame();
-        top = dr ? 19 : PR_Y0; bot = dr ? 19 + 8 * 15 - 1 : PR_Y0 + PR_ROWS * PR_RH;
-        y = (top + bot) / 2;
-        seq_col((uint32_t)dr, 12, &x, &w);
-        ok = gpx(x - 1, y) == T_THEME && gpx(x + w + 1, y) == T_THEME && gpx(x + w / 2, bot - 2) == T_THEME;
-        seq_col((uint32_t)dr, 2, &x, &w);
-        ok &= gpx(x + w / 2, top - 2) == T_ACCENT && gpx(x - 1, y) != T_THEME;
-        seq_col((uint32_t)dr, 7, &x, &w);
-        ok &= gpx(x + w / 2, top - 2) == T_ACCENT;
-        seq_col((uint32_t)dr, 4, &x, &w);
-        ok &= gpx(x + w / 2, top - 2) == T_MID && gpx(x + w / 2, top - 3) != T_ACCENT;
-        turn(EN_K1, 1); frame();                          /* KNOB 1: the frame on step 14 at once */
-        seq_col((uint32_t)dr, 13, &x, &w);
-        ok &= ui.cursor == 13u && gpx(x - 1, y) == T_THEME;
-        seq_col((uint32_t)dr, 12, &x, &w);
-        ok &= gpx(x - 1, y) != T_THEME;
-        t->step[13].comp = CP_JUMP; t->step[13].carg = 5;   /* a JUMP to step 6, then KNOB 3 to step 7 */
-        ui.force = 1; frame();
-        seq_col((uint32_t)dr, 5, &x, &w);
-        ok &= gpx(x + 1, y) == T_ACCENT;
-        turn(EN_K3, 1); frame();
-        ok &= CP_JTO(t->step[13].carg) == 6u && gpx(x + 1, y) != T_ACCENT;
-        seq_col((uint32_t)dr, 6, &x, &w);
-        ok &= gpx(x + 1, y) == T_ACCENT;
-        bad += check(dr ? "  .. the same on a kit's grid" :
-                     "SEQ > COMP marks: the step framed THEME (live with KNOB 1), the same component ACCENT, another MID, JUMP's step ACCENT", ok);
-    }
-    return bad;
-}
-
+/* (0.9.18 .. ACID FM 3c-1 task 4) SEQ > COMP's marks on JIANT's roll (seq_overlay): gone with its pages (SEQ > MORE's rows) */
 static int projects(void)
 {
     int bad = 0, ok = 1;
@@ -410,12 +355,6 @@ static uint32_t card_px(uint32_t k, uint16_t c)
             n += swap16(host_screen[y * 240 + x]) == c;
     return n;
 }
-/* (0.8.5) a slide: the bar of step column i reaches into the next column's first px (its row: note n) */
-static int pr_slide_reach(uint32_t i, int32_t n)
-{
-    return pr_is_bar((uint32_t)PR_CX(i + 1u), graph_y() + (uint32_t)pr_row_y(n) + 1u);
-}
-
 static int screens(void)
 {
     int bad = 0, ok;
@@ -454,40 +393,7 @@ static int screens(void)
         bad += check("  RATCHET shows dimmed on a REST, a TIE or an empty step (a note or a hit: not)", ok);
         t->step[0] = (step_t){{0}, 0, ST_REST, 0, 0};
     }
-    ui_power_on();                                   /* the piano roll: x2 in two bars, the middle column empty */
-    t = TSEL;
-    track_defaults_steps(t);
-    t->p[P_SLEN] = 16;
-    t->step[1] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-    t->step[3] = t->step[1];
-    step_set_ratchet(&t->step[1], 2);
-    go_title("NOTE"); ui.cursor = 8; ui.bank = 0;     /* (ACID FM 3c-1 task 2: ui_graph.c's roll and grid, NOTE's; STEPS' own,
-                                                         * ux_seq.c: tests/ui_test.c test_t32_ratchet) */
-    memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-    y = graph_y() + (uint32_t)pr_row_y(60) + 1u;
-    x = (uint32_t)PR_CX(1);                          /* (0.8.5: columns 14 / 15 px, the bar a px in: x2 at x + 1 .. 6, 8 .. 13) */
-    ok = pr_is_bar(x + 2u, y) && pr_is_bar(x + 10u, y) && !pr_is_bar(x + 7u, y);
-    x = (uint32_t)PR_CX(3);
-    bad += check("  the piano roll draws an x2 step in two parts (x1 whole)", ok && pr_is_bar(x + 7u, y));
-    t->step[4] = (step_t){{64}, 1, ST_NOTE, 0, 100};   /* SLIDE into a note: the line, but not from x2 */
-    t->step[3].flags = SF_SLIDE;
-    t->step[1].flags |= SF_SLIDE;                     /* (x2 kept) */
-    t->step[2] = t->step[4];
-    memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-    bad += check("  an x1 SLIDE step's bar reaches into the next column, an x2 one's not", pr_slide_reach(3, 60) &&
-                 !pr_slide_reach(1, 60));
-    t->step[1].flags &= (uint8_t)~SF_SLIDE; t->step[3].flags = 0;
-    t->step[2] = t->step[4] = (step_t){{0}, 0, ST_REST, 0, 0};
-    set_engine_of(t, ENGI_DRUM);                     /* the grid: x3 in three bars */
-    t->engine = t->eng_req;
-    t->step[1] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u};
-    step_set_ratchet(&t->step[1], 3);
-    ui.lane = 1;
-    memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-    y = graph_y() + 19u + 2u + 5u;                   /* lane 0's hits: y 21 .. 30 of the panel (0.8.5: under LENTE's bars) */
-    x = 40u + 12u;
-    bad += check("  the DRUM grid draws an x3 hit in three parts", pr_is_bar(x, y) && !pr_is_bar(x + 2u, y) &&
-                 pr_is_bar(x + 3u, y) && !pr_is_bar(x + 5u, y) && pr_is_bar(x + 6u, y));
+    /* (3c-1 task 4) JIANT's roll and grid gone (NOTE's page): STEPS' x2 and the grid's x3 in parts, tests/ui_test.c test_t32_ratchet */
     return bad;
 }
 
@@ -610,35 +516,34 @@ static int components(void)
     ok &= trk[0].step[3].comp == CP_ARPN && trk[0].step[3].carg == CP_ARG(2u, 6u, 2u) && trk[1].step[0].comp == CP_TRIG &&
           trk[1].step[0].carg == 7u && !trk[0].step[2].comp;
     bad += check("a project keeps the components (FUNC round trip)", ok);
-    /* SEQ > COMP: K2 the TYPE, K3 / K4 its values; OFF / CHANCE / RATCH take a component away */
+    /* SEQ > COMP (ACID FM 3c-1 task 4: SEQ > MORE's STEP rows): TYPE, its values; OFF / CHANCE / RATCH take a component away */
     ui_power_on();
     t = TSEL;
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    go_page(GR_COMP); frame();
-    ok = str_eq(cur_page()->title, "COMP") && comp_view() == COMP_OFF;
-    turn(EN_K2, 3);                                       /* OFF CHANCE RATCH ARP */
+    seqm_pick(UXR_TRACK, ID_SQ_TYPE); frame();
+    ok = str_eq(cur_page()->title, "SEQ MORE") && comp_view() == COMP_OFF;
+    seqm(ID_SQ_TYPE, 3);                                  /* OFF CHANCE RATCH ARP */
     ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 5u, 0u);
-    turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; (0.9.18)
-                                                           * KNOB 4 RATE x the laps: 1/16 -> 1/32 */
+    seqm(ID_SQ_VAL, 1); seqm(ID_SQ_RNG, 1); seqm(ID_SQ_VAL2, 1);   /* (0.6.92) ORDER DOWN, RANGE two octaves (their own rows); RATE
+                                                         * 1/16 -> 1/32 */
     frame();
     ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 0u && CP_RNG(t->step[0].carg) == 1u &&
-          !strncmp(ui.col[3], "RATE|1/32", 9);         /* (the label as it plays: 1/32) */
-    turn(EN_K4, 1); turn(EN_K4, 1); frame();           /* (1/32 1/16 1/8: a detent a value) */
-    ok &= CP_RATE(t->step[0].carg) == 6u && !strncmp(ui.col[3], "RATE|1/8", 8);
-    turn(EN_K4, -1); turn(EN_K4, -1);
-    turn(EN_K4, 4);                                       /* (.. 1/4 1:2: the step's EVERY) */
-    ok &= CP_RATE(t->step[0].carg) == 7u && ST_EVERY(&t->step[0]) == EV_1_2;
-    turn(EN_K4, -4);
+          str_eq(seqm_val(ID_SQ_VAL2), "1/32") && str_eq(seqm_val(ID_SQ_VAL), "DOWN") && str_eq(seqm_val(ID_SQ_RNG), "2 OCT");
+    seqm(ID_SQ_VAL2, -1); seqm(ID_SQ_VAL2, -1); frame();   /* (1/32 1/16 1/8: a detent a value) */
+    ok &= CP_RATE(t->step[0].carg) == 6u && str_eq(seqm_val(ID_SQ_VAL2), "1/8");
+    seqm(ID_SQ_EVERY, 1);                                 /* (the step's EVERY: its own row) */
+    ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_RATE(t->step[0].carg) == 6u;
+    seqm(ID_SQ_EVERY, -1);
     ok &= ST_EVERY(&t->step[0]) == EV_ALWAYS;
-    turn(EN_K2, 1);                                       /* SEQ: the values kept */
+    seqm(ID_SQ_TYPE, 1);                                  /* SEQ: the values kept */
     ok &= t->step[0].comp == CP_ARPQ && CP_ORD(t->step[0].carg) == 1u;
-    turn(EN_K2, 4); turn(EN_K2, 4); turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);   /* TRIG 1:2 .. 2:4 */
+    seqm(ID_SQ_TYPE, 4); seqm(ID_SQ_TYPE, 4); seqm(ID_SQ_TYPE, 1); seqm(ID_SQ_VAL, 4); seqm(ID_SQ_VAL, 1);   /* TRIG .. 2ND OF 4 */
     ok &= t->step[0].comp == CP_TRIG && t->step[0].carg == 5u;
-    turn(EN_K2, -4); turn(EN_K2, -4); turn(EN_K2, -4); turn(EN_K3, -40);   /* CHANCE 60 %: the TRIG gone */
+    seqm(ID_SQ_TYPE, -4); seqm(ID_SQ_TYPE, -4); seqm(ID_SQ_TYPE, -4); seqm(ID_SQ_VAL, -40);   /* CHANCE 60 %: the TRIG gone */
     ok &= !t->step[0].comp && step_chance(&t->step[0]) == 60u && comp_view() == COMP_CHANCE;
-    turn(EN_K1, 1); frame();
+    cursor_set(1); frame();
     ok &= ui.cursor == 1u && comp_view() == COMP_OFF;
-    bad += check("SEQ > COMP: TYPE, ORDER x RANGE, RATE x laps, TRIG's condition, CHANCE takes the component away", ok);
+    bad += check("SEQ > COMP (SEQ > MORE's rows): TYPE, ORDER x RANGE, RATE, EVERY, TRIG's condition, CHANCE takes the component away", ok);
     return bad;
 }
 
@@ -840,19 +745,18 @@ static int components2(void)
         ui_power_on();
         t = TSEL;
         t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-        go_page(GR_COMP); frame();
-        turn(EN_K2, 4); turn(EN_K2, 4);                   /* .. RAND (0.9.18: the list by family) */
+        seqm(ID_SQ_TYPE, 4); seqm(ID_SQ_TYPE, 4);         /* .. RAND (0.9.18: the list by family; 3c-1 task 4: SEQ > MORE) */
         ok = t->step[0].comp == CP_RAND && t->step[0].carg == 2u;
-        turn(EN_K2, 3);                                   /* .. JUMP */
-        turn(EN_K3, 9);
+        seqm(ID_SQ_TYPE, 3);                              /* .. JUMP */
+        seqm(ID_SQ_VAL, 9);
         ok &= t->step[0].comp == CP_JUMP && t->step[0].carg == 9u;
-        turn(EN_K4, 1); frame();                          /* (0.6.92) EVERY 1:2, the step kept */
-        ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 9u && strstr(ui.col[3], "1:2") != 0;
-        turn(EN_K3, -2);
+        seqm(ID_SQ_EVERY, 1); frame();                    /* (0.6.92) EVERY 1ST OF 2, the step kept */
+        ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 9u && str_eq(seqm_val(ID_SQ_EVERY), "1ST OF 2");
+        seqm(ID_SQ_VAL, -2);
         ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 7u;
-        turn(EN_K2, 4);                                   /* KILL */
+        seqm(ID_SQ_TYPE, 4);                              /* KILL */
         ok &= t->step[0].comp == CP_KILL && comp_view() == COMP_KILL;
-        bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3, EVERY on KNOB 4", ok);
+        bad += check("SEQ > COMP (SEQ > MORE): RAND .. KILL on TYPE, JUMP's step its value, EVERY its row", ok);
     }
     return bad;
 }
@@ -977,23 +881,20 @@ static int components3(void)
     ui_power_on();
     t = TSEL;
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    go_page(GR_COMP); frame();
-    ui.page++; page_entered(); frame();
-    ok = str_eq(cur_page()->title, "COMP 2") && comp_slot() == 1u && comp_view() == COMP_OFF;
-    turn(EN_K2, 1);                                       /* OFF -> RATCH (no CHANCE here: an ECHO, x2 FLAT) */
+    seqm_pick(UXR_TRACK, ID_SQ_TYPE2); frame();          /* (3c-1 task 4: COMP 2's, SEQ > MORE's TYPE 2 rows) */
+    ok = str_eq(cur_page()->title, "SEQ MORE") && str_eq(seqm_val(ID_SQ_TYPE2), "OFF");
+    seqm(ID_SQ_TYPE2, 1);                                 /* OFF -> RATCH (no CHANCE here: an ECHO, x2 FLAT) */
     ok &= t->step[0].comp2 == CP_ECHO && t->step[0].carg2 == CP_ECHO_EVEN && !t->step[0].comp;
-    turn(EN_K2, 1);                                       /* .. ARP */
+    seqm(ID_SQ_TYPE2, 1);                                 /* .. ARP */
     ok &= t->step[0].comp2 == CP_ARPN;
-    turn(EN_K2, 4); turn(EN_K2, 1);                       /* .. RAND */
+    seqm(ID_SQ_TYPE2, 4); seqm(ID_SQ_TYPE2, 1);           /* .. RAND */
     ok &= t->step[0].comp2 == CP_RAND;
-    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* EVERY: 1:2 2:2 1:3 */
-    ok &= ST_EVERY(&t->step[0]) == EV_1_3 && strstr(ui.col[3], "1:3") != 0;
-    ui.page--; page_entered(); frame();
-    ok &= str_eq(cur_page()->title, "COMP") && comp_slot() == 0u;
-    turn(EN_K2, 2); turn(EN_K3, 4);                       /* OFF CHANCE RATCH: x5 FLAT, an ECHO on the first */
+    seqm(ID_SQ_EVERY, 1); seqm(ID_SQ_EVERY, 1); seqm(ID_SQ_EVERY, 1);   /* EVERY: 1:2 2:2 1:3 */
+    ok &= ST_EVERY(&t->step[0]) == EV_1_3 && str_eq(seqm_val(ID_SQ_EVERY), "1ST OF 3");
+    seqm(ID_SQ_TYPE, 2); seqm(ID_SQ_VAL, 4);              /* OFF CHANCE RATCH: x5 FLAT, an ECHO on the first */
     ok &= t->step[0].comp == CP_ECHO && t->step[0].carg == (CP_ECHO_EVEN | 3u);
-    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* RATE: a step/4 (DIV) */
-    ok &= CT_DIV(&t->step[0]) == 3u && strstr(ui.col[3], "1/16") != 0;   /* (4 over a synth's 4 steps: one apart) */
+    seqm(ID_SQ_VAL2, 1); seqm(ID_SQ_VAL2, 1); seqm(ID_SQ_VAL2, 1);   /* RATE: a step/4 (DIV) */
+    ok &= CT_DIV(&t->step[0]) == 3u && strstr(seqm_val(ID_SQ_VAL2), "1/16") != 0;   /* (4 over a synth's 4 steps: one apart) */
     bad += check("SEQ > COMP 2: a second component (RATCH, ARP, RAND), EVERY 1:3 on KNOB 4; COMP: RATCH x5, its RATE 1/16 (as it plays: a step apart)", ok);
     return bad;
 }
@@ -1135,7 +1036,7 @@ static int timing(void)
 
 int main(void)
 {
-    int bad = play() + comp_marks() + projects() + presets() + screens() + components() + components2() + components3() + human() + timing();
+    int bad = play() + projects() + presets() + screens() + components() + components2() + components3() + human() + timing();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }

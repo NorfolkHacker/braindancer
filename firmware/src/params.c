@@ -605,6 +605,17 @@ enum { ID_DX_LANE = 0xD0, ID_DX_PITCH, ID_DX_DECAY, ID_DX_NOISE, ID_DX_COLOR, ID
        ID_DX_XRATE, ID_DX_XDEP, ID_DX_XSHP, ID_DX_XRND, ID_DX_END };
 typedef char fld_ids_ok[(uint32_t)P_COUNT <= (uint32_t)ID_FO_OP && (uint32_t)ID_DX_END <= 0xFAu ? 1 : -1];
 static int fld_is(uint32_t id) { return (id >= ID_FO_OP && id < ID_FO_END) || (id >= ID_DX_LANE && id < ID_DX_END); }
+/* (ACID FM 3c-1 task 4) SEQ > MORE's views (spec 2.4): what the inherited SEQ pages turned that is no track setting, as MORE
+ * rows: SHAPE's STRETCH REPEAT NUDGE (ui_input.c shape_knob, applied as you turn), PLAYHEADS' four (fugue.c fg_set), the picked
+ * step's (its two components' TYPE and values, EVERY, NOTE's FOCUS PITCH MOVE: ui_input.c comp_knob, note_edit), AUTOMATION's
+ * (PLAY, the counts, the list: ui_events.c). Nothing is stored under these ids: ux_seq.c uxq_vtext reads each, ui_input.c
+ * seq_view_turn turns it with the inherited page's handler. Ids past every track setting, below the fields of 0xC0 */
+enum { ID_SQ_STRETCH = 0xA0, ID_SQ_REPEAT, ID_SQ_NUDGE, ID_SQ_HEAD, ID_SQ_HRATE, ID_SQ_HDIR, ID_SQ_HIVL, ID_SQ_TYPE, ID_SQ_VAL,
+       ID_SQ_VAL2, ID_SQ_TYPE2, ID_SQ_VALB, ID_SQ_VAL2B, ID_SQ_EVERY, ID_SQ_FOCUS, ID_SQ_PITCH, ID_SQ_MOVE, ID_SQ_PLAY,
+       ID_SQ_EVENTS, ID_SQ_LOCKS, ID_SQ_ROW, ID_SQ_ESTEP, ID_SQ_EPARAM, ID_SQ_EVAL, ID_SQ_RNG, ID_SQ_RNGB, ID_SQ_END };   /* (RNG:
+                                                         * WALK's, OCT's and an ARP's RANGE, MODE / ORDER's own row) */
+typedef char sqv_ids_ok[(uint32_t)P_COUNT <= (uint32_t)ID_SQ_STRETCH && (uint32_t)ID_SQ_END <= (uint32_t)ID_FO_OP ? 1 : -1];
+static int sqv_is(uint32_t id) { return id >= ID_SQ_STRETCH && id < ID_SQ_END; }
 static const param_desc_t *fld_ref(uint32_t id, int16_t **valp);   /* (ui_dx.c) its descriptor, its value (a scratch) */
 static void fld_turn(uint32_t id, int32_t steps, uint32_t knob);    /* (ui_dx.c) turned steps detents of KNOB knob (0..3) */
 static uint32_t dx_lane_picked(void);                   /* (ui_dx.c) the drum picked, 0..7 (BD .. CB): DRUM-X's SOUND's LEVEL */
@@ -701,10 +712,11 @@ static const ux_row_t UXM_DRM_ROWS[] = {
     {UXM_H_FILTER, UXR_HEAD, 0}, {P_FTYPE, UXR_TRACK, 0}, {P_FCUT, UXR_TRACK, 0}, {P_FRES, UXR_TRACK, 0},
 };
 static const ux_more_t UXM_DRM = {UXM_DRM_ROWS, (uint8_t)(sizeof UXM_DRM_ROWS / sizeof UXM_DRM_ROWS[0])};
-/* (3b task 6) SCL's MORE: the track's two pitch moves in semitones (spec 2.5); ALL TRACKS (scale steps, every sequence) is
- * the KEY page's KNOB 4. ARP and ENV have none (their eight settings on two pages each) */
+/* (3b task 6) SCL's MORE: TRANSPOSE, every note the track plays in semitones (spec 2.5); ALL TRACKS (scale steps, every sequence)
+ * is the KEY page's KNOB 4. (3c-1 task 4: SEQ PITCH SEQ > MORE's, 3c-1 spec 2.4: one place a setting.) ARP and ENV have none
+ * (their eight settings on two pages each) */
 static const ux_row_t UXM_SCL_ROWS[] = {
-    {P_POFS, UXR_TRACK, 0}, {P_TRANS, UXR_TRACK, 0},
+    {P_TRANS, UXR_TRACK, 0},
 };
 static const ux_more_t UXM_SCL = {UXM_SCL_ROWS, (uint8_t)(sizeof UXM_SCL_ROWS / sizeof UXM_SCL_ROWS[0])};
 /* (3b task 7) LFO's MORE: the LFO's PHASE (where MODE TRIG starts it), then the STEPS (JIANT's MSEQ: sixteen levels the matrix's
@@ -745,6 +757,27 @@ static const ux_row_t UXM_FX_ROWS[] = {
 };
 typedef char uxm_fx_fits[sizeof UXM_FX_ROWS / sizeof UXM_FX_ROWS[0] <= 64u ? 1 : -1];   /* (ux_more.c: a list holds 64 at most) */
 static const ux_more_t UXM_FX = {UXM_FX_ROWS, (uint8_t)(sizeof UXM_FX_ROWS / sizeof UXM_FX_ROWS[0])};
+/* (ACID FM 3c-1 task 4) SEQ's MORE (spec 2.4): everything the inherited SEQ pages reached that STEPS, STEP EXTRAS and PATTERN do
+ * not: TRACK (JIANT's TRACK page), the picked step's (its heading names it, STEP 5: the two components of COMP and COMP 2, EVERY,
+ * NOTE's FOCUS PITCH MOVE), MUTATE, SHAPE (STRETCH: applied as you turn; ROTATE, SCL's until now), PLAYHEADS, AUTOMATION (PLAY,
+ * the counts, CLEAR asking first, then AUTO LIST's rows: OCT+ adds a lock or turns a record into the other kind). STEP right after
+ * TRACK (not the spec's fifth): the step picked on STEPS a few detents away (tests/ui_test.c's task race) */
+static const ux_row_t UXM_SEQ_ROWS[] = {
+    {UXM_H_TRACK, UXR_HEAD, 0}, {P_POFS, UXR_TRACK, 0}, {P_TCHAN, UXR_TRACK, 0}, {P_HVEL, UXR_TRACK, 0}, {P_HRQ, UXR_TRACK, 0},
+    {UXM_H_STEP, UXR_HEAD, 0}, {ID_SQ_TYPE, UXR_TRACK, 0}, {ID_SQ_VAL, UXR_TRACK, 0}, {ID_SQ_RNG, UXR_TRACK, 0},
+    {ID_SQ_VAL2, UXR_TRACK, 0}, {ID_SQ_TYPE2, UXR_TRACK, 0}, {ID_SQ_VALB, UXR_TRACK, 0}, {ID_SQ_RNGB, UXR_TRACK, 0},
+    {ID_SQ_VAL2B, UXR_TRACK, 0}, {ID_SQ_EVERY, UXR_TRACK, 0},
+    {ID_SQ_FOCUS, UXR_TRACK, 0}, {ID_SQ_PITCH, UXR_TRACK, 0}, {ID_SQ_MOVE, UXR_TRACK, 0},
+    {UXM_H_MUTATE, UXR_HEAD, 0}, {P_MSND, UXR_TRACK, 0}, {P_MPAT, UXR_TRACK, 0}, {P_MAMT, UXR_TRACK, 0}, {P_MMODE, UXR_TRACK, 0},
+    {UXM_H_SHAPE, UXR_HEAD, 0}, {ID_SQ_STRETCH, UXR_TRACK, 0}, {ID_SQ_REPEAT, UXR_TRACK, 0}, {ID_SQ_NUDGE, UXR_TRACK, 0},
+    {P_SOFS, UXR_TRACK, 0},
+    {UXM_H_HEADS, UXR_HEAD, 0}, {ID_SQ_HEAD, UXR_TRACK, 0}, {ID_SQ_HRATE, UXR_TRACK, 0}, {ID_SQ_HDIR, UXR_TRACK, 0},
+    {ID_SQ_HIVL, UXR_TRACK, 0},
+    {UXM_H_AUTO, UXR_HEAD, 0}, {ID_SQ_PLAY, UXR_TRACK, 0}, {ID_SQ_EVENTS, UXR_TRACK, 0}, {ID_SQ_LOCKS, UXR_TRACK, 0},
+    {UXM_A_CLRAUTO, UXR_ACTION, 0}, {ID_SQ_ROW, UXR_TRACK, 0}, {ID_SQ_ESTEP, UXR_TRACK, 0}, {ID_SQ_EPARAM, UXR_TRACK, 0},
+    {ID_SQ_EVAL, UXR_TRACK, 0},
+};
+static const ux_more_t UXM_SEQ = {UXM_SEQ_ROWS, (uint8_t)(sizeof UXM_SEQ_ROWS / sizeof UXM_SEQ_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -761,8 +794,8 @@ static const page_t PAGES[] = {
     {"MASTER", FAM_FX, SC_GLOBAL, GR_NONE, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}},   /* JIANT: clipper, drum bus, ducking */
     {"SCL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_QUANT, ID_ALLTR}},   /* (JIANT: ROOT, SCALE every melodic track's;
                                                          * 0.7.6: ALL TR, the global, where TRANS was: SCL 2 gone) */
-    {"CHORD", FAM_SCL, SC_TRACK, GR_NONE, {P_CHRD, P_CVOI, P_CSTR, P_SOFS}},   /* (0.6.81) a key plays a chord (seq.c); (ACID FM 3b
-                                                         * task 6) KNOB 4 ROTATE, the SCL layer's, reached without it (spec 2.5) */
+    {"CHORD", FAM_SCL, SC_TRACK, GR_NONE, {P_CHRD, P_CVOI, P_CSTR, 0xFF}},   /* (0.6.81) a key plays a chord (seq.c); (ACID FM 3c-1
+                                                         * task 4) KNOB 4 empty: ROTATE is SEQ > MORE's (3c-1 spec 2.4: one place) */
     {"EDIT 1", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E0, P_E1, P_E2, P_E3}},
     {"EDIT 2", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E4, P_E5, P_E6, P_E7}},
     {"WORDS", FAM_EDIT, SC_TRACK, GR_LYRIC, {P_VLANG, P_VLYR, P_E0, 0xFF}},   /* (0.8.5) VOICE: LANG LYRIC POS, OCT+ TYPE
@@ -805,24 +838,17 @@ static const page_t PAGES[] = {
     {"STEP", FAM_SEQ, SC_STEP, GR_ROLL, {0, 1, 3, 2}},   /* (ACID FM 3c-1 task 2: SEQ > STEPS, ux_seq.c) KNOB 1..4 the fields
                                                          * STEP NOTE FLAG TIME (ui_input.c step_edit): STEP NOTE ACC/SLD GATE */
     {"PATTERN", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SLEN, P_SDIV, P_SSWING, P_SGATE}},
-    {"NOTE", FAM_SEQ, SC_STEP, GR_ROLL, {4, 5, 6, 9}},   /* (0.6.81) the piano roll's edits: FOCUS PITCH MOVE; (0.6.92) MICRO */
-    {"STRETCH", FAM_SEQ, SC_TRACK, GR_SHAPE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.85) STRETCH REPEAT NUDGE (0.6.92: on the turn) ROTATE */
-    {"COMP", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.39) STEP TYPE and its two values */
-    {"COMP 2", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.82) the step's second component, EVERY */
-    {"PLAYHEADS", FAM_SEQ, SC_TRACK, GR_FUGUE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.52) three more playheads (fugue.c; was FUGUE) */
+    /* (ACID FM 3c-1 task 4) JIANT's NOTE, STRETCH, COMP, COMP 2, PLAYHEADS, TRACK, AUTOMATION, AUTO LIST and MUTATE pages gone:
+     * SEQ > MORE's rows (UXM_SEQ; their settings and the inherited handlers they turned: ui_input.c seq_view_turn) */
     /* (0.8.2) the pages above edit the piano roll and keep it in the panel (ui_graph.c roll_view); TRACK and the ones
      * after are the track's own, with their own graphs. (0.8.3) LENTE (ui.c lens_*) groups them by level, the table
      * as it was: PATTERN (PATTERN STRETCH PLAYHEADS TRACK MUTATE), BAR (STEP NOTE AUTOMATION AUTO LIST), STEP (NOTE
      * COMP COMP 2); SELECT zooms, a SEQ tap the level's next set */
-    {"TRACK", FAM_SEQ, SC_TRACK, GR_STEPS, {P_POFS, P_TCHAN, P_HVEL, P_HRQ}},   /* (0.6.92) PITCH CHANCE HUMAN REC Q */
     {"PHRASES", FAM_SEQ, SC_GLOBAL, GR_PATS, {0xFF, 0xFF, 0xFF, 0xFF}},    /* pattern loader (ui.c pat_load); 0.6.37: hidden */
     {"MIXER", FAM_TRK, SC_TRK, GR_TRK, {0, 1, 2, 3}},   /* GLO button; LEVEL PAN REV, (0.9.1) the DJ FILTER (was MUTE) */
     {"SONG", FAM_SEQ, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"STEP EXTRAS", FAM_SEQ, SC_STEP, GR_CHANCE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (ACID FM 3c-1 task 3: was CHANCE, hidden since
                                                          * 0.6.37) the picked step's RATCHET CHANCE CONDITION MICRO (ux_seq.c) */
-    {"AUTOMATION", FAM_SEQ, SC_TRACK, GR_MOTION, {0xFF, 0xFF, 0xFF, 0xFF}},
-    {"AUTO LIST", FAM_SEQ, SC_TRACK, GR_EVENTS, {0xFF, 0xFF, 0xFF, 0xFF}},   /* 1.1.5: the locks and events, edited */
-    {"MUTATE", FAM_SEQ, SC_TRACK, GR_MUTATE, {P_MSND, P_MPAT, P_MAMT, P_MMODE}},   /* (0.6.43) project.c mutate_poll */
     /* (0.8.5) LENTE everywhere (ui_lens.c): pages the mock-up added, appended (the table's order is no one's index) */
     {"VOICE 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_ALLOC, P_DETUNE, 0xFF, 0xFF}},   /* EDIT > TONE: ALLOC, UNISON's DETUNE (in
                                                          * TP since Felucca, on no page until now) */
@@ -860,6 +886,8 @@ static const page_t PAGES[] = {
     /* (ACID FM 3b task 8) FX's MORE (ui_lens.c CE_FX: SENDS, SPACE, MASTER, MORE): a track page (its DISTORT and AUTO PAN rows the
      * track's: REC + FX clears their automation, ui_input.c rec_clear_auto), the buses' rows globals */
     {"FX MORE", FAM_FX, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_FX},
+    /* (ACID FM 3c-1 task 4) SEQ's MORE (ui_lens.c CE_SEQ: STEPS, STEP EXTRAS, PATTERN, MORE): a track page */
+    {"SEQ MORE", FAM_SEQ, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SEQ},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot_tr[NTRK];   /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit, a track each (3b task 7: as FM6's
@@ -911,6 +939,10 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
     }
     if (t && fld_is(id))                              /* (3b task 5) FM6's operator, DRUM-X's kit: their bytes */
         return fld_ref(id, valp);
+    if (sqv_is(id)) {                                 /* (3c-1 task 4) SEQ > MORE's views: no value of their own (ux_seq.c) */
+        *valp = 0;
+        return 0;
+    }
     if (!t) {
         *valp = &song.g[id];
         if (song.g[G_RTYPE] == 3 && (id == G_RPRE || id == G_RDAMP))   /* (0.6.5) RESO: PITCH, FOLW in their slots */

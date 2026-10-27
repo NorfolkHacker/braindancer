@@ -29,13 +29,14 @@ static int ux_section_owns(uint32_t sec)
 }
 
 /* (3c-1 task 2 fix 1) the page shown is drawn by ux_section_draw (ui_draw.c routes it, ui_input.c lights its knob column): its
- * section's on the ux engine, and on SEQ one of the pages ux_seq.c draws (uxq_owns: STEPS, task 3: STEP EXTRAS, PATTERN; the
- * inherited SEQ pages JIANT's until task 4 moves them) */
+ * section's on the ux engine, and on SEQ one of the pages ux_seq.c draws (uxq_owns: STEPS, task 3: STEP EXTRAS, PATTERN) or
+ * (task 4) its MORE; PHRASES (PRESETS' pattern loader) JIANT's */
 static uint32_t nav_sec(void);
 static int ux_page_owns(void)
 {
     uint32_t sec = nav_sec();
-    return ux_section_owns(sec) && (sec != UXS_SEC_SEQ || uxq_owns());
+    return ux_section_owns(sec) && (sec != UXS_SEC_SEQ || uxq_owns() || (!ui.home && ui.page < NPAGES &&
+                                                                         PAGES[ui.page].graph == GR_MORE));
 }
 static void ux_section_draw(void);   /* cur_page(): header, knobs from its PAGES row, its picture, status, footer */
 /* the panel's list (between ux_panel_begin / ux_panel_end): each shown row's name and value, the picked one (sel, a

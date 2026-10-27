@@ -130,8 +130,8 @@ else {
     ok((await p.locator('#fm1 .ctl[data-ctl="F3"] .klay').textContent()) === "RPT 1/8", `page ${w}px: the FX layer on the keys (F3 RPT 1/8)`);
     await p.fill("#q", "borrar paso");
     ok(/CLR STEP/.test(await p.locator("#cmds .cmd").first().innerText()), `page ${w}px: the search filters (borrar paso -> CLR STEP)`);
-    await p.locator('.pg[data-ce="CE_SEQ"]').nth(5).click();   /* (ACID FM 3c-1 task 2: STEPS first; task 3: STEP EXTRAS, TRACK the sixth) */
-    ok(/SEQ · TRACK · TRACK/.test(await p.locator("#pagebox").innerText()), `page ${w}px: a page of the map opens its screen and knobs`);
+    await p.locator('.pg[data-ce="CE_SEQ"]').nth(2).click();   /* (ACID FM 3c-1 task 4: STEPS STEP EXTRAS PATTERN MORE) */
+    ok(/SEQ · PATTERN · PATTERN/.test(await p.locator("#pagebox").innerText()), `page ${w}px: a page of the map opens its screen and knobs`);
     const imgsOk = await p.evaluate(() => Promise.all([...document.images].filter((i) => i.src.includes("/shots/")).map((i) =>
       i.complete ? i.naturalWidth === 240 : new Promise((r) => { i.onload = () => r(i.naturalWidth === 240); i.onerror = () => r(false); }))).then((a) => a.every(Boolean)));
     ok(imgsOk, `page ${w}px: the screens shown load`);

@@ -657,7 +657,8 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_FM6_ALG4, S_EDIT_FM6_TURN, S_EDIT_DRUM_1, S_EDIT_DRUM_2, S_EDIT_DRUM_3,
        S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL,
        S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS, S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM,
-       S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_COUNT };
+       S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_SEQ_MORE, S_SEQ_MORE_END, S_SEQ_MORE_DRUM,
+       S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo",
@@ -704,7 +705,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_fm6_more", "edit_fm6_alg4", "edit_fm6_turn", "edit_drum_1", "edit_drum_2", "edit_drum_3", "edit_drum_more",
     "edit_drum_muted", "edit_drum_more_end", "layer_edit", "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state",
     "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64", "seq_steps_drum",
-    "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32"};
+    "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end", "seq_more_drum", "seq_lock",
+    "seq_extras_echo"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -960,6 +962,24 @@ static void fx_more_at(uint32_t id, uint32_t kind)      /* FX > MORE, the row (k
         uxm_at[uxm_key()].top = (uint8_t)t;
     }
 }
+/* (ACID FM 3c-1 task 4) SEQ > MORE, the row (kind, id) picked and in sight: JIANT's SEQ pages' scenes (COMP, PLAYHEADS, MUTATE,
+ * AUTOMATION, AUTO LIST, TRACK, STRETCH, NOTE) are its rows now; the step picked kept */
+static void seq_more_at(uint32_t kind, uint32_t id)
+{
+    uint32_t r, c = ui.cursor;
+    memset(uxm_at, 0, sizeof uxm_at);
+    nav_scene(SEC_SEQ, "MORE");
+    cursor_set((int32_t)c);
+    for (r = 0; r < UXM_SEQ.n && !(UXM_SEQ.rows[r].kind == kind && UXM_SEQ.rows[r].id == id); r++)
+        ;
+    uxm_at[uxm_key()].sel = (uint8_t)r;
+    uxm_at[uxm_key()].top = 0;
+    {
+        uint32_t sl = r, t = r;
+        uxm_fix(&UXM_SEQ, uxm_mask(&UXM_SEQ), &sl, &t);
+        uxm_at[uxm_key()].top = (uint8_t)t;
+    }
+}
 static void setup(int s)
 {
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
@@ -1114,7 +1134,7 @@ static void setup(int s)
         TSEL->p[P_SLEN] = 8;
         fg_set[song.sel][0] = (fg_set_t){7, 0, 2}; fg_set[song.sel][1] = (fg_set_t){3, 1, -3};
         fg_head[song.sel][0].idx = 5; fg_head[song.sel][1].idx = 2; song.playing = 1; fg_ui = 1;
-        go_page(GR_FUGUE);
+        seq_more_at(UXR_TRACK, ID_SQ_HEAD);
         break;
     case S_PFLASH:                                      /* (0.6.51) a page changed by hand: its name big, held */
         go_title("LFO"); page_flash(); pf_ms = fm1_ms - 200u;
@@ -1134,7 +1154,7 @@ static void setup(int s)
         break;
     case S_MUTATE:                                      /* (0.6.43) three tracks mutating, bar 5 */
         trk[0].p[P_MSND] = 2; trk[0].p[P_MPAT] = 4; trk[1].p[P_MSND] = 3; trk[1].p[P_MMODE] = 1; trk[3].p[P_MPAT] = 1;
-        seq_line(); bar_n = 5; go_page(GR_MUTATE);
+        seq_line(); bar_n = 5; seq_more_at(UXR_TRACK, P_MSND);
         break;
     case S_COMP:                                        /* (0.6.39) an ARP NOTES step: UP-DN x6 over two octaves */
     case S_COMP_TRIG:                                   /* .. a TRIG 3:4 */
@@ -1144,9 +1164,9 @@ static void setup(int s)
         TSEL->step[0].carg = s == S_COMP ? CP_ARG(2u, 3u, 1u) : s == S_COMP_ECHO ? 2u : 7u;
         if (s == S_COMP_ECHO) { TSEL->step[10].comp = CP_JUMP; TSEL->step[10].carg = 2; TSEL->step[12].comp = CP_PULSE; }
         TSEL->step[4].comp = CP_TRIG; step_set_chance(&TSEL->step[6], 50); step_set_ratchet(&TSEL->step[8], 3);
-        go_page(GR_COMP);
+        ui.cursor = 0; seq_more_at(UXR_TRACK, ID_SQ_TYPE);
         break;
-    case S_MOTION: seq_line(); motion_set_event(TSEL, 4, P_REV, 40); go_page(GR_MOTION); break;
+    case S_MOTION: seq_line(); motion_set_event(TSEL, 4, P_REV, 40); seq_more_at(UXR_TRACK, ID_SQ_PLAY); break;
     /* 1.1.5, the REC layer (REC held): over HOME, the settings as they come (CLICK OFF, COUNT-IN OFF, LEVEL MID);
      * over STEP armed, CLICK REC, COUNT-IN 2 BARS, LEVEL HIGH (KNOB 2 just turned); a song playing on an empty
      * track (CLEAR dimmed: STOP TO EDIT) */
@@ -1254,7 +1274,7 @@ static void setup(int s)
     case S_DLG_MUT_BACK:                                /* (0.9.3) MUTATE turned OFF on T3 after mutating: the NOTICE */
         song.sel = 2; trk[2].p[P_MSND] = 2; trk[2].p[P_MPAT] = 4; mut_keep();
         trk[2].p[P_MSND] = trk[2].p[P_MPAT] = 0;
-        go_page(GR_MUTATE);
+        seq_more_at(UXR_TRACK, P_MSND);
         ui.confirm = CF_MUT_BACK; ui.confirm_trk = 2;
         break;
     case S_DLG_DICE_SOUND: case S_DLG_DICE_SEQ: case S_DLG_DICE_FX: {   /* (0.8.5) the DICE dialog: BEFORE / NOW */
@@ -1365,7 +1385,8 @@ static void setup(int s)
         TSEL->p[P_ROOT] = 9; TSEL->p[P_SCALE] = 2; TSEL->p[P_QUANT] = 1;
         nav_scene(SEC_SCL, "KEY");
         break;
-    case S_SHIFT: seq_line(); TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
+    case S_SHIFT: seq_line(); TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; seq_more_at(UXR_TRACK, P_POFS); break;   /* (0.6.92: TRACK;
+                                                         * 3c-1 task 4: SEQ > MORE's) */
     case S_ARP: uxs_seen = 0x3FFu; ux_hot_k = -1; nav_scene(SEC_ARP, "ARP"); break;   /* (3b task 6: OFF, the chord as played) */
     case S_VOICE:                                       /* (3b task 4: FM6's: a synth's VOICE is EDIT's ux page 3; task 5: FM6's */
         eng(ENGI_FM6); TSEL->engine = TSEL->eng_req;    /* MORE, its VOICE rows) */
@@ -1458,8 +1479,8 @@ static void setup(int s)
     case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("GLOBAL"); break;
     case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("GLOBAL"); break;
     case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("GLOBAL"); break;
-    case S_MOTION_REC: song.rec = 1u << song.sel; go_page(GR_MOTION); break;    /* recording into the motion */
-    case S_MOTION_OFF: song.playing = 0; go_page(GR_MOTION); ui.act = 4; break;  /* stopped, CLEAR picked */
+    case S_MOTION_REC: song.rec = 1u << song.sel; seq_more_at(UXR_TRACK, ID_SQ_PLAY); break;    /* recording into the motion */
+    case S_MOTION_OFF: song.playing = 0; seq_more_at(UXR_ACTION, UXM_A_CLRAUTO); break;  /* stopped, CLEAR picked */
     case S_MOTION_CARD: {                                          /* #63: EDIT 1 (ACID FM 3a: was HOME), MOTION drives KNOB 1
                                                                     * and 3 (3 just turned) */
         const page_t *pg;
@@ -1597,10 +1618,14 @@ static void setup(int s)
         if (s == S_LENTE_BAR_LONG)                      /* (0.8.5) ALL TR at the right of the bars' strip */
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
-                  "STEPS" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : "COMP");   /* (0.9.2: NOTE the roll; the
-                                                         * step large on COMP: TIE, REST, LONG there) */
-        cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
+        ui.cursor = (uint8_t)(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
+        if (s == S_LENTE_PAT || s == S_LENTE_BAR || s == S_LENTE_BAR_LONG) {   /* (3c-1 task 4: STRETCH NOTE COMP COMP 2: SEQ >
+                                                         * MORE's rows) */
+            nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : "STEPS");
+            cursor_set(ui.cursor);
+        } else
+            seq_more_at(UXR_TRACK, s == S_LENTE_STRETCH ? ID_SQ_STRETCH : s == S_LENTE_STEP_COMP2 ? ID_SQ_TYPE2 :
+                        s == S_LENTE_STEP ? ID_SQ_FOCUS : ID_SQ_TYPE);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
         break;
     }
@@ -1610,8 +1635,13 @@ static void setup(int s)
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEPS" : "COMP");
-        cursor_set(20); ui.lane = 4;
+        ui.cursor = 20; ui.lane = 4;
+        if (s == S_LENTE_STEP_DRUM)
+            seq_more_at(UXR_TRACK, ID_SQ_TYPE);
+        else {
+            nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : "STEPS");
+            cursor_set(20);
+        }
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name
      * (the placeholder); 12 of the widest letters, the cursor past them; playing (OCT+ dim) */
@@ -1688,7 +1718,7 @@ static void setup(int s)
     case S_MOTION_LOCKS:
         seq_line();
         motion_set_event(TSEL, 1, P_REV, 40); motion_set_lock(TSEL, 2, P_REV, 100); motion_set_lock(TSEL, 6, P_ATK, 90);
-        go_page(GR_MOTION);
+        seq_more_at(UXR_TRACK, ID_SQ_LOCKS);
         break;
     /* 1.1.5 SEQ > AUTO LIST (ui_events.c): locks and automation events of the track, the 4th row selected, its
      * VALUE just turned; empty (+ ADD LOCK: step 5, the first knob of HOME); a DRUM track's long list, scrolled
@@ -1698,16 +1728,16 @@ static void setup(int s)
         motion_set_event(TSEL, 0, P_LRATE, 70); motion_set_lock(TSEL, 2, P_REV, 100); motion_set_lock(TSEL, 2, P_ED_FLT, -30);
         motion_set_lock(TSEL, 6, P_ATK, 90); motion_set_lock(TSEL, 6, P_E4, 20); motion_set_event(TSEL, 8, P_PAN, -40);
         motion_set_lock(TSEL, 11, P_LD_FLT, 50); motion_set_lock(TSEL, 13, P_DLY, 80); motion_set_lock(TSEL, 15, P_GLIDE, 60);
-        go_page(GR_EVENTS); ui.ev_row = 3; ui.hot_col = 3; ui.hot_t = 30;
+        seq_more_at(UXR_TRACK, ID_SQ_EVAL); ui.ev_row = 3;
         break;
-    case S_AUTO_LIST_ADD: ui.cursor = 4; go_page(GR_EVENTS); break;
+    case S_AUTO_LIST_ADD: ui.cursor = 4; seq_more_at(UXR_TRACK, ID_SQ_ROW); break;
     case S_AUTO_LIST_DRUM: {
         uint32_t i;
         drum(0); go_page(GR_ROLL);
         for (i = 0; i < 12u; i++)
             motion_set_lock(TSEL, i, i & 1u ? P_LN0 + i % 8u : P_E0 + i % 8u, 100);
         motion_set_event(TSEL, 15, P_REV, 127);
-        go_page(GR_EVENTS); ui.ev_row = 13; song.playing = 1;
+        seq_more_at(UXR_TRACK, ID_SQ_EPARAM); ui.ev_row = 9; song.playing = 1;
         break;
     }
     case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER); break;   /* EDIT NAME lit */
@@ -1805,7 +1835,7 @@ static void setup(int s)
         drum(0);
         trk[3].step[0].comp = s == S_COMP_TOUCH ? CP_TOUCH : CP_ECHO;
         trk[3].step[0].carg = s == S_COMP_TOUCH ? 1u : (uint8_t)(2u | CP_ECHO_EVEN);
-        go_page(GR_COMP); ui.cursor = 0;
+        ui.cursor = 0; seq_more_at(UXR_TRACK, ID_SQ_TYPE);
         break;
     /* (0.9.18) SEQ > COMP: the step the component goes on framed (THEME, a tab at the foot), the steps with the same
      * component a bar on top (ACCENT), those with another a thin one; a synth's roll, a kit's grid, a JUMP's step */
@@ -1824,8 +1854,8 @@ static void setup(int s)
         t->step[12].comp = CP_ECHO; t->step[12].carg = 2;
         t->step[4].comp = CP_RAND; t->step[4].carg = 2;
         t->step[9].comp = CP_JUMP; t->step[9].carg = 3;
-        nav_scene(SEC_SEQ, "COMP");
-        cursor_set(s == S_COMP_JUMP ? 9 : 12);
+        ui.cursor = (uint8_t)(s == S_COMP_JUMP ? 9 : 12);
+        seq_more_at(UXR_TRACK, s == S_COMP_JUMP ? ID_SQ_VAL : ID_SQ_TYPE);
         break;
     }
     /* (ACID FM 3b task 4) EDIT on a synth track, the ux pages (ux_section.c): SOUND (its first opening: the hint), TONE,
@@ -1969,9 +1999,48 @@ static void setup(int s)
         nav_scene(SEC_SEQ, "STEPS");
         cursor_set(20); ui.lane = 1;
         break;
+    /* (ACID FM 3c-1 task 4) SEQ > MORE: step 5 an ARP (DOWN over two octaves) and a RATCHET x5 RISE, EVERY 1ST OF 4, TYPE picked;
+     * the list scrolled to its end (AUTO LIST's rows, two records); a DRUM track's (no FOCUS PITCH MOVE); the lock card: a step
+     * held on the roll, EDIT's MORE the locks' page, MORPH locked, KNOB 2 just turned (LOCK . MORPH . value) */
+    case S_SEQ_MORE: case S_SEQ_MORE_END: {
+        track_t *t = TSEL;
+        static const uint8_t CH3[3] = {48, 51, 55};
+        eng(ENGI_ANALOG); t->engine = t->eng_req;
+        track_defaults_steps(t); t->p[P_SLEN] = 16;
+        step_put(&t->step[4], ST_NOTE, SF_ACCENT, 3, CH3);
+        t->step[4].comp = CP_ARPN; t->step[4].carg = (uint8_t)CP_ARG(1u, 5u, 1u);
+        t->step[4].comp2 = CP_ECHO; t->step[4].carg2 = (uint8_t)(3u | CP_ECHO_RISE);
+        ST_EVERY_SET(&t->step[4], EV_1_4);
+        motion_set_event(t, 2, P_FCUT, 40); motion_set_lock(t, 4, P_REV, 100);
+        ui.cursor = 4; ui.comp_at = 0;
+        seq_more_at(UXR_TRACK, s == S_SEQ_MORE ? ID_SQ_TYPE : ID_SQ_EVAL);
+        break;
+    }
+    case S_SEQ_MORE_DRUM:
+        drum(0); ui.cursor = 4;
+        trk[3].step[4].comp = CP_ECHO; trk[3].step[4].carg = (uint8_t)(2u | CP_ECHO_EVEN);
+        seq_more_at(UXR_TRACK, ID_SQ_TYPE);
+        break;
+    case S_SEQ_LOCK: {
+        uint32_t r, i;
+        roll_scene(S_ROLL_ACID);
+        for (i = 0; i < NPAGES && PAGES[i].more != &UXM_SYN; i++)
+            ;
+        for (r = 0; r < UXM_SYN.n && UXM_SYN.rows[r].id != P_MORPH; r++)
+            ;
+        memset(uxm_at, 0, sizeof uxm_at);
+        uxm_at[nav_key(SEC_EDIT) % NAV_KEYS].sel = (uint8_t)r;
+        ui.plk_src = (uint8_t)(i + 1u);
+        motion_set_lock(TSEL, ui.cursor, P_MORPH, 90);
+        ui.entry_open = 1;
+        fm1_in.notes = 1u << 10;
+        ux_knob_touch(1);
+        break;
+    }
     /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS: the acid line with chances, ratchets (x2 .. x4), conditions and micro timing (step 5
      * picked: 1ST OF 4, late; KNOB 3 just turned); a DRUM track's; PATTERN: 16 steps straight, 32 swung with a short gate */
     case S_SEQ_EXTRAS:
+    case S_SEQ_EXTRAS_ECHO:                             /* (task 4: step 5 an ECHO ratchet, x6 FADE: its parts, its shape) */
     case S_SEQ_PATTERN:
     case S_SEQ_PATTERN_32: {
         static const uint8_t LINE[16] = {36, 0, 48, 43, 43, 0, 46, 48, 41, 0, 53, 48, 36, 0, 39, 43};
@@ -1987,9 +2056,9 @@ static void setup(int s)
                 step_put(&t->step[i], ST_REST, 0, 0, &nt);
             else
                 step_put(&t->step[i], ST_NOTE, i % 16u == 4u || i % 16u == 11u ? SF_ACCENT : i % 16u == 7u ? SF_SLIDE : 0u, 1, &nt);
-            if (s == S_SEQ_EXTRAS) step_set_chance(&t->step[i], CHN[i]);
+            if (s == S_SEQ_EXTRAS || s == S_SEQ_EXTRAS_ECHO) step_set_chance(&t->step[i], CHN[i]);
         }
-        if (s == S_SEQ_EXTRAS) {
+        if (s == S_SEQ_EXTRAS || s == S_SEQ_EXTRAS_ECHO) {
             step_set_ratchet(&t->step[3], 2); step_set_ratchet(&t->step[8], 3); step_set_ratchet(&t->step[12], 4);
             t->step[4].comp = CP_TRIG; t->step[4].carg = 5;    /* (1ST OF 4; EVERY 2ND) */
             t->step[10].comp = CP_TRIG; t->step[10].carg = 1;
@@ -1998,7 +2067,8 @@ static void setup(int s)
         if (s == S_SEQ_PATTERN_32) { t->p[P_SSWING] = 60; t->p[P_SGATE] = 40; }
         else { t->p[P_SSWING] = 0; t->p[P_SGATE] = 100; }
         song.playing = 1; t->seq_idx = s == S_SEQ_PATTERN_32 ? 21u : 8u;
-        nav_scene(SEC_SEQ, s == S_SEQ_EXTRAS ? "STEP EXTRAS" : "PATTERN");
+        if (s == S_SEQ_EXTRAS_ECHO) { t->step[4].comp2 = CP_ECHO; t->step[4].carg2 = 4u; }   /* (x6 FADE) */
+        nav_scene(SEC_SEQ, s == S_SEQ_PATTERN || s == S_SEQ_PATTERN_32 ? "PATTERN" : "STEP EXTRAS");
         cursor_set(4);
         if (s == S_SEQ_EXTRAS) ux_knob_touch(2);
         break;
@@ -2015,8 +2085,8 @@ static void setup(int s)
         trk[3].step[2].comp = CP_ECHO; trk[3].step[2].carg = 1;
         trk[3].step[10].comp = CP_ECHO; trk[3].step[10].carg = 0;
         trk[3].step[6].comp = CP_RAND; trk[3].step[6].carg = 1;
-        nav_scene(SEC_SEQ, "COMP");
-        cursor_set(10); ui.lane = 3;
+        ui.cursor = 10; ui.lane = 3;
+        seq_more_at(UXR_TRACK, ID_SQ_TYPE);
         break;
     default: break;
     }
@@ -2451,23 +2521,7 @@ static void align_sweeps(void)
             nm_draw_field();
         }
         name_close();
-        cur_name = st ? "sweep LINE: piano roll" : "sweep FLAT: piano roll";
-        roll_scene(S_ROLL_ACID);
-        for (v = 0; v + PR_ROWS <= 128; v++) {
-            proll.lo = (uint8_t)v;
-            cv_begin(240, H_GRAPH, T_SURF);
-            graph_roll(TSEL, T_THEME);
-        }
-        state(); pal(UI_ACID_INDEX);
-        cur_name = st ? "sweep LINE: drum kits" : "sweep FLAT: drum kits";
-        for (k = 0; k < 4u; k++) {
-            drum(k);
-            for (i = 0; i < NLANE; i++) {
-                ui.lane = (uint8_t)i;
-                cv_begin(240, H_GRAPH, T_SURF);
-                graph_grid(TSEL, T_THEME);
-            }
-        }
+        /* (ACID FM 3c-1 task 4) JIANT's piano roll and DRUM grid sweeps gone with them (ux_seq.c's roll, grid: the SEQ scenes) */
         state(); pal(UI_ACID_INDEX);
         cur_name = st ? "sweep LINE: mixer" : "sweep FLAT: mixer";
         go_page(GR_TRK);

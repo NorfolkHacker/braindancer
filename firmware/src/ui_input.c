@@ -854,12 +854,6 @@ static void step_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
-    if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (0.6.92) KNOB 4 MICRO, on a kit too */
-        if (slot == 3u) micro_edit(steps);
-        else if (drum_track(TSEL)) { if (slot == 0u) cursor_turn(steps); else ui_message("A KIT: STEP + MICRO"); }
-        else note_edit(slot, steps);
-        return;
-    }
     if (drum_track(TSEL)) {
         grid_edit(slot, steps);
         return;
@@ -914,6 +908,13 @@ static void step_edit(uint32_t slot, int32_t steps)
  * (x2..x8, a shape, a pitch step: ui.c rat_ui_set); a component is one at a time: turning to OFF or CHANCE takes it
  * away. (0.6.82) COMP 2: the step's second component the same way (no CHANCE there; its RATCH an ECHO). KNOB 4: EVERY
  * (0.6.92), but an ARP's LAP (0.9.17), RATCH's DIV x PITCH (0.9.18) and WALK's RATE (0.6.98) */
+static void every_turn(step_t *st, int32_t e)          /* (0.6.92) EVERY a detent on, in the knob's order (core.h EV_ORD) */
+{
+    uint32_t i;
+    for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
+    i = (uint32_t)clamp((int32_t)i + e, 0, EV_N - 1);
+    ST_EVERY_SET(st, EV_ORD[i]);
+}
 static void comp_knob(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
@@ -924,10 +925,7 @@ static void comp_knob(uint32_t slot, int32_t steps)
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
     if (slot == 3u && !(v == COMP_ARPQ && k == 0u) && v != COMP_ARPN && v != COMP_RATCH && v != COMP_WALK &&
         v != COMP_OCT) {
-        uint32_t i;                                     /* (0.6.92) EVERY: the step's components' loops, in the knob's order */
-        for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
-        i = (uint32_t)clamp((int32_t)i + e, 0, EV_N - 1);
-        ST_EVERY_SET(st, EV_ORD[i]);
+        every_turn(st, e);                              /* (0.6.92) EVERY: the step's components' loops */
         return;
     }
     if (slot == 1u) {
@@ -1045,6 +1043,79 @@ static void shape_knob(uint32_t slot, int32_t steps)
         knob_cap(TSEL, P_SOFS);
     }
 }
+/* (0.6.52) PLAYHEADS: KNOB 1 HEAD, 2 RATE, 3 DIR, 4 INTERVAL of the head picked (fugue.c; 3c-1 task 4: SEQ > MORE's rows) */
+static void fugue_knob(uint32_t slot, int32_t steps)
+{
+    fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
+    int32_t d = steps > 0 ? 1 : -1;
+    if (slot == 0u) fg_ui = (uint8_t)clamp((int32_t)fg_ui + d, 0, FG_HEADS - 1);
+    else if (slot == 1u) f->rate = (uint8_t)clamp((int32_t)f->rate + d, 0, FG_NRATE - 1);
+    else if (slot == 2u) f->dir = (uint8_t)clamp((int32_t)f->dir + d, 0, 3);
+    else f->ivl = (int8_t)clamp((int32_t)f->ivl + d, -14, 14);
+}
+/* (ACID FM 3c-1 task 4) SEQ > MORE's view id (params.c ID_SQ_*) turned steps detents: the inherited SEQ page's handler, as its
+ * knob turned it (STRETCH's shape_knob, PLAYHEADS' fugue_knob, COMP's and COMP 2's comp_knob on the step picked, NOTE's
+ * note_edit, AUTOMATION's PLAY, AUTO LIST's ev_knob); the step's ones not while a song plays (STOP TO EDIT), as there */
+static void seq_view_turn(uint32_t id, int32_t steps)
+{
+    step_t *st = &TSEL->step[ui.cursor % NSTEP];
+    int32_t e = steps > 0 ? 1 : -1;
+    if (id <= ID_SQ_NUDGE) {
+        shape_knob(id - ID_SQ_STRETCH, steps);
+        return;
+    }
+    if (id <= ID_SQ_HIVL) {
+        fugue_knob(id - ID_SQ_HEAD, steps);
+        return;
+    }
+    if (id >= ID_SQ_ROW && id <= ID_SQ_EVAL) {
+        ev_knob(id - ID_SQ_ROW, steps);
+        return;
+    }
+    if (id == ID_SQ_EVENTS || id == ID_SQ_LOCKS) {      /* (a count: the list below edits them; spec 0 rule 6) */
+        ui_message("ROW PICKS ONE BELOW");
+        return;
+    }
+    if (chain_busy()) {
+        ui_message("STOP TO EDIT");
+        return;
+    }
+    if (id == ID_SQ_PLAY)
+        motion_set_enabled(TSEL, steps > 0);
+    else if (id == ID_SQ_EVERY)
+        every_turn(st, e);
+    else if (id >= ID_SQ_FOCUS && id <= ID_SQ_MOVE)
+        note_edit(id - ID_SQ_FOCUS, steps);
+    else {                                              /* TYPE and its values; TYPE 2 and its */
+        uint32_t w = id == ID_SQ_RNG || id == ID_SQ_RNGB ? 3u : (id - ID_SQ_TYPE) % 3u, v;
+        comp_k = (uint8_t)(id >= ID_SQ_TYPE2 && id != ID_SQ_RNG);
+        v = comp_view();
+        if ((w == 1u || w == 3u) && (v == COMP_WALK || v == COMP_OCT || v == COMP_ARPN || v == COMP_ARPQ)) {
+            uint8_t *ap = comp_k ? &st->carg2 : &st->carg;   /* (MODE / ORDER and RANGE their own rows, spec 2.2: COMP's one */
+            int32_t d = e;                              /* list of MODE x RANGE, ORDER x RANGE split; a detent a turn) */
+            if (v == COMP_WALK || v == COMP_OCT)
+                *ap = CP_WARG(CP_WRATE(*ap), w == 1u ? (uint32_t)clamp((int32_t)CP_WMODE(*ap) + d, 0, 3) : CP_WMODE(*ap),
+                              w == 3u ? (uint32_t)clamp((int32_t)CP_WRNG(*ap) + d, 0, 3) : CP_WRNG(*ap));
+            else
+                *ap = CP_ARG(w == 1u ? (uint32_t)clamp((int32_t)CP_ORD(*ap) + d, 0, 3) : CP_ORD(*ap), CP_RATE(*ap),
+                             w == 3u ? (uint32_t)clamp((int32_t)CP_RNG(*ap) + d, 0, 3) : CP_RNG(*ap));
+        } else if (w >= 2u && v == COMP_RATCH) {        /* (RATCH's RATE and PITCH STEP their own rows: COMP's one list */
+            uint32_t pit = rat_pit_of(st, comp_k), r = rat_ui(st, comp_k);   /* DIV x PITCH split) */
+            if (w == 2u)
+                st->ctime = (uint8_t)((st->ctime & ~7u) | (uint32_t)clamp((int32_t)CT_DIV(st) + e, 0, (int32_t)CT_NDIV - 1));
+            else if (!r)                                /* (x1: no pitch step, as COMP's) */
+                ui_message("X1: NO PITCH STEP");
+            else
+                rat_ui_set(st, comp_k, r, (uint32_t)clamp((int32_t)pit + e, 0, 3));
+        } else if (w == 2u && v == COMP_ARPN) {         /* (an ARP's RATE alone: its EVERY is the step's EVERY row) */
+            uint8_t *ap = comp_k ? &st->carg2 : &st->carg;
+            uint32_t r;
+            for (r = 0; r < 3u && ARP_RCODE[r] != CP_RATE(*ap); r++) {}
+            *ap = CP_ARG(CP_ORD(*ap), ARP_RCODE[clamp((int32_t)r + e, 0, 3)], CP_RNG(*ap));
+        } else if (w < 3u)
+            comp_knob(w + 1u, steps);
+    }
+}
 /* (ACID FM 3b, factored out of edit_param) setting id of track t (0: a global) turned steps detents of KNOB knob (0..3, its
  * acceleration): the write every page's knob does (params.c param_ref), a MORE row's too (ux_more.c): the value, the views
  * written back (TRACKS, LOAD, the LFO's MODE / PHASE), the turn recorded (AUTOMATION) and heard by MIDI LEARN (knob_cap) */
@@ -1061,6 +1132,10 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
     }
     if (t && fld_is(id)) {                              /* (3b task 5) FM6's operator, DRUM-X's kit: as JIANT's pages wrote */
         fld_turn(id, steps, knob);
+        return;
+    }
+    if (t && sqv_is(id)) {                              /* (3c-1 task 4) SEQ > MORE's views: the inherited pages' handlers */
+        seq_view_turn(id, steps);
         return;
     }
     d = param_ref(t, id, &vp);
@@ -1101,6 +1176,8 @@ static void edit_param(uint32_t slot, int32_t steps)
     if (pg->graph == GR_MORE) {                         /* (ACID FM 3b) MORE: KNOB 1 the row, KNOB 2 its value (ux_more.c); */
         if (slot >= 2u)                                 /* 3 and 4 say so (spec 0 rule 6: never nothing silently) */
             ui_message(UXM_K34);
+        else if (slot == 1u && chain_busy() && uxq_more_busy())   /* (3c-1 task 4) SEQ's TRACK rows: not while a song plays, */
+            ui_message("STOP TO EDIT");                 /* as JIANT's TRACK page */
         else
             (void)ux_more_knob(slot, steps);
         return;
@@ -1109,44 +1186,28 @@ static void edit_param(uint32_t slot, int32_t steps)
         live_knob(slot, steps);
         return;
     }
-    if (pg->graph == GR_COMP) {
-        comp_knob(slot, steps);
-        return;
-    }
-    if (pg->graph == GR_SHAPE) {                        /* (0.6.85) STRETCH, REPEAT (picked, OCT+ does it), NUDGE (now) */
-        shape_knob(slot, steps);
-        return;
-    }
-    if (pg->graph == GR_FUGUE) {                        /* (0.6.52) HEAD, RATE, DIR, INTERVAL */
-        fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
-        int32_t d = steps > 0 ? 1 : -1;
-        if (slot == 0u) fg_ui = (uint8_t)clamp((int32_t)fg_ui + d, 0, FG_HEADS - 1);
-        else if (slot == 1u) f->rate = (uint8_t)clamp((int32_t)f->rate + d, 0, FG_NRATE - 1);
-        else if (slot == 2u) f->dir = (uint8_t)clamp((int32_t)f->dir + d, 0, 3);
-        else f->ivl = (int8_t)clamp((int32_t)f->ivl + d, -14, 14);
-        return;
-    }
+    /* (ACID FM 3c-1 task 4) COMP, COMP 2, STRETCH, PLAYHEADS, AUTO LIST, AUTOMATION: SEQ > MORE's rows (seq_view_turn) */
     if (pg->graph == GR_CHANCE) {                       /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS, the step picked on STEPS: */
         step_t *st = &TSEL->step[ui.cursor];            /* RATCHET (the inherited CHANCE page's RATCH x1..x4), CHANCE (its */
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }   /* CHANCE), CONDITION (COMP's TRIG), MICRO (NOTE's) */
-        if (slot == 0u)
-            step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + steps, 1, 4));
-        else if (slot == 1u)
+        if (slot == 0u) {                               /* (task 4) the step's ratchet as shown (an ECHO's x2..x8 too): x1..x4 */
+            uint32_t sh;                                /* written; past x4 from an ECHO kept (SEQ > MORE's STEP rows set it) */
+            int32_t ek, to = (int32_t)uxq_ratch(st, &sh, &ek) + steps;
+            if (ek >= 0 && steps > 0 && to > 4) {         /* (left from x6: x4) */
+                ui_message("X5 TO X8: SEQ MORE, TYPE");
+                return;
+            }
+            if (ek == 0)
+                st->comp = st->carg = 0;
+            else if (ek == 1)
+                st->comp2 = st->carg2 = 0;
+            step_set_ratchet(st, (uint32_t)clamp(to, 1, 4));
+        } else if (slot == 1u)
             step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
         else if (slot == 2u)                            /* (pre-review fix: the step's TRIG, the note on its loops) */
             uxq_cond_turn(st, steps > 0 ? 1 : -1);
         else
             micro_edit(steps);
-        return;
-    }
-    if (pg->graph == GR_EVENTS) {                         /* AUTO LIST (ui_events.c) */
-        ev_knob(slot, steps);
-        return;
-    }
-    if (pg->graph == GR_MOTION) {
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        if (slot == 0u) motion_set_enabled(TSEL, steps > 0);
-        else if (slot == 3u) ui.act = steps > 0 ? 4u : 0u;
         return;
     }
     if (pg->graph == GR_SONG) {
@@ -1255,6 +1316,10 @@ static void edit_param(uint32_t slot, int32_t steps)
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;
     }
+    if (pg->fam == FAM_SCL && pg->id[slot & 3u] == 0xFFu) {   /* (3c-1 task 4) CHORD's KNOB 4, ROTATE until 0.4: where it is now */
+        ui_message("ROTATE IS IN SEQ MORE");
+        return;
+    }
     param_knob(page_trk(pg), page_id(pg, slot), steps, slot);
 }
 
@@ -1265,13 +1330,9 @@ static void act_do(void)
     uint32_t c = act_col(), id, k = (uint32_t)song.g[G_SLOT] - 1u;
     if (!c--)
         return;
-    if (cur_page()->graph == GR_MOTION) {
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        confirm_open(CF_CLEAR_MOTION, song.sel);
-        return;
-    }
-    /* (0.6.99 .. ACID FM 3b task 8) FX > PUNCH's CLEAR (the punch-in lane, a dialog): FX > MORE's CLEAR LANE (ux_more.c) */
-    if (cur_page()->graph == GR_EVENTS) {
+    /* (0.6.99 .. ACID FM 3b task 8) FX > PUNCH's CLEAR (the punch-in lane, a dialog): FX > MORE's CLEAR LANE (ux_more.c); (3c-1
+     * task 4) AUTOMATION's CLEAR: SEQ > MORE's (the same dialog) */
+    if (uxq_more_kind() == UXQ_MK_LIST) {               /* (3c-1 task 4) SEQ > MORE's AUTO LIST rows */
         ev_oct();
         return;
     }
@@ -1428,6 +1489,10 @@ static void rec_clear_auto(uint32_t b)
                     for (k = P_M1SRC; k <= P_M4AMT; k++)
                         m[k / 32u] |= 1u << (k % 32u);
             }
+        if (f == FAM_SCL) {                             /* (3c-1 task 4) ROTATE and SEQ PITCH, SEQ > MORE's now: still the SCL */
+            m[P_SOFS / 32u] |= 1u << (P_SOFS % 32u);    /* layer's K3 K4 (ui_layer.c LY_SCL), cleared with SCL's as before */
+            m[P_POFS / 32u] |= 1u << (P_POFS % 32u);
+        }
         if (f == FAM_EDIT)                              /* (3b task 5 fix) every drum's LEVEL: DRUM-X's SOUND names P_LN0 */
             for (k = P_LN0; k <= P_LN7; k++)            /* and turns the drum picked's (params.c page_id), as JIANT's */
                 m[k / 32u] |= 1u << (k % 32u);          /* LEVELS pages held all eight */
@@ -1471,7 +1536,8 @@ static void ent_message(void)
 static void ent_knob(uint32_t k, int32_t s)
 {
     int32_t d = clamp(s, -4, 4);                        /* (detents, not accelerated: small ranges) */
-    if (k == 0u && !ui.ent_arp) ui.ent_len = (uint8_t)clamp(ui.ent_len + d, 1, TSEL->p[P_SLEN] > 16 ? 16 : TSEL->p[P_SLEN]);
+    if (!ui.ent_arp) ui.ent_len = (uint8_t)clamp(ui.ent_len + d, 1, TSEL->p[P_SLEN] > 16 ? 16 : TSEL->p[P_SLEN]);   /* (3c-1
+                                                         * task 4: KNOB 4's) */
     else if (k == 0u) ui.ent_res = (uint8_t)clamp(ui.ent_res + d, 1, 4);
     else if (k == 1u) ui.ent_ord = (uint8_t)clamp(ui.ent_ord + d, 0, 3);
     else ui.ent_oct = (uint8_t)clamp(ui.ent_oct + d, 1, 3);
@@ -1932,12 +1998,13 @@ static void seq_clr_step(void)
         ui_message("STOP TO EDIT");
         return;
     }
-    if (pg->graph == GR_EVENTS) {
+    if (uxq_more_kind() == UXQ_MK_LIST) {               /* (3c-1 task 4) SEQ > MORE's AUTO LIST rows: the record */
         ev_delete();
         return;
     }
-    if (pg->graph == GR_ROLL && pg->id[0] == 4u && ui.pr_focus && TSEL->step[ui.cursor].time == ST_NOTE &&
-        ui.pr_focus <= TSEL->step[ui.cursor].n) {       /* (0.6.81) SEQ > NOTE: the note in focus alone */
+    if (uxq_more_kind() == UXQ_MK_STEP && ui.pr_focus && TSEL->step[ui.cursor].time == ST_NOTE &&
+        ui.pr_focus <= TSEL->step[ui.cursor].n) {       /* (0.6.81) SEQ > NOTE (3c-1 task 4: MORE's STEP rows, FOCUS on a
+                                                         * note): the note in focus alone */
         note_drop(&TSEL->step[ui.cursor], ui.pr_focus - 1u);
         ui.pr_focus = 0;
         ui_message("NOTE DELETED");
@@ -2433,7 +2500,8 @@ static void ui_input_frame(void)
                 break;
             if (live_page())                            /* (0.9.11) LIVE: OCT- RETURN / held BYPASS, OCT+ COMMIT */
                 break;                                  /* (ui_live.c live_frame) */
-            if (!ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_MUTATE) {   /* (0.6.43) KEEP, FREEZE */
+            if (!ui.confirm && uxq_more_kind() == UXQ_MK_MUTATE) {   /* (0.6.43) KEEP, FREEZE (3c-1 task 4: SEQ > MORE's MUTATE
+                                                         * rows, MUTATE's page's keys) */
                 if (b == B_OCTUP) { mut_keep(); ui_message("ANCHOR: THE MUSIC NOW"); }
                 else { mut_freeze = (uint8_t)!mut_freeze; ui_message(mut_freeze ? "MUTATE FROZEN" : "MUTATE FREE"); }
                 break;
@@ -2541,12 +2609,15 @@ static void ui_input_frame(void)
             continue;
         }
         if (ui.entry_open && !ui.home && cur_page()->graph == GR_ROLL && !grid_on() && lock_held() &&
-            (k == 0u || (ui.ent_arp && k < 3u))) {      /* (0.6.37) a chord being entered: KNOB 1 its LEN (ARP: RES), */
-            ent_knob(k, s);                             /* 2 ORDER, 3 OCT; the others still lock */
-            continue;
+            (ui.ent_arp ? k < 3u : k == 3u)) {          /* (0.6.37) a chord being entered: (3c-1 task 4) KNOB 4 its LEN, KNOB 1 */
+            ent_knob(k, s);                             /* .. 3 the locks' (KNOB 1 a MORE row's pick, as on the grid); ARP: */
+            ux_knob_touch(k);                           /* KNOB 1 RES, 2 ORDER, 3 OCT, KNOB 4 the lock's (a MORE list's: */
+            continue;                                   /* its pick) */
         }
         if ((held = lock_held()) != 0u) {               /* a step held on STEP: KNOB k locks (parameter locks) */
-            lock_turn(k, s, held);
+            lock_turn(ui.entry_open && ui.ent_arp && k == 3u && lock_src() && lock_src()->graph == GR_MORE ? 0u : k, s,
+                      held);                            /* (3c-1 task 4: ARP, KNOB 4 picks the MORE row, KNOB 1's job) */
+            ux_knob_touch(k);
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
             continue;

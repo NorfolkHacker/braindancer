@@ -18,7 +18,7 @@
  * 5. REC Q 50 %: half way to the grid (within a 64th of half the offset); 100 %: on it.
  * 6. saved and loaded: every value on 64 steps of a synth and a kit's, the block 'M' 'F' there; without it (what firmware
  *    before 0.9.1 reads: the rest of the project as it is) the sixteenth below.
- * 7. SEQ > NOTE's KNOB 4 a 64th a detent, -32 .. +31, "+5/64" (the editor's STEP_SET keeping a step's MICRO: editor_test.c). */
+ * 7. SEQ > NOTE's KNOB 4 (3c-1 task 4: STEP EXTRAS' MICRO) a 64th a detent, -32 .. +31, "+5/64" (the editor's STEP_SET keeping a step's MICRO: editor_test.c). */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
 
@@ -317,7 +317,7 @@ static void test_micro_edit(void)
     st->time = ST_NOTE; st->n = 1; st->note[0] = 60; st->vel = 90;
     song.sel = 0;
     open_family(FAM_SEQ);
-    for (i = 0; i < NPAGES && !(PAGES[i].scope == SC_STEP && PAGES[i].id[0] == 4u); i++)
+    for (i = 0; i < NPAGES && PAGES[i].graph != GR_CHANCE; i++)   /* (ACID FM 3c-1 task 4: STEP EXTRAS' MICRO, NOTE's page gone) */
         ;
     ui.page = (uint8_t)i; page_entered();
     ui.cursor = 2;
@@ -333,7 +333,11 @@ static void test_micro_edit(void)
     ck("SEQ > NOTE's KNOB 4: a 64th a detent, -32 .. +31 at the ends", ok);
     ST_MICRO_SET(st, 5);
     ui.force = 1; frame();
-    ck("  its card: \"+5/64\"", str_eq(ui.col[3] + str_len("MICRO|"), "+5/64||") || !memcmp(ui.col[3], "MICRO|+5/64|", 12));
+    {
+        ux_knob_t k[4];
+        uxs_knobs(cur_page(), k);
+        ck("  its knob: \"+5\" (STEP EXTRAS' MICRO)", str_eq(k[3].label, "MICRO") && str_eq(k[3].value, "+5"));
+    }
 }
 
 int main(void)

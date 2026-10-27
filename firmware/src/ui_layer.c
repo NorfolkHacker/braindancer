@@ -971,7 +971,7 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             return mut_back_ok() ? LS_OFF : LS_DIM;
         }
         if (p == TL_STEP) {                             /* (0.9.2) G5 */
-            str_cpy(nm, cur_page()->graph == GR_EVENTS ? "DEL REC" : "CLR STEP", 12);
+            str_cpy(nm, uxq_more_kind() == UXQ_MK_LIST ? "DEL REC" : "CLR STEP", 12);
             return busy;
         }
         if (!tl_cell(TSEL, p))

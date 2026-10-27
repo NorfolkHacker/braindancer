@@ -82,8 +82,21 @@ static const uxc_id_t UXC_JIANT[] = {
     {SEC_SCL, TRK, P_ROOT}, {SEC_SCL, TRK, P_SCALE}, {SEC_SCL, TRK, P_QUANT}, {SEC_SCL, TRK, P_CHRD},
     {SEC_SCL, TRK, P_CVOI}, {SEC_SCL, TRK, P_CSTR}, {SEC_SCL, TRK, ID_ALLTR},
     /* (3b task 6) the SCL layer's (ui_layer.c LY_SCL: ROOT SCALE ROTATE PITCH): spec 2.5 puts ROTATE and PITCH OFFSET (SEQ
-     * PITCH) in the section too, reached without the layer (spec 0 rule 2) */
-    {SEC_SCL, TRK, P_SOFS}, {SEC_SCL, TRK, P_POFS},
+     * PITCH) in the section too, reached without the layer (spec 0 rule 2); (3c-1 task 4) SEQ's now, 3c-1 spec 2.4 (below) */
+    /* (ACID FM 3c-1 task 4) SEQ: what JIANT's SEQ pages reached (as 9869027 left them: PATTERN, TRACK, MUTATE, STRETCH's ROTATE,
+     * then the controls that are no setting of their own, params.c's ID_SQ_* views: STRETCH's STRETCH REPEAT NUDGE, PLAYHEADS'
+     * four, COMP's and COMP 2's TYPE and values, EVERY, NOTE's FOCUS PITCH MOVE, AUTOMATION's PLAY and counts, AUTO LIST's four).
+     * STEPS' and STEP EXTRAS' knobs are a step's fields (tests/ui_test.c test_t32_*, test_t33_*); AUTOMATION's CLEAR an action
+     * (main: checked below) */
+    {SEC_SEQ, TRK, P_SLEN}, {SEC_SEQ, TRK, P_SDIV}, {SEC_SEQ, TRK, P_SSWING}, {SEC_SEQ, TRK, P_SGATE},
+    {SEC_SEQ, TRK, P_POFS}, {SEC_SEQ, TRK, P_TCHAN}, {SEC_SEQ, TRK, P_HVEL}, {SEC_SEQ, TRK, P_HRQ},
+    {SEC_SEQ, TRK, P_MSND}, {SEC_SEQ, TRK, P_MPAT}, {SEC_SEQ, TRK, P_MAMT}, {SEC_SEQ, TRK, P_MMODE}, {SEC_SEQ, TRK, P_SOFS},
+    {SEC_SEQ, TRK, ID_SQ_STRETCH}, {SEC_SEQ, TRK, ID_SQ_REPEAT}, {SEC_SEQ, TRK, ID_SQ_NUDGE}, {SEC_SEQ, TRK, ID_SQ_HEAD},
+    {SEC_SEQ, TRK, ID_SQ_HRATE}, {SEC_SEQ, TRK, ID_SQ_HDIR}, {SEC_SEQ, TRK, ID_SQ_HIVL}, {SEC_SEQ, TRK, ID_SQ_TYPE},
+    {SEC_SEQ, TRK, ID_SQ_VAL}, {SEC_SEQ, TRK, ID_SQ_VAL2}, {SEC_SEQ, TRK, ID_SQ_TYPE2}, {SEC_SEQ, TRK, ID_SQ_VALB},
+    {SEC_SEQ, TRK, ID_SQ_VAL2B}, {SEC_SEQ, TRK, ID_SQ_EVERY}, {SEC_SEQ, TRK, ID_SQ_FOCUS}, {SEC_SEQ, TRK, ID_SQ_PITCH},
+    {SEC_SEQ, TRK, ID_SQ_MOVE}, {SEC_SEQ, TRK, ID_SQ_PLAY}, {SEC_SEQ, TRK, ID_SQ_EVENTS}, {SEC_SEQ, TRK, ID_SQ_LOCKS},
+    {SEC_SEQ, TRK, ID_SQ_ROW}, {SEC_SEQ, TRK, ID_SQ_ESTEP}, {SEC_SEQ, TRK, ID_SQ_EPARAM}, {SEC_SEQ, TRK, ID_SQ_EVAL},
     /* (3b task 5) the patch's and the kit's fields JIANT's special pages turned, reviewed from ui_fm6op.c and ui_dx.c as of
      * d96b47f (params.c's views name them): FM6's OPERATOR (OP, RATIO, FINE, LEVEL), OP ENV (OP, STAGE, RATE, LEVEL),
      * OPERATOR 2 (OP, MODE, DETUNE, VEL); DRUM-X's SOUND (LANE, SIDE, PITCH, PMOD), SOUND 2 (LANE, DECAY, NOISE, COLOR), SOUND 3
@@ -116,12 +129,12 @@ static const uxc_hid_t UXC_HIDDEN[] = {
                            "DRIVE (KIT 2), three drives were one too many"},
 };
 
-static const uint8_t UXC_SECS[] = {UXC_SYN, UXC_FM6, UXC_DRM, UXC_DIG, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL};
+static const uint8_t UXC_SECS[] = {UXC_SYN, UXC_FM6, UXC_DRM, UXC_DIG, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL, SEC_SEQ};
 static const char *uxc_key_name(uint32_t key)
 {
     return key == UXC_FM6 ? "UXC_FM6" : key == UXC_DRM ? "UXC_DRM" : key == UXC_DIG ? "UXC_DIG" : key == UXC_SYN ? "UXC_SYN" :
            key == SEC_ENV ? "SEC_ENV" : key == SEC_LFO ? "SEC_LFO" : key == SEC_FX ? "SEC_FX" : key == SEC_ARP ? "SEC_ARP" :
-           key == SEC_SCL ? "SEC_SCL" : "?";
+           key == SEC_SCL ? "SEC_SCL" : key == SEC_SEQ ? "SEC_SEQ" : "?";
 }
 
 /* the settings chain key reaches now, a bit each ([glo][id]): its pages' knobs (MOD's slots, the drum picked's: all), and
@@ -211,7 +224,12 @@ static void uxc_dump(void)
 static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",   /* (page title, then the label's start) */
                                        "MORE DIST TYPE", "MORE DLY TYPE", "MORE SLICE MODE",   /* (fix round 1, M2: MORE's
                                                          * KNOB 2, JIANT's words kept: RECTIFY, ANALOG, DIGITAL, STUTTER) */
-                                       "EXTRAS CONDITION"};   /* (ACID FM 3c-1 task 3: the conditions in plain words, 3c-1 spec
+                                       "EXTRAS CONDITION",
+                                       "MORE RATE", "MORE ORDER", "MORE MODE", "MORE TYPE", "MORE PULSE", "MORE CONDITION",
+                                       "MORE SHIFT", "MORE DIRECTION", "MORE RANGE", "MORE FOCUS", "MORE BEND", "MORE LAP",
+                                       "MORE INTERVAL", "MORE RATCHET", "MORE EVERY"};   /* (3c-1 task 4: SEQ > MORE's step options
+                                                         * and heads in words with their unit, "UP 5 DEG", "1ST OF 4", "PING-PONG":
+                                                         * the list's row spells them in UF_HDR, KNOB 2 a smaller face) */   /* (ACID FM 3c-1 task 3: the conditions in plain words, 3c-1 spec
                                                          * 2.2: EVERY 2ND, 1ST OF 4 .., none fits UF_VAL's 48 px) */
 static uint32_t uxc_wn, uxc_wbad, uxc_whdr, uxc_wmore;
 static void uxc_wfit(const char *where, const char *v)
@@ -459,6 +477,57 @@ static int uxc_widths(void)
         *TSEL = keep;
         ui.cursor = 0;
     }
+    {   /* (ACID FM 3c-1 task 4) SEQ > MORE's views (ux_seq.c uxq_vtext) as KNOB 2 shows them: every TYPE of both components with
+         * every value (ECHO's shapes and pitch steps, DIV), EVERY, STRETCH REPEAT, the heads, FOCUS / PITCH, the list's; their names
+         * as KNOB 2's label */
+        track_t keep = *TSEL;
+        uint32_t c, a, r, id;
+        set_engine_of(TSEL, ENGI_ANALOG); TSEL->engine = TSEL->eng_req;
+        ui.cursor = 0;
+        step_clear(&TSEL->step[0]);
+        TSEL->step[0].time = ST_NOTE; TSEL->step[0].n = 3; TSEL->step[0].note[0] = 0; TSEL->step[0].note[1] = 127;
+        for (c = 0; c < COMP_N; c++)
+            for (a = 0; a < 256u; a += (c == COMP_RATCH || c == COMP_ARPN || c == COMP_ARPQ || c == COMP_WALK || c == COMP_OCT) ? 1u : 3u) {
+                TSEL->step[0].comp = TSEL->step[0].comp2 = COMP_CP[c];
+                TSEL->step[0].carg = TSEL->step[0].carg2 = (uint8_t)a;
+                TSEL->step[0].ctime = (uint8_t)(a & 7u);
+                ST_EVERY_SET(&TSEL->step[0], a % EV_N);
+                ui.comp_at = 0; ui.comp_sel = (uint8_t)c;
+                for (id = ID_SQ_TYPE; id < ID_SQ_END; id = id == ID_SQ_EVERY ? ID_SQ_RNG : id + 1u) {
+                    char v[24], w[48];
+                    uint8_t bar;
+                    const char *nm = uxq_vtext(id, v, sizeof v, &bar);
+                    str_cpy(w, "MORE ", sizeof w);
+                    str_cpy(w + str_len(w), nm, sizeof w - str_len(w));
+                    if (nm[0]) uxc_wfit(w, v);
+                    if (nm[0] && text_w(&UF_LBL, nm) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+                    uxc_wmore++;
+                }
+            }
+        for (r = 0; r < 15u * 9u; r++) {               /* STRETCH, REPEAT; the heads; FOCUS on each note; the counts and list */
+            char v[24];
+            uint8_t bar;
+            shp_i = (uint8_t)(r % 15u); shp_r = (uint8_t)(r % 9u);
+            fg_ui = (uint8_t)(r % FG_HEADS);
+            fg_set[song.sel % NTRK][fg_ui].rate = (uint8_t)(r % FG_NRATE);
+            fg_set[song.sel % NTRK][fg_ui].dir = (uint8_t)(r & 3u);
+            fg_set[song.sel % NTRK][fg_ui].ivl = (int8_t)((int32_t)(r % 29u) - 14);
+            ui.pr_focus = (uint8_t)(r % 4u);
+            for (id = ID_SQ_STRETCH; id < ID_SQ_END; id++) {
+                char w[48];
+                const char *nm;
+                if ((id >= ID_SQ_TYPE && id <= ID_SQ_EVERY) || id >= ID_SQ_RNG) continue;
+                nm = uxq_vtext(id, v, sizeof v, &bar);
+                str_cpy(w, "MORE ", sizeof w);
+                str_cpy(w + str_len(w), nm, sizeof w - str_len(w));
+                uxc_wfit(w, v);
+                if (text_w(&UF_LBL, nm) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+            }
+        }
+        *TSEL = keep;
+        ui.pr_focus = 0; shp_i = 7u; shp_r = 0u; fg_ui = 0; ui.comp_at = 0;
+        memset(&fg_set[song.sel % NTRK], 0, sizeof fg_set[0]);
+    }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);
     printf("ux widths: %u values a 3b knob can show (%u on MORE pages' knob rows), %u names kept whole in a smaller face "
@@ -501,12 +570,12 @@ int main(int argc, char **argv)
             ok = 0;
         }
     }
-    bad += check("ux cover: every setting JIANT's six sections reached is on a page or a MORE row, or hidden on purpose",
-                 ok && n > 150u);
+    bad += check("ux cover: every setting JIANT's six sections (3c-1 task 4: and SEQ) reached is on a page or a MORE row, or hidden on "
+                 "purpose", ok && n > 190u);
     ok = 1;                                             /* the hidden list: reviewed rows only */
     for (i = 0; i < NELEM(UXC_HIDDEN); i++) {
         const uxc_hid_t *h = &UXC_HIDDEN[i];
-        int real = h->glo ? h->id < G_COUNT : h->id < P_COUNT || fld_is(h->id);   /* (a stored setting: no view, kept as it
+        int real = h->glo ? h->id < G_COUNT : h->id < P_COUNT || fld_is(h->id) || sqv_is(h->id);   /* (a stored setting: no view, kept as it
                                                          * is; 3b task 5: a patch's or kit's byte, stored with them) */
         if (!uxc_in_jiant(h->key, h->glo, h->id) || !real || !h->why || str_len(h->why) < 8u ||
             uxc_hidden(h->key, h->glo, h->id) != h) {
@@ -543,15 +612,25 @@ int main(int argc, char **argv)
                                                          * drum's FEEDBACK shown, gen.c sets the snare's) */
     uxc_reach(UXC_FM6, 1, got);
     ok &= got[TRK][ID_FO_DTUN] && got[TRK][ID_FO_ELVL] && got[TRK][P_E7] && !got[TRK][P_ALLOC];
-    {   /* (3b task 6) the SCL layer's four (ui_layer.c LY_SCL) all in SCL's chain: ROTATE on a page, PITCH (SEQ PITCH) in MORE;
-         * ENV's eight on its two pages (STAGE gone, none in a MORE), ARP's eight on its two */
+    {   /* (3b task 6) the SCL layer's four (ui_layer.c LY_SCL): ROOT SCALE in SCL's chain; (3c-1 task 4) ROTATE and SEQ PITCH in
+         * SEQ's MORE alone (3c-1 spec 2.4: one place a setting); ENV's eight on its two pages, ARP's eight on its two */
         uint32_t k;
         uxc_reach(SEC_SCL, 1, got);
-        for (k = 0; k < 4u; k++)
+        for (k = 0; k < 2u; k++)
             ok &= got[LY_SCL.scope == SC_GLOBAL][LY_SCL.id[k]];
-        ok &= got[TRK][P_TRANS];
-        uxc_reach(SEC_SCL, 0, got);
-        ok &= got[TRK][P_SOFS] && !got[TRK][P_POFS];
+        ok &= got[TRK][P_TRANS] && !got[TRK][P_SOFS] && !got[TRK][P_POFS];
+        uxc_reach(SEC_SEQ, 1, got);
+        for (k = 2; k < 4u; k++)
+            ok &= got[LY_SCL.scope == SC_GLOBAL][LY_SCL.id[k]];
+        ok &= got[TRK][ID_SQ_TYPE2] && got[TRK][ID_SQ_EVAL] && got[TRK][P_HRQ];
+        uxc_reach(SEC_SEQ, 0, got);
+        ok &= got[TRK][P_SLEN] && !got[TRK][P_SOFS] && !got[TRK][ID_SQ_STRETCH];
+        {                                               /* AUTOMATION's CLEAR: SEQ's MORE, its dialog JIANT's */
+            uint32_t r;
+            for (r = 0; r < UXM_SEQ.n && !(UXM_SEQ.rows[r].kind == UXR_ACTION && UXM_SEQ.rows[r].id == UXM_A_CLRAUTO); r++)
+                ;
+            ok &= r < UXM_SEQ.n && UXM_ACT[UXM_A_CLRAUTO].ask == CF_CLEAR_MOTION;
+        }
         uxc_reach(SEC_ENV, 0, got);
         ok &= got[TRK][P_ATK] && got[TRK][P_ELOOP] && got[TRK][P_ED_SHP];
         uxc_reach(SEC_ARP, 0, got);

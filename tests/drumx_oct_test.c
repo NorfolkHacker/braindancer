@@ -730,7 +730,8 @@ static int ui_part(void)
     dt->step[2].comp = CP_TOUCH;
     dt->step[2].carg = 2;
     step_norm(&dt->step[2], 1u);                        /* (0.9.18) TOUCH: the mode of the step's lanes (as a load does) */
-    go_page(GR_COMP);
+    seqm_pick(UXR_TRACK, ID_SQ_TYPE);                   /* (ACID FM 3c-1 task 4: COMP's, SEQ > MORE's rows) */
+    comp_k = 0;
     cursor_set(2);
     frame();
     ok = comp_view() == COMP_OFF && !dt->step[2].comp && step_lmode(&dt->step[2], DV_KICK) == LM_FLAM;

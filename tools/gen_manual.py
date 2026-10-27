@@ -36,9 +36,8 @@ PAGE_SHOT = {
     'CE_FM6': {'SOUND': 'edit_fm6_1', 'OPERATOR': 'edit_fm6_2', 'OP ENV': 'edit_fm6_3', 'MORE': 'edit_fm6_more'},
     'CE_DRM': {'KIT': 'edit_drum_1', 'SOUND': 'edit_drum_2', 'SOUND 2': 'edit_drum_3', 'MORE': 'edit_drum_more'},
     # (3b task 5: FM6's and DRUM-X's EDIT on the ux pages, their creatures gone)
-    'SEQ': {'STEP EXTRAS': 'seq_extras', 'PATTERN': 'seq_pattern', 'STRETCH': 'lente_stretch',   # (3c-1 task 3: ux pages) 'PLAYHEADS': 'fugue', 'TRACK': 'shift',
-            'MUTATE': 'mutate', 'STEPS': 'seq_steps', 'NOTE': 'lente_step_note',   # (3c-1 task 2: STEPS on the ux pages)
-            'COMP': 'lente_step_comp', 'COMP 2': 'lente_step_comp2', 'AUTOMATION': 'motion', 'AUTO LIST': 'auto_list'},
+    'SEQ': {'STEPS': 'seq_steps', 'STEP EXTRAS': 'seq_extras', 'PATTERN': 'seq_pattern', 'MORE': 'seq_more'},   # (3c-1 tasks 2-4:
+            # STEPS, STEP EXTRAS, PATTERN, MORE on the ux pages; JIANT's STRETCH .. AUTO LIST MORE's rows)
     'FX': {'SENDS': 'fx_1', 'SPACE': 'fx_2', 'MASTER': 'fx_3', 'MORE': 'fx_more'},   # (3b task 8: FX on the ux pages)
     'GLO': {'MANO': 'live_mano', 'RIELES': 'live_rieles', 'MIXER': 'mixer', 'SENDS': 'glo_sends',
             'GLOBAL': 'global', 'SYSTEM': 'system'},

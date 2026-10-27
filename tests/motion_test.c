@@ -682,7 +682,7 @@ static int lock_ui(void)
     bad += check("from FX: the knobs lock DIST CHO DLY REV", lock_id(0) == P_DIST && lock_id(3) == P_REV);
     lk_down(k4); turn(EN_K4, 5); lk_up(k4);
     bad += check("  step 5 gets a REV lock", motion_lock_get(t, 4, P_REV, &v) && v == t->p[P_REV] + 5);
-    go_page(GR_MOTION);
+    seqm_pick(UXR_TRACK, ID_SQ_PLAY);                    /* (ACID FM 3c-1 task 4: AUTOMATION's, SEQ > MORE's rows) */
     frame();
     bad += check("AUTOMATION: EVENT 0, LOCK 3", motion_count(t) - motion_lock_count(t) == 0u && motion_lock_count(t) == 3u);
     /* the roll: the step being entered is the one held */
@@ -769,22 +769,23 @@ static int auto_list(void)
     t->p[P_SLEN] = 16;
     go_home();
     cursor_set(4);
-    go_page(GR_EVENTS);
+    seqm_pick(UXR_TRACK, ID_SQ_ROW);                     /* (ACID FM 3c-1 task 4: AUTO LIST's, SEQ > MORE's rows: ROW STEP SETTING
+                                                         * VALUE where its KNOB 1..4 were) */
     frame();
     id0 = ui.ev_id;
     bad += check("AUTO LIST: empty, + ADD LOCK selected on the SEQ cursor's step, the first knob of the sound page",
-        cur_page()->graph == GR_EVENTS && ev_rows(idx) == 0u && ui.ev_step == 4u && id0 == lock_id(0) &&
+        uxq_more_kind() == UXQ_MK_LIST && ev_rows(idx) == 0u && ui.ev_step == 4u && id0 == lock_id(0) &&
         str_eq(act_name(4), "ADD") && act_ready());
     press(B_OCTUP);
     bad += check("  OCT+: a lock on step 5 at the sound's own value, its row selected",
         motion_lock_get(t, 4, id0, &v) && v == motion_base_value(t, id0) && ev_row(ev_rows(idx)) == 0u &&
         str_eq(ui.msg, "LOCK ADDED") && motion_enabled(t));
-    turn(EN_K4, 3);
+    seqm(ID_SQ_EVAL, 3);
     bad += check("  KNOB 4: its value", motion_lock_get(t, 4, id0, &v) && v == motion_base_value(t, id0) + 3);
-    turn(EN_K2, 2);
+    seqm(ID_SQ_ESTEP, 2);
     bad += check("  KNOB 2: its step (5 -> 7), the value kept", !motion_lock_get(t, 4, id0, &v) &&
         motion_lock_get(t, 6, id0, &v) && v == motion_base_value(t, id0) + 3);
-    turn(EN_K3, 1);
+    seqm(ID_SQ_EPARAM, 1);
     id1 = MOTION_ID(&motion.event[0]);
     bad += check("  KNOB 3: the next parameter, from the sound's own value", id1 > id0 && ev_id_ok(t, id1) &&
         motion_lock_get(t, 6, id1, &v) && v == motion_base_value(t, id1) && motion_count(t) == 1u);
@@ -795,14 +796,14 @@ static int auto_list(void)
     ok = motion_lock_count(t) == 1u;
     press(B_OCTUP);
     bad += check("  and back (AUTO -> LOCK -> AUTO)", ok && !motion_lock_count(t));
-    turn(EN_K1, 1);
-    turn(EN_K2, -2);
+    seqm(ID_SQ_ROW, 1);
+    seqm(ID_SQ_ESTEP, -2);
     bad += check("  KNOB 1: + ADD LOCK; KNOB 2 there: its step", ev_row(ev_rows(idx)) == 1u && ui.ev_step == 2u);
     press(B_OCTUP);
     bad += check("  OCT+: a second lock on step 3, first in the list (by step)", motion_count(t) == 2u &&
         motion_lock_get(t, 2, ui.ev_id, &v) && ev_rows(idx) == 2u && ev_row(2u) == 0u &&
         (motion.event[idx[0]].place & 63u) == 2u);
-    turn(EN_K1, 5);
+    seqm(ID_SQ_ROW, 5);
     press(B_OCTUP);
     bad += check("  OCT+ on + ADD LOCK where one is: ALREADY LISTED, that row selected", motion_count(t) == 2u &&
         str_eq(ui.msg, "ALREADY LISTED") && ev_row(2u) == 0u);
@@ -810,19 +811,19 @@ static int auto_list(void)
     bad += check("  0.9.2 SEQ + G5 (was EDIT): the row's record goes", motion_count(t) == 1u && !motion_lock_get(t, 2, ui.ev_id, &v) &&
         str_eq(ui.msg, "DELETED"));
     frames(2000);
-    turn(EN_K1, -5);
+    seqm(ID_SQ_ROW, -5);
     v = motion.event[0].value;
-    turn(EN_K4, 2); turn(EN_K4, 2); turn(EN_K4, 2);
+    seqm(ID_SQ_EVAL, 2); seqm(ID_SQ_EVAL, 2); seqm(ID_SQ_EVAL, 2);
     ok = motion.event[0].value == v + 6;
     bad += check("  KNOB 4 turned on (three turns): the value", ok);
     v = motion.event[0].value;
     chain.running = 1;
-    turn(EN_K4, 1);
+    seqm(ID_SQ_EVAL, 1);
     bad += check("  a song playing: STOP TO EDIT", motion.event[0].value == v && str_eq(ui.msg, "STOP TO EDIT"));
     chain.running = 0;
     for (i = 0; motion.count < MOTION_MAX; i++)          /* the 64 used (track 2) */
         motion_set_event(&trk[1], i % NSTEP, i < NSTEP ? P_REV : P_DLY, 10);
-    turn(EN_K1, 5);
+    seqm(ID_SQ_ROW, 5);
     press(B_OCTUP);
     bad += check("  the 64 used: OCT+ adds nothing, AUTOMATION FULL", motion_count(t) == 1u &&
         str_eq(ui.msg, "AUTOMATION FULL") && !act_ready());
@@ -838,9 +839,7 @@ static int auto_list(void)
         ev_name(t, P_ED_FLT, a); ev_name(t, P_LD_FLT, b);
         bad += check("  names: ENV FILTER / LFO FILTER", str_eq(a, "ENV FILTER") && str_eq(b, "LFO FILTER"));
     }
-    ui_prefs |= PREF_LARGE;
-    bad += check("  MENU > LARGE: the list layout with labels in M (as the other lists)", large_kind() == LK_LABEL);
-    ui_prefs &= ~PREF_LARGE;
+    bad += check("  (3c-1 task 4) the list on SEQ > MORE, a ux page (MENU > LARGE's list layout: JIANT's pages')", ux_page_owns());
     return bad;
 }
 /* SHIFT (JIANT, the former chord keys): OFS plays the sequence that many steps later (wrapping in LEN; recording

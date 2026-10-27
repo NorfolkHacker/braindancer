@@ -71,18 +71,12 @@ static const nv_t CE_DIG[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("
                               NV("OP4 ENV", 0, 2, 2), NV("OP LEVEL", 0, 2, 2)};
 static const ng_t CG_DIG[] = {{"SOUND", 0}, {"TONE", 0}, {"OPERATOR", "OPS"}};
 enum { LV_PAT, LV_BAR, LV_STEP, LV_N };                 /* SEQ's pictures: the bars, the roll, the step large */
-/* (ACID FM 3c-1 task 2) SEQ = STEPS -> STEP EXTRAS -> PATTERN -> MORE (spec 2), opening on STEPS (JIANT's STEP page, the ux pages:
- * ux_seq.c; task 3: STEP EXTRAS, the row JIANT's hidden CHANCE was, and PATTERN too). MORE has no PAGES row yet (task 4): not
- * shown. Until task 4 moves them, the inherited SEQ pages follow PATTERN in their groups (STRETCH and PLAYHEADS PATTERN's; TRACK MUTATE, NOTE, COMP COMP 2, AUTOMATION AUTO LIST),
- * each still reached (SELECT, SEQ's button), drawn as before */
+/* (ACID FM 3c-1 task 2) SEQ = STEPS -> STEP EXTRAS -> PATTERN -> MORE (spec 2), opening on STEPS, a page a group (its button steps
+ * them round), all on the ux pages (ux_seq.c, ux_section.c; task 3: STEP EXTRAS, the row JIANT's hidden CHANCE was; task 4: MORE,
+ * the inherited SEQ pages' settings: params.c UXM_SEQ) */
 static const nv_t CE_SEQ[] = {NV("STEP", "STEPS", 0, LV_BAR), NV("STEP EXTRAS", 0, 1, LV_STEP), NV("PATTERN", 0, 2, LV_PAT),
-                              NV("STRETCH", 0, 2, LV_PAT), NV("PLAYHEADS", 0, 2, LV_PAT),
-                              NV("TRACK", 0, 3, LV_PAT), NV("MUTATE", 0, 3, LV_PAT),   /* (0.9.18: no BAR page) */
-                              NV("NOTE", 0, 4, LV_BAR), NV("COMP", 0, 5, LV_STEP),
-                              NV("COMP 2", 0, 5, LV_STEP), NV("AUTOMATION", 0, 6, LV_BAR), NV("AUTO LIST", 0, 6, LV_BAR),
-                              NV("SEQ MORE", "MORE", 7, LV_PAT)};
-static const ng_t CG_SEQ[] = {{"STEPS", 0}, {"STEP EXTRAS", "EXTRA"}, {"PATTERN", "PATT"}, {"TRACK", 0}, {"NOTE", 0},
-                              {"COMP", 0}, {"AUTO", 0}, {"MORE", 0}};
+                              NV("SEQ MORE", "MORE", 3, LV_PAT)};
+static const ng_t CG_SEQ[] = {{"STEPS", 0}, {"STEP EXTRAS", "EXTRAS"}, {"PATTERN", 0}, {"MORE", 0}};
 /* (ACID FM 3b task 8) FX on the ux pages (ux_section.c), a page a group (its button steps them round, spec 2.4): SENDS (JIANT's
  * FX: the track's DISTORT, CHORUS, DELAY, REVERB), SPACE (DLY TIME, DLY FDBK, REV TYPE, REV SIZE), MASTER (CLIP, PUNCH, DUCK, DUCK
  * TIME), MORE (the rest of JIANT's sixteen pages: params.c UXM_FX). The DJ FILTER stays GLO's */

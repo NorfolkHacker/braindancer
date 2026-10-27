@@ -14,7 +14,8 @@
 /* the headings' words (ux_more.h UXM_H_*) */
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "STEPS", "DELAY", "REVERB", "CHORUS",
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
-                                              "AUTO PAN", "SLICE PITCH", "PUNCH LANE"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
+                                              "PLAYHEADS", "AUTOMATION"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -23,10 +24,13 @@ static const char *uxm_head(uint32_t h)
     static char b[16];
     if (h >= UXM_H_N)
         return "";
-    if (h != UXM_H_OP && h != UXM_H_DRUM)
+    if (h != UXM_H_OP && h != UXM_H_DRUM && h != UXM_H_STEP)
         return UXM_HEAD[h];
     str_cpy(b, UXM_HEAD[h], sizeof b);
-    str_cpy(b + str_len(b), h == UXM_H_OP ? N_FO_OP[fop_op % 6u] : N_DX_LANE[dx_ui_lane & 7u], sizeof b - str_len(b));
+    if (h == UXM_H_STEP)                                /* (3c-1 task 4) SEQ's: the step picked (ux_seq.c), "STEP 5" */
+        fmt_int(b + str_len(b), (int32_t)uxq_step() + 1);
+    else
+        str_cpy(b + str_len(b), h == UXM_H_OP ? N_FO_OP[fop_op % 6u] : N_DX_LANE[dx_ui_lane & 7u], sizeof b - str_len(b));
     return b;
 }
 /* the actions (UXR_ACTION rows' ids): KNOB 2 turned up does it; ask: JIANT's dialog first (a CF_* kind, OCT+ yes / OCT- no:
@@ -35,6 +39,8 @@ typedef struct { const char *name; uint8_t ask; } uxm_act_t;
 static const uxm_act_t UXM_ACT[UXM_A_N] = {
     {"TYPE LYRIC", 0},                                  /* VOICE: the lyric typed on the NAME screen (was WORDS' OCT+ TYPE) */
     {"CLEAR LANE", CF_CLEAR_PFX},                       /* (3b task 8) FX: the punch-in lane emptied (was FX > PUNCH's CLEAR) */
+    {"CLEAR", CF_CLEAR_MOTION},                         /* (3c-1 task 4) SEQ: the track's automation and locks (was AUTOMATION's
+                                                         * CLEAR, OCT+ then the same dialog) */
 };
 #define UXM_GO "\x86"                                   /* (an action's value in the list: UF_HDR's arrow) */
 static int uxm_act_ok(uint32_t a) { return a == UXM_A_LYRIC ? trk_engp(TSEL) == &ENG_FORMANT : a < UXM_A_N; }
@@ -61,7 +67,7 @@ static int uxm_row_ok(const ux_row_t *r)
 {
     uint32_t id = r->id;
     int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT;
-    return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
+    return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) || sqv_is(id) : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
            r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
 }
 /* (3b task 8) a global LOAD ECO takes out of the sound (fx.c fx_buses: no chorus; slicer.c slicer_on: no SLICER): its row not
@@ -70,7 +76,7 @@ static int uxm_eco_out(uint32_t id) { return id == G_CRATE || id == G_CDEPTH || 
 /* a setting or action row shown on this track now (above) */
 static int ux_row_shown(const ux_row_t *r)
 {
-    uint32_t i, k, held = 0, glo = r->kind == UXR_GLOBAL;
+    uint32_t i, k, held = 0, glo = r->kind == UXR_GLOBAL, seq = r >= UXM_SEQ.rows && r < UXM_SEQ.rows + UXM_SEQ.n;
     if (!uxm_row_ok(r))
         return 0;
     if (glo && sys_load == LOAD_ECO && uxm_eco_out(r->id))
@@ -79,6 +85,8 @@ static int ux_row_shown(const ux_row_t *r)
         return 0;
     if (r->kind == UXR_ACTION)
         return uxm_act_ok(r->id);
+    if (r->kind == UXR_TRACK && sqv_is(r->id))          /* (3c-1 task 4) SEQ's views: by the step picked, the track (ux_seq.c) */
+        return uxq_vshown(r->id);
     if (r->kind != UXR_TRACK && !glo)
         return 0;
     if (!glo) {
@@ -88,8 +96,9 @@ static int ux_row_shown(const ux_row_t *r)
     }
     for (i = 0; i < NPAGES; i++) {
         const page_t *pg = &PAGES[i];
-        if (pg->graph == GR_MORE || pg->scope == SC_STEP || pg->scope == SC_TRK || (pg->scope == SC_GLOBAL) != glo)
-            continue;
+        if (pg->graph == GR_MORE || pg->scope == SC_STEP || pg->scope == SC_TRK || (pg->scope == SC_GLOBAL) != glo ||
+            (seq && pg->fam != FAM_SEQ))                /* (3c-1 task 4: SEQ's by SEQ's pages alone: TRACK's and MUTATE's ids */
+            continue;                                   /* are DIGITAL's operator slots too, core.h) */
         for (k = 0; k < 4u && pg->id[k] != r->id; k++)
             ;
         if (k < 4u) {
@@ -401,6 +410,8 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
         str_cpy(val, UXM_GO, nv);
         return r->id < UXM_A_N ? UXM_ACT[r->id].name : "";
     }
+    if (r->kind == UXR_TRACK && sqv_is(r->id))          /* (3c-1 task 4) SEQ's views: their words (ux_seq.c) */
+        return uxq_vtext(r->id, val, nv, bar);
     d = param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp);
     if (!d || !vp)
         return "";

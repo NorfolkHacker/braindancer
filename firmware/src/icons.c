@@ -239,8 +239,6 @@ static uint32_t engine_icon(const char *name)
     return ICON_GENERIC;
 }
 
-/* MOTION: the knob and its trace; recording into it (REC armed on the selected track, playing): its REC form */
-static uint32_t motion_icon(void) { return rec_on(TSEL) ? ICON_X_MOTION_REC : ICON_X_MOTION; }
 
 /* the icon beside a page's title in the footer (the pages that have one of their own; else ICON_NONE) */
 static uint32_t page_icon(const page_t *pg)
@@ -248,15 +246,10 @@ static uint32_t page_icon(const page_t *pg)
     switch (pg->graph) {
     case GR_TRK: return ICON_X_MIXER;         /* MIXER (GLO): vertical faders */
     case GR_PATS: return ICON_X_PATTERN;      /* SEQ > PHRASES: the pattern loader */
-    case GR_SONG: return ICON_X_SONG;         /* SONG: the disc */
-    case GR_COMP: return ICON_ARP;            /* (0.6.39) COMP: the step components */
-    case GR_MUTATE: return ICON_PROB;         /* (0.6.43) MUTATE */
-    case GR_FUGUE: return ICON_X_PATTERN;     /* (0.6.52) FUGUE */
-    case GR_SHAPE: return ICON_X_REPEAT;      /* (0.6.85) STRETCH */
+    case GR_SONG: return ICON_X_SONG;         /* SONG: the disc (ACID FM 3c-1 task 4: COMP, MUTATE, PLAYHEADS, STRETCH,
+                                                 * AUTOMATION, AUTO LIST gone: SEQ > MORE's rows) */
     case GR_MORPH: return ICON_LFO_WAVE;
     case GR_DXIMG: return ICON_MIX;      /* (0.6.45) MORPH */
-    case GR_MOTION: return motion_icon();
-    case GR_EVENTS: return ICON_X_MOTION;     /* AUTO LIST */
     default: return ICON_NONE;
     }
 }
@@ -265,6 +258,5 @@ static uint32_t page_icon(const page_t *pg)
 static uint32_t icon_for_label(const char *l) { (void)l; return ICON_NONE; }
 static uint32_t param_icon(const param_desc_t *d, int32_t v) { (void)d; (void)v; return ICON_NONE; }
 static uint32_t engine_icon(const char *name) { (void)name; return ICON_NONE; }
-static uint32_t motion_icon(void) { return ICON_NONE; }
 static uint32_t page_icon(const page_t *pg) { (void)pg; return ICON_NONE; }
 #endif

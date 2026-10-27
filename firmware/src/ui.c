@@ -505,7 +505,7 @@ static uint32_t large_kind(void)
         return LK_TALL;
     g = cur_page()->graph;
     return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
-           g == GR_COMP || g == GR_EVENTS || g == GR_LIVE ? LK_LABEL : LK_TALL;
+           g == GR_LIVE ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
@@ -728,7 +728,8 @@ static int lock_page_ok(uint32_t i)
 {
     uint32_t k;
     if (i < NPAGES && PAGES[i].graph == GR_MORE)        /* (3b task 9, the user: every MORE row) its rows: KNOB 2 locks the */
-        return PAGES[i].more != 0;                      /* one picked when the lock store holds it (ux_more.c uxm_lock_why) */
+        return PAGES[i].more != 0 && PAGES[i].fam != FAM_SEQ;   /* one picked when the lock store holds it (ux_more.c
+                                                         * uxm_lock_why); (3c-1 task 4) not SEQ's: a step locks the sound */
     if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD)
         return 0;
     for (k = 0; k < 4u; k++)
@@ -769,12 +770,13 @@ static void ev_enter(void);
 static void page_entered(void)
 {
     const page_t *pg = cur_page();
-    if (!ui.home && pg->graph == GR_EVENTS)      /* AUTO LIST: + ADD LOCK on the SEQ cursor's step */
+    if (!ui.home && pg->more == &UXM_SEQ)        /* (3c-1 task 4) SEQ > MORE's AUTO LIST rows: + ADD LOCK on the step picked */
         ev_enter();
     if (!ui.home && lock_page_ok(ui.page))
         ui.plk_src = (uint8_t)(ui.page + 1u);
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
-    ui.hint_k = ui.home ? HK_NONE : pg->graph == GR_MOTION ? HK_MOTION : pg->graph == GR_MUTATE ? HK_MUTATE : HK_NONE;   /* (0.9.5:
+    ui.hint_k = HK_NONE;                         /* (3c-1 task 4: AUTOMATION's and MUTATE's hints SEQ > MORE's status line,
+                                                         * ux_seq.c uxq_more_say; 0.9.5:
                                                          * its hint once dwelt on: ui_layer.c hint_tick; 3b task 8: FX > PUNCH's,
                                                          * HK_PUNCH, its MORE rows' status line, ux_section.c UXS_LANE_SAY) */
     ui.hint_at = (uint8_t)(ui.home ? 255u : ui.page + 1u);
@@ -835,24 +837,17 @@ static void rat_rate_name(const track_t *t, uint32_t d, char *b)
     uint32_t w = trk_kit(t) ? RAT_WKIT : RAT_WMEL, n = BASE[(uint32_t)clamp(t->p[P_SDIV], 0, 9)] * d, v = n / w;
     const char *tr = "";
     if (n % w || !v || (v & (v - 1u))) {
-        if (n % w == 0u && v % 3u == 0u && !((v / 3u * 2u) & (v / 3u * 2u - 1u))) { v = v / 3u * 2u; tr = "T"; }
+        if (n % w == 0u && v && v % 3u == 0u && !((v / 3u * 2u) & (v / 3u * 2u - 1u))) { v = v / 3u * 2u; tr = "T"; }
         else { b[0] = '/'; fmt_int(b + 1, (int32_t)d); return; }
     }
     b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "ARP", "SEQ", "WALK", "PULSE", "OCT", "RAND",
                                                "BEND", "TONAL", "JUMP", "REV", "TRIG", "FILL", "KILL"};
-/* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
- * the step's LEN): which this is (0..2) */
-static uint32_t comp_slot(void)
-{
-    uint32_t i = ui.page, k = 0;
-    while (i > 0u && k < 2u && PAGES[i - 1u].graph == GR_COMP)
-        i--, k++;
-    return k;
-}
-static uint32_t comp_type(const step_t *s) { return comp_slot() == 1u ? s->comp2 : s->comp; }   /* (the page's) */
-static uint32_t comp_arg(const step_t *s) { return comp_slot() == 1u ? s->carg2 : s->carg; }
+/* (0.6.82) the step's two components (JIANT's COMP and COMP 2 pages; ACID FM 3c-1 task 4: SEQ > MORE's STEP rows, TYPE .. and
+ * TYPE 2 ..): which one the knob turns, 0 or 1 (ui_input.c seq_view_turn sets it) */
+static uint8_t comp_k;
+static uint32_t comp_slot(void) { return comp_k & 1u; }
 static uint32_t comp_view1(void);
 static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step: COMP 2's its second */
 {
@@ -1805,8 +1800,9 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     uint32_t c, m = 0;
     if (ui.home)
         return 0;
-    if (pg->graph == GR_MOTION) return 8u;      /* KNOB 4 CLEAR (3b task 8: FX > PUNCH's, FX > MORE's CLEAR LANE now) */
-    if (pg->graph == GR_EVENTS) return 16u;     /* AUTO LIST: no knob is an action; OCT+ adds / toggles (ev_oct) */
+    if (uxq_more_kind() == UXQ_MK_LIST) return 16u;   /* (3c-1 task 4) SEQ > MORE's AUTO LIST rows: no knob is an action; OCT+
+                                                         * adds / toggles (ev_oct), as JIANT's AUTO LIST page (AUTOMATION's
+                                                         * CLEAR: MORE's action row) */
     if (pg->graph == GR_TOOLS) return 15u;
     /* (0.8.5 .. ACID FM 3b task 4) WORDS' OCT+ TYPE: its page MORE's rows now, TYPE LYRIC an action there (ux_more.c) */
     if (pg->graph == GR_SONG)
@@ -1832,7 +1828,7 @@ static uint32_t shp_rep(void) { return shp_r == 0u ? 1u : shp_r < 8u ? shp_r + 1
 static uint32_t act_col(void)
 {
     if (!ui.home && cur_page()->graph == GR_SONG) return 1u;
-    if (!ui.home && cur_page()->graph == GR_EVENTS) return 5u;
+    if (!ui.home && uxq_more_kind() == UXQ_MK_LIST) return 5u;
     return !ui.home && cur_page()->graph == GR_PATS ? 2u : ui.act;
 }
 
@@ -1840,8 +1836,7 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
 {
     static const char *const UP_GO[3] = {"LOAD", "ERASE", "SAVE"};
     uint32_t id = cur_page()->id[c & 3u];
-    if (cur_page()->graph == GR_MOTION) return "CLEAR";
-    if (cur_page()->graph == GR_EVENTS) return ev_act_name();
+    if (uxq_more_kind() == UXQ_MK_LIST) return ev_act_name();
     if (cur_page()->graph == GR_TOOLS) {
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
         return actions[c < 5u ? c : 4u];
@@ -1862,8 +1857,7 @@ static int act_ready(void)
     uint32_t c = act_col(), s = song.sel, id;
     if (!c--)
         return 0;
-    if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
-    if (cur_page()->graph == GR_EVENTS) return ev_act_ready();
+    if (uxq_more_kind() == UXQ_MK_LIST) return ev_act_ready();
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);

@@ -42,9 +42,10 @@ static const char *const UXQ_TIME[3] = {"NOTE", "TIE", "REST"};          /* GATE
 static const char *const UXQ_HIT[LM_N + 1] = {"OFF", "ON", "X2", "X4", "X8", "SHORT", "GHOST", "FLAM"};   /* (ui.c GRID_HIT's) */
 /* the words the knob row, the status line and the spelled step are made of (one table: tests/ux_msg_scan.py checks each has its
  * glyphs in UF_LBL and UF_HDR); the knob labels, STEPS' and the grid's */
-static const char *const UXQ_WORD[] = {"STEP ", " \xB7 ", " STEPS", "ACCENT ", "ON", "OFF", "ACC", "SLD", "--", "+", "/", " "};
+static const char *const UXQ_WORD[] = {"STEP ", " \xB7 ", " STEPS", "ACCENT ", "ON", "OFF", "ACC", "SLD", "--", "+", "/", " ",
+                                       "LOCK", "AUTO", "ST", "LOCK \xB7 "};
 enum { UXQ_W_STEP, UXQ_W_DOT, UXQ_W_STEPS, UXQ_W_ACCENT, UXQ_W_ON, UXQ_W_OFF, UXQ_W_ACC, UXQ_W_SLD, UXQ_W_NONE, UXQ_W_PLUS,
-       UXQ_W_SLASH, UXQ_W_SP };
+       UXQ_W_SLASH, UXQ_W_SP, UXQ_W_LOCK, UXQ_W_AUTO, UXQ_W_ST, UXQ_W_LOCKDOT };
 static const char *const UXQ_LABEL[11] = {"STEP", "NOTE", "ACC/SLD", "GATE", "LANE", "HIT", "ACC", "RATCHET", "CHANCE", "CONDITION",
                                           "MICRO"};
 enum { UXQ_L_STEP, UXQ_L_NOTE, UXQ_L_FLAG, UXQ_L_GATE, UXQ_L_LANE, UXQ_L_HIT, UXQ_L_ACC, UXQ_L_RATCH };
@@ -55,6 +56,23 @@ static const char *const UXQ_COND[CP_NTRIG + 1u] = {"ALWAYS", "1ST OF 2", "EVERY
                                                     "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY", "NOT 1ST"};
 static const char *const UXQ_XW[6] = {"X", "%", "GRID", "/64", "-", "FULL"};   /* (a ratchet's X2, a chance's 65%, MICRO on the
                                                          * grid, its 64ths, early; CONDITION with no slot free) */
+static const char *const UXQ_VNAME[ID_SQ_END - ID_SQ_STRETCH] = {"STRETCH", "REPEAT", "NUDGE", "HEAD", "RATE", "DIRECTION",
+                                                                 "INTERVAL", "TYPE", "", "", "TYPE 2", "", "", "EVERY", "FOCUS",
+                                                                 "PITCH", "MOVE", "PLAY", "EVENTS", "LOCKS", "ROW", "STEP",
+                                                                 "SETTING", "VALUE", "RANGE", "RANGE"};
+static const char *const UXQ_TYPE[COMP_N] = {"OFF", "CHANCE", "RATCHET", "ARP", "SEQ", "WALK", "PULSE", "OCTAVE", "RANDOM", "BEND",
+                                             "TONAL", "JUMP", "REVERSE", "CONDITION", "FILL", "KILL"};
+static const char *const UXQ_VAL1[COMP_N] = {"", "CHANCE", "RATCHET", "ORDER", "ORDER", "MODE", "PULSE", "MODE", "RANGE", "BEND",
+                                             "SHIFT", "TO STEP", "", "CONDITION", "", ""};   /* (a TYPE's first value; none: no row) */
+static const char *const UXQ_EVERY[EV_N] = {"ALWAYS", "1ST OF 2", "EVERY 2ND", "NEVER", "1ST OF 3", "2ND OF 3", "EVERY 3RD",
+                                            "1ST OF 4", "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY", "NOT 1ST"};
+static const char *const UXQ_WAY[4] = {"UP", "DOWN", "UP-DOWN", "RANDOM"};   /* (an ARP's ORDER, WALK's MODE, a head's way: +PING) */
+#define UXQ_PSTEP "PITCH STEP"                          /* (RATCH's pitch step, its own row: "PITCH" is NOTE's) */
+static const char *const UXQ_HDIR[4] = {"FORWARD", "REVERSE", "PING-PONG", "RANDOM"};   /* (fugue.c N_FGDIR) */
+static const char *const UXQ_VW[] = {" DEG", " OCT", " LOOPS", " LOOP", "FIT", " STEPS", "ALL", "CHORD", "NOTE ", "ADD", "ON",
+                                     "OFF", "TO 64", "\x86", " FADE", " RISE"};
+enum { UXQ_V_DEG, UXQ_V_OCT, UXQ_V_LOOPS, UXQ_V_LOOP, UXQ_V_FIT, UXQ_V_STEPS, UXQ_V_ALL, UXQ_V_CHORD, UXQ_V_NOTE, UXQ_V_ADD,
+       UXQ_V_ON, UXQ_V_OFF, UXQ_V_TO64, UXQ_V_LR, UXQ_V_FADE, UXQ_V_RISE };
 static int32_t uxq_ph_drawn = -1;                       /* the playing cell drawn (-1: none), when (ms): ux_section_draw's pace */
 static uint32_t uxq_ph_ms;
 
@@ -197,21 +215,31 @@ static int uxq_select(int32_t s)
     return 0;
 }
 
-/* the knob row: STEP NOTE ACC/SLD GATE (a DRUM track STEP LANE HIT ACC); a step held: what KNOB 1..4 lock (ui_input.c lock_turn:
- * the sound page's four, a MORE list's pick and row), a value not locked dim (the inherited card's) */
+/* the knob row: STEP NOTE ACC/SLD GATE (a DRUM track STEP LANE HIT ACC); a step held: the lock card (spec 2.5), what KNOB 1..4 lock
+ * (ui_input.c lock_turn: the sound page's four, a MORE list's pick and row), a value not locked dim; (task 4) a chord being entered
+ * on the roll: KNOB 4 its LENGTH, KNOB 1..3 the locks'; arpeggiated: KNOB 1..3 its RATE ORDER OCTAVES, KNOB 4 the lock's (a MORE
+ * list's: its pick) */
+static const char *const UXQ_ENT[4] = {"RATE", "ORDER", "OCTAVES", "LENGTH"};
 static void uxq_lock_knobs(ux_knob_t k[4])
 {
     uint64_t held = lock_held();
     const page_t *lp = lock_src();
-    uint32_t st = 0, c;
+    uint32_t st = 0, c, ent = ui.entry_open && !grid_on(), more = lp && lp->graph == GR_MORE;
     while (st < NSTEP && !((held >> st) & 1u))
         st++;                                           /* (the first step held: its values) */
     for (c = 0; c < 4u; c++) {
         int on = 0;
-        if (lp && lp->graph == GR_MORE) {
+        if (ent && (ui.ent_arp ? c < 3u : c == 3u)) {   /* (the chord's own) */
+            k[c].label = UXQ_ENT[ui.ent_arp ? c : 3u];
+            if (!ui.ent_arp || c == 2u)
+                uxq_num(k[c].value, sizeof k[c].value, ui.ent_arp ? ui.ent_oct : ui.ent_len);
+            else
+                uxq_cat(k[c].value, sizeof k[c].value, c ? UXQ_WAY[ui.ent_ord & 3u] : ENT_RES[(ui.ent_res - 1u) & 3u]);
+            on = 1;
+        } else if (more) {
             int32_t r;
             char v[24];
-            k[c].label = uxm_lock_card(lp, c, st, v, sizeof v, &on, &r);
+            k[c].label = uxm_lock_card(lp, ent && ui.ent_arp && c == 3u ? 0u : c, st, v, sizeof v, &on, &r);
             str_cpy(k[c].value, v, sizeof k[c].value);
             k[c].bar = (uint8_t)(r >= 0 ? r * 255 / 1000 : 0);
         } else {
@@ -232,6 +260,25 @@ static void uxq_lock_knobs(ux_knob_t k[4])
         k[c].off = (uint8_t)!on;
     }
 }
+/* the step's ratchet as STEP EXTRAS shows it (the effective one: an ECHO component's x2..x8 and its shape, else the flags'
+ * x1..x4): its hits, *shape RS_FLAT / RS_FADE / RS_RISE, *k the ECHO's slot (-1: the flags') */
+static uint32_t uxq_ratch(const step_t *st, uint32_t *shape, int32_t *k)
+{
+    int32_t e = st->comp == CP_ECHO ? 0 : st->comp2 == CP_ECHO ? 1 : -1;
+    uint32_t r = e < 0 ? 0u : rat_ui(st, (uint32_t)e);
+    *k = e;
+    *shape = r ? (r - 1u) / 7u % 3u : RS_FLAT;          /* (rat_ui: 1..7 FLAT x2..x8, 8..14 FADE, 15..21 RISE) */
+    return r ? 2u + (r - 1u) % 7u : step_ratchet(st);
+}
+static void uxq_ratch_txt(const step_t *st, char *b, uint32_t n)   /* "X3", "X6 FADE" */
+{
+    uint32_t sh;
+    int32_t k;
+    uxq_cat(b, n, UXQ_XW[0]);
+    uxq_num(b, n, (int32_t)uxq_ratch(st, &sh, &k));
+    if (sh != RS_FLAT)
+        uxq_cat(b, n, UXQ_VW[sh == RS_FADE ? UXQ_V_FADE : UXQ_V_RISE]);
+}
 static int uxq_on(const step_t *st) { return st->time == ST_NOTE && (st->n || st->hit); }   /* (the step plays something) */
 /* (pre-review fix) CONDITION: the step's TRIG's slot (0 comp, 1 comp2; -1 none); its place in UXQ_COND (0 ALWAYS), UXQ_FULL */
 static int32_t uxq_trig(const step_t *st) { return st->comp == CP_TRIG ? 0 : st->comp2 == CP_TRIG ? 1 : -1; }
@@ -242,8 +289,9 @@ static uint32_t uxq_cond(const step_t *st)
         return 1u + (k ? st->carg2 : st->carg) % CP_NTRIG;
     return st->comp != CP_NONE && st->comp2 != CP_NONE ? UXQ_FULL : 0u;
 }
-/* .. a detent on (e +-1): the TRIG there edited in place, else one put in the first free slot (comp, then comp2); ALWAYS takes it
- * away (its slot emptied); no slot free: nothing written, FULL shown (never another component overwritten) */
+/* .. a detent on (e +-1): the TRIG there edited in place (task 4: a TRIG in both slots, the note on the loops both allow: the first
+ * shown and edited), else one put in the first free slot (comp, then comp2); ALWAYS takes it away (its slot emptied; both TRIGs
+ * when both are, so ALWAYS plays always); no slot free: nothing written, FULL shown (never another component overwritten) */
 static void uxq_cond_turn(step_t *st, int32_t e)
 {
     uint32_t c = uxq_cond(st);
@@ -261,22 +309,24 @@ static void uxq_cond_turn(step_t *st, int32_t e)
     ap = k ? &st->carg2 : &st->carg;
     *cp = (uint8_t)(c ? CP_TRIG : CP_NONE);
     *ap = (uint8_t)(c ? c - 1u : 0u);
+    if (!c && st->comp2 == CP_TRIG)                     /* (ALWAYS: the second TRIG too) */
+        st->comp2 = st->carg2 = 0;
 }
 /* (task 3) STEP EXTRAS': RATCHET X1..X4, CHANCE 0..100%, CONDITION in words, MICRO +-n (64ths; GRID on it); a step with nothing to
  * play: its values dim, MICRO -- (micro_edit refuses it) */
 static void uxq_extras_knobs(ux_knob_t k[4])
 {
     const step_t *st = &TSEL->step[uxq_step()];
-    uint32_t r = step_ratchet(st), ch = step_chance(st), cd = uxq_cond(st), c;
-    int32_t m = ST_MICRO(st);
+    uint32_t sh, r, ch = step_chance(st), cd = uxq_cond(st), c;
+    int32_t m = ST_MICRO(st), ek;
+    r = uxq_ratch(st, &sh, &ek);                        /* (task 4: the effective ratchet, an ECHO's x2..x8 and shape too) */
     int on = uxq_on(st);
     for (c = 0; c < 4u; c++) {
         k[c].label = UXQ_LABEL[UXQ_L_RATCH + c];
         k[c].off = (uint8_t)!on;
     }
-    uxq_cat(k[0].value, sizeof k[0].value, UXQ_XW[0]);
-    uxq_num(k[0].value, sizeof k[0].value, (int32_t)r);
-    k[0].bar = (uint8_t)((r - 1u) * 85u);
+    uxq_ratch_txt(st, k[0].value, sizeof k[0].value);
+    k[0].bar = (uint8_t)((r - 1u) * 255u / 7u);
     uxq_num(k[1].value, sizeof k[1].value, (int32_t)ch);
     uxq_cat(k[1].value, sizeof k[1].value, UXQ_XW[1]);
     k[1].bar = (uint8_t)(ch * 255u / 100u);
@@ -301,7 +351,7 @@ static __attribute__((noinline)) int uxq_knobs(const page_t *pg, ux_knob_t k[4])
     const step_t *st = &TSEL->step[s];
     if (kind != UXQ_STEPS && kind != UXQ_EXTRAS)
         return 0;
-    if (lock_held()) {
+    if (kind == UXQ_STEPS && lock_held()) {             /* (a step held: on STEPS only, lock_held) */
         uxq_lock_knobs(k);
         return 1;
     }
@@ -386,7 +436,10 @@ static __attribute__((noinline)) const char *uxq_say(uint32_t c, char *b, uint32
         uxq_cat(b, n, UXQ_FLAG_SAY[uxq_flag(st)]);
         return b;
     }
-    if (lk) {                                           /* a lock's: "NAME . VALUE" */
+    if (lk && ui.entry_open && !grid_on() && (ui.ent_arp ? c < 3u : c == 3u))
+        lk = 0;                                         /* (task 4: a chord's own: "LENGTH 3", "ORDER UP") */
+    if (lk) {                                           /* the lock card's (spec 2.5): "LOCK . NAME . VALUE" */
+        uxq_cat(b, n, UXQ_WORD[UXQ_W_LOCKDOT]);
         uxq_cat(b, n, k[c].label);
         uxq_cat(b, n, UXQ_WORD[UXQ_W_DOT]);
     } else if (c == 3u && drum) {
@@ -402,6 +455,287 @@ static __attribute__((noinline)) const char *uxq_say(uint32_t c, char *b, uint32
     else
         uxq_cat(b, n, k[c].value);
     return b;
+}
+
+/* ------------------------------------------------------------------------------------- SEQ > MORE's views (task 4) --- */
+/* (params.c ID_SQ_*; spec 2.4) the inherited SEQ pages' controls as MORE rows: their names, their values in plain words (COMP's
+ * TYPEs: ui.c COMP_*, the knob's order; EVERY: core.h EV_*, the knob's EV_ORD; PLAYHEADS: fugue.c's) */
+static void uxq_signed(char *b, uint32_t n, int32_t v)  /* "+3", "-2", "0" */
+{
+    if (v > 0)
+        uxq_cat(b, n, UXQ_WORD[UXQ_W_PLUS]);
+    uxq_num(b, n, v);
+}
+/* component slot k's TYPE as the list shows it (COMP's: its CHANCE and RATCH remembered a step, ui.c comp_view1) */
+static uint32_t uxq_cview(uint32_t k) { return k ? comp_ui(TSEL->step[ui.cursor % NSTEP].comp2) : comp_view1(); }
+static const char *uxq_cname(uint32_t k, uint32_t which)   /* .. its first / second value's name ("": none, no row) */
+{
+    uint32_t v = uxq_cview(k);
+    if (which == 1u)
+        return UXQ_VAL1[v];
+    if (which == 3u)                                    /* (WALK's, OCT's, an ARP's RANGE: MODE / ORDER's own row; RATCH's */
+        return v == COMP_WALK || v == COMP_OCT || v == COMP_ARPN || v == COMP_ARPQ ? UXQ_VNAME[ID_SQ_RNG - ID_SQ_STRETCH] :
+               v == COMP_RATCH ? UXQ_PSTEP : "";        /* PITCH STEP, its RATE's own) */
+    return v == COMP_RATCH || v == COMP_ARPN || v == COMP_WALK || v == COMP_OCT ? UXQ_VNAME[ID_SQ_HRATE - ID_SQ_STRETCH] :
+           v == COMP_ARPQ && !k ? "LAP" : "";
+}
+static __attribute__((noinline)) void uxq_cval(uint32_t k, uint32_t which, char *b, uint32_t n)   /* .. its value in words */
+{
+    const step_t *st = &TSEL->step[ui.cursor % NSTEP];
+    uint32_t v = uxq_cview(k), a = k ? st->carg2 : st->carg;
+    int32_t i = (int32_t)a;
+    if (which == 2u) {
+        if (v == COMP_RATCH) {                          /* the hits' spacing (FIT: the step's) */
+            char r[8];
+            if (CT_DIV(st))
+                rat_rate_name(TSEL, CT_DIVS[CT_DIV(st) % CT_NDIV], r);
+            else
+                str_cpy(r, UXQ_VW[UXQ_V_FIT], sizeof r);
+            uxq_cat(b, n, r);
+        } else if (v == COMP_ARPN) {
+            uxq_cat(b, n, N_DIV[ARP_DIVI[CP_RATE(a)] % 4u]);
+        } else if (v == COMP_ARPQ) {                    /* LAP: the note it plays this pass of the pattern */
+            uint32_t lap = song.playing ? TSEL->loops : 0u, c = COMP_CP[v];
+            uint8_t kn[4 + NLANE];
+            if (CP_ORD(a) == 3u)
+                uxq_cat(b, n, UXQ_WAY[3]);
+            else if (drum_track(TSEL))
+                uxq_cat(b, n, cp_kit_arp(TSEL, st, c, a, lap, kn) ? drum_lane_abbr(TSEL, drum_lane(kn[0])) : UXQ_WORD[UXQ_W_NONE]);
+            else
+                note_name(b + str_len(b), cp_arp_note(TSEL, st, c, a, lap));
+        } else {                                        /* WALK, OCT: a move every so many loops */
+            uint32_t r = CP_WRATES[CP_WRATE(a) % CP_NWRATE];
+            uxq_num(b, n, (int32_t)r);
+            uxq_cat(b, n, UXQ_VW[r == 1u ? UXQ_V_LOOP : UXQ_V_LOOPS]);
+        }
+        return;
+    }
+    if (which == 3u && v == COMP_RATCH) {               /* PITCH STEP: each hit a degree up, down, an octave up every other */
+        static const char *const PN[4] = {"OFF", "+1 DEG", "-1 DEG", "+OCT"};
+        uxq_cat(b, n, PN[rat_pit_of(st, k) & 3u]);
+        return;
+    }
+    switch (v) {
+    case COMP_CHANCE: uxq_num(b, n, (int32_t)step_chance(st)); uxq_cat(b, n, UXQ_XW[1]); break;
+    case COMP_RATCH: {                                  /* x1, x2..x8 and the shape (COMP's list, rat_ui) */
+        uint32_t r = rat_ui(st, k);
+        uxq_cat(b, n, UXQ_XW[0]);
+        uxq_num(b, n, r ? 2 + (int32_t)((r - 1u) % 7u) : 1);
+        if (r > 7u)
+            uxq_cat(b, n, UXQ_VW[r > 14u ? UXQ_V_RISE : UXQ_V_FADE]);
+        break;
+    }
+    case COMP_TRIG: uxq_cat(b, n, UXQ_COND[1u + a % CP_NTRIG]); break;
+    case COMP_WALK: case COMP_OCT:                      /* MODE ("UP"); its RANGE (which 3) "5 DEG", "2 OCT" */
+        if (which == 3u) {
+            uxq_num(b, n, v == COMP_OCT ? (int32_t)CP_WRNG(a) + 1 : (int32_t)CP_WDEGS[CP_WRNG(a) & 3u]);
+            uxq_cat(b, n, UXQ_VW[v == COMP_OCT ? UXQ_V_OCT : UXQ_V_DEG]);
+        } else
+            uxq_cat(b, n, UXQ_WAY[CP_WMODE(a) & 3u]);
+        break;
+    case COMP_ARPN: case COMP_ARPQ:                     /* ORDER ("UP"); its RANGE "2 OCT" */
+        if (which == 3u) {
+            uxq_num(b, n, (int32_t)CP_RNG(a) + 1);
+            uxq_cat(b, n, UXQ_VW[UXQ_V_OCT]);
+        } else
+            uxq_cat(b, n, UXQ_WAY[CP_ORD(a) & 3u]);
+        break;
+    case COMP_RAND: uxq_num(b, n, i); uxq_cat(b, n, UXQ_VW[UXQ_V_DEG]); break;
+    case COMP_TONAL: uxq_signed(b, n, i - 7); uxq_cat(b, n, UXQ_VW[UXQ_V_DEG]); break;
+    case COMP_BEND: uxq_signed(b, n, i - 12); uxq_cat(b, n, UXQ_WORD[UXQ_W_SP]); uxq_cat(b, n, UXQ_WORD[UXQ_W_ST]); break;
+    case COMP_PULSE: uxq_num(b, n, 1 + i % 4); uxq_cat(b, n, UXQ_VW[UXQ_V_STEPS]); break;
+    case COMP_JUMP: uxq_num(b, n, (int32_t)CP_JTO(a) + 1); break;
+    default: break;
+    }
+}
+static uint32_t uxq_vk(uint32_t id) { return id == ID_SQ_VALB || id == ID_SQ_VAL2B || id == ID_SQ_RNGB; }   /* (a value view's slot, */
+static uint32_t uxq_vw(uint32_t id) { return id == ID_SQ_VAL || id == ID_SQ_VALB ? 1u : id == ID_SQ_RNG || id == ID_SQ_RNGB ? 3u : 2u; }   /* which) */
+static int uxq_vshown(uint32_t id)
+{
+    const step_t *st = &TSEL->step[ui.cursor % NSTEP];
+    switch (id) {
+    case ID_SQ_VAL: case ID_SQ_VAL2: case ID_SQ_VALB: case ID_SQ_VAL2B: case ID_SQ_RNG: case ID_SQ_RNGB:
+        return uxq_cname(uxq_vk(id), uxq_vw(id))[0] != 0;
+    case ID_SQ_EVERY:                                   /* (the step's components' loops: shown with one) */
+        return st->comp != CP_NONE || st->comp2 != CP_NONE;
+    case ID_SQ_FOCUS: case ID_SQ_PITCH: case ID_SQ_MOVE:   /* (NOTE's: a kit's steps are hits, STEPS' and the grid's) */
+        return !drum_track(TSEL);
+    default:
+        return sqv_is(id);
+    }
+}
+static __attribute__((noinline)) const char *uxq_vtext(uint32_t id, char *val, uint32_t nv, uint8_t *bar)
+{
+    const track_t *t = TSEL;
+    const step_t *st = &t->step[ui.cursor % NSTEP];
+    const fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
+    const char *nm = sqv_is(id) ? UXQ_VNAME[id - ID_SQ_STRETCH] : "";
+    val[0] = 0;
+    *bar = 0;
+    switch (id) {
+    case ID_SQ_STRETCH: {                               /* x1 as it was, /8 .. /2, x2 .. x8 (ui.c shp_k) */
+        int32_t k = shp_k();
+        uxq_cat(val, nv, k > 0 ? UXQ_XW[0] : UXQ_WORD[UXQ_W_SLASH]);
+        uxq_num(val, nv, k > 0 ? k : -k);
+        *bar = (uint8_t)(shp_i * 255u / 14u);
+        break;
+    }
+    case ID_SQ_REPEAT: {
+        uint32_t r = shp_rep();
+        if (r == 1u)
+            uxq_cat(val, nv, UXQ_VW[UXQ_V_OFF]);
+        else if (r) {
+            uxq_cat(val, nv, UXQ_XW[0]);
+            uxq_num(val, nv, (int32_t)r);
+        } else
+            uxq_cat(val, nv, UXQ_VW[UXQ_V_TO64]);
+        *bar = (uint8_t)(shp_r * 255u / 8u);
+        break;
+    }
+    case ID_SQ_NUDGE: uxq_cat(val, nv, UXQ_VW[UXQ_V_LR]); break;
+    case ID_SQ_HEAD: uxq_num(val, nv, (int32_t)(fg_ui % FG_HEADS) + 2); *bar = (uint8_t)(fg_ui % FG_HEADS * 127u); break;
+    case ID_SQ_HRATE: {                                 /* (fugue.c N_FGRATE, its x in capitals) */
+        char *p;
+        uxq_cat(val, nv, N_FGRATE[f->rate % FG_NRATE]);
+        for (p = val; *p; p++)
+            if (*p == 'x')
+                *p = 'X';
+        *bar = (uint8_t)(f->rate % FG_NRATE * 255u / (FG_NRATE - 1u));
+        break;
+    }
+    case ID_SQ_HDIR: uxq_cat(val, nv, UXQ_HDIR[f->dir & 3u]); break;
+    case ID_SQ_HIVL: uxq_signed(val, nv, f->ivl); uxq_cat(val, nv, UXQ_VW[UXQ_V_DEG]); *bar = (uint8_t)((f->ivl + 14) * 255 / 28); break;
+    case ID_SQ_TYPE: case ID_SQ_TYPE2: uxq_cat(val, nv, UXQ_TYPE[uxq_cview(id == ID_SQ_TYPE2)]); break;
+    case ID_SQ_VAL: case ID_SQ_VAL2: case ID_SQ_VALB: case ID_SQ_VAL2B: case ID_SQ_RNG: case ID_SQ_RNGB:
+        nm = uxq_cname(uxq_vk(id), uxq_vw(id));
+        uxq_cval(uxq_vk(id), uxq_vw(id), val, nv);
+        break;
+    case ID_SQ_EVERY: uxq_cat(val, nv, UXQ_EVERY[ST_EVERY(st) % EV_N]); break;
+    case ID_SQ_FOCUS: case ID_SQ_PITCH: {               /* (NOTE's: the chord or one of its notes, its pitch) */
+        uint32_t on = st->time == ST_NOTE && st->n, fc = on && ui.pr_focus <= st->n ? ui.pr_focus : 0u;
+        if (id == ID_SQ_PITCH) {
+            if (on)
+                note_name(val, st->note[fc ? fc - 1u : 0u]);
+            else
+                uxq_cat(val, nv, UXQ_WORD[UXQ_W_NONE]);
+        } else if (fc) {
+            uxq_cat(val, nv, UXQ_VW[UXQ_V_NOTE]);
+            uxq_num(val, nv, (int32_t)fc);
+        } else
+            uxq_cat(val, nv, UXQ_VW[on && st->n > 1u ? UXQ_V_CHORD : UXQ_V_ALL]);
+        break;
+    }
+    case ID_SQ_MOVE: uxq_stepn(val, nv, 0); break;
+    case ID_SQ_PLAY: uxq_cat(val, nv, UXQ_VW[motion_enabled(t) ? UXQ_V_ON : UXQ_V_OFF]); break;
+    case ID_SQ_EVENTS: uxq_num(val, nv, (int32_t)(motion_count(t) - motion_lock_count(t))); break;
+    case ID_SQ_LOCKS: uxq_num(val, nv, (int32_t)motion_lock_count(t)); break;
+    default: {                                          /* AUTO LIST's (ui_events.c): ROW STEP SETTING VALUE; the last row ADD */
+        uint8_t idx[MOTION_MAX];
+        uint32_t n = ev_rows(idx), r = ev_row(n), step, pid;
+        int16_t v;
+        if (r < n) {
+            const motion_event_t *e = &motion.event[idx[r]];
+            step = MOTION_STEP(e);
+            pid = MOTION_ID(e);
+            v = MOTION_VAL(e);
+            if (id == ID_SQ_EVAL)
+                nm = UXQ_WORD[(motion.event[idx[r]].param & MOTION_LOCK) ? UXQ_W_LOCK : UXQ_W_AUTO];
+        } else {
+            ev_fix();
+            step = ui.ev_step;
+            pid = ui.ev_id;
+            v = pid < P_COUNT ? motion_base_value(t, pid) : 0;
+        }
+        if (id == ID_SQ_ROW) {
+            if (r < n) {
+                uxq_num(val, nv, (int32_t)r + 1);
+                uxq_cat(val, nv, UXQ_WORD[UXQ_W_SLASH]);
+                uxq_num(val, nv, (int32_t)n);
+            } else
+                uxq_cat(val, nv, UXQ_VW[UXQ_V_ADD]);
+        } else if (id == ID_SQ_ESTEP)
+            uxq_num(val, nv, (int32_t)step + 1);
+        else if ((pid >= P_COUNT && pid != MOT_DJF) || !ev_id_ok(t, pid))
+            uxq_cat(val, nv, UXQ_WORD[UXQ_W_NONE]);
+        else if (id == ID_SQ_EPARAM) {
+            char b[12];
+            ev_name(t, pid, b);
+            uxq_cat(val, nv, b);
+        } else
+            uxs_vtext(track_desc(t, pid), v, 0, pid, val, nv);
+        break;
+    }
+    }
+    return nm;
+}
+
+static const ux_row_t *uxq_more_row(void)
+{
+    const page_t *pg = cur_page();
+    return !ui.home && !ui.menu && pg->more == &UXM_SEQ ? uxm_lock_row(pg) : 0;
+}
+static uint32_t uxq_more_kind(void)
+{
+    const ux_row_t *r = uxq_more_row();
+    uint32_t h = r ? uxm_head_of(&UXM_SEQ, (uint32_t)(r - UXM_SEQ.rows)) : UXM_H_N;
+    if (r && r->kind == UXR_TRACK && r->id >= ID_SQ_ROW && r->id <= ID_SQ_EVAL)
+        return UXQ_MK_LIST;
+    return h == UXM_H_MUTATE ? UXQ_MK_MUTATE : h == UXM_H_AUTO ? UXQ_MK_AUTO : h == UXM_H_STEP ? UXQ_MK_STEP : UXQ_MK_NONE;
+}
+static int uxq_more_busy(void)
+{
+    const ux_row_t *r = uxq_more_row();
+    return r && uxm_head_of(&UXM_SEQ, (uint32_t)(r - UXM_SEQ.rows)) == UXM_H_TRACK;
+}
+static const char *const UXQ_MSAY[] = {"OCT+ ADD A LOCK", "OCT+ LOCK OR AUTO", "OCT+ KEEP  GLO+A4 FREEZE", "REC + PLAY THEN TURN A KNOB"};
+static const char *uxq_more_say(void)                   /* the status line on SEQ > MORE: what OCT+ does there (the pages' hints) */
+{
+    switch (uxq_more_kind()) {
+    case UXQ_MK_LIST: {
+        uint8_t idx[MOTION_MAX];
+        uint32_t n = ev_rows(idx);
+        return UXQ_MSAY[ev_row(n) < n];
+    }
+    case UXQ_MK_MUTATE: return UXQ_MSAY[2];
+    case UXQ_MK_AUTO: return UXQ_MSAY[3];
+    default: return 0;
+    }
+}
+
+/* (task 4) the status line while a step is held and no knob turned: "LOCK . STEP 5" (the card's: spec 2.5); 0 none held */
+static const char *uxq_lock_line(char *b, uint32_t n)
+{
+    uint64_t held = uxq_owns() == UXQ_STEPS ? lock_held() : 0u;
+    uint32_t st = 0;
+    if (!held)
+        return 0;
+    while (st < NSTEP && !((held >> st) & 1u))
+        st++;
+    b[0] = 0;
+    uxq_cat(b, n, UXQ_WORD[UXQ_W_LOCKDOT]);
+    uxq_cat(b, n, UXQ_WORD[UXQ_W_STEP]);
+    uxq_num(b, n, (int32_t)st + 1);
+    return b;
+}
+
+/* .. the footer while a step is held (0.9.12's, ui_input.c lock_select: SELECT walks the pages the knobs lock): "LOCK . SOUND",
+ * its place "2 / 5" (out of the walk: ENV LFO FX's page, HOME's four; none). 0: none held */
+static int uxq_lock_foot(char *w, uint32_t nw, char *c, uint32_t nc)
+{
+    uint8_t v[16];
+    uint32_t at, m;
+    if (uxq_owns() != UXQ_STEPS || !lock_held())
+        return 0;
+    m = lock_chain(v, &at);
+    w[0] = c[0] = 0;
+    uxq_cat(w, nw, UXQ_WORD[UXQ_W_LOCKDOT]);
+    uxq_cat(w, nw, at < m ? nv_name(SEC_EDIT, v[at], ui.plk_src - 1u) : ui.plk_src ? PAGES[ui.plk_src - 1u].title : SEC_NAME[SEC_HOME]);
+    if (at < m) {
+        uxq_num(c, nc, (int32_t)at + 1);
+        uxq_cat(c, nc, " / ");
+        uxq_num(c, nc, (int32_t)m);
+    }
+    return 1;
 }
 
 /* ------------------------------------------------------------------------------------------------------- the pictures --- */
@@ -543,7 +877,8 @@ static __attribute__((noinline)) void uxq_extras(int y0, int h)
 {
     const track_t *t = TSEL;
     uint32_t len = uxq_len(), f = uxq_first(), ncol = f < len ? (len - f < 16u ? len - f : 16u) : 0u, i;
-    int32_t ch = h - 6, drum = drum_track(t);
+    int32_t ch = h - 6, drum = drum_track(t), ek;
+    uint32_t sh;
     uxq_cols(y0, h, ncol, uxq_ph());
     for (i = 0; i < ncol; i++) {
         const step_t *st = &t->step[f + i];
@@ -551,7 +886,7 @@ static __attribute__((noinline)) void uxq_extras(int y0, int h)
         if (!uxq_on(st))
             continue;
         fh = ch * (int32_t)step_chance(st) / 100;
-        pr_split(x, y0 + h - (fh > 1 ? fh : 1), UX_STRIP_W, fh > 1 ? fh : 1, ux_step_col(st, UX_EMPTY, drum), step_ratchet(st));
+        pr_split(x, y0 + h - (fh > 1 ? fh : 1), UX_STRIP_W, fh > 1 ? fh : 1, ux_step_col(st, UX_EMPTY, drum), uxq_ratch(st, &sh, &ek));
         mx = cx + m * UX_STRIP_PITCH / (MICRO_MAX - MICRO_MIN + 1);
         if (m)
             cv_rect(m > 0 ? cx : mx, y0 + 1, (m > 0 ? mx - cx : cx - mx) + 1, 2, UX_TEXT);
