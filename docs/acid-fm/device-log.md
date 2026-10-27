@@ -92,3 +92,11 @@ Still pending:
   follow the clock (done above, over TRS); loop the last bar live and let it go: user feedback pending
 - USB MIDI out (NOTES OUT KEYS) to a computer or device: deferred by the user ("I'll check midi to keys later")
 - Merge ff to main and push, on the user's go-ahead: pending
+
+## 2026-10-27 — ACID FM 0.5.1 (GEN genres retuned)
+
+- Release built on 2099c43: acid-fm-0.5.1.fwsc, 610122 B, identity FM-1_905, sha256
+  063a24b7873485fa16bf865363d21ef0d76ed87c3b0d3cd33caecf919e8c685b; installed over 0.5 (backup of 2026-10-27 covers it).
+- Console: acid-fm v0.5.1, cpu_pct 25, idle and steady (audio_late carried over the update's restart, not rising).
+- User tried the retuned genres (GLITCH HOP, AMB TECHNO, DRILL'N'BASS 155-172, RETROBOC 68-100 ...): "this is about
+  right". RETROBOC stays the name (card RETRO).
