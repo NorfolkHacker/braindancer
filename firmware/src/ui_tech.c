@@ -31,7 +31,7 @@ static int32_t tk_amt(uint32_t c)
 }
 
 /* ENV DEST: the source now into four bipolar columns, one under each card (0.9.7: LFO DEST, VOICE and MSEQ 2 have
- * their lenses' pictures: ui_lzpage.c, ui_lzedit.c) */
+ * their lenses' pictures: ui_lzedit.c; ACID FM 3b / 3c-1: the ux pages') */
 static void tech_dest(const track_t *t)
 {
     int32_t src = 0, c, mid = (TK_Y0 + TK_Y1) / 2, half = 44;

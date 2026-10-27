@@ -3102,7 +3102,16 @@ static int test_roll(void)
     ok = pat_pick() == 3u && !ui.roll[0].from[0] && roll_static_now();
     bad += check("roll: a change within 40 ms of the last one snaps (a fast turn)", ok);
 
-    /* snaps: the page, the track, the palette, ui.force (a sign, a length, a name: roll_dir's table, above) */
+    /* a name snaps: PROJECT's LOAD card ("--" -> its action picked, N_GO's words), the strip changed, no roll (3c-1 task 7: was
+     * GLOBAL's CLK; a sign, a length: roll_dir's table, above) */
+    ui_power_on(); go_title("PROJECT"); ui.hot_t = 0; ui.bpm_t = 0;
+    for (k = 0; k < 12u; k++) frame();
+    memcpy(roll_shot, host_screen, sizeof roll_shot);
+    turn(EN_K3, 1); frame();
+    ok = ui.act == 3u && !ui.roll[2].from[0] && roll_diff(STRIP(2), 1) > 20u && roll_static_now();
+    bad += check("roll: a name (PROJECT's LOAD card: its action picked) snaps", ok);
+
+    /* snaps: the page, the track, the palette, ui.force */
     ok = 1;
     for (k = 0; k < 5u; k++) {
         ui_power_on(); roll_settle();
@@ -3576,9 +3585,41 @@ static int test_product_ux(void)
                  msg_is("AUTOMATION CLEARED"));
     motion_full = 1; frame();
     bad += check("#93 the events used up: AUTOMATION FULL", msg_is("AUTOMATION FULL") && !motion_full);
-    /* #63's card MOTION icon (a card shows it while the track's motion changes its parameter): (ACID FM 3c-1 task 7) GLO > SENDS and
-     * the MIXER, the last JIANT pages with a track's settings on cards, gone; every section's knob row is the ux pages' (their mark:
-     * 3c-1 spec 6) */
+#if FELUCCA_FM4
+    {   /* #63: a card shows MOTION's icon while the track's motion changes its parameter. (3c-1 task 7) On DIGITAL's OP1 ENV, a
+         * FELUCCA_FM4 build's: GLO > SENDS and the MIXER, the default build's last JIANT cards with a track's settings, gone */
+        uint32_t id0, id1;
+        const char *pt = "OP1 ENV";
+        ui_power_on(); set_engine_of(&trk[3], ENGI_DIGITAL); trk[3].engine = trk[3].eng_req;
+        track_select(1); set_engine_of(TSEL, ENGI_DIGITAL); TSEL->engine = TSEL->eng_req;
+        go_title(pt); frame();
+        id0 = page_id(cur_page(), 0); id1 = page_id(cur_page(), 1);
+        ok = !card_motion(0) && !card_motion(1) && motion_param(id0) && motion_param(id1);
+        song.rec = 2; seq_start(); go_title(pt); turn(EN_K1, 1); frame();
+        ok &= card_motion(0) && !card_motion(1) && !card_motion(2) && !card_motion(3);
+        bad += check("MOTION: a recorded knob marks its card (FM4: DIGITAL's OP1 ENV), no other", ok && motion_count(TSEL) == 1);
+        song.rec = 0; press(B_PLAY); events_block(32); frame();
+        ok = card_motion(0);
+        seqm(ID_SQ_PLAY, -1); go_title(pt); frame();
+        ok &= !card_motion(0) && motion_count(TSEL) == 1;
+        bad += check("MOTION: PLAY OFF takes the icon off the card, the events stay", ok);
+        seqm(ID_SQ_PLAY, 1); go_title(pt); frame();
+        ok = card_motion(0);
+        track_select(3); go_title(pt); frame();         /* (T4 DIGITAL too: the same page) */
+        ok &= !card_motion(0);                           /* (another track: its own motion, none) */
+        track_select(1); go_title(pt); frame();
+        ok &= card_motion(0);
+        bad += check("MOTION: PLAY ON again shows it; only on the track that has the motion", ok);
+        motion_set_event(TSEL, 3, id1, 20); frame();
+        ok = card_motion(1) && card_motion(0) && !card_motion(2) && !card_motion(3);
+        bad += check("MOTION: another parameter's event marks its card", ok);
+        seqm_act(UXM_A_CLRAUTO); press(B_OCTUP);
+        ok = motion_count(TSEL) == 0;
+        go_title(pt); frame();
+        ok &= !card_motion(0) && !card_motion(1);
+        bad += check("MOTION: CLEAR takes the icon off every card", ok);
+    }
+#endif
     ui_power_on(); ui_leds();
     memset(led_pos, 0xFF, sizeof led_pos);
     led_pos[panel.btn[B_PLAY]] = 1; led_pos[panel.btn[B_REC]] = 2;
@@ -11675,10 +11716,33 @@ static int test_toasts(void)
     ui_prefs &= ~PREF_LARGE;
     bad += check("0.9.5 a toast is a pill over the page: the panel behind it as it was (ACID, LARGE too)", ok);
     bad += check("  gone with the message: the page whole again", gone);
-    /* (3c-1 task 7) "playing: the page goes on moving behind the toast": GLO > GLOBAL's playhead was the last JIANT page moving
-     * while a song plays; gone (SAVE's and PHRASES' panels hold still), the check with it. The ux pages say a message on their
-     * status line, no pill */
-    (void)moved;
+    for (sk = 0; sk < 1u; sk++) {                       /* playing: the page moves on behind it (3c-1 task 7: SAVE's ARRANGE, a song
+                                                         * chain running: its row and bars left a bar at a time; was GLOBAL's
+                                                         * playhead, the page gone) */
+        uint32_t bars;
+        ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
+        song.playing = 0; project_save(0); project_save(1);
+        chain_config.count = 2;
+        chain_config.row[0] = (chain_row_t){0, 2};
+        chain_config.row[1] = (chain_row_t){1, 2};
+        SONG_END(&chain_config) = SONG_FOREVER;
+        moved &= chain_prepare() == 0;
+        events_block(32);
+        go_title("ARRANGE"); frames(800);
+        ui_message("SAVED A LONG MESSAGE"); frame();
+        toast_box(ui.msg, b);
+        memcpy(toast_snap, host_screen, sizeof toast_snap);
+        for (bars = 0; bars < 2u; bars++) { song_poll(); events_block(chain_bar()); frame(); }
+        for (n = 0, y = graph_y(); y < graph_y() + graph_h(); y++)
+            for (x = 0; x < 240u; x++)
+                if (!((int32_t)x >= b[0] && (int32_t)x < b[2] && (int32_t)y >= b[1] && (int32_t)y < b[3]))
+                    n += host_screen[y * 240u + x] != toast_snap[y * 240u + x];
+        moved &= chain.running && ui.msg_t && n > 0u && b[2] > b[0];
+        if (!moved) printf("  ARRANGE behind the toast: running %d, msg %u, %u px moved, pill %d..%d\n", chain.running,
+                           (unsigned)ui.msg_t, (unsigned)n, (int)b[0], (int)b[2]);
+        transport_req = 2; events_block(32); song_poll();
+    }
+    bad += check("  playing: the page (ARRANGE, a song chain running) goes on moving behind the toast", moved);
 
     for (ok = 1, sk = 0; sk < 1u; sk++) {               /* NOTICE: the page round its box, its tabs, its breadcrumb */
         static const int16_t R[3][4] = {{0, LT_Y, 240, 0}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
@@ -18916,9 +18980,17 @@ static int test_t37_mix_knobs(void)
     trk[2].p[P_LEVEL] = 111;
     uxs_knobs(cur_page(), k);
     ok &= uxq_t_is("LEVEL -0.5 dB", k[0].value, "-0.5");
+    {   /* (fix 1) the status line in the same words: "T3 LEVEL . -0.5DB", "0.0DB", OFF */
+        char sb[48];
+        ok &= uxq_t_is("status -0.5", uxg_mix_say(0, sb, sizeof sb), "T3 LEVEL \xB7 -0.5DB");
+        trk[2].p[P_LEVEL] = 112;
+        ok &= uxq_t_is("status 0.0", uxg_mix_say(0, sb, sizeof sb), "T3 LEVEL \xB7 0.0DB");
+        trk[2].p[P_LEVEL] = 0;
+        ok &= uxq_t_is("status OFF", uxg_mix_say(0, sb, sizeof sb), "T3 LEVEL \xB7 OFF");
+    }
     turn(EN_K1, 1); frame();
     ok &= !strncmp(uxq_t_say(), "T3 LEVEL \xB7 ", 11);
-    bad += check("  MIX's knob row: LEVEL -6.0 (OFF at 0, 0.0, -0.5), PAN, SWING 20%, TUNE; a turn says T3 LEVEL . its dB", ok);
+    bad += check("  MIX's knob row: LEVEL -6.0 (OFF at 0, 0.0, -0.5), PAN, SWING 20%, TUNE; a turn says T3 LEVEL . its dB as the knob", ok);
     ui_power_on();
     return bad;
 }
@@ -18992,11 +19064,25 @@ static int test_t37_more(void)
     song.cpu_q8 = 64;                                   /* (25 %) */
     frames(1200);
     ok &= uxq_t_is("CPU", uxg_t_row_val(UXR_GLOBAL, G_INFO), "25%");
-    {   /* the readout paced: the load moving every frame for 3 s, the list redrawn at most once a second */
-        uint32_t n0 = uxs_panels, f;
+    {   /* the readout paced: the load moving every frame for 3 s, the list redrawn at most once a second (its row on the panel) */
+        uint32_t n0, f;
+        uxg_t_more_at(UXR_GLOBAL, G_INFO);
+        n0 = uxs_panels;
         for (f = 0; f < 3000u / 16u; f++) { song.cpu_q8 = (uint8_t)(40u + f % 50u); frame(); }
         ok &= uxs_panels - n0 >= 2u && uxs_panels - n0 <= 4u;
         if (uxs_panels - n0 < 2u || uxs_panels - n0 > 4u) printf("  CPU readout: %u panels in 3 s\n", (unsigned)(uxs_panels - n0));
+    }
+    {   /* (fix 1) the CPU row scrolled off the panel (LIVE's RATE picked, the list at its top): its changes redraw nothing */
+        uint32_t n0, f;
+        uxg_t_more_at(UXR_GLOBAL, ID_LV_RATE);
+        frames(1200);
+        ok &= uxg_owns() == 0 && !uxg_cpu_shown();
+        n0 = uxs_panels;
+        for (f = 0; f < 3000u / 16u; f++) { song.cpu_q8 = (uint8_t)(40u + f % 50u); frame(); }
+        ok &= uxs_panels == n0;
+        if (uxs_panels != n0) printf("  CPU off the panel: %u panels in 3 s\n", (unsigned)(uxs_panels - n0));
+        uxg_t_more_at(UXR_GLOBAL, G_INFO);
+        ok &= uxg_cpu_shown();
     }
     bad += check("ACID FM 3c-1 task 7: GLO > MORE's rows: LIVE (RAILS), SYSTEM TRACKS LOAD CPU (paced: a panel a second at most), "
                  "TEMPO BPM CLOCK, UNDO", ok);

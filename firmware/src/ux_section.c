@@ -2947,8 +2947,8 @@ static void ux_section_draw(void)
                     sig = sig * 33u + (uint16_t)*vp;
             }
     }
-    if (pg->more == &UXM_GLO)                           /* (3c-1 task 7) GLO > MORE's CPU: the readout as last taken (ux_glo.c: */
-        sig = sig * 31u + uxg_cpu_pct();                /* at most once a second, a panel then) */
+    if (pg->more == &UXM_GLO && uxg_cpu_shown())        /* (3c-1 task 7) GLO > MORE's CPU on the panel: the readout as last taken */
+        sig = sig * 31u + uxg_cpu_pct();                /* (ux_glo.c: at most once a second, a panel then; scrolled off, none) */
     if (pg->graph == GR_MIX)                            /* (3c-1 task 7) GLO > MIX: the six tracks' columns */
         sig = sig * 31u + uxg_mix_sig();
     if (pg->more == &UXM_SEQ) {                         /* (3c-1 task 4) SEQ > MORE's views: what they are read from (the step

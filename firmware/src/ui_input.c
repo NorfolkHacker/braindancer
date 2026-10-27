@@ -471,10 +471,9 @@ static void knob_cap(track_t *t, uint32_t id)
     ml_knob(t, id);
 }
 
-/* MIXER page: KNOB 1 LEVEL, 2 PAN, 3 REV send of the selected track (the track itself is ALGORITHM's, on every page),
- * (0.9.1) KNOB 4 the master DJ FILTER (G_DJF: was the track's MUTE, which the GLO layer's black keys latch, as before).
- * Pattern length stays on SEQ. (ACID FM 3c-1 task 7) The MIXER page gone, its writes kept: GLO > MIX's KNOB 1 and 2, LIVE's
- * KNOB 4 (ui_live.c) */
+/* the inherited MIXER's writes (ACID FM 3c-1 task 7: the page gone, its writes kept): slot 0 LEVEL, 1 PAN of the selected track
+ * (GLO > MIX's KNOB 1 and 2; the track itself is ALGORITHM's, on every page), 3 the master DJ FILTER (G_DJF, 0.9.1; GLO > LIVE's
+ * KNOB 4, ui_live.c). MIXER's REV (slot 2) FX > SENDS' */
 static void tracks_edit(uint32_t slot, int32_t steps)
 {
     track_t *t = TSEL;
@@ -491,10 +490,6 @@ static void tracks_edit(uint32_t slot, int32_t steps)
     case 0:
         vp = &t->p[P_LEVEL];
         d = &TP[P_LEVEL];
-        break;
-    case 2:
-        vp = &t->p[P_REV];
-        d = &TP[P_REV];
         break;
     default:
         vp = &t->p[P_PAN];

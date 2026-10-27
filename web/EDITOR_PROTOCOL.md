@@ -39,7 +39,7 @@ the end of the step replies, and an optional last byte of a step write (see "Rat
 0..6 (see "DRUM lane modes" below). Nothing else changed.
 
 **DJ FILTER (JIANT 0.9.1):** global 17 (was `NAME`, `--`, 0..0, never set) is the master DJ FILTER, `DJ FILT`, -64..63
-(0 out of the chain, below a low-pass, above a high-pass; GLO > MIXER KNOB 4 on the device). G_COUNT is unchanged; a
+(0 out of the chain, below a low-pass, above a high-pass; GLO > LIVE KNOB 4 on the device; GLO > MIXER's until ACID FM 0.5). G_COUNT is unchanged; a
 `SET` of it while the selected track records is recorded as the knob is. Its automation records are `MOTION` records
 of id 127 (past every track parameter; automation only: op 5, a lock, is refused with 1), listed by the query as any
 other. Firmware before 0.9.1 shows global 17 as `NAME`.
@@ -105,7 +105,7 @@ DRIVE (firmware before 0.4 refuses a kit with them set).
 **JIANT 0.4 E values:** LOFI {CHIP WAVE DUTY CRSH CUT VIB BEND MASK} (CUT BEND MASK were SWP ARP TONE); ANALOG's E8
 is INT, osc 2's interval −24..24 (was KTR). A project (kit marker below 3, or an older format) or a user preset (no 0.4
 mark) stored before loads LOFI's TONE as CUT, BEND MASK 0, and ANALOG's KTR as INT 0. VOICE 2 (ALLOC DETUNE PAN MUTE)
-is no page any more: PAN and MUTE on MIXER, the others at their stored values.
+is no page any more: PAN on GLO > MIX (MIXER until ACID FM 0.5), MUTE the GLO layer's, the others at their stored values.
 
 **ACID FM 0.5: 90 globals**: G 71..76 each track's MIDI IN (OFF / ON, ON), 77..82 its OUT (OFF / ON, ON), 83..88 its
 CHANNEL (1..16, T1..T6: 1..6), 89 KEYBOARD PLAYS SELECTED (OFF / ON: a channel no track takes plays the selected track).

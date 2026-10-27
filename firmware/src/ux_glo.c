@@ -42,10 +42,10 @@ enum { UXG_L_RATE, UXG_L_LOOP, UXG_L_THIN, UXG_L_DJF, UXG_L_TGT, UXG_L_CUT, UXG_
 /* the words the knob row, the status line, the rows and the picture are made of (tests/ux_msg_scan.py: every one has its glyphs
  * in UF_LBL and UF_HDR) */
 static const char *const UXG_WORD[] = {"OFF", " STEPS", "%", " PLAY", "ALL", "RATCHET X", "THIN ", " \xB7 ", "LATCH", "RANDOM",
-                                       "OCT+", "OCT-", "TURN ", "+", "K", " LP", " HP", "LOW-PASS ", "HIGH-PASS ", "HZ", " ", " STEP"};
+                                       "OCT+", "OCT-", "TURN ", "+", "K", " LP", " HP", "LOW-PASS ", "HIGH-PASS ", "HZ", " ", " STEP", "DB"};
 enum { UXG_W_OFF, UXG_W_STEPS, UXG_W_PCT, UXG_W_PLAY, UXG_W_ALL, UXG_W_RATCH, UXG_W_THIN, UXG_W_DOT, UXG_W_LATCH, UXG_W_RND,
        UXG_W_UP, UXG_W_DN, UXG_W_TURN, UXG_W_PLUS, UXG_W_K, UXG_W_LP, UXG_W_HP, UXG_W_LOW, UXG_W_HIGH, UXG_W_HZ, UXG_W_SP,
-       UXG_W_STEP };
+       UXG_W_STEP, UXG_W_DB };
 static const char *const UXG_ARROW_LBL[2] = {"<<", "<>"};   /* (the picture's REVERSE, PING-PONG: UF_LBL alone has < and >) */
 /* the status line on LIVE with no knob turned (what the keys do; LATCH on), on a RAILS row (GLO > MORE: OCT- and OCT+ there),
  * (task 7) on MORE's UNDO (what it takes back) */
@@ -323,6 +323,15 @@ static const char *uxg_mix_say(uint32_t c, char *b, uint32_t n)
     b[3] = 0;
     uxg_cat(b, n, uxs_label(SEC_GLO, 0, id, d->label));
     uxg_cat(b, n, UXG_WORD[UXG_W_DOT]);
+    if (!c) {                                           /* (LEVEL: HOME's number, "0.0", "-0.5", OFF, and DB) */
+        char v[16];
+        if (ux_lvl_fmt(song.sel % NTRK, v)[0]) {        /* (a unit: dB, not OFF) */
+            uxg_cat(b, n, v);
+            uxg_cat(b, n, UXG_WORD[UXG_W_DB]);
+        } else
+            uxg_cat(b, n, v);
+        return b;
+    }
     uxs_vtext(d, TSEL->p[id], 0, id, b + str_len(b), n - str_len(b));
     return b;
 }
@@ -385,6 +394,18 @@ static uint32_t uxg_cpu_pct(void)                       /* the load now, % (song
         uxg_cpu_on = 1;
     }
     return uxg_cpu;
+}
+static int uxg_cpu_shown(void)                         /* GLO > MORE's CPU row on the panel now (its pick and scroll) */
+{
+    uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, r, vt;
+    uint64_t m = uxm_mask(&UXM_GLO);
+    uxm_fix(&UXM_GLO, m, &s, &t);
+    for (r = 0; r < UXM_GLO.n && !(UXM_GLO.rows[r].kind == UXR_GLOBAL && UXM_GLO.rows[r].id == G_INFO); r++)
+        ;
+    if (!uxm_on(m, r))
+        return 0;
+    vt = uxm_vis(m, t);
+    return uxm_vis(m, r) >= vt && uxm_vis(m, r) < vt + uxm_rows(&UXM_GLO, s);
 }
 static const char *uxg_cpu_text(char *val, uint32_t nv, uint8_t *bar)   /* GLO > MORE's CPU row: "25%" */
 {
