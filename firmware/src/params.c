@@ -532,7 +532,8 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP };   /* (ACID FM 3c-1 task 7: SC_TRK, JIANT's MIXER's, gone with it) */
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER,
        GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MORPH, GR_DXIMG,
-       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP, GR_MIX };   /* (ACID FM 3c-1 task 7) GR_MIX: GLO > MIX (ux_glo.c); GR_TRK,
+       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP, GR_MIX, GR_MIDI };   /* (ACID FM 3c-1 task 8) GR_MIDI: GLO > MIDI (ux_glo.c);
+                                                         * (task 7) GR_MIX: GLO > MIX (ux_glo.c); GR_TRK,
                                                          * JIANT's MIXER and SENDS, gone with them */   /* (ACID FM 3c-1 task 4 fix 1: GR_MOTION GR_EVENTS GR_COMP GR_MUTATE
                                                          * GR_FUGUE GR_SHAPE gone with SEQ's pages; no value is stored, PAGES' own) */   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
                                                          * (task 5) GR_FM6P FM6's OPERATOR, OP ENV; GR_DXP DRUM-X's SOUND, SOUND 2 */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
@@ -624,6 +625,18 @@ static int sqv_is(uint32_t id) { return id >= ID_SQ_STRETCH && id < ID_SQ_END; }
 enum { ID_LV_TGT = 0xF5, ID_LV_RATE, ID_LV_CUT, ID_LV_DENS, ID_LV_END };
 typedef char lvv_ids_ok[(uint32_t)G_COUNT <= (uint32_t)ID_LV_TGT && (uint32_t)ID_LV_END <= 0xF9u ? 1 : -1];
 static int lvv_is(uint32_t id) { return id >= ID_LV_TGT && id < ID_LV_END; }
+/* (ACID FM 3c-1 task 8) GLO > MORE's MIDI rows that are no song global: NOTES OUT (OFF / KEYS / KEYS+SEQUENCE) and CLOCK OUT, the
+ * device's (ui.c midi_outs: saved with the settings, MENU's MIDI OUT until 0.5), LEARN (MIDI LEARN armed: midi_learn.c ml.on,
+ * never saved; MENU's until 0.5). Views as TRACKS and LOAD: param_ref reads one into mov_ui, a turn writes it back (ui_input.c
+ * param_knob, mov_put). Ids past every global, below the RAILS' */
+enum { ID_MO_NOTES = 0xF2, ID_MO_CLOCK, ID_ML_LEARN, ID_MO_END };
+typedef char mov_ids_ok[(uint32_t)G_COUNT <= (uint32_t)ID_MO_NOTES && (uint32_t)ID_MO_END <= (uint32_t)ID_LV_TGT ? 1 : -1];
+static int mov_is(uint32_t id) { return id >= ID_MO_NOTES && id < ID_MO_END; }
+static const char *const N_MONOTES[] = {"OFF", "KEYS", "K+SEQ"};   /* (the ux pages: KEYS+SEQ, the status line KEYS + SEQUENCE: ux_section.c
+                                                         * uxs_vtext, uxs_vfull) */
+static const param_desc_t MOV_DESC[3] = {PE("NOTES OUT", N_MONOTES, 1), PE("CLOCK OUT", N_ONOFF, 0), PE("LEARN", N_ONOFF, 0)};
+static int16_t mov_ui;
+static uint32_t mov_get(uint32_t id);                   /* (ui.c: the setting now) */
 static const param_desc_t *fld_ref(uint32_t id, int16_t **valp);   /* (ui_dx.c) its descriptor, its value (a scratch) */
 static void fld_turn(uint32_t id, int32_t steps, uint32_t knob);    /* (ui_dx.c) turned steps detents of KNOB knob (0..3) */
 static uint32_t dx_lane_picked(void);                   /* (ui_dx.c) the drum picked, 0..7 (BD .. CB): DRUM-X's SOUND's LEVEL */
@@ -788,13 +801,16 @@ static const ux_row_t UXM_SEQ_ROWS[] = {
 static const ux_more_t UXM_SEQ = {UXM_SEQ_ROWS, (uint8_t)(sizeof UXM_SEQ_ROWS / sizeof UXM_SEQ_ROWS[0])};
 /* (ACID FM 3c-1 task 6) GLO's MORE (spec 3.3): LIVE's RAILS (the inherited second LIVE page's four knobs, spec 3.1); (task 7)
  * SYSTEM (JIANT's GLO > SYSTEM: TRACKS 4 / 6, LOAD, CPU a readout; ROUTE, inert since 0.5, gone), TEMPO (GLOBAL's BPM, the rules
- * HOME's KNOB 4 has: ui_input.c param_knob; its CLOCK until task 8's MIDI page, which then holds it: uxm_mask leaves a row out
- * when a page of the chain shows it), UNDO (the GLO layer's G4: ui_layer.c glo_undo) */
+ * HOME's KNOB 4 has: ui_input.c param_knob; task 8: its CLOCK the MIDI page's KNOB 4), (task 8, spec 4.1) MIDI (KEYBOARD PLAYS
+ * SELECTED, CLOCK OUT, NOTES OUT, LEARN, LEARN CLEAR: the last four MENU > MIDI's until 0.5), UNDO (the GLO layer's G4: ui_layer.c
+ * glo_undo) */
 static const ux_row_t UXM_GLO_ROWS[] = {
     {UXM_H_LIVE, UXR_HEAD, 0}, {ID_LV_TGT, UXR_GLOBAL, 0}, {ID_LV_RATE, UXR_GLOBAL, 0}, {ID_LV_CUT, UXR_GLOBAL, 0},
     {ID_LV_DENS, UXR_GLOBAL, 0},
     {UXM_H_SYSTEM, UXR_HEAD, 0}, {G_TRKS, UXR_GLOBAL, 0}, {G_LOADP, UXR_GLOBAL, 0}, {G_INFO, UXR_GLOBAL, 0},
-    {UXM_H_TEMPO, UXR_HEAD, 0}, {G_BPM, UXR_GLOBAL, 0}, {G_CLOCK, UXR_GLOBAL, 0},
+    {UXM_H_TEMPO, UXR_HEAD, 0}, {G_BPM, UXR_GLOBAL, 0},
+    {UXM_H_MIDI, UXR_HEAD, 0}, {G_MRSEL, UXR_GLOBAL, 0}, {ID_MO_CLOCK, UXR_GLOBAL, 0}, {ID_MO_NOTES, UXR_GLOBAL, 0},
+    {ID_ML_LEARN, UXR_GLOBAL, 0}, {UXM_A_LCLEAR, UXR_ACTION, 0},
     {UXM_H_UNDO, UXR_HEAD, 0}, {UXM_A_UNDO, UXR_ACTION, 0},
 };
 static const ux_more_t UXM_GLO = {UXM_GLO_ROWS, (uint8_t)(sizeof UXM_GLO_ROWS / sizeof UXM_GLO_ROWS[0])};
@@ -913,6 +929,9 @@ static const page_t PAGES[] = {
     /* (ACID FM 3c-1 task 7) GLO > MIX (3c-1 spec 3.2, ux_glo.c): KNOB 1 LEVEL, 2 PAN of the selected track (no id: ui_input.c
      * tracks_edit, the inherited MIXER's write), 3 SWING, 4 TUNE (the song's, as JIANT's GLOBAL turned them) */
     {"MIX", FAM_GLO, SC_GLOBAL, GR_MIX, {0xFF, 0xFF, G_SWING, G_TUNE}},
+    /* (ACID FM 3c-1 task 8) GLO > MIDI (spec 4.1, ux_glo.c): KNOB 1 IN, 2 OUT, 3 CHANNEL of the selected track (page_id: the
+     * first track's id + the track), 4 CLOCK (INT / USB / TRS, the song's; JIANT's GLOBAL's) */
+    {"MIDI", FAM_GLO, SC_GLOBAL, GR_MIDI, {G_MRIN1, G_MROUT1, G_MRCH1, G_CLOCK}},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot_tr[NTRK];   /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit, a track each (3b task 7: as FM6's
@@ -962,6 +981,11 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
         *valp = &load_ui;
         return &LOAD_DESC;
     }
+    if (mov_is(id)) {                                 /* (3c-1 task 8) GLO > MORE's NOTES OUT, CLOCK OUT, LEARN: the same */
+        mov_ui = (int16_t)mov_get(id);
+        *valp = &mov_ui;
+        return &MOV_DESC[id - ID_MO_NOTES];
+    }
     if (t && fld_is(id))                              /* (3b task 5) FM6's operator, DRUM-X's kit: their bytes */
         return fld_ref(id, valp);
     if (sqv_is(id) || lvv_is(id)) {                   /* (3c-1 task 4) SEQ > MORE's views, (task 6) GLO > MORE's RAILS: no value
@@ -992,6 +1016,8 @@ static uint32_t page_id(const page_t *pg, uint32_t slot)
         return id;
     if (pg->scope == SC_STEP)
         return ID_NONE;
+    if (pg->graph == GR_MIDI && slot < 3u)            /* (3c-1 task 8) GLO > MIDI's IN OUT CHANNEL: the selected track's */
+        return id + song.sel % NTRK;
     if (pg->scope == SC_GLOBAL)
         return id;                                      /* (3b task 8: SL PITCH's step picked gone: MORE's rows) */
     if (pg->scope == SC_ENGINE && id == P_E4 && ENGINES[TSEL->eng_req % NENGINES] == &ENG_LOFI && TSEL->p[P_E1] < RW_BYTE)

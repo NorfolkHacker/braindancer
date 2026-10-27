@@ -16,10 +16,17 @@
  *            (lit: the selected track), a level bar on the mixer's dB (ux_home.c ux_lvl_bar, HOME TRACKS' rule) with 0 dB marked
  *            beside it, its dB number (the knob row's), a pan mark; muted dim, asleep (TRACKS 4) grey. The inherited SENDS are FX >
  *            SENDS', MIXER's REV FX's, its DJ FILTER LIVE's KNOB 4.
+ *   MIDI     (spec 4.1; task 8) KNOB 1 IN, 2 OUT, 3 CHANNEL of the selected track (params.c page_id: G_MRIN1 / G_MROUT1 /
+ *            G_MRCH1 + the track), 4 CLOCK (INT / USB / TRS). The picture: the clock on top ("CLOCK USB" and a diamond lit on each
+ *            beat received while following: uxg_clk_lit), a row a track, T1 .. T6: its number (lit: the selected track), IN and
+ *            OUT as dots (on: KNOB 1's, KNOB 2's colour; off a ring), CH and its channel; asleep (TRACKS 4) grey; NOTES OUT OFF said
+ *            on top, the OUT dots dim. The status line names the track ("T3 CHANNEL . 10"); CHANNEL 16's hint: Program Change
+ *            there picks the section / project (midi_control.c).
  *   MORE     (spec 3.3) its LIVE rows: the RAILS (the inherited second LIVE page's knobs, ui_live.c live_rail): TRACKS, RATE,
  *            CUT, DENSITY (uxg_vtext); OCT- / OCT+ there as on LIVE (ui_live.c live_page, uxg_more_live). (task 7) SYSTEM: TRACKS
- *            4 / 6, LOAD, CPU (a readout, uxg_cpu_text: sampled at most once a second); TEMPO: BPM (HOME's rules), CLOCK (until
- *            task 8's MIDI page); UNDO (the GLO layer's G4). The inherited SYSTEM's ROUTE, inert since 0.5, on none.
+ *            4 / 6, LOAD, CPU (a readout, uxg_cpu_text: sampled at most once a second); TEMPO: BPM (HOME's rules; task 8: CLOCK
+ *            the MIDI page's); (task 8) MIDI: KEYBOARD PLAYS SELECTED, CLOCK OUT, NOTES OUT, LEARN, LEARN CLEAR (a hint each,
+ *            uxg_midi_more_say); UNDO (the GLO layer's G4). The inherited SYSTEM's ROUTE, inert since 0.5, on none.
  * The picture is redrawn when what it shows changes (uxg_sig), the bar's line as it moves at most every UX_TRK_MS (UX_TRK_SLOW_MS
  * under load): a panel a 1/16 at most while tricks run, none while nothing changes. Included after ux_seq.c, before
  * ux_section.c. */
@@ -56,7 +63,8 @@ static uint32_t uxg_ph_ms;
 
 static int uxg_owns(void)
 {
-    return !ui.home && ui.page < NPAGES && (PAGES[ui.page].graph == GR_LIVE || PAGES[ui.page].graph == GR_MIX);
+    return !ui.home && ui.page < NPAGES && (PAGES[ui.page].graph == GR_LIVE || PAGES[ui.page].graph == GR_MIX ||
+                                            PAGES[ui.page].graph == GR_MIDI);
 }
 static int uxg_more_live(void)
 {
@@ -223,6 +231,15 @@ static void uxg_tags(const lv_mod_t *m, char *b, uint32_t n)
         }
     }
 }
+/* track i's number in its box at (x, y), lit (KNOB 1's colour) when on: LIVE's rows, MIX's columns, MIDI's rows (task 8) */
+static void uxg_numbox(int32_t x, int32_t y, uint32_t i, int on, uint16_t ink)
+{
+    uint16_t bx = on ? UX_ACID : UX_BG2;
+    char d[2] = {(char)('1' + i), 0};
+    cv_rect(x, y, UXG_BW, UXG_BHT, bx);
+    cv_text_on(x + (UXG_BW - text_w(&UF_LBL, d)) / 2, y + (UXG_BHT - UF_LBL_CAP_H) / 2 - UF_LBL_CAP_Y, &UF_LBL, d,
+               on ? UX_BG : ink, bx);
+}
 /* track i's row at y: its number (lit picked), the bar's band, its window, its tricks in words under it */
 static void uxg_row(uint32_t i, uint32_t tg, int32_t y)
 {
@@ -230,11 +247,8 @@ static void uxg_row(uint32_t i, uint32_t tg, int32_t y)
     uint32_t len = (uint32_t)clamp(trk[i].p[P_SLEN], 1, NSTEP), cn = m->cut && m->cut < len ? m->cut : 0u;
     uint32_t ws = cn && (m->fl & LF_HERE) ? m->ws : 0u, a, w;
     int on = (int)((tg >> i) & 1u);
-    uint16_t bx = on ? UX_ACID : UX_BG2;
-    char d[2] = {(char)('1' + i), 0}, b[48];
-    cv_rect(UXG_BX, y, UXG_BW, UXG_BHT, bx);
-    cv_text_on(UXG_BX + (UXG_BW - text_w(&UF_LBL, d)) / 2, y + (UXG_BHT - UF_LBL_CAP_H) / 2 - UF_LBL_CAP_Y, &UF_LBL, d,
-               on ? UX_BG : UX_MID, bx);
+    char b[48];
+    uxg_numbox(UXG_BX, y, i, on, UX_MID);
     cv_rect(UXG_X0, y, UXG_W, UXG_BH, UX_BG2);
     if (lv_neutral(m))
         return;
@@ -345,17 +359,15 @@ static __attribute__((noinline)) void uxg_mix_picture(void)
         const track_t *t = &trk[c];
         int sel = c == song.sel % NTRK, awake = c < trk_live, mute = t->p[P_MUTE] != 0;
         int32_t bx = UXG_MBX(c), cx = bx + UXG_MBW / 2, h = UXG_MBH * ux_lvl_bar(t->p[P_LEVEL]) / 255, w, pan, px;
-        uint16_t box = sel ? UX_ACID : UX_BG2, lc = sel ? UX_ACID : ux_mix(UX_BG, UX_ACID, 55),
+        uint16_t lc = sel ? UX_ACID : ux_mix(UX_BG, UX_ACID, 55),
                  pc = sel ? UX_SLIDE : ux_mix(UX_BG, UX_SLIDE, 55), tc = sel ? UX_TEXT : UX_MID;
-        char d[16] = {(char)('1' + c), 0};
+        char d[16];
         if (mute || !awake) {
             lc = UX_DIM(lc, 55);
             pc = UX_DIM(pc, 55);
             tc = UX_DIM(UX_MID, 55);
         }
-        cv_rect(cx - UXG_BW / 2, 4, UXG_BW, UXG_BHT, box);
-        cv_text_on(cx - UXG_BW / 2 + (UXG_BW - text_w(&UF_LBL, d)) / 2, 4 + (UXG_BHT - UF_LBL_CAP_H) / 2 - UF_LBL_CAP_Y, &UF_LBL, d,
-                   sel ? UX_BG : UX_MID, box);
+        uxg_numbox(cx - UXG_BW / 2, 4, c, sel, UX_MID);
         cv_rect(bx, UXG_MBY, UXG_MBW, UXG_MBH, UX_BG2);
         if (awake && h > 0)
             cv_rect(bx, UXG_MBY + UXG_MBH - h, UXG_MBW, h, lc);
@@ -377,6 +389,120 @@ static uint32_t uxg_mix_sig(void)
     for (c = 0; c < NTRK; c++)
         h = (h ^ (uint32_t)(uint16_t)trk[c].p[P_LEVEL] ^ (uint32_t)(uint16_t)trk[c].p[P_PAN] << 8 ^
              (uint32_t)(trk[c].p[P_MUTE] != 0) << 24) * 16777619u;
+    return h;
+}
+
+/* ------------------------------------------------------------------------------------------------------ MIDI (task 8) --- */
+#define UXG_DY0 22               /* the table: T1's row (y), the rows' pitch (6 x 21: 22 .. 148) */
+#define UXG_DP 21
+#define UXG_DIN 30               /* .. a row's IN, OUT, CH (x) */
+#define UXG_DOUT 86
+#define UXG_DCH 150
+#define UXG_BEAT_MS 120u         /* the clock's diamond lit this long from a beat received (24 clocks) */
+/* the picture's words (UF_LBL): the clock line's, a row's, NOTES OUT off said */
+static const char *const UXG_MIDI_LBL[] = {"CLOCK ", "IN ", "OUT ", "CH ", "NOTES OUT OFF", " ", UX_GL_ON, UX_GL_OFF, UX_GL_SYNC};
+enum { UXG_ML_CLOCK, UXG_ML_IN, UXG_ML_OUT, UXG_ML_CH, UXG_ML_NOFF, UXG_ML_SP, UXG_ML_ON, UXG_ML_OFF, UXG_ML_SYNC };
+/* the status line on MIDI (CHANNEL 16 picked: what Program Change does there, midi_control.c) and on GLO > MORE's MIDI rows */
+static const char *const UXG_MIDI_SAY[] = {"CH 16 PROGRAM CHANGE: SECTION/PROJECT", "USB ONLY: THE TRS SOCKET IS INPUT ONLY",
+                                           "OTHER CHANNELS PLAY THE SELECTED TRACK", "KEYS+SEQ: THE SEQUENCE GOES OUT TOO",
+                                           "ON: TURN A KNOB THEN SEND A CC", "FORGETS EVERY LEARNED CC"};
+enum { UXG_MS_CH16, UXG_MS_CLKOUT, UXG_MS_KBD, UXG_MS_NOTES, UXG_MS_LEARN, UXG_MS_LCLEAR };
+static uint32_t uxg_beat_n, uxg_beat_ms;                /* the beat last seen (midi_clock.c npulse / 24), when (ms) */
+static int32_t uxg_lit_drawn = -1;                      /* the diamond as drawn (-1: never), when: ux_section_draw's pace */
+static uint32_t uxg_lit_ms;
+/* the diamond lit: a beat received from the clock followed less than UXG_BEAT_MS ago (CLOCK USB / TRS) */
+static int uxg_clk_lit(void)
+{
+    uint32_t b;
+    if (!song.g[G_CLOCK])
+        return 0;
+    b = midi_clock.npulse / 24u;
+    if (b != uxg_beat_n) {
+        uxg_beat_n = b;
+        uxg_beat_ms = fm1_ms;
+    }
+    return fm1_ms - uxg_beat_ms < UXG_BEAT_MS;
+}
+/* the status line for MIDI's KNOB 1 .. 3 just turned: "T3 IN . OFF", "T3 CHANNEL . 10" (the track's: the label does not say) */
+static const char *uxg_midi_say(uint32_t c, char *b, uint32_t n)
+{
+    const page_t *pg = &PAGES[ui.page];
+    uint32_t id = page_id(pg, c % 3u);
+    int16_t *vp;
+    const param_desc_t *d = param_ref(0, id, &vp);
+    b[0] = 'T';
+    b[1] = (char)('1' + song.sel % NTRK);
+    b[2] = ' ';
+    b[3] = 0;
+    if (!d || !vp)
+        return b;
+    uxg_cat(b, n, uxs_label(SEC_GLO, 1, id, d->label));
+    uxg_cat(b, n, UXG_WORD[UXG_W_DOT]);
+    uxs_vtext(d, *vp, 1, id, b + str_len(b), n - str_len(b));
+    return b;
+}
+static const char *uxg_midi_idle(void)                  /* (MIDI, no knob turned: CHANNEL 16's hint; else none) */
+{
+    return song.g[G_MRCH1 + song.sel % NTRK] == 16 ? UXG_MIDI_SAY[UXG_MS_CH16] : 0;
+}
+static const char *uxg_midi_more_say(const ux_row_t *r)   /* (GLO > MORE: a MIDI row picked, what it does; 0 none) */
+{
+    if (r->kind == UXR_ACTION)
+        return r->id == UXM_A_LCLEAR ? UXG_MIDI_SAY[UXG_MS_LCLEAR] : 0;
+    return r->id == G_MRSEL ? UXG_MIDI_SAY[UXG_MS_KBD] : r->id == ID_MO_CLOCK ? UXG_MIDI_SAY[UXG_MS_CLKOUT] :
+           r->id == ID_MO_NOTES ? UXG_MIDI_SAY[UXG_MS_NOTES] : r->id == ID_ML_LEARN ? UXG_MIDI_SAY[UXG_MS_LEARN] : 0;
+}
+/* the picture's word w (UXG_ML_*) at (x, y) in ink on bg; the pen after it */
+static int32_t uxg_mword(int32_t x, int32_t y, uint32_t w, uint16_t ink, uint16_t bg)
+{
+    return cv_text_on(x, y, &UF_LBL, UXG_MIDI_LBL[w], ink, bg);
+}
+/* the clock on top, then a row a track: its number (lit: selected), IN and OUT as dots, CH and its channel */
+static __attribute__((noinline)) void uxg_midi_picture(void)
+{
+    uint32_t i, ck = (uint32_t)song.g[G_CLOCK] % 3u, nout = mout_notes() != MOUT_OFF;
+    int32_t x = 8, ty;
+    x = uxg_mword(x, 4, UXG_ML_CLOCK, UX_MID, ux_under(x, 8));
+    x = cv_text_on(x, 4, &UF_LBL, N_CLOCK[ck], UX_ACCENT, ux_under(x, 8));
+    if (ck) {                                           /* (following: the diamond, lit a beat received) */
+        x = uxg_mword(x, 4, UXG_ML_SP, UX_MID, ux_under(x, 8));
+        (void)uxg_mword(x, 4, UXG_ML_SYNC, uxg_clk_lit() ? UX_ACCENT : UX_DIM(UX_ACCENT, 60), ux_under(x, 8));
+    }
+    if (!nout) {
+        x = 232 - text_w(&UF_LBL, UXG_MIDI_LBL[UXG_ML_NOFF]);
+        (void)uxg_mword(x, 4, UXG_ML_NOFF, UX_MID, ux_under(x, 8));
+    }
+    for (i = 0; i < NTRK; i++) {
+        int32_t y = UXG_DY0 + (int32_t)i * UXG_DP;
+        int sel = i == song.sel % NTRK, awake = i < trk_live, in = song.g[G_MRIN1 + i] != 0, out = song.g[G_MROUT1 + i] != 0;
+        uint16_t tx = sel ? UX_TEXT : UX_MID, bg, ci = UX_ACID, co = nout ? UX_SLIDE : UX_DIM(UX_SLIDE, 55), cc = UX_VIOLET;
+        char d[4];
+        if (!awake)                                     /* (asleep: TRACKS 4) */
+            tx = ci = co = cc = UX_DIM(UX_MID, 55);
+        if (sel)
+            cv_rect(UXG_BX + UXG_BW + 3, y, 232 - (UXG_BX + UXG_BW + 3), UXG_BHT, UX_BG2);
+        uxg_numbox(UXG_BX, y, i, sel, awake ? UX_MID : UX_DIM(UX_MID, 55));
+        ty = y + (UXG_BHT - UF_LBL_CAP_H) / 2 - UF_LBL_CAP_Y;
+        bg = sel ? UX_BG2 : ux_under(UXG_DIN, y + UXG_BHT / 2);
+        x = uxg_mword(UXG_DIN, ty, UXG_ML_IN, tx, bg);
+        (void)uxg_mword(x, ty, in ? UXG_ML_ON : UXG_ML_OFF, in ? ci : UX_MID, bg);
+        bg = sel ? UX_BG2 : ux_under(UXG_DOUT, y + UXG_BHT / 2);
+        x = uxg_mword(UXG_DOUT, ty, UXG_ML_OUT, tx, bg);
+        (void)uxg_mword(x, ty, out ? UXG_ML_ON : UXG_ML_OFF, out ? co : UX_MID, bg);
+        bg = sel ? UX_BG2 : ux_under(UXG_DCH, y + UXG_BHT / 2);
+        x = uxg_mword(UXG_DCH, ty, UXG_ML_CH, tx, bg);
+        fmt_int(d, song.g[G_MRCH1 + i]);
+        (void)cv_text_on(x, ty, &UF_LBL, d, sel ? cc : tx, bg);
+    }
+}
+/* what the table is drawn from: the selected track, the tracks awake, each one's IN OUT CHANNEL, the clock, NOTES OUT (the
+ * diamond: ux_section_draw, paced) */
+static uint32_t uxg_midi_sig(void)
+{
+    uint32_t h = song.sel * 131u + trk_live * 7u + (uint32_t)song.g[G_CLOCK] * 3u + (mout_notes() != MOUT_OFF) + 1u, i;
+    for (i = 0; i < NTRK; i++)
+        h = (h ^ (uint32_t)song.g[G_MRIN1 + i] ^ (uint32_t)song.g[G_MROUT1 + i] << 1 ^ (uint32_t)song.g[G_MRCH1 + i] << 2) *
+            16777619u;
     return h;
 }
 

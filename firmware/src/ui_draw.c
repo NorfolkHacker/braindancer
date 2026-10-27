@@ -191,8 +191,8 @@ static int32_t roll_text(uint32_t k, int32_t x, int32_t y, const char *s, uint16
 /* the header (y 0..24). (0.8.5) The approved mock-up's skin: one quiet line over a LINE rule at row 22,
  *   left    (0.8.9, the skins' mock-up: the 0.6 colours) the selected track's number in an ACCENT box (4..16), the play
  *           state (x 22: stopped a MID square, playing a THEME triangle, counting in the accent) and the BPM large, in M
- *           (THEME; the knob turning it: the accent) from x 35, then BPM LOCK's lock and the REC mark (a dot: filled the
- *           selected track armed, a ring another)
+ *           (THEME; the knob turning it: the accent) from x 35, then BPM LOCK's lock, (ACID FM 3c-1 task 8) the sync mark
+ *           (a diamond: CLOCK USB / TRS) and the REC mark (a dot: filled the selected track armed, a ring another)
  *   centre  what the page is of, centred on x 120 (MID): "T1 . ANALOG ACID" (the track, its engine and sound), on the
  *           song's pages (SAVE, ARRANGE, TOOLS, GLOBAL) "P1 NAME" (the project), on FX "T1" (the accent)
  *   right   the octave ("OCT +2"), or the song row while a song plays (the disc and its number), ending at 196; the load
@@ -328,7 +328,7 @@ static void draw_head(void)
     uint32_t rec = (song.rec >> song.sel) & 1u ? 2u : song.rec != 0u;   /* 2 the selected track armed, 1 another */
     uint32_t sig = (uint32_t)song.playing * 3u + rec * 5u + (uint32_t)(song.octave + 8) * 11u + song.sel * 13131u +
                    (ui.msg_t ? str_hash(7u, ui.msg) : ui.layer * 7919u) + (uint32_t)song.g[G_BPM] * 101u + (ui.bpm_t != 0) * 31u +
-                   (uint32_t)seq_counting() * 7u + (ui_prefs & PREF_BPM_LOCK) * 4099u +
+                   (uint32_t)seq_counting() * 7u + (ui_prefs & PREF_BPM_LOCK) * 4099u + (uint32_t)song.g[G_CLOCK] * 65599u +
                    (uint32_t)batt_shown() * 7777u + (chain.running ? (chain.row + 1u) * 104729u : 0u) +
                    head_load() * 0x9E3779B1u + str_hash(tc, ttl) * 3u;
     int msg = ui.msg_t || ui.layer;
@@ -377,6 +377,13 @@ static void draw_head(void)
         cv_rect(x + 6, HEAD_MID - 4, 1, 3, T_MID);
         cv_rect(x, HEAD_MID - 1, 8, 6, T_MID);
         lx += HEAD_GAP + 8;
+    }
+    if (song.g[G_CLOCK]) {                             /* (ACID FM 3c-1 task 8) an outside clock (USB, TRS): the sync mark, a
+                                                         * diamond 7 x 7, as the ux pages' header shows (ux_widgets.c ux_transport) */
+        int32_t x = lx + HEAD_GAP, k;
+        for (k = 0; k < 7; k++)
+            cv_rect(x + (k < 3 ? 3 - k : k - 3), HEAD_MID - 3 + k, 7 - 2 * (k < 3 ? 3 - k : k - 3), 1, T_THEME);
+        lx += HEAD_GAP + 7;
     }
     if (song.rec) {                                    /* REC: its dot (x + 3 .. x + 11 of its cell) */
         draw_rec_mark(lx + HEAD_GAP - 3, T_BG);

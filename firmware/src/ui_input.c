@@ -97,8 +97,7 @@ static uint32_t oct_leds(void)
     if (ui.menu && !ui.confirm)
         return ui.menu >= 2u ? (ui.menu == 2u ? 1u | OCT_BREATH : 1u) :   /* (ABOUT: OCT- back, lit; 0.9.14: OCT+
                                                  * PROFILE, breathing) */
-               !menu_valued(ui.menu_sel) ? (ui.menu_sel != MI_LCLEAR || ml_count() ? OCT_BREATH : 0u) :   /* CALIBRATION /
-                                                 * ABOUT: OCT+ opens; (0.9.12) LEARN CLEAR: clears, while CCs are learned */
+               !menu_valued(ui.menu_sel) ? OCT_BREATH :   /* CALIBRATION / ABOUT / (3c-1 task 8) MIDI IS ON GLO: OCT+ opens */
                (menu_step(ui.menu_sel, -1) != menu_get(ui.menu_sel) ? OCT_BREATH_DN : 0u) |   /* a value: each */
                (menu_step(ui.menu_sel, 1) != menu_get(ui.menu_sel) ? OCT_BREATH : 0u);         /* way it can go */
     if (ui.confirm || act_cols())
@@ -1115,17 +1114,22 @@ static void seq_view_turn(uint32_t id, int32_t steps)
 /* (ACID FM 3b, factored out of edit_param) setting id of track t (0: a global) turned steps detents of KNOB knob (0..3, its
  * acceleration): the write every page's knob does (params.c param_ref), a MORE row's too (ux_more.c): the value, the views
  * written back (TRACKS, LOAD, the LFO's MODE / PHASE), the turn recorded (AUTOMATION) and heard by MIDI LEARN (knob_cap) */
+/* (3b task 10 fix, ruling 1; 3c-1 task 8: every writer) an external clock sets the tempo (midi_clock.c): HOME's KNOB 4, GLO > MORE's
+ * BPM (param_knob), GLO + SELECT and the GLO layer's TAP (ui_layer.c glo_tap) change nothing and say whose it is. 1: refused */
+static int tempo_ext(void)
+{
+    if (!song.g[G_CLOCK])
+        return 0;
+    ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
+    return 1;
+}
 static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
 {
     int16_t *vp;
     int32_t v;
     const param_desc_t *d;
-    if (!t && id == G_BPM && song.g[G_CLOCK]) {         /* (3b task 10 fix, ruling 1) an external clock sets the tempo
-                                                         * (midi_clock.c): a turn changes nothing and says whose it is, on GLO >
-                                                         * GLOBAL, HOME's TRACKS (ux_home.c) and a MORE row alike */
-        ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
+    if (!t && id == G_BPM && tempo_ext())               /* (the tempo: the outside clock's) */
         return;
-    }
     if (t && fld_is(id)) {                              /* (3b task 5) FM6's operator, DRUM-X's kit: as JIANT's pages wrote */
         fld_turn(id, steps, knob);
         return;
@@ -1160,6 +1164,10 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
         track_t *lt = t ? t : TSEL;
         lfo_view_put(lt, vp == &lmode_ui, v);
         knob_cap(lt, P_LPHASE);
+        return;
+    }
+    if (vp == &mov_ui) {                                /* (3c-1 task 8) GLO > MORE's NOTES OUT, CLOCK OUT (saved), LEARN */
+        mov_put(id, v);
         return;
     }
     if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
@@ -2111,7 +2119,8 @@ static void ui_input_frame(void)
     perf_latch_on = fx_latch & 1u;                      /* (MENU > FX LATCH; a settings load sets it too) */
     fx_usb_fixed = (ui_prefs & PREF_USB_FIXED) != 0u;   /* (MENU > USB LEVEL: fx.c, audio.c) */
     fx_usb_gain = USB_GAIN[fx_usb_fixed ? usb_lvl % 5u : 0u];   /* (0.7.0) .. and its attenuation (usb.c uac_tap) */
-    mo_lvl = (uint8_t)(midi_out_mode & 3u);             /* (0.6.72) MENU > MIDI OUT (seq.c) */
+    mo_lvl = (uint8_t)mout_lvl();                       /* (0.6.72) MENU > MIDI OUT (seq.c); (ACID FM 0.5) GLO > MORE's NOTES OUT,
+                                                         * CLOCK OUT (ui.c midi_outs) */
     midi_pc_poll();                                     /* (0.6.72) PROGRAM CHANGE in: the sounds it asked for */
     ml_poll();                                          /* (0.9.12) MIDI LEARN: a CC came for the picked parameter */
     rp_apply();                                        /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
@@ -2575,7 +2584,7 @@ static void ui_input_frame(void)
                                                     * the tracks that play: TRACKS 4 stops at T4 (T5 / T6 asleep) */
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
     if (glo) {                                          /* GLO + SELECT: the tempo (0.6.67: the only way, with TAP) */
-        if (sel) {
+        if (sel && !tempo_ext()) {                      /* (3c-1 task 8: under an outside clock, refused and said) */
             song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, sel, 200), GP[G_BPM].min, GP[G_BPM].max);
             ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
         }

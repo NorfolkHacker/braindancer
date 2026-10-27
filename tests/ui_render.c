@@ -658,7 +658,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL,
        S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS, S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM,
        S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_SEQ_MORE, S_SEQ_MORE_END, S_SEQ_MORE_DRUM,
-       S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_GLO_MIX, S_GLO_MORE_END, S_COUNT };
+       S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_GLO_MIX, S_GLO_MORE_END, S_GLO_MIDI, S_GLO_MORE_MIDI, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo",
@@ -706,7 +706,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_drum_muted", "edit_drum_more_end", "layer_edit", "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state",
     "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64", "seq_steps_drum",
     "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end", "seq_more_drum", "seq_lock",
-    "seq_extras_echo", "glo_mix", "glo_more_end"};
+    "seq_extras_echo", "glo_mix", "glo_more_end", "glo_midi", "glo_more_midi"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's); (ACID FM 3c-1 task 6)
  * the ux pages: LIVE idle (stopped, nothing live); with tricks (T2 THIN 70 %, T3 x2 RATCH x3, T4 LOOP 8, T5 2/3; black key 3 held:
@@ -1004,6 +1004,20 @@ static void glo_mix_scene(void)
     nav_scene(SEC_GLO, "MIX");
     ux_knob_touch(0);
 }
+/* (ACID FM 3c-1 task 8) GLO > MIDI: mixed settings (T1 OUT off, T2 on channel 10, T3 IN off, T4 selected on channel 16: its hint,
+ * T5 OUT off on channel 5), the clock USB with the diamond lit (a beat just received) */
+static void glo_midi_scene(void)
+{
+    trk_midi_defaults();
+    song.g[G_MROUT1] = 0; song.g[G_MRCH1 + 1] = 10; song.g[G_MRIN1 + 2] = 0; song.g[G_MRCH1 + 3] = 16; song.g[G_MROUT1 + 4] = 0;
+    song.g[G_CLOCK] = 1;
+    song.sel = 3;
+    uxs_seen |= (uint16_t)(1u << SEC_GLO);
+    uxs_hint_sec = 0xFF;
+    ux_hot_k = -1;
+    nav_scene(SEC_GLO, "MIDI");
+    midi_clock.npulse += 24u;                           /* (a beat: the diamond lit) */
+}
 static void seq_more_at(uint32_t kind, uint32_t id)
 {
     uint32_t r, c = ui.cursor;
@@ -1151,9 +1165,8 @@ static void setup(int s)
     case S_PRESETS: favorite_set(0, 4, 1); favorite_set(0, 5, 1); go_page(GR_BROWSE); break;
     case S_PRESETS_NOFAV: favorites.filter = 1; go_page(GR_BROWSE); break;
     case S_PRESETS_TYPE: list_put(PT_PLUCK + 1u); go_page(GR_BROWSE); break;   /* (0.9.12) LIST PLUCK: every engine's */
-    case S_MENU_MIDI:                                   /* (0.9.12) MENU > MIDI: LEARN ON, LEARN CLEAR with three learned */
-        ml_learn(24, 0, P_PAN); ml_learn(25, 1, P_E0); ml_learn(26, 2, P_LEVEL); ml_set(1);
-        ui.menu = 1; ui.menu_sel = MI_LCLEAR; break;
+    case S_MENU_MIDI:                                   /* (0.9.12) MENU > MIDI; (ACID FM 3c-1 task 8) its pointer, MIDI IS ON GLO */
+        ui.menu = 1; ui.menu_sel = MI_GLOMIDI; break;
     case S_MENU_SCREEN2:                                /* (0.9.18) MENU > SCREEN 2: SCREEN SLEEP 15 MIN just turned */
         scr_put(2u); ui.menu = 1; ui.menu_sel = MI_SCROFF; ui.hot_col = 2u; ui.hot_t = 30; break;
     case S_USER: song.playing = 0; up_store(3, "MY LONG BASS NAME"); up_store(4, "PAD"); ui.uslot = 3; go_page(GR_USER); break;
@@ -1437,6 +1450,9 @@ static void setup(int s)
     case S_SYSTEM: song.cpu_q8 = 87; glo_more_at(UXR_GLOBAL, G_TRKS); break;   /* (.. its SYSTEM, the page gone) */
     case S_GLO_MIX: glo_mix_scene(); break;
     case S_GLO_MORE_END: song.cpu_q8 = 87; glo_more_at(UXR_ACTION, UXM_A_UNDO); break;   /* (scrolled to its end) */
+    case S_GLO_MIDI: glo_midi_scene(); break;
+    case S_GLO_MORE_MIDI: mout_put(MOUT_SEQ, 1); glo_more_at(UXR_GLOBAL, ID_MO_CLOCK); break;   /* (3c-1 task 8: its MIDI rows,
+                                                         * CLOCK OUT picked: its hint) */
     case S_EDIT_ANALOG: go_title("EDIT 1"); break;
     case S_EDIT_DIGITAL: eng(E_FM); go_title("EDIT 1"); break;
     case S_OP_ENV: eng(1); go_title("OP1 ENV"); break;

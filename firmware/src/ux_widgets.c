@@ -139,7 +139,10 @@ static void ux_transport(char *b, uint32_t n)
     char d[8];
     if (n < 2u)
         return;
-    str_cpy(b, song.playing ? UX_GL_PLAY " " : UX_GL_STOP " ", n);
+    b[0] = 0;
+    if (song.g[G_CLOCK])                                /* (3c-1 task 8: following USB or TRS) */
+        str_cpy(b, UX_GL_SYNC " ", n);
+    str_cpy(b + str_len(b), song.playing ? UX_GL_PLAY " " : UX_GL_STOP " ", n - str_len(b));
     fmt_int(d, song.g[G_BPM]);
     str_cpy(b + str_len(b), d, n - str_len(b));
     str_cpy(b + str_len(b), " BPM", n - str_len(b));

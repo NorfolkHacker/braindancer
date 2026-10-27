@@ -84,8 +84,9 @@ static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, 0), NV("FX SPACE", "SPACE", 1,
                              NV("FX MORE", "MORE", 3, 0)};
 static const ng_t CG_FX[] = {{"SENDS", 0}, {"SPACE", 0}, {"MASTER", 0}, {"MORE", 0}};
 /* (ACID FM 3c-1 task 6) GLO = LIVE -> MIX -> MIDI -> MORE (spec 3), a page a group (its button steps them round), all on the ux
- * pages (ux_glo.c): LIVE (0.9.11's first page), (task 7) MIX (LEVEL PAN SWING TUNE), MIDI (task 8: no PAGES row yet, hidden), MORE
- * (the RAILS; SYSTEM, TEMPO, UNDO). The inherited MIXER, SENDS, GLOBAL and SYSTEM gone (task 7: MIX's knobs, MORE's rows) */
+ * pages (ux_glo.c): LIVE (0.9.11's first page), (task 7) MIX (LEVEL PAN SWING TUNE), (task 8) MIDI (IN OUT CHANNEL of the selected
+ * track, CLOCK), MORE (the RAILS; SYSTEM, TEMPO, MIDI, UNDO). The inherited MIXER, SENDS, GLOBAL and SYSTEM gone (task 7: MIX's
+ * knobs, MORE's rows) */
 static const nv_t CE_GLO[] = {NV("LIVE", 0, 0, 0), NV("MIX", 0, 1, 0), NV("MIDI", 0, 2, 0), NV("GLO MORE", "MORE", 3, 0)};
 static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"MIDI", 0}, {"MORE", 0}};
 /* (ACID FM 3b task 6) ENV, SCL, ARP on the ux pages (ux_section.c), a page a group (the button steps them round, spec 2.2,

@@ -118,6 +118,7 @@ static const uxs_name_t UXS_NAME[] = {
     {UXS_ALL, UXS_ALL, 1, G_PFXLEN, "LANE STEPS"},      /* (JIANT's PUNCH LEN: the punch-in lane's steps, */
     {UXS_ALL, UXS_ALL, 1, G_PFXRES, "LANE RATE"},       /* .. RES a step's length: as LFO's STEP RATE) */
     {UXS_ALL, UXS_ALL, 1, G_DREL, "DUCK TIME"},         /* (JIANT's REL: DUCK's release, how long the others take back) */
+    {UXS_ALL, UXS_ALL, 1, G_MRSEL, "KEYBOARD"},         /* (3c-1 task 8) KEYBOARD PLAYS SELECTED (ux_more.c uxm_list_name: the list's) */
 };
 /* (3b task 8) REVERB's fourth setting by its TYPE (params.c param_ref: ROOM / SPRING the pre-delay, SHIMMER / CLOUD AIR, RESO its
  * chord's PITCH), and DAMP on RESO: FOLLOW (the track its strings take their notes from) */
@@ -204,6 +205,8 @@ static void uxs_val(const param_desc_t *d, int32_t v, char *b, uint32_t nb)
  * algorithm plays) "P" and that algorithm's number, "P 5" (PAT named a pattern elsewhere; the status line adds UXS_ALGP_SAY) */
 static const char *const UXS_ALGP[] = {"P "};
 #define UXS_ALGP_SAY " (THE PATCH'S)"
+#define UXS_NOTES_K "KEYS+SEQ"                           /* (3c-1 task 8) GLO > MORE's NOTES OUT's third (param_format's five letters */
+#define UXS_NOTES_FULL "KEYS + SEQUENCE"                 /* .. would read KEYS+), the status line's in full */
 static int uxs_algp(uint32_t glo, uint32_t id, int32_t v) { return !glo && id == P_E0 && !v && trk_eng(TSEL) == ENGI_FM6; }
 /* (3b task 6) the ARP's pattern on the knob where JIANT's word is wider than its column (REPEAT, THUMB) or the same as another
  * (ORD plays as UP: ui_input.c param_knob steps over it); the status line says each in full (uxs_vfull), and SCALE's */
@@ -784,6 +787,8 @@ static int uxs_fx_val(uint32_t glo, uint32_t id, int32_t v, char *b, uint32_t nb
 static const char *uxs_vfull(uint32_t glo, uint32_t id, int32_t v)   /* value v of setting id in full (0: as the knob's) */
 {
     static char b[32];
+    if (glo && id == ID_MO_NOTES && v == MOUT_SEQ)      /* (3c-1 task 8) GLO > MORE's NOTES OUT: KEYS+SEQ in full */
+        return UXS_NOTES_FULL;
     if (uxs_fx_val(glo, id, v, b, sizeof b, 1))         /* (3b task 8) */
         return b;
     if (!glo && uxs_lfo_val(id, v, b, sizeof b, 1))   /* (3b task 7) */
@@ -812,6 +817,10 @@ static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t i
     }
     if (uxs_is_strn(glo, id)) {
         uxs_strn(v, b, nb, 0);
+        return;
+    }
+    if (glo && id == ID_MO_NOTES && v == MOUT_SEQ) {    /* (3c-1 task 8) */
+        str_cpy(b, UXS_NOTES_K, nb);
         return;
     }
     if (!uxs_algp(glo, id, v)) {
@@ -979,6 +988,10 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
         *col = UX_TEXT;
         return uxg_mix_say((uint32_t)h, b, sizeof b);
     }
+    if (h >= 0 && h < 3 && pg->graph == GR_MIDI) {      /* (3c-1 task 8) MIDI's IN, OUT, CHANNEL: the track's (ux_glo.c) */
+        *col = UX_TEXT;
+        return uxg_midi_say((uint32_t)h, b, sizeof b);
+    }
     if (h >= 0) {
         const char *nm = 0;
         char v[32];                                     /* (3b task 7 fix: a matrix name and what it is, uxs_mtx_say) */
@@ -989,7 +1002,7 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
             if (s < uxm_n(pg->more)) {
                 const ux_row_t *r = &pg->more->rows[s];
                 int16_t *vp;
-                nm = uxm_row_text(r, v, sizeof v, &bar);
+                nm = uxm_list_name(r, uxm_row_text(r, v, sizeof v, &bar));   /* (3c-1 task 8: KEYBOARD PLAYS SELECTED) */
                 if ((r->kind == UXR_TRACK || r->kind == UXR_GLOBAL) && param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp) &&
                     vp && uxs_vfull(r->kind == UXR_GLOBAL, r->id, *vp))   /* (3b task 7: in full, as a page's knob) */
                     str_cpy(v, uxs_vfull(r->kind == UXR_GLOBAL, r->id, *vp), sizeof v);
@@ -1031,6 +1044,8 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
         return uxg_idle();
     if (uxg_more_live())                                /* .. GLO > MORE's RAILS: OCT- and OCT+ there */
         return UXG_SAY[2];
+    if (pg->graph == GR_MIDI && uxg_midi_idle())        /* (3c-1 task 8) MIDI: CHANNEL 16's hint */
+        return uxg_midi_idle();
     if (pg->graph == GR_MORE && pg->more) {             /* (3b task 8) a PUNCH LANE row picked: how a lane is recorded */
         uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
         uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
@@ -1038,6 +1053,8 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
             return UXS_LANE_SAY;
         if (uxm_head_of(pg->more, s) == UXM_H_UNDO)     /* (3c-1 task 7) GLO's UNDO: what it takes back */
             return UXG_SAY[3];
+        if (uxm_head_of(pg->more, s) == UXM_H_MIDI && uxg_midi_more_say(&pg->more->rows[s]))   /* (task 8) GLO's MIDI rows */
+            return uxg_midi_more_say(&pg->more->rows[s]);
     }
     return pg->graph == GR_MORE ? UXM_HINT : 0;
 }
@@ -2841,6 +2858,10 @@ static void uxs_picture(const page_t *pg)
         uxg_mix_picture();
         return;
     }
+    if (pg->graph == GR_MIDI) {                         /* (3c-1 task 8) GLO > MIDI: the clock, the six tracks' IN OUT CHANNEL */
+        uxg_midi_picture();
+        return;
+    }
     if (pg->graph == GR_MORE) {
         ux_more_draw(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top);
         return;
@@ -2900,7 +2921,7 @@ static void ux_section_draw(void)
     static uint32_t head_sig, panel_sig, foot_sig;
     const page_t *pg = cur_page();
     uint32_t sec = nav_sec(), sig, all, c, scr = uxs_lfo_sc, win = uxs_rh.win, spw = uxs_sp_win;
-    int32_t mtr = uxs_mtr_px, qph = uxq_ph_drawn, gph = uxg_ph_drawn;
+    int32_t mtr = uxs_mtr_px, qph = uxq_ph_drawn, gph = uxg_ph_drawn, lit = uxg_lit_drawn;
     int due = 0;
     ux_knob_t k[4];
     const char *st;
@@ -2951,6 +2972,14 @@ static void ux_section_draw(void)
         sig = sig * 31u + uxg_cpu_pct();                /* (ux_glo.c: at most once a second, a panel then; scrolled off, none) */
     if (pg->graph == GR_MIX)                            /* (3c-1 task 7) GLO > MIX: the six tracks' columns */
         sig = sig * 31u + uxg_mix_sig();
+    if (pg->graph == GR_MIDI) {                         /* (3c-1 task 8) GLO > MIDI: the table (uxg_midi_sig); the clock's diamond
+                                                         * as it blinks, as STEPS' playhead (UX_TRK_MS, slower under load, never
+                                                         * frozen): two panels a beat at most, none while no clock comes */
+        lit = uxg_clk_lit();
+        sig = sig * 31u + uxg_midi_sig();
+        due = lit != uxg_lit_drawn && ux_pace_at(fm1_ms, uxg_lit_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_TRK_MS,
+                                                 UX_TRK_SLOW_MS).draw;
+    }
     if (pg->more == &UXM_SEQ) {                         /* (3c-1 task 4) SEQ > MORE's views: what they are read from (the step
                                                          * picked, STRETCH's picks, the heads, the automation and the list's place) */
         const uint8_t *sp = (const uint8_t *)&TSEL->step[ui.cursor % NSTEP];
@@ -3102,6 +3131,10 @@ static void ux_section_draw(void)
         if (pg->graph == GR_LIVE) {                     /* (task 6: the bar's line drawn, when) */
             uxg_ph_drawn = gph;
             uxg_ph_ms = fm1_ms;
+        }
+        if (pg->graph == GR_MIDI) {                     /* (task 8: the diamond drawn, when) */
+            uxg_lit_drawn = lit;
+            uxg_lit_ms = fm1_ms;
         }
         if (pg->fam == FAM_FX) {                        /* (3b task 8: the paced pictures' state, drawn from now) */
             uxs_mtr_px = mtr;

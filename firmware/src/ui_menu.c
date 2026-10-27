@@ -322,15 +322,6 @@ static int32_t menu_ratio(uint32_t row)               /* a card's gauge and heat
 }
 static void menu_val(uint32_t row, char *b)          /* the row's value as it reads ("0.4 s"; LEARN CLEAR "3 CC") */
 {
-    if (row == MI_LCLEAR) {                            /* (0.9.12) LEARN CLEAR: how many CCs are learned, "NONE" */
-        uint32_t n = ml_count();
-        str_cpy(b, "NONE", 16);
-        if (n) {
-            fmt_int(b, (int32_t)n);
-            str_cpy(b + str_len(b), " CC", 4);
-        }
-        return;
-    }
     str_cpy(b, menu_valued(row) ? menu_vname(row, menu_get(row)) : "", 16);
 }
 static const char *menu_short(uint32_t row)          /* a card's label: a whole word of the row's name (8 characters) */
@@ -338,7 +329,7 @@ static const char *menu_short(uint32_t row)          /* a card's label: a whole 
     static const struct { uint8_t row; char s[9]; } SH[] = {
         {MI_LOWCUT, "SPEAKER"}, {MI_CPU, "CORES"}, {MI_CLKLVL, "LEVEL"}, {MI_USB, "LEVEL"}, {MI_SERIAL, "USB AUD"},
         {MI_ANIM, "ANIMATE"}, {MI_SCROFF, "SLEEP"}, {MI_HOLD, "HOLD"}, {MI_ACCEL, "SPEEDUP"}, {MI_SCLLED, "SCALE"},
-        {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU MHZ"}, {MI_PANEL, "CALIB"}, {MI_LCLEAR, "CLEAR"}};   /* (no two alike on a
+        {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU MHZ"}, {MI_PANEL, "CALIB"}, {MI_GLOMIDI, "GLO"}};   /* (no two alike on a
                                                          * page: tests/ui_test.c) */
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)
@@ -365,12 +356,7 @@ static const struct { uint8_t row, v; const char *s; } MI_HELP[] = {
     {MI_CLKLVL, 255, "THE METRONOME'S VOLUME"},
     {MI_COUNTIN, 255, "BARS BEFORE RECORDING STARTS"},
     {MI_BPMLOCK, 255, "DICE ALL KEEPS THE TEMPO"},
-    {MI_MIDIOUT, 0, "USB MIDI OUT: THE KEYS' NOTES"},
-    {MI_MIDIOUT, 1, "THE KEYS + CLOCK, START, STOP"},
-    {MI_MIDIOUT, 2, "EVERY NOTE PLAYED + CLOCK"},
-    {MI_MIDIOUT, 3, "NOTHING GOES OUT"},
-    {MI_LEARN, 255, "ON: TURN A KNOB, THEN SEND A CC"},
-    {MI_LCLEAR, 255, "OCT+ FORGETS EVERY LEARNED CC"},
+    {MI_GLOMIDI, 255, "OCT+: OPENS GLO'S MIDI PAGE"},
     {MI_SERIAL, 0, "STEREO + THE SERIAL CONSOLE"},
     {MI_SERIAL, 1, "STEREO AND MIDI ONLY (MACOS)"},
     {MI_SERIAL, 2, "8 CHANNELS: EVERY TRACK + FX"},
@@ -415,7 +401,7 @@ static void menu_cards(void)
         if (!menu_valued(r)) {                         /* an action: armed by its knob (TINT, OCT+ its value) */
             int arm = r == ui.menu_sel;
             card_arm_next = (uint8_t)arm;
-            draw_column(c, menu_short(r), arm ? "OCT+" : v, "", arm ? (r == MI_LCLEAR && !ml_count() ? T_DIM : T_TEXT) : T_MID,
+            draw_column(c, menu_short(r), arm ? "OCT+" : v, "", arm ? T_TEXT : T_MID,
                         -1, ICON_NONE);
             continue;
         }
@@ -468,7 +454,7 @@ static void draw_menu(void)
           settings_leds * 6151u + ui_prefs * 4099u + ui_style * 257u + ui_skin * 1543u + song.rec * 65537u + song.sel * 13u +
           ui_rec_prefs * 92821u + ui_scr * 131071u + (ui.hot_t ? ui.hot_col + 1u : 0u) * 0x9E3779B1u +
           (ui.menu == 1 && ui.msg_t ? str_hash(0x70A57u, ui.msg) : 0u) + ml_count() * 977u + ml.on * 3u + usb_out * 61u +
-          midi_out_mode * 89u + cpu_cfg * 197u + ui_load * 433u + ui_scope * 71u +
+          midi_outs * 89u + cpu_cfg * 197u + ui_load * 433u + ui_scope * 71u +
           (ui.menu >= 2 ? ui.menu_scroll * 48611u : 0u) + (ui.menu == 3 ? prf_seq * 2971u + 1u : 0u) +
           (ui.menu == 2 ? (song.cpu_q8 >> 3) * 7741u + load_diag.peak * 3329u + load_diag.late * 1931u +
                           load_diag.shed * 2671u : 0u);   /* (0.6.19) ABOUT's AUDIO LOAD: live (NOW in ~3 % steps) */
@@ -596,10 +582,10 @@ static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_tap
         if (s)
             menu_put(ui.menu_sel, menu_step(ui.menu_sel, s));
     } else if (up) {
-        if (ui.menu_sel == MI_LCLEAR) {                 /* (0.9.12) LEARN CLEAR: every learned CC (no dialog: LEARN again
-                                                         * brings one back) */
-            ui_message(ml_clear_all() ? "LEARN CLEARED" : "NOTHING LEARNED");
-            ui.force = 1;
+        if (ui.menu_sel == MI_GLOMIDI) {                /* (ACID FM 3c-1 task 8) MIDI IS ON GLO: there (LEARN, LEARN CLEAR GLO >
+                                                         * MORE's, as MIDI OUT's two settings) */
+            menu_close();
+            nav_put(SEC_GLO, "MIDI");
         } else if (ui.menu_sel == MI_PANEL) {
             panel_setup();
             scrn.idle = fm1_ms;                         /* (SCREEN OFF: its own loop had the input) */

@@ -910,6 +910,14 @@ SPEAKER EQ (9), CLICK (12), CLICK LEVEL (13), COUNT-IN (14), TRACKS (18), LOAD (
 (10), USB AUDIO (11); SYSTEM HOLD TIME (5), KNOB SPEEDUP (6), FX LATCH (7), RESTORE LAST (15), CPU CORES (23), CPU
 CLOCK (24). Names now whole words: ANIM → ANIMATION, LEDS → LED GLOW (values OFF, LOW, HIGH, INVERT: were OFF, DIM LO,
 DIM HI, INV), HOLD → HOLD TIME, KNOB ACCEL → KNOB SPEEDUP, USB → USB AUDIO, SCREEN OFF → SCREEN SLEEP, CPU → CPU CORES.
+
+(ACID FM 0.5) MIDI OUT (id 20) keeps its id, tab (2 MIDI), names and values, but it is on no page of the device: the device
+stores GLO > MORE > MIDI's **NOTES OUT** (OFF / KEYS / KEYS+SEQUENCE) and **CLOCK OUT** (off / on) instead
+(`favorites.factory[15][14]`: bits 0-1 NOTES OUT, bit 2 CLOCK OUT, bit 7 set once it holds them; `src/midi_outs.h`), migrated
+once from MIDI OUT's byte (`[15][24]`, kept as saved): KEYS → KEYS, off; CLOCK → KEYS, on; ALL → KEYS+SEQUENCE, on; OFF → OFF,
+off. A MENU_SET of id 20 sets the two the same way; MENU_DESC reads them back as the nearest of the four (KEYS+SEQUENCE: ALL;
+CLOCK OUT on: CLOCK; OFF: OFF; else KEYS). LEARN and LEARN CLEAR are GLO > MORE > MIDI's rows; MENU > MIDI is a pointer to
+GLO > MIDI.
 The device's SYSTEM tab also holds CALIBRATION and ABOUT (not offered); INIT SYSTEM left the MENU (SAVE > TOOLS > NEW
 PROJECT). An editor that groups by tab name follows by itself; remember settings by id.
 

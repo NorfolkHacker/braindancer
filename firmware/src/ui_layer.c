@@ -299,14 +299,13 @@ static void glo_undo(void)
     else
         ui_message("UNDONE (AGAIN: REDO)");
 }
-/* GLO TAP: from the third tap the tempo of the taps (the last 4); 2 s without one starts over. INT clock only */
+/* GLO TAP: from the third tap the tempo of the taps (the last 4); 2 s without one starts over. INT clock only (3c-1 task 8: an
+ * outside clock's refusal as every tempo writer's, ui_input.c tempo_ext) */
 static void glo_tap(void)
 {
     uint32_t n = lys.ntap, i;
-    if (song.g[G_CLOCK]) {
-        ui_message("TAP: CLK IS EXT");
+    if (tempo_ext())
         return;
-    }
     if (n && fm1_ms - lys.tap[n - 1u] > 2000u)
         n = 0;
     if (n == 4u) {

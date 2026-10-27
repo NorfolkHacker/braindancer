@@ -440,11 +440,11 @@ static int pages(void)
     ui_power_on();
     frame();
     press(B_GLO); frame();
-    ok = str_eq(cur_page()->title, "LIVE") && ux_page_owns() && uxg_owns() && song.grid == 3 && !strcmp(uxs_count(), "1 / 3");
+    ok = str_eq(cur_page()->title, "LIVE") && ux_page_owns() && uxg_owns() && song.grid == 3 && !strcmp(uxs_count(), "1 / 4");
     turn(EN_SELECT, -1); frame();
     ok &= str_eq(cur_page()->title, "LIVE");
     turn(EN_SELECT, 10); frame();
-    ok &= str_eq(cur_page()->title, "GLO MORE") && ux_page_owns() && song.grid == 0 && live_page() && !strcmp(uxs_count(), "3 / 3");
+    ok &= str_eq(cur_page()->title, "GLO MORE") && ux_page_owns() && song.grid == 0 && live_page() && !strcmp(uxs_count(), "4 / 4");   /* (3c-1 task 8: MIDI before it) */
     bad += check("GLO: LIVE at power-on (3c-1 task 7), the chain's first; SELECT on to MORE (its last; both on the ux pages)", ok);
     ui_power_on();
     return bad;

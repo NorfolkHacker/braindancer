@@ -15,7 +15,7 @@
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "STEPS", "DELAY", "REVERB", "CHORUS",
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
                                               "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
-                                              "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO", "MIDI"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -43,6 +43,9 @@ static const uxm_act_t UXM_ACT[UXM_A_N] = {
                                                          * CLEAR, OCT+ then the same dialog) */
     {"UNDO", 0},                                        /* (3c-1 task 7) GLO: the last big change back, again forward (the GLO
                                                          * layer's G4: ui_layer.c glo_undo) */
+    {"CLEAR", 0},                                       /* (3c-1 task 8) GLO: LEARN CLEAR (uxm_list_name; CLEAR on the knob, as
+                                                         * MENU's card was), every learned CC forgotten (MENU > MIDI's until 0.5:
+                                                         * no dialog, LEARN again brings one back) */
 };
 #define UXM_GO "\x86"                                   /* (an action's value in the list: UF_HDR's arrow) */
 #define UXM_CPU_SAY "CPU: A READOUT"                    /* (3c-1 task 7) KNOB 2 on GLO > MORE's CPU */
@@ -63,6 +66,8 @@ static void uxm_act_do(uint32_t a)
         name_open(NK_LYRIC, song.sel);
     if (a == UXM_A_UNDO)
         glo_undo();
+    if (a == UXM_A_LCLEAR)
+        ui_message(ml_clear_all() ? "LEARN CLEARED" : "NOTHING LEARNED");
 }
 
 /* row r names something real: a track setting (< P_COUNT) or a global (< G_COUNT) or a view (params.c param_ref: else
@@ -73,7 +78,7 @@ static int uxm_row_ok(const ux_row_t *r)
     uint32_t id = r->id;
     int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT;
     return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) || sqv_is(id) :
-           r->kind == UXR_GLOBAL ? id < G_COUNT || view || lvv_is(id) :
+           r->kind == UXR_GLOBAL ? id < G_COUNT || view || lvv_is(id) || mov_is(id) :
            r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
 }
 /* (3b task 8) a global LOAD ECO takes out of the sound (fx.c fx_buses: no chorus; slicer.c slicer_on: no SLICER): its row not
@@ -93,7 +98,7 @@ static int ux_row_shown(const ux_row_t *r)
         return uxm_act_ok(r->id);
     if (r->kind == UXR_TRACK && sqv_is(r->id))          /* (3c-1 task 4) SEQ's views: by the step picked, the track (ux_seq.c) */
         return uxq_vshown(r->id);
-    if (glo && lvv_is(r->id))                           /* (3c-1 task 6) GLO's RAILS: always */
+    if (glo && (lvv_is(r->id) || mov_is(r->id)))      /* (3c-1 task 6) GLO's RAILS, (task 8) its MIDI views: always */
         return 1;
     if (r->kind != UXR_TRACK && !glo)
         return 0;
@@ -438,6 +443,14 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
     return uxs_label(nav_sec(), r->kind == UXR_GLOBAL, r->id, d->label);
 }
 
+/* (3c-1 task 8) row r's name in the list and the status line, where the knob row's (name, what uxm_row_text gave: it fits a
+ * knob's column) is short for it: GLO's KEYBOARD, KEYBOARD PLAYS SELECTED in full; its CLEAR, LEARN CLEAR */
+static const char *uxm_list_name(const ux_row_t *r, const char *name)
+{
+    return r->kind == UXR_GLOBAL && r->id == G_MRSEL ? UXM_KBD_SEL : r->kind == UXR_ACTION && r->id == UXM_A_LCLEAR ? UXM_LCLEAR :
+           name;
+}
+
 /* row r's place in its range: a short meter (UXM_BAR_W x 3) in a column of its own left of the values (ending UXM_BAR_X1),
  * on the text's middle row y: the track UX_LINE, the fill KNOB 2's colour on the pick (else dim); a range either side of 0
  * (min < 0 < max) filled from the middle, 0 a tick there; none for a list of words (an enum). (3b task 6 fix: a line under
@@ -509,7 +522,7 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
         if (!uxm_on(sh, i))
             continue;
         r++;
-        name = uxm_row_text(rw, val, sizeof val, &bar);
+        name = uxm_list_name(rw, uxm_row_text(rw, val, sizeof val, &bar));
         if (rw->kind == UXR_HEAD) {                     /* a heading: VIOLET capitals, a rule after them */
             int32_t w;
             bg = ux_under(12, ty + 4);

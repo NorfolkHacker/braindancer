@@ -46,8 +46,10 @@ import aa_raster as ar  # noqa: E402
 FONTS = Path(__file__).resolve().parents[1] / "fonts"
 LOCAL_INTER = os.path.expanduser("~/Library/Fonts/Inter.ttc")   # 4.001: 0 Regular, 10 Medium, 12 SemiBold
 EXTRAS = [0xA9, 0xB0, 0xB7, 0xC4, 0xD6, 0xDC, 0xE4, 0xF6, 0xFC, 0x2026]  # (c) deg . A: O: U: a: o: u: (Latin-1), ...
-CODE = {0x2026: 0x85, 0x2192: 0x86, 0x25B6: 0x87, 0x25A0: 0x88}   # characters outside Latin-1 -> their one-byte code in the
-                                                   # firmware: ... 0x85, the arrow 0x86, (ACID FM 3a) play 0x87 and stop 0x88 (UF_HDR)
+CODE = {0x2026: 0x85, 0x2192: 0x86, 0x25B6: 0x87, 0x25A0: 0x88, 0x25CF: 0x89, 0x25CB: 0x8A, 0x25C6: 0x8B}
+                                                   # characters outside Latin-1 -> their one-byte code in the
+                                                   # firmware: ... 0x85, the arrow 0x86, (ACID FM 3a) play 0x87 and stop 0x88 (UF_HDR);
+                                                   # (3c-1 task 8) GLO > MIDI's dots on 0x89 / off 0x8A, the outside clock's diamond 0x8B
 PHASES, PHASES_L = 2, 2                # horizontal phases per glyph (aa_raster.raster_font): S M, L. (JIANT 0.9.16, flash)
                                        # S M 2, were 4: 12.9 KB less of the glyph tables; a glyph within 1/4 px of its
                                        # place, a gap within 1/2 px (text_spacing_test.py, as L since 0.5)
@@ -65,10 +67,11 @@ UF_HUFF = "TTL,MARK"                      # (acid) the faces stored Huffman-code
 RISE = {"IBMPlexMono-SemiBold.ttf": 1}
 UI_PRESET = "jiant-lab"            # the firmware's faces (tools/build.py; tests/text_spacing_test.py)
 PFX = "AF"                         # the faces' C prefix: AF_<N> (jiant-lab), UF_<N> (acid)
-UF_LBL = " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00b7\u2192"   # (ACID FM) upper-case labels; arrow = code 0x86
+UF_LBL = " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00b7\u2192\u25cf\u25cb\u25c6"   # (ACID FM) upper-case labels; arrow = code 0x86;
+                                   # (3c-1 task 8) GLO > MIDI's dots and diamond (0x89 0x8A 0x8B)
 UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7\u00b0"   # (3b task 7 fix: the degree sign, LFO's PHASE, +44 B) VAL (HDR: more below): ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
-UF_HDR = UF_TEXT + "\u25b6\u25a0" + "'(),=>[]\u2192\u2026"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop
-                                   # (code 0x88); the status line's messages: ' ( ) , = > [ ], the arrow (0x86), the ellipsis
+UF_HDR = UF_TEXT + "\u25b6\u25a0\u25cf\u25cb\u25c6" + "'(),=>[]\u2192\u2026"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop
+                                   # (code 0x88), (3c-1 task 8) the dots and the outside clock's diamond (0x89 0x8A 0x8B: ux_widgets.h); the status line's messages: ' ( ) , = > [ ], the arrow (0x86), the ellipsis
                                    # (0x85, ui_say's cut) (tests/ux_msg_scan.py: every message literal drawn there has its glyphs)
 UF_TTL = " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 UF_MARK = " ACDFIM"                # the wordmark's letters only

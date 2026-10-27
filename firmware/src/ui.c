@@ -121,6 +121,28 @@ static const int16_t USB_GAIN[5] = {4096, 2048, 1024, 512, 256};   /* Q12: 0 -6 
                                                 * engine uses, 0 in older settings (0.6.29's 6 LITE: 1, LITE) */
 #define midi_out_mode (favorites.factory[15][24])   /* (JIANT 0.6.72) MENU > MIDI OUT (seq.c MO_*): 0 KEYS (older settings,
                                                 * as ever), 1 CLOCK, 2 ALL, 3 OFF; a byte no engine uses */
+/* (ACID FM 0.5, 3c-1 task 8) GLO > MORE's NOTES OUT and CLOCK OUT, in a byte no engine uses (engine 15's 14: past the hints'
+ * 0..12, 0 in every older setting; midi_outs.h its bits). Without its mark the two are read from MIDI OUT (midi_out_mode, kept as
+ * saved), which settings_persist.c migrates into it once (mout_of_mode) */
+#define midi_outs (favorites.factory[15][14])
+#include "midi_outs.h"
+static uint32_t mout(void) { return midi_outs & MOUT_MARK ? midi_outs : mout_of_mode(midi_out_mode); }
+static uint32_t mout_notes(void) { uint32_t n = mout() & 3u; return n == 3u ? MOUT_KEYS : n; }
+static uint32_t mout_clock(void) { return (mout() & MOUT_CLK) != 0u; }
+static void mout_put(uint32_t notes, uint32_t clock)
+{
+    midi_outs = (uint8_t)(MOUT_MARK | (notes > MOUT_SEQ ? MOUT_KEYS : notes) | (clock ? MOUT_CLK : 0u));
+}
+static uint32_t mout_mode(void)                        /* .. and back as MIDI OUT's nearest (the editor's id 20): KEYS CLOCK ALL OFF */
+{
+    uint32_t n = mout_notes(), c = mout_clock();
+    return n == MOUT_SEQ ? 2u : c ? 1u : n == MOUT_OFF ? 3u : 0u;
+}
+static uint32_t mout_lvl(void)                         /* .. as seq.c mo_lvl's bits */
+{
+    uint32_t n = mout_notes();
+    return (n == MOUT_OFF ? MO_MUTE : n == MOUT_SEQ ? MO_SEQ : 0u) | (mout_clock() ? MO_CLK : 0u);
+}
 #define PREF_SIX (0x80u << 8)                  /* (JIANT 0.6.18) MENU > TRACKS 6: all six tracks play; clear (the
                                                 * default): 4, T5 and T6 asleep (voice.c trk_live) */
 /* (JIANT 0.6.44) the settings brought up to date at power-on (main.c; 0.6.58 the browser emulator too, web/emu, where
@@ -683,6 +705,21 @@ static void ui_message(const char *s) { ui_say(s, ""); }
 /* a message led by an icon: its first byte (ui_draw.c draw_head draws the icon, then the words) */
 #define MSG_NOFILE "\x01"                      /* the no-file icon (ICON_X_NOFILE) */
 #include "midi_learn.c"                       /* (0.9.12) MIDI LEARN's UI (the map: midi_control.c) */
+/* (ACID FM 3c-1 task 8) GLO > MORE's NOTES OUT, CLOCK OUT, LEARN (params.c ID_MO_*, views): the setting now, and set (NOTES OUT
+ * and CLOCK OUT saved with the settings; LEARN never: armed or not, as MENU's was) */
+static uint32_t mov_get(uint32_t id)
+{
+    return id == ID_MO_NOTES ? mout_notes() : id == ID_MO_CLOCK ? mout_clock() : ml.on;
+}
+static void mov_put(uint32_t id, int32_t v)
+{
+    if (id == ID_ML_LEARN) {
+        ml_set((uint32_t)v);
+        return;
+    }
+    mout_put(id == ID_MO_NOTES ? (uint32_t)v : mout_notes(), id == ID_MO_CLOCK ? (uint32_t)v : mout_clock());
+    settings_save();
+}
 
 static int chain_busy(void) { return chain.running || chain.armed; }
 /* (0.6.22) ARRANGE: the rows 0..count-1, + ADD (while there is room), then the song's END row */

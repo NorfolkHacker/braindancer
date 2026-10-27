@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Adapted from MIDI clock contributions by ChanceTheMaker and keremimo (2026).
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* Audio ISR state. Input timestamps keep USB/TRS jitter outside the render loop. */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
+/* Audio ISR state. Input timestamps keep USB/TRS jitter outside the render loop. (ACID FM 3c-1 task 8) npulse: the clocks
+ * received from the source followed (24 a beat; 0 at START): GLO > MIDI's diamond lit a beat (ux_glo.c uxg_clk_lit) */
 static struct {
     uint32_t pos, rendered, last_ms, start_ms, rem, interval_ms;
-    uint32_t pulse_samples, interp_q8, tempo_ms;
+    uint32_t pulse_samples, interp_q8, tempo_ms, npulse;
     uint8_t mode, have_pulse, tempo_valid, tempo_n;
 } midi_clock;
 
@@ -15,6 +17,7 @@ static __attribute__((noinline)) void midi_clock_transport(uint32_t status, uint
         midi_clock.have_pulse = midi_clock.tempo_valid = 0;
         midi_clock.interval_ms = 0;
         midi_clock.start_ms = ms;
+        midi_clock.npulse = 0;
         seq_start();
     } else if (status == 0xFBu) {                  /* Continue: preserve the step */
         midi_clock.pos = midi_clock.rendered;
@@ -33,6 +36,7 @@ static __attribute__((noinline)) void midi_clock_transport(uint32_t status, uint
 static __attribute__((noinline)) void midi_clock_pulse(uint32_t ms)
 {
     uint32_t q;
+    midi_clock.npulse++;
     if (!midi_clock.tempo_valid) {
         midi_clock.tempo_valid = 1;
         midi_clock.tempo_ms = ms;

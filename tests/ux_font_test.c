@@ -47,9 +47,9 @@ int main(void)
     CHECK(text_w(&UF_VAL, "128") > 0);
     CHECK(text_w(&UF_TTL, "A1") > 0);
     has(&UF_MARK, "MARK", "ACID FM");
-    has(&UF_LBL, "LBL", " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\xB7\x86");
+    has(&UF_LBL, "LBL", " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\xB7\x86\x89\x8A\x8B");   /* (3c-1 task 8: GLO > MIDI's dots, diamond) */
     has(&UF_HDR, "HDR", all);
-    has(&UF_HDR, "HDR", "'(),=>[]\x85\x86\x87\x88");   /* (the status line's messages, the transport) */
+    has(&UF_HDR, "HDR", "'(),=>[]\x85\x86\x87\x88\x89\x8A\x8B");   /* (the status line's messages, the transport) */
 #ifdef UX_MSG_LITS
     has_all(&UF_HDR, "HDR (status-line texts)", UX_MSG_HDR);
     has_all(&UF_LBL, "LBL (footer texts)", UX_MSG_LBL);

@@ -10,8 +10,10 @@
  * favorites.factory[15][23]: JIANT_PAL_SEEN (JIANT 0.6.81). [15][20]: SKIN (JIANT 0.8.9; 0 = COLORS; 0.9.7: 3 AIR, new settings'; 0.9.17: 1, the retired BOTTOM, = AIR). [15][19]: SCOPE (0.9.7; 0 = OFF). favorites.factory[15][28..31]: CLICK / CLICK LEVEL / COUNT-IN (1.1), STYLE, MENU's flags, [31] the layers seen (0.9.5: unused, kept as saved) (bytes no
  * engine uses; 0 in older settings = every one's default); [15][27]: SCREEN OFF (1.1.5; 0 = 30 MIN, the default).
  * [15][0..12] (0.9.5): how many times each teaching hint has been given (ui.c hint_given; 0 in older settings = not yet).
+ * [15][14] (ACID FM 0.5): NOTES OUT, CLOCK OUT (ui.c midi_outs), migrated from MIDI OUT ([15][24], kept as saved) once.
  * MENU's flags (ui.c PREF_*) are append-only bits whose 0 is the default: BPM LOCK (16) is clear in every older setting
  * = unlocked, LARGE (32) = OFF, RESTORE LAST OFF (128, 1.2) = ON, read as saved (nothing to migrate, so importing twice changes nothing). */
+#include "midi_outs.h"                     /* (ACID FM 0.5: NOTES OUT, CLOCK OUT, migrated from MIDI OUT once) */
 typedef struct {
     uint32_t magic, palette, lowcut, zoom;
     panel_t panel;
@@ -61,6 +63,10 @@ static int settings_import(persist_t *p, int n)
         p->favorites.factory[15][26] = 0;
     if (p->favorites.factory[15][24] > 3u)         /* MIDI OUT (JIANT 0.6.72, ui.c midi_out_mode): unknown = KEYS */
         p->favorites.factory[15][24] = 0;
+    if (!(p->favorites.factory[15][14] & MOUT_MARK))   /* (ACID FM 0.5) NOTES OUT, CLOCK OUT (ui.c midi_outs): MIDI OUT's, once */
+        p->favorites.factory[15][14] = (uint8_t)mout_of_mode(p->favorites.factory[15][24]);
+    else if ((p->favorites.factory[15][14] & 3u) == 3u)   /* (.. an unknown NOTES OUT: KEYS) */
+        p->favorites.factory[15][14] = (uint8_t)((p->favorites.factory[15][14] & ~3u) | MOUT_KEYS);
     if (p->favorites.factory[15][17] > 127u)       /* (0.9.12) MENU > SYSTEM > CPU, CPU CLOCK (cpu_safe.c cpu_cfg): unknown =
                                                      * 2 CORES, 360 MHZ (0, older settings too) */
         p->favorites.factory[15][17] = 0;

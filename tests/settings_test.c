@@ -83,6 +83,26 @@ int main(void)
                favorites.factory[ENGI_DRUM][0] == 1u);
         p = original; assert(settings_import(&p, sizeof p) == 1);
     }
+    {   /* (ACID FM 0.5, 3c-1 task 8) NOTES OUT, CLOCK OUT (midi_outs.h, favorites.factory[15][14]): an older record (no mark) takes
+         * MIDI OUT's ([15][24], kept as saved) once: KEYS, CLOCK (keys + clock), ALL (keys + sequence + clock), OFF; a marked one
+         * kept, exported as loaded; an older record without favorites: KEYS */
+        static const uint8_t WANT[4] = {MOUT_MARK | MOUT_KEYS, MOUT_MARK | MOUT_KEYS | MOUT_CLK, MOUT_MARK | MOUT_SEQ | MOUT_CLK,
+                                        MOUT_MARK | MOUT_OFF};
+        persist_t q;
+        uint32_t m;
+        for (m = 0; m < 4u; m++) {
+            p = original; p.favorites.factory[15][14] = 0; p.favorites.factory[15][24] = (uint8_t)m;
+            assert(settings_import(&p, sizeof p) == 1 && favorites.factory[15][14] == WANT[m] && favorites.factory[15][24] == m);
+            settings_export(&q); q.favorites.factory[15][24] = 3u;   /* (once: MIDI OUT no longer read) */
+            assert(settings_import(&q, sizeof q) == 1 && favorites.factory[15][14] == WANT[m]);
+        }
+        p = original; p.favorites.factory[15][14] = MOUT_MARK | 3u;   /* (an unknown NOTES OUT: KEYS, CLOCK OUT kept) */
+        assert(settings_import(&p, sizeof p) == 1 && favorites.factory[15][14] == (MOUT_MARK | MOUT_KEYS));
+        p = original; p.magic = 0x50455233u;
+        assert(settings_import(&p, sizeof p - sizeof p.favorites) == 2 && favorites.factory[15][14] == (MOUT_MARK | MOUT_KEYS));
+        p = original; assert(settings_import(&p, sizeof p) == 1);
+        printf("settings: NOTES OUT / CLOCK OUT migrated from MIDI OUT once (KEYS CLOCK ALL OFF), kept, exported   ok\n");
+    }
 #endif
     settings.lowcut = 0;
     settings_export(&p);

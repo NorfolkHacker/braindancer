@@ -6,23 +6,25 @@
  * MENU_DESC / MENU_SET). One apply path for both: menu_put. A row is a setting (its MI_* is its place in the menu's
  * tables, not stored: the editor's ids are editor_menu.c ED_MENU's). (0.9.18) On pages of up to four knobs in five
  * tabs (MPAGE; ACID FM 0.3: eight): SCREEN (LARGE SCOPE ANIMATION SCREEN SLEEP; LEDS: LED GLOW SCALE LEDS), AUDIO
- * (SPEAKER EQ TRACKS LOAD BPM LOCK; CLICK CLICK LEVEL COUNT-IN), MIDI (MIDI OUT LEARN LEARN CLEAR), USB (USB AUDIO USB
+ * (SPEAKER EQ TRACKS LOAD BPM LOCK; CLICK CLICK LEVEL COUNT-IN), MIDI (MIDI OUT LEARN LEARN CLEAR; ACID FM 3c-1 task 8: MIDI IS ON
+ * GLO, a pointer), USB (USB AUDIO USB
  * LEVEL), SYSTEM (CONTROLS: HOLD TIME KNOB SPEEDUP FX LATCH CALIBRATION; SYSTEM: RESTORE LAST CPU CORES CPU CLOCK, what
  * a power-on does, and ABOUT). Until 0.9.17 one list in the
  * tabs DISPLAY CONTROL AUDIO MIDI SYSTEM, SELECT a row, any knob its value; the stored values and their meanings are
- * the same. LEARN (OFF / ON) is not a setting: it arms MIDI LEARN (midi_learn.c ml_set) and is never saved; LEARN
- * CLEAR is an action: OCT+ clears the map (ml_clear_all), its card shows how many CCs are learned. Neither is offered
- * to the editor (editor_menu.c ED_MENU); the map travels with the settings */
+ * the same. (ACID FM 3c-1 task 8) LEARN and LEARN CLEAR are GLO > MORE's rows (params.c ID_ML_LEARN, ux_more.c UXM_A_LCLEAR);
+ * the map travels with the settings */
 #include "cpu_safe.c"        /* (0.9.12) MENU > SYSTEM > CPU CORES, CPU CLOCK; the last crash kept in the settings */
 enum { MI_COLOR, MI_SKIN, MI_SCOPE, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HOLD, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_SCLLED,
        MI_LOWCUT, MI_USB,
-       MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_LOAD, MI_MIDIOUT, MI_LEARN, MI_LCLEAR, MI_SERIAL, MI_RESTORE, MI_CPU,
-       MI_CLOCK, MI_PANEL, MI_ABOUT, MI_COUNT };   /* (1.1: the metronome's rows; 1.2: RESTORE LAST, SCALE LEDS; 0.9.12: MIDI
-                      * OUT, LEARN, LEARN CLEAR; CPU, CPU CLOCK, cpu_safe.c; 0.9.18: INIT SYSTEM gone, SAVE > TOOLS > NEW
-                      * PROJECT is the same) */
+       MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_LOAD, MI_MIDIOUT, MI_SERIAL, MI_RESTORE, MI_CPU,
+       MI_CLOCK, MI_PANEL, MI_ABOUT, MI_GLOMIDI, MI_COUNT };   /* (1.1: the metronome's rows; 1.2: RESTORE LAST, SCALE LEDS; 0.9.12:
+                      * MIDI OUT, LEARN, LEARN CLEAR; CPU, CPU CLOCK, cpu_safe.c; 0.9.18: INIT SYSTEM gone, SAVE > TOOLS > NEW
+                      * PROJECT is the same; ACID FM 0.5, 3c-1 task 8: LEARN and LEARN CLEAR GLO > MORE's rows, MIDI OUT on no page
+                      * (the editor's id 20: GLO > MORE's NOTES OUT and CLOCK OUT in its four words), MI_GLOMIDI MENU > MIDI's
+                      * pointer, an action: OCT+ opens GLO > MIDI) */
 #define MI_VALUES MI_PANEL
 #define MI_NONE 0xFFu
-static int menu_valued(uint32_t row) { return row < MI_VALUES && row != MI_LCLEAR; }   /* (a row with a value) */
+static int menu_valued(uint32_t row) { return row < MI_VALUES; }   /* (a row with a value) */
 /* (ACID FM 0.3) COLOR, SKIN, STYLE: one palette, one skin, one style. Their rows are on no page of the MENU; the editor's
  * ids (editor_menu.c ED_MENU 0, 1, 21) answer: one value, "ACID", 0; a set is taken and changes nothing. (ACID FM 3b) SCOPE
  * the same (id 22: one value, OFF): it chose between the synths' creatures and the scope on EDIT, both gone (the synths'
@@ -32,12 +34,13 @@ static int menu_hidden(uint32_t row) { return row == MI_COLOR || row == MI_SKIN 
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE", "LARGE", "ANIMATION", "LED GLOW", "SCREEN SLEEP",
                                               "HOLD TIME", "KNOB SPEEDUP", "FX LATCH", "BPM LOCK", "SCALE LEDS",
                                               "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS", "LOAD",
-                                              "MIDI OUT", "LEARN", "LEARN CLEAR", "USB AUDIO",
-                                              "RESTORE LAST", "CPU CORES", "CPU CLOCK", "CALIBRATION", "ABOUT"};
+                                              "MIDI OUT", "USB AUDIO",
+                                              "RESTORE LAST", "CPU CORES", "CPU CLOCK", "CALIBRATION", "ABOUT",
+                                              "MIDI IS ON GLO"};   /* (the pointer's: its one row, a sentence) */
 /* (0.9.18) the MENU as the rest of the system (rule 1..6): pages of four knobs, KNOB n the page's setting n, SELECT walks
  * the pages, ALGORITHM jumps to the next / previous tab; the tabs the groups (a dot a page), the footer MENU . TAB . page
  * n/N (a page named as its tab, or its tab and a number: MENU . page). Each row on one page (tests/ui_test.c checks it); the editor gets a row's tab after its MENU_DESC reply (tab
- * indexes are not ids: 0.9.18 regrouped them). An action (LEARN CLEAR, CALIBRATION, ABOUT) is a card armed by its knob,
+ * indexes are not ids: 0.9.18 regrouped them). An action (CALIBRATION, ABOUT, MIDI IS ON GLO) is a card armed by its knob,
  * OCT+ does it */
 enum { MTAB_SCREEN, MTAB_AUDIO, MTAB_MIDI, MTAB_USB, MTAB_SYSTEM, MTAB_COUNT };
 static const char *const MTAB_NAME[MTAB_COUNT] = {"SCREEN", "AUDIO", "MIDI", "USB", "SYSTEM"};
@@ -49,7 +52,8 @@ static const menu_page_t MPAGE[MP_COUNT] = {   /* (a page opens on its first set
     {"LEDS", MTAB_SCREEN, {MI_LEDS, MI_SCLLED, MI_NONE, MI_NONE}},
     {"AUDIO", MTAB_AUDIO, {MI_LOWCUT, MI_TRACKS, MI_LOAD, MI_BPMLOCK}},
     {"CLICK", MTAB_AUDIO, {MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_NONE}},
-    {"MIDI", MTAB_MIDI, {MI_MIDIOUT, MI_LEARN, MI_LCLEAR, MI_NONE}},
+    {"MIDI", MTAB_MIDI, {MI_GLOMIDI, MI_NONE, MI_NONE, MI_NONE}},   /* (ACID FM 3c-1 task 8: MIDI IS ON GLO, its settings GLO >
+                                                                      * MIDI's and GLO > MORE's) */
     {"USB", MTAB_USB, {MI_SERIAL, MI_USB, MI_NONE, MI_NONE}},
     {"CONTROLS", MTAB_SYSTEM, {MI_HOLD, MI_ACCEL, MI_LATCH, MI_PANEL}},
     {"SYSTEM", MTAB_SYSTEM, {MI_RESTORE, MI_CPU, MI_CLOCK, MI_ABOUT}},   /* (RESTORE LAST, CPU CORES, CPU CLOCK: at power-on) */
@@ -63,7 +67,8 @@ static uint32_t menu_page_of(uint32_t row)             /* the page a row is on *
                 return p;
     return 0;
 }
-static uint32_t mi_tab(uint32_t row) { return MPAGE[menu_page_of(row)].tab; }
+static uint32_t mi_tab(uint32_t row) { return row == MI_MIDIOUT ? MTAB_MIDI : MPAGE[menu_page_of(row)].tab; }   /* (MIDI OUT: on no
+                                                         * page, the editor's MIDI's) */
 static uint32_t mtab_page(uint32_t t)                  /* a tab's first page */
 {
     uint32_t p = 0;
@@ -78,7 +83,7 @@ static uint32_t mtab_pages(uint32_t t)                 /* .. and how many it has
         n += MPAGE[p].tab == t;
     return n;
 }
-static const char *const SCOPEOPT_N[2] = {"OFF", "ON"};   /* (LEARN; SCOPE's one value, OFF) */
+static const char *const SCOPEOPT_N[2] = {"OFF", "ON"};   /* (SCOPE's one value, OFF) */
 /* the two-valued rows: a bit of ui_prefs (PREF_REC: of ui_rec_prefs, ui.c PREF_SCALE_LEDS) and its names (bit clear =
  * the default, bit set). A step up (a knob right,
  * OCT+) = ON on the ON / OFF rows (the switch's knob to the right; ANIM, USB SERIAL: their bit clears), else the
@@ -119,7 +124,8 @@ static const char *const COUNTIN_N[3] = {"OFF", "1 BAR", "2 BARS"};
 /* 1.1.5: SCREEN OFF (ui.c scr_*: the screen dark after this long without panel input; NEVER the default since 1.1.5.1) */
 static const char *const SCROFF_N[5] = {"NEVER", "5 MIN", "15 MIN", "30 MIN", "60 MIN"};
 /* (JIANT 0.6.72) MIDI OUT over USB (ui.c midi_out_mode, seq.c MO_*): the keys; and the clock + START / STOP; and every
- * note the FM-1 plays; nothing */
+ * note the FM-1 plays; nothing. (ACID FM 0.5) GLO > MORE's NOTES OUT and CLOCK OUT (ui.c midi_outs) read and set in these four
+ * words (the editor's id 20; mout_mode its nearest of the six pairs) */
 static const char *const MIDIOUT_N[4] = {"KEYS", "CLOCK", "ALL", "OFF"};
 
 /* MENU > USB SERIAL (#67). The serial console is a developer tool (README: FELUCCA_CDC). ON (the default) presents it,
@@ -174,9 +180,8 @@ static uint32_t menu_get(uint32_t row)
     case MI_SCROFF: return scr_get();
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: return rp_get(row - MI_CLICK);
     case MI_LOAD: return load_get();
-    case MI_MIDIOUT: return midi_out_mode & 3u;
+    case MI_MIDIOUT: return mout_mode();
     case MI_CPU: case MI_CLOCK: return cpu_get(row == MI_CLOCK);
-    case MI_LEARN: return ml.on;
     case MI_LEDS:
         while (i + 1u < LEDS_COUNT && LEDS_MENU[i] != settings_leds)
             i++;
@@ -191,7 +196,7 @@ static const char *menu_vname(uint32_t row, uint32_t v)
         return f->name[v & 1u];
     switch (row) {
     case MI_COLOR: case MI_SKIN: case MI_STYLE: return UI_PALETTES[UI_ACID_INDEX].name;   /* (ACID FM 0.3: one value) */
-    case MI_SCOPE: case MI_LEARN: return SCOPEOPT_N[v & 1u];
+    case MI_SCOPE: return SCOPEOPT_N[v & 1u];
     case MI_LOWCUT: return SPK_EQ[v % 3u];
     case MI_USB: return USBLVL_N[v % 6u];
     case MI_SERIAL: return USBOUT_N[v % 5u];
@@ -239,8 +244,7 @@ static void menu_put(uint32_t row, uint32_t v)
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: rp_put(row - MI_CLICK, v); break;   /* (at once: click.c, seq.c) */
     case MI_LOAD: load_put(v % 3u); break;
     case MI_CPU: case MI_CLOCK: cpu_put(row == MI_CLOCK, v & 1u); break;   /* (0.9.12, cpu_safe.c) */
-    case MI_MIDIOUT: midi_out_mode = (uint8_t)(v & 3u); break;
-    case MI_LEARN: ml_set(v); break;                   /* (0.9.12: armed, or off; not saved) */   /* (seq.c reads it every frame: ui_input) */         /* (at once: voice.c sys_load) */
+    case MI_MIDIOUT: midi_outs = (uint8_t)mout_of_mode(v); break;   /* (seq.c reads it every frame: ui_input) */
     }
 }
 /* the menu's step, any of KNOB 1..4 or OCT+ (s > 0) / OCT- (s < 0): the next / previous value, stopping at the ends

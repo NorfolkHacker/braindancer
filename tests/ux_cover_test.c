@@ -197,7 +197,7 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
 {
     const ch_t *c = &CHAINS[key];
     uint32_t sec = key < SEC_N ? key : SEC_EDIT, e, i, sl, v, r;
-    uint8_t mo = mod_ui_slot, dl = dx_ui_lane;
+    uint8_t mo = mod_ui_slot, dl = dx_ui_lane, sel0 = song.sel;
     memset(got, 0, 2 * 256);
     for (e = 0; e < c->n; e++) {
         if (!c->e[e].t)
@@ -220,13 +220,16 @@ static void uxc_reach(uint32_t key, int more, uint8_t got[2][256])
                     uint32_t id;
                     mod_ui_slot = (uint8_t)(v & 3u);
                     dx_ui_lane = (uint8_t)(v & 7u);     /* (3b task 5: DRUM-X's SOUND, the drum picked's LEVEL) */
+                    if (pg->graph == GR_MIDI)           /* (3c-1 task 8: GLO > MIDI's IN OUT CHANNEL, the track's) */
+                        song.sel = (uint8_t)(v % NTRK);
                     id = page_id(pg, sl);
+                    song.sel = sel0;
                     if (id < 256u)
                         got[pg->scope == SC_GLOBAL][id] = 1;
                 }
         }
     }
-    mod_ui_slot = mo; dx_ui_lane = dl;
+    mod_ui_slot = mo; dx_ui_lane = dl; song.sel = sel0;
 }
 
 static const uxc_hid_t *uxc_hidden(uint32_t key, uint32_t glo, uint32_t id)
@@ -282,7 +285,9 @@ static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",  
                                        "MORE RATE", "MORE ORDER", "MORE MODE", "MORE TYPE", "MORE PULSE", "MORE CONDITION",
                                        "MORE SHIFT", "MORE DIRECTION", "MORE RANGE", "MORE FOCUS", "MORE BEND", "MORE LAP",
                                        "MORE INTERVAL", "MORE RATCHET", "MORE EVERY",
-                                       "LIVE DJ FILTER", "MORE CUT", "MORE DENSITY", "MORE TRACKS"};   /* (3c-1 task 6: the DJ FILTER's cutoff and
+                                       "LIVE DJ FILTER", "MORE CUT", "MORE DENSITY", "MORE TRACKS",
+                                       "MORE NOTES OUT"};   /* (3c-1 task 8: KEYS+SEQ, the ruling's KEYS + SEQUENCE short;
+                                                         * the list spells it in UF_HDR, the status line in full) */   /* (3c-1 task 6: the DJ FILTER's cutoff and
                                                          * its side, "5.4K HP"; the RAILS rows' steps, RATCHET X3, SYNTHS, spelled in
                                                          * UF_HDR on the list) */   /* (3c-1 task 4: SEQ > MORE's step options
                                                          * and heads in words with their unit, "UP 5 DEG", "1ST OF 4", "PING-PONG":
@@ -643,6 +648,47 @@ static int uxc_widths(void)
         }
         TSEL->p[P_LEVEL] = l0; TSEL->p[P_PAN] = p0;
     }
+    {   /* (3c-1 task 8) GLO > MORE's MIDI views each value (param_ref reads them from the device: set, not *vp) and their names, GLO
+         * > MIDI's labels */
+        static const uint8_t MV[] = {ID_MO_NOTES, ID_MO_CLOCK, ID_ML_LEARN};
+        uint32_t n0 = mout_notes(), c0 = mout_clock(), r, k;
+        ux_row_t rw = {0, UXR_GLOBAL, 0};
+        ux_knob_t kn[4];
+        for (r = 0; r < NELEM(MV); r++)
+            for (k = 0; k < 3u; k++) {
+                char v[24], w[32];
+                uint8_t bar;
+                const char *nm;
+                rw.id = MV[r];
+                if (MV[r] == ID_MO_NOTES) mout_put(k, 0); else if (MV[r] == ID_MO_CLOCK) mout_put(MOUT_KEYS, k & 1u); else ml.on = (uint8_t)(k & 1u);
+                nm = uxm_row_text(&rw, v, sizeof v, &bar);
+                str_cpy(w, "MORE ", sizeof w);
+                str_cpy(w + str_len(w), nm, sizeof w - str_len(w));
+                uxc_wfit(w, v);
+                uxc_wmore++;
+                if (text_w(&UF_LBL, nm) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+            }
+        ml.on = 0;
+        mout_put(n0, c0);
+        rw.id = G_MRSEL;
+        {
+            char v[24];
+            uint8_t bar;
+            const char *nm = uxm_row_text(&rw, v, sizeof v, &bar);
+            if (text_w(&UF_LBL, nm) > UX_COL_W - 4) { printf("  MORE %s: its name too wide\n", nm); uxc_wbad++; }
+        }
+        rw.kind = UXR_ACTION; rw.id = UXM_A_LCLEAR;
+        {
+            char v[24];
+            uint8_t bar;
+            const char *nm = uxm_row_text(&rw, v, sizeof v, &bar);
+            if (text_w(&UF_LBL, nm) > UX_COL_W - 4) { printf("  MORE %s: its name too wide\n", nm); uxc_wbad++; }
+        }
+        nav_put(SEC_GLO, "MIDI");
+        uxs_knobs(cur_page(), kn);
+        for (k = 0; k < 4u; k++)
+            if (text_w(&UF_LBL, kn[k].label) > UX_COL_W - 4) { printf("  MIDI %s: its name too wide\n", kn[k].label); uxc_wbad++; }
+    }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);
     printf("ux widths: %u values a 3b knob can show (%u on MORE pages' knob rows), %u names kept whole in a smaller face "
@@ -706,8 +752,22 @@ int main(int argc, char **argv)
           got[GLO][G_LOADP] && got[GLO][G_INFO] && got[GLO][ID_LV_DENS] && !got[GLO][G_ROUTE];
     uxc_reach(SEC_GLO, 0, got);
     ok &= got[GLO][G_SWING] && got[GLO][G_TUNE] && !got[GLO][G_BPM] && !got[GLO][G_TRKS];
+    {   /* (3c-1 task 8) GLO > MIDI: every track's IN OUT CHANNEL (the selected one's) and CLOCK on its page; GLO > MORE's MIDI rows:
+         * KEYBOARD PLAYS SELECTED, and what MENU > MIDI held (MIDI OUT as NOTES OUT and CLOCK OUT, LEARN; LEARN CLEAR an action) */
+        uint32_t k, r, lc = 0, ck = 0;
+        for (k = 0; k < NTRK; k++)
+            ok &= got[GLO][G_MRIN1 + k] && got[GLO][G_MROUT1 + k] && got[GLO][G_MRCH1 + k];
+        ok &= got[GLO][G_CLOCK] && !got[GLO][G_MRSEL] && !got[GLO][ID_MO_NOTES];
+        uxc_reach(SEC_GLO, 1, got);
+        ok &= got[GLO][G_MRSEL] && got[GLO][ID_MO_NOTES] && got[GLO][ID_MO_CLOCK] && got[GLO][ID_ML_LEARN];
+        for (r = 0; r < UXM_GLO.n; r++)
+            lc += UXM_GLO.rows[r].kind == UXR_ACTION && UXM_GLO.rows[r].id == UXM_A_LCLEAR,
+            ck += UXM_GLO.rows[r].kind == UXR_GLOBAL && UXM_GLO.rows[r].id == G_CLOCK;
+        ok &= lc == 1u && ck == 0u;                     /* (CLOCK: the MIDI page's, no MORE row) */
+    }
     bad += check("ux cover: GLO (3c-1 task 7): MIX's SWING TUNE, MORE's SYSTEM and TEMPO; LEVEL PAN DJ FILTER on its knobs, the sends on "
-                 "FX, ROUTE hidden", ok);
+                 "FX, ROUTE hidden; (task 8) MIDI's IN OUT CHANNEL of every track and CLOCK, MORE's MIDI rows (MENU's MIDI OUT, LEARN, "
+                 "LEARN CLEAR)", ok);
     ok = 1;                                             /* the hidden list: reviewed rows only */
     for (i = 0; i < NELEM(UXC_HIDDEN); i++) {
         const uxc_hid_t *h = &UXC_HIDDEN[i];
