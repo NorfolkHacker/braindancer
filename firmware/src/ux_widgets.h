@@ -28,7 +28,12 @@
 #define UX_STRIP_W  13
 #define UX_STRIP_H  18
 
-typedef struct { const char *label; char value[12]; uint8_t bar; /* 0..255 */ uint8_t off; /* not in use: its value dim */ } ux_knob_t;   /* (3b task 7 fix: value 12, a name: "CHO DEPTH") */
+typedef struct { const char *label; char value[12]; uint8_t bar; /* 0..255 */ uint8_t off; /* not in use: its value dim */
+                 uint8_t mark; /* (3c-1 task 10) the setting moves on its own: automation (PLAY ON) or a lock on the step picked */
+} ux_knob_t;   /* (3b task 7 fix: value 12, a name: "CHO DEPTH") */
+/* (3c-1 task 10) the mark: the column's rule's right end, UX_MARK_W px of it and a row under it, in UX_TEXT (hot or not) */
+#define UX_MARK_W 10
+#define UX_MARK_H 3
 
 /* top line + header, LCD y 0..15: "T<trk> · sound" (trk 0: the sound alone), right in MID */
 static void ux_header(uint32_t trk, const char *sound, const char *right);

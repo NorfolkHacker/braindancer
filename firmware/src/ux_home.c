@@ -360,6 +360,7 @@ static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])
         }
         k[c].label = lbl[c];
         k[c].off = 0;
+        k[c].mark = 0;
     }
 }
 

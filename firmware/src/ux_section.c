@@ -867,15 +867,31 @@ static const char *uxs_count(void)
     return b;
 }
 
-/* the knob row of page pg (MORE: its pick and value), each label its plain name (uxs_label) */
+/* (3c-1 task 10) the knob row's marks: the selected track's settings automation moves (its records, not its locks, under PLAY
+ * ON: as motion_mask) or a lock holds on the step playing, else the step picked; a bit per P_* id in m[] */
+static void uxs_marks(uint32_t m[(P_COUNT + 31u) / 32u])
+{
+    uint32_t i, k = trk_index(TSEL), at = (k << 6) | (song.playing ? seq_src(TSEL, TSEL->seq_idx) : ui.cursor) % NSTEP;
+    memset(m, 0, ((P_COUNT + 31u) / 32u) * sizeof m[0]);
+    for (i = 0; i < motion.count && i < MOTION_MAX; i++) {
+        const motion_event_t *e = &motion.event[i];
+        uint32_t id = MOTION_ID(e);
+        if (MOTION_TRK(e) == k && id < P_COUNT &&
+            ((e->param & MOTION_LOCK) ? MOTION_PLACE(e) == at : motion_enabled(TSEL)))
+            m[id / 32u] |= 1u << (id % 32u);
+    }
+}
+/* the knob row of page pg (MORE: its pick and value), each label its plain name (uxs_label); (3c-1 task 10) a track setting
+ * marked when it moves on its own (uxs_marks) */
 static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
 {
-    uint32_t c;
+    uint32_t c, mm[(P_COUNT + 31u) / 32u];
     for (c = 0; c < 4u; c++) {
         k[c].label = "";
         k[c].value[0] = 0;
         k[c].bar = 0;
         k[c].off = 0;
+        k[c].mark = 0;
     }
     if (pg->graph == GR_LIVE) {                         /* (3c-1 task 6) GLO > LIVE: RATE LOOP THIN DJ FILTER (ux_glo.c) */
         uxg_knobs(k);
@@ -913,6 +929,7 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         }
         return;
     }
+    uxs_marks(mm);                                      /* (3c-1 task 10: what moves on its own, once a row) */
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(pg, c, &vp);
@@ -920,6 +937,8 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
             continue;
         uxs_vtext(d, *vp, pg->scope == SC_GLOBAL, page_id(pg, c), k[c].value, sizeof k[c].value);
         k[c].label = uxs_label(nav_sec(), pg->scope == SC_GLOBAL, page_id(pg, c), d->label);
+        if (vp >= TSEL->p && vp < TSEL->p + P_COUNT)    /* (a track setting: automation or a lock can hold it) */
+            k[c].mark = (uint8_t)((mm[(vp - TSEL->p) / 32] >> ((vp - TSEL->p) % 32)) & 1u);
         if (d->max > d->min) {
             int32_t b = clamp(((int32_t)*vp - d->min) * 255 / (d->max - d->min), 0, 255);
             k[c].bar = (uint8_t)(d->fmt == F_PCTINV ? 255 - b : b);
@@ -3105,8 +3124,10 @@ static void ux_section_draw(void)
         due = gph != uxg_ph_drawn && ux_pace_at(fm1_ms, uxg_ph_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_TRK_MS,
                                                 UX_TRK_SLOW_MS).draw;
     }
-    if (!all && sig != panel_sig && !due && pg == uxs_heavy_pg && pg->fam == FAM_EDIT && pg->graph != GR_MORE &&
-        (edit_kind() == 2u || (!edit_kind() && trk_eng(TSEL) == ENGI_NOISE)) &&
+    if (!all && sig != panel_sig && !due && pg == uxs_heavy_pg &&
+        ((pg->fam == FAM_EDIT && pg->graph != GR_MORE && (edit_kind() == 2u || (!edit_kind() && trk_eng(TSEL) == ENGI_NOISE))) ||
+         (song.playing && motion.on && motion.count)) &&   /* (3c-1 task 10: automation or step locks playing move settings
+                                                         * every step: the picture they change paced as the heavy ones) */
         !ux_pace_at(fm1_ms, uxs_heavy_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_VIS_MS, UX_VIS_SLOW_MS).draw)
         sig = panel_sig;                                /* (3b task 10) NOISE's and DRUM-X's pictures render up to 8,192 samples
                                                          * (DUST, a hit): a change redrawn at most every UX_VIS_MS (UX_VIS_SLOW_MS

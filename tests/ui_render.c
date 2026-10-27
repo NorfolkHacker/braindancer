@@ -1048,7 +1048,8 @@ static void setup(int s)
         int b = BASE[s - S_TOAST_ENV];
         if (b == S_COUNT) { setup(S_FXL_PAN); return; }   /* (3b task 8: PUNCH's hint, FX > MORE's PUNCH LANE status line) */
         setup(b);
-        if (s == S_TOAST_MUTATE_HINT) {           /* (MUTATE's hint, dwelt on: ui_layer.c hint_tick) */
+        if (s == S_TOAST_MUTATE_HINT) {           /* (MUTATE's old hint text as a toast: the toast's look; since */
+                                                  /* 3c-1 task 4 the hint is SEQ > MORE's status line) */
             ui_message("OCT+ KEEP  GLO+A4 FREEZE");
             str_cpy(ui.msg2, "SEQ+D5 REVERT  GLO+B4 ALL", sizeof ui.msg2);
         } else

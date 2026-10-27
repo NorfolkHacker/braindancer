@@ -42,7 +42,7 @@ enum { UXL_S_FX, UXL_S_LATCH, UXL_S_LOCK, UXL_S_EDIT, UXL_S_EDRM, UXL_S_SCL, UXL
 static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK KEYS MUTE", "FX LATCH: KEYS ON / OFF \xB7 OCT- ALL OFF",
                                              "FX LOCKED: PRESS FX TO UNLOCK", "EDIT: F3 INIT \xB7 G3 RECALL \xB7 SELECT DICE",
                                              "EDIT: SELECT DICE \xB7 BLACK KEYS MUTE",
-                                             "SCL: A KEY SETS THE ROOT \xB7 NO OCTAVE", "LFO: F3 DICE \xB7 G3 CLEAR \xB7 SELECT DICE",
+                                             "SCL: A KEY SETS THE ROOT \xB7 NO OCTAVE", "LFO: F3 DICE \xB7 G3 CLEAR \xB7 SELECT DICES LFO",   /* (3c-1 task 10: what SELECT dices) */
                                              "MACROS LATCHED: PRESS LFO TO CLOSE",
                                              "SEQ TOOLS: WHITE KEYS \xB7 REC CLEARS ALL",
                                              "SEQ TOOLS: LANES ON BLACK \xB7 REC CLEARS ALL",
@@ -74,6 +74,7 @@ static void uxl_knobs(uint32_t l, ux_knob_t k[4])
         k[c].value[0] = 0;
         k[c].bar = 0;
         k[c].off = 0;
+        k[c].mark = 0;
     }
     if (l == LAYER_FX && perf_gfocus() != PF_N) {       /* a glitcher's key down: its four */
         uint32_t x = perf_gx(perf_gfocus());

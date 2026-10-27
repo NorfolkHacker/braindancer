@@ -238,7 +238,7 @@ static int32_t menu_document(int32_t y, int draw)
         cv_text_r(232, y + 61, &AF_S, __DATE__, T_MID, T_BG);
         cv_text(6, y + 82, &AF_S, "by NorfolkHacker", T_TEXT);
         cv_text(6, y + 100, &AF_S, "Free, GPL-3.0-only, no warranty", T_TEXT);
-        cv_text(6, y + 118, &AF_S, "A fork of JIANT FM", T_TEXT);
+        cv_text(6, y + 118, &AF_S, "Built on JIANT FM and Felucca", T_TEXT);   /* (3c-1 task 10, spec 5) */
         cv_text(6, y + 138, &AF_S, "github.com", T_MID);
         cv_text(6, y + 156, &AF_S, "/NorfolkHacker", T_MID);
         cv_text(6, y + 174, &AF_S, "/acid-fm", T_MID);
@@ -246,8 +246,8 @@ static int32_t menu_document(int32_t y, int draw)
     }
     y = menu_text("THE PROJECT", y + 216, T_THEME, draw);
     y = menu_text("Copyright (C) 2026 NorfolkHacker", y, T_TEXT, draw);
-    y = menu_text("ACID FM is a fork of JIANT FM by Juan Jiant (Copyright (C) 2026 Juan Ignacio Antonucci), "
-                  "itself a fork of Felucca by Hugelton Instruments.", y, T_TEXT, draw);
+    y = menu_text("ACID FM builds on open firmware for the FM-1: JIANT FM by Juan Jiant "
+                  "(Copyright (C) 2026 Juan Ignacio Antonucci) and Felucca by Hugelton Instruments.", y, T_TEXT, draw);
     y = menu_text("Installer, emulator, manual:", y + 4, T_TEXT, draw);
     y = menu_text("norfolkhacker.github.io/acid-fm", y, T_MID, draw);
     y = menu_text("JIANT FM: juanjiant-bit.github.io/JIANT", y + 4, T_MID, draw);

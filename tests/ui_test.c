@@ -3547,7 +3547,8 @@ static int test_product_ux(void)
     go_title("OP1 ENV"); turn(EN_K1, 4);
     bad += check("operator envelope K1 edits only OP1 attack", TSEL->p[P_FM1_ATK] == 4 && !TSEL->p[P_FM2_ATK]);
     track_select(2); frame();
-    bad += check("changing to a non-FM track leaves the stale operator page", page_visible(ui.page) && cur_page()->id[0] == P_E0);
+    bad += check("changing to a non-FM track leaves the stale operator page (3c-1 task 10: for its page 3, the same place; was EDIT 1)",
+                 page_visible(ui.page) && (str_eq(cur_page()->title, "SYN FILTER") || str_eq(cur_page()->title, "SYN VOICE")));
 #else
     set_engine_of(TSEL, ENGI_DIGITAL); open_family(FAM_EDIT); ok = TSEL->eng_req == ENGI_FM6;
     for (i = 0; i < 12u; i++) { ok &= !(cur_page()->id[0] >= P_FM1_ATK && cur_page()->id[0] <= P_FM4_LEVEL); open_family(FAM_EDIT); }
@@ -4323,11 +4324,13 @@ static int test_edit_cycle(void)
         apply_preset_to(TSEL, 0);
         bad += check("a factory preset load: every lane 100 % again", TSEL->p[P_LN5] == 127);
         set_engine_of(TSEL, 0); frame();
-        bad += check("DRUM-X's SOUND of a track no longer DRUM falls back to EDIT 1", str_eq(cur_page()->title, "EDIT 1"));
+        bad += check("DRUM-X's SOUND of a track no longer DRUM: the new engine's page 2 (3c-1 task 10: the same place; was EDIT 1)",
+                     str_eq(cur_page()->title, "EDIT 2"));
     }
     go_title("OP2 ENV");
     set_engine_of(TSEL, 0); frame();
-    bad += check("an OP page of a track no longer DIGITAL falls back to EDIT 1", str_eq(cur_page()->title, "EDIT 1"));
+    bad += check("an OP page of a track no longer DIGITAL: the new engine's page 3 (3c-1 task 10: DIGITAL's OPERATOR group; was "
+                 "EDIT 1)", str_eq(cur_page()->title, "SYN VOICE"));
     go_title("EDIT 2"); frame();                        /* (0.9.2: a page put by code brings its entry) */
     go_home(); press(B_EDIT);
     bad += check("EDIT remembers its last page (as every section: rule 2)", str_eq(cur_page()->title, "EDIT 2"));
@@ -11673,8 +11676,8 @@ static int test_lz_dialogs(void)
 }
 
 /* (0.9.5) toasts and hints: a toast is a small pill over the page, never a cleared panel (every skin, palette, LARGE); a
- * NOTICE leaves the page round its box; a page's hint only once dwelt on, never while SELECT walks past, at most UXT_HINT_MAX
- * times a power-on */
+ * NOTICE leaves the page round its box; (3c-1 task 4) MUTATE's and AUTOMATION's hints are SEQ > MORE's status line on their rows
+ * (no toast, nothing counted), SCL tapped gives no layer hint, and the counts kept with the settings still round-trip */
 static uint16_t toast_snap[240 * 240];
 static void toast_box(const char *m, int32_t *b)        /* the pill on the screen (ui_graph.c toast_pill, toast_at) */
 {
@@ -19555,6 +19558,157 @@ static int test_t38_clock(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3c-1 task 10: the backlog (spec 6): the automation / lock mark on the knob row, automation and locks paced on a
+ * section's picture, held MACRO's SELECT DICES LFO, EDIT's page kept when the engine changes; the COMP 2 ECHO's left turn
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static void c10_edit_open(uint32_t e)                   /* T1 on engine e, no automation, EDIT open on its first page */
+{
+    ui_power_on(); frame();
+    song.sel = 0; song.playing = 0;
+    set_engine_of(TSEL, e); TSEL->engine = TSEL->eng_req;
+    motion_clear(TSEL); motion_set_enabled(TSEL, 0);
+    go_home(); frame();
+    press(B_EDIT); frames(UX_HOT_MS + 100u);
+}
+/* the knob row's mark of column c: its rule's right end bright (UX_TEXT), else the rule as it was */
+static int c10_marked(uint32_t c)
+{
+    return ux_px((uint32_t)(UX_COL_X0 + (int32_t)c * UX_COL_PITCH + UX_COL_W - 3), UX_Y_KNOBS + 1u) == UX_TEXT;
+}
+static int test_c10_mark(void)
+{
+    int bad = 0, ok;
+    c10_edit_open(ENGI_ANALOG);
+    ok = str_eq(cur_page()->title, "EDIT 1") && page_id(cur_page(), 1) == P_E1 && page_id(cur_page(), 2) == P_E2;
+    ok &= !c10_marked(0) && !c10_marked(1) && !c10_marked(2) && !c10_marked(3);
+    motion_set_event(TSEL, 3, P_E1, 40);                /* DETUNE recorded, PLAY ON: it moves on its own */
+    motion_set_enabled(TSEL, 1);
+    ui.cursor = 0;
+    motion_set_lock(TSEL, 0, P_E2, 20);                 /* MIX locked on the step picked (step 1) */
+    motion_set_lock(TSEL, 5, P_E3, 20);                 /* NOISE locked on another step: no mark */
+    frames(64);
+    ok &= !c10_marked(0) && c10_marked(1) && c10_marked(2) && !c10_marked(3);
+    if (!ok) printf("  marks: %d %d %d %d\n", c10_marked(0), c10_marked(1), c10_marked(2), c10_marked(3));
+    turn(EN_K2, 1); frames(32);                         /* (the column hot: still marked) */
+    ok &= c10_marked(1);
+    ui.cursor = 5; frames(64);                          /* (the step picked moved: NOISE's lock now, not MIX's) */
+    ok &= c10_marked(1) && !c10_marked(2) && c10_marked(3);
+    motion_set_enabled(TSEL, 0); frames(64);            /* PLAY OFF: the automation does not play, no mark; the lock stays */
+    ok &= !c10_marked(1) && c10_marked(3);
+    bad += check("ACID FM 3c-1 task 10: the knob row marks a setting with automation (PLAY ON) or a lock on the step picked "
+                 "(the rule's right end lit), none without", ok);
+    motion_clear(TSEL);
+    ui_power_on();
+    return bad;
+}
+/* automation (a record every step) and step locks played fast on EDIT's page: the picture redrawn at most every UX_VIS_MS,
+ * never frozen: the last value drawn once the pace allows, none idle */
+static int test_c10_pace(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t lk, i, n0, n1;
+    for (lk = 0; lk < 2u; lk++) {
+        c10_edit_open(ENGI_ANALOG);
+        for (i = 0; i < 16u; i++) {
+            if (lk) motion_set_lock(TSEL, i, P_E1, (int16_t)(i * 7u));
+            else motion_set_event(TSEL, i, P_E1, (int16_t)(i * 7u));
+        }
+        motion_set_enabled(TSEL, 1);
+        song.playing = 1;
+        frames(400);
+        n0 = uxs_panels;
+        for (i = 0; i < 64u; i++) {                     /* (a step a frame: 64 steps in 1,024 ms) */
+            motion_step(TSEL, i % 16u, &motion, 1);
+            frame();
+        }
+        n1 = uxs_panels - n0;
+        ok &= n1 >= 1024u / (UX_VIS_SLOW_MS + 16u) && n1 <= 1024u / UX_VIS_MS + 1u;
+        if (!ok) printf("  %s: %u panels for 64 changes in 1024 ms\n", lk ? "locks" : "automation", (unsigned)n1);
+        n0 = uxs_panels;
+        frames(UX_VIS_SLOW_MS + 32u);                   /* (the last change drawn when its time came) */
+        ok &= uxs_panels - n0 <= 1u;
+        n0 = uxs_panels;
+        frames(800);
+        ok &= uxs_panels == n0;
+        song.playing = 0;
+    }
+    bad += check("ACID FM 3c-1 task 10: automation and step locks playing redraw a section's picture paced (at most one a UX_VIS_MS, "
+                 "never frozen, none idle)", ok);
+    motion_clear(TSEL);
+    ui_power_on();
+    return bad;
+}
+static int test_c10_macro_say(void)
+{
+    int bad = 0;
+    int32_t w = text_w(&UF_HDR, UXL_SAY[UXL_S_MAC]);
+    if (8 + w > 232) printf("  %d px from x 8\n", (int)w);
+    bad += check("ACID FM 3c-1 task 10: held MACRO's status line says SELECT DICES LFO, within the line (x 8..232)",
+                 strstr(UXL_SAY[UXL_S_MAC], "SELECT DICES LFO") != 0 && 8 + w <= 232);
+    return bad;
+}
+/* the engine changed on EDIT's page 3 (or 2, or MORE): the new engine's page in the same place */
+static int test_c10_engine_page(void)
+{
+    static const struct { uint32_t e; const char *p2, *p3; } E[] = {
+        {ENGI_PHASE, "EDIT 2", "SYN FILTER"}, {ENGI_FM6, "FM6 OP", "FM6 OP ENV"}, {ENGI_DRUM, "DRUM SOUND", "DRUM SOUND 2"},
+        {ENGI_ANALOG, "EDIT 2", "SYN VOICE"}, {ENGI_LOFI, "EDIT 2", "SYN FILTER"}};
+    int bad = 0, ok;
+    uint32_t i;
+    c10_edit_open(ENGI_ANALOG);
+    press(B_EDIT); frame(); press(B_EDIT); frame();
+    ok = str_eq(cur_page()->title, "SYN VOICE");
+    for (i = 0; i < NELEM(E); i++) {
+        select_engine(E[i].e); frames(64);
+        if (!str_eq(cur_page()->title, E[i].p3)) {
+            printf("  %s on page 3: \"%s\"\n", ENGINES[E[i].e]->name, cur_page()->title);
+            ok = 0;
+        }
+    }
+    bad += check("ACID FM 3c-1 task 10: the engine changed on EDIT's page 3 stays on page 3 (PHASE FILTER, FM6 OP ENV, DRUM SOUND 2, "
+                 "ANALOG VOICE)", ok);
+    ok = 1;
+    c10_edit_open(ENGI_ANALOG);
+    press(B_EDIT); frame();
+    for (i = 0; i < NELEM(E); i++) {
+        select_engine(E[i].e); frames(64);
+        ok &= str_eq(cur_page()->title, E[i].p2);
+    }
+    press(B_EDIT); frame();                             /* (the chain goes on from there: page 3, then MORE) */
+    ok &= str_eq(cur_page()->title, "SYN FILTER");
+    press(B_EDIT); frame();
+    ok &= str_eq(cur_page()->title, "SYN MORE");
+    select_engine(ENGI_FM6); frames(64);
+    ok &= str_eq(cur_page()->title, "FM6 MORE");
+    bad += check("  page 2 and MORE the same: the new engine's page 2, its MORE", ok);
+    ui_power_on();
+    return bad;
+}
+/* (task 4 review N1) STEP EXTRAS' RATCHET turned left from a COMP 2 ECHO's x2: the ECHO goes and the step plays once (X1), not the
+ * flags' own ratchet left under it */
+static int test_c10_echo_left(void)
+{
+    int bad = 0, ok;
+    uint32_t sh;
+    int32_t ek;
+    step_t *st;
+    uxq_t_open(16, ENGI_ANALOG);
+    uxq_t_note(0, 48, 0);
+    st = &TSEL->step[0];
+    step_set_ratchet(st, 3);
+    rat_ui_set(st, 1, 1, RP_NONE);                      /* (COMP 2: an ECHO x2 FLAT, the flags' x3 under it) */
+    ok = st->comp2 == CP_ECHO && uxq_ratch(st, &sh, &ek) == 2u && ek == 1;
+    press(B_SEQ); frame();
+    ok &= str_eq(cur_page()->title, "STEP EXTRAS");
+    turn(EN_K1, -1); frames(32);
+    ok &= st->comp2 != CP_ECHO && uxq_ratch(st, &sh, &ek) == 1u && ek < 0 && step_ratchet(st) == 1u;
+    if (!ok) printf("  after the left turn: ratchet x%u\n", (unsigned)uxq_ratch(st, &sh, &ek));
+    bad += check("ACID FM 3c-1 task 10: RATCHET left from a COMP 2 ECHO x2: X1 (the flags' ratchet reset too)", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -19762,6 +19916,11 @@ int main(void)
     bad += test_t38_more();
     bad += test_t38_menu();
     bad += test_t38_clock();
+    bad += test_c10_mark();                             /* (ACID FM 3c-1 task 10) */
+    bad += test_c10_pace();
+    bad += test_c10_macro_say();
+    bad += test_c10_engine_page();
+    bad += test_c10_echo_left();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

@@ -124,7 +124,7 @@ const UI = {
     e_eb: "En vivo", e_h2: "Probalo en el emulador", e_in: "El firmware completo corriendo en el navegador. Cada comando de este manual muestra qué teclas de la compu usar.", e_go: "Encender el emulador acá", e_tab: "Abrir en otra pestaña",
     e_keys: "Teclado: Z–' y Q–O las teclas · 1 … = los botones FX … REC · [ ] OCT · ↑ ↓ SELECT · ← → ALGORITHM · Shift-clic mantiene un botón · perillas: rueda del mouse.",
     close: "Cerrar", ver: "firmware", recipe_steps: "pasos", try: "Probar", emu_note: "(necesita conexión)",
-    foot: "ACID FM · a fork of JIANT FM by Juan Jiant", home: "Inicio", manualmd: "Manual completo (texto)" },
+    foot: "ACID FM · built on JIANT FM and Felucca", home: "Inicio", manualmd: "Manual completo (texto)" },
   en: { lang: "en", nav_panel: "The panel", nav_ref: "How do I…?", nav_rec: "Recipes", nav_map: "Map", nav_new: "What's new", nav_emu: "Emulator",
     kicker: "interactive manual · firmware", h1a: "Interactive", h1b: "manual",
     lede: "All of JIANT on one page: touch any control of the FM-1 to see what it does alone, held and in combination, with the real screen it leads to. Search any command, follow a recipe or try it live in the emulator.",
@@ -141,7 +141,7 @@ const UI = {
     e_eb: "Live", e_h2: "Try it in the emulator", e_in: "The whole firmware running in the browser. Every command in this manual shows which computer keys to use.", e_go: "Switch the emulator on here", e_tab: "Open in a new tab",
     e_keys: "Keyboard: Z–' and Q–O the keys · 1 … = the buttons FX … REC · [ ] OCT · ↑ ↓ SELECT · ← → ALGORITHM · Shift-click holds a button · knobs: mouse wheel.",
     close: "Close", ver: "firmware", recipe_steps: "steps", try: "Try", emu_note: "(needs a connection)",
-    foot: "ACID FM · a fork of JIANT FM by Juan Jiant", home: "Home", manualmd: "Full manual (text)" }
+    foot: "ACID FM · built on JIANT FM and Felucca", home: "Home", manualmd: "Full manual (text)" }
 };
 
 const API = { KNOBS, ROW1, ROW2, KEYS, CONTROL_IDS, keyName, norm, tokens, emuHint, search, keyLayers, keyLabel, allShots, UI, L, sectionName };

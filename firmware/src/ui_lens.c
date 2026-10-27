@@ -183,6 +183,28 @@ static uint32_t nav_cur(void)
     ui.nav_at = e;
     return e;
 }
+/* (3c-1 task 10) EDIT's page pg left behind by an engine change (not on this track now): this track's page in the same group
+ * (page 3 stays page 3: ANALOG's VOICE to PHASE's FILTER, FM6's OP ENV, DRUM-X's SOUND 2; MORE stays MORE), remembered as
+ * EDIT's; NPAGES none */
+static uint32_t nav_edit_same(uint32_t pg)
+{
+    static const uint8_t KEYS[] = {SEC_EDIT, SEC_N, SEC_N + 1u, SEC_N + 2u};   /* (nav_key: synth, FM6, DRUM, DIGITAL) */
+    const ch_t *c;
+    uint32_t i, k, g = 0xFFu, p;
+    for (i = 0; i < NELEM(KEYS) && g == 0xFFu; i++)
+        for (k = 0; k < CHAINS[KEYS[i]].n; k++)
+            if (CHAINS[KEYS[i]].e[k].t && str_eq(CHAINS[KEYS[i]].e[k].t, PAGES[pg].title)) {
+                g = CHAINS[KEYS[i]].e[k].g;
+                break;
+            }
+    c = nav_ch(SEC_EDIT);
+    for (k = 0; g != 0xFFu && k < c->n; k++)
+        if (c->e[k].g == g && (p = nv_page(SEC_EDIT, k)) < NPAGES) {
+            nav_mem_put(nav_key(SEC_EDIT), k);
+            return p;
+        }
+    return NPAGES;
+}
 static uint32_t nav_lv(void) { return nav_ch(nav_sec())->e[nav_cur()].lv; }   /* the 0.8.5 lens level it is drawn as */
 static uint32_t pd_level(void) { return nav_lv(); }
 static uint32_t save_level(void) { return nav_lv(); }

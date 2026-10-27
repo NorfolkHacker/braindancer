@@ -1204,8 +1204,11 @@ static void edit_param(uint32_t slot, int32_t steps)
             int32_t ek, to = (int32_t)uxq_ratch(st, &sh, &ek) + (steps > 0 ? 1 : -1);   /* (rat_ui_set: x1, or FLAT x2..x4 with */
             if (ek < 0)                                 /* no pitch step, the flags'); the flags' own x1..x4 as before */
                 step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + steps, 1, 4));
-            else
+            else {
                 rat_ui_set(st, (uint32_t)ek, to <= 1 ? 0u : sh * 7u + (uint32_t)clamp(to, 2, 8) - 1u, rat_pit_of(st, (uint32_t)ek));
+                if (to <= 1 && ek == 1)                 /* (3c-1 task 10: COMP 2's ECHO gone, the step plays once: X1, not */
+                    step_set_ratchet(st, 1u);           /* the flags' own ratchet left under it) */
+            }
         } else if (slot == 1u)
             step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
         else if (slot == 2u)                            /* (pre-review fix: the step's TRIG, the note on its loops) */

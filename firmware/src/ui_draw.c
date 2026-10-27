@@ -1755,8 +1755,10 @@ static void ui_draw_body(uint32_t counting)
         return;
     }
     if (!ui.home && !page_visible(ui.page)) {          /* an OP page of a track that is not DIGITAL (without
-                                                         * FELUCCA_FM4: any track): EDIT 1 */
-        ui.page = (uint8_t)page_first(FAM_EDIT);
+                                                         * FELUCCA_FM4: any track): EDIT 1; (3c-1 task 10) an EDIT
+                                                         * page an engine change left: the new engine's in its group */
+        uint32_t p = PAGES[ui.page].fam == FAM_EDIT ? nav_edit_same(ui.page) : NPAGES;
+        ui.page = (uint8_t)(p < NPAGES ? p : page_first(FAM_EDIT));
         page_entered();
     }
     if (ux_page_owns()) {                               /* (ACID FM 3b) a section moved to the ux pages (ux_section.c), its
