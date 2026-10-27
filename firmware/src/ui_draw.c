@@ -1754,9 +1754,9 @@ static void ui_draw_body(uint32_t counting)
         ui.force = 0;
         return;
     }
-    if (!ui.home && !page_visible(ui.page)) {          /* an OP page of a track that is not DIGITAL (without
-                                                         * FELUCCA_FM4: any track): EDIT 1; (3c-1 task 10) an EDIT
-                                                         * page an engine change left: the new engine's in its group */
+    if (!ui.home && !page_visible(ui.page)) {          /* a page this track does not have (another engine's EDIT page, an
+                                                         * OP page without DIGITAL): (3c-1 task 10) the new engine's EDIT
+                                                         * page in the same group (nav_edit_same), else EDIT's first */
         uint32_t p = PAGES[ui.page].fam == FAM_EDIT ? nav_edit_same(ui.page) : NPAGES;
         ui.page = (uint8_t)(p < NPAGES ? p : page_first(FAM_EDIT));
         page_entered();

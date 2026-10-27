@@ -215,7 +215,7 @@ export function stockFileProblem(name, bytes, v15size) {
 export function makeReport({ env, page = "", installer = "", state = {}, scan = null, permission = "", error = null, log = "" }) {
   const fw = state.fw || {};
   const lines = [
-    "JIANT installer report",
+    "ACID FM installer report",
     `date: ${new Date().toISOString()}`,
     `page: ${page}`,
     `installer: ${installer}`,

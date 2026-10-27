@@ -868,10 +868,11 @@ static const char *uxs_count(void)
 }
 
 /* (3c-1 task 10) the knob row's marks: the selected track's settings automation moves (its records, not its locks, under PLAY
- * ON: as motion_mask) or a lock holds on the step playing, else the step picked; a bit per P_* id in m[] */
+ * ON: as motion_mask) or a lock holds on the step playing (fix 1: its place seq_idx, where seq.c's motion_step applies the
+ * locks, not the source step SHIFT OFS plays there), else the step picked; a bit per P_* id in m[] */
 static void uxs_marks(uint32_t m[(P_COUNT + 31u) / 32u])
 {
-    uint32_t i, k = trk_index(TSEL), at = (k << 6) | (song.playing ? seq_src(TSEL, TSEL->seq_idx) : ui.cursor) % NSTEP;
+    uint32_t i, k = trk_index(TSEL), at = (k << 6) | (song.playing ? TSEL->seq_idx : ui.cursor) % NSTEP;
     memset(m, 0, ((P_COUNT + 31u) / 32u) * sizeof m[0]);
     for (i = 0; i < motion.count && i < MOTION_MAX; i++) {
         const motion_event_t *e = &motion.event[i];

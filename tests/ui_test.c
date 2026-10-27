@@ -19598,6 +19598,19 @@ static int test_c10_mark(void)
     ok &= !c10_marked(1) && c10_marked(3);
     bad += check("ACID FM 3c-1 task 10: the knob row marks a setting with automation (PLAY ON) or a lock on the step picked "
                  "(the rule's right end lit), none without", ok);
+    motion_clear(TSEL);                                 /* (fix 1) playing with SHIFT OFS 3: the lock marked is the one at the */
+    motion_set_enabled(TSEL, 1);                        /* place playing (seq_idx, where motion_step applies it), not at the */
+    TSEL->p[P_SOFS] = 3;                                /* source step SHIFT OFS plays there */
+    TSEL->seq_idx = 2;
+    ok = seq_src(TSEL, 2) != 2u;
+    motion_set_lock(TSEL, 2, P_E2, 20);
+    motion_set_lock(TSEL, seq_src(TSEL, 2), P_E3, 20);
+    ui.cursor = 9;
+    song.playing = 1; frames(64);
+    ok &= c10_marked(2) && !c10_marked(3);
+    if (!ok) printf("  playing, SHIFT OFS 3: marks %d %d\n", c10_marked(2), c10_marked(3));
+    song.playing = 0; TSEL->p[P_SOFS] = 0;
+    bad += check("  playing: the lock on the place playing (seq_idx) marked, with SHIFT OFS not the source step's", ok);
     motion_clear(TSEL);
     ui_power_on();
     return bad;
