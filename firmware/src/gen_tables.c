@@ -599,13 +599,19 @@ static const ggenre_t GENRE[] = {
 #define GEN_NSPOS (GEN_NSHOWN + 2u)                     /* the knob's places now: EXPLORE, RANDOM, the ten */
 static const uint8_t GEN_SHOWN[GEN_NSHOWN] = {41 /* IDM */, 42 /* BROKEN */, 30 /* BREAKS */, 31 /* DRUM & BASS */, 4 /* ACID HOUSE */,
                                               11 /* ELECTRO */, 2 /* MICRO HOUSE */, 26 /* BOOM BAP */, 37 /* AMBIENT */,
-                                              39 /* IMPRESSION */};
-static const char *const GEN_SHOWN_NAME[GEN_NSHOWN] = {"IDM", "BROKEN BEAT", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO",
-                                                       "MICRO", "RETROBOC", "AMBIENT", "DRIFT"};
+                                              7 /* DUB TECHNO */};
+/* (ACID FM 0.5.1) names, tempos and swing from docs/acid-fm/genre-research.md: BROKEN BEAT (80..100 swung is glitch-hop,
+ * not West London broken beat) is GLITCH HOP; DRIFT (a second AMBIENT) is AMB TECHNO (the Warp ambient-techno lane, on
+ * DUB TECHNO's template); RETROBOC is the user's name for the Boards of Canada style (68..100) */
+static const char *const GEN_SHOWN_NAME[GEN_NSHOWN] = {"IDM", "GLITCH HOP", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO",
+                                                       "MICRO", "RETROBOC", "AMBIENT", "AMB TECHNO"};
 /* the GEN card holds about seven letters: the same names where they fit, else a short one (the full name is drawn across
  * the panel, gen.c gen_panel, while the genre's card is the one turned) */
-static const char *const GEN_SHOWN_CARD[GEN_NSHOWN] = {"IDM", "BROKEN", "BREAKS", "D'N'BASS", "ACID", "ELECTRO",
-                                                       "MICRO", "RETRO", "AMBIENT", "DRIFT"};
+static const char *const GEN_SHOWN_CARD[GEN_NSHOWN] = {"IDM", "GLITCH", "BREAKS", "D'N'BASS", "ACID", "ELECTRO",
+                                                       "MICRO", "RETRO", "AMBIENT", "AMBTECH"};
+/* (0.5.1) each shown genre's own tempo range and swing (the research's), over its template's: bpm_lo, bpm_hi, swing */
+static const uint8_t GEN_SHOWN_TEMPO[GEN_NSHOWN][3] = {{96, 132, 6}, {82, 100, 20}, {124, 145, 8}, {155, 172, 0}, {122, 140, 4},
+                                                       {124, 138, 2}, {116, 126, 14}, {68, 100, 14}, {60, 90, 0}, {106, 126, 4}};
 /* a stored genre's place among the ten, 255 if it is RANDOM, EXPLORE or hidden */
 static uint32_t gen_shown_index(uint32_t genre)
 {
@@ -613,6 +619,16 @@ static uint32_t gen_shown_index(uint32_t genre)
     for (i = 0; i < GEN_NSHOWN && genre; i++)
         if (genre == 1u + GEN_SHOWN[i]) return i;
     return 255u;
+}
+/* (0.5.1) a genre template as GEN plays it: a shown genre's own tempo and swing over its template's */
+static void gen_shown_tempo(ggenre_t *m, uint32_t genre)
+{
+    uint32_t i = gen_shown_index(genre);
+    if (i < GEN_NSHOWN) {
+        m->bpm_lo = GEN_SHOWN_TEMPO[i][0];
+        m->bpm_hi = GEN_SHOWN_TEMPO[i][1];
+        m->swing = GEN_SHOWN_TEMPO[i][2];
+    }
 }
 /* its keys: the SCALE page's modes of seven, the exotic ones likeliest (LOC too: its tonic chord a diminished one the
  * plan never takes, the other six degrees do) */

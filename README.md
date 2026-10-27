@@ -8,7 +8,11 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/acid-fm/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/acid-fm/manual/)**
 
-## Status: 0.5
+## Status: 0.5.1
+
+0.5.1 retunes GEN's genres (names, tempo ranges and swing, from [research into the real styles](docs/acid-fm/genre-research.md):
+GLITCH HOP and AMB TECHNO replace BROKEN BEAT and DRIFT; DRILL'N'BASS 155–172, ELECTRO 124–138, RETROBOC 68–100) and makes
+an external clock (USB or TRS) hold a steady tempo.
 
 0.5 is SEQ, GLO and MIDI in the ACID look (piece 3c-1), on top of 0.4:
 

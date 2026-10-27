@@ -2318,13 +2318,16 @@ static void gen_make(void)
         g = gs.g = &gmut;
     } else {
         gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gen_random_genre() - 1u;
-        g = gs.g = &GENRE[gs.gi];
-        gmut = *g;
+        gmut = GENRE[gs.gi];
+        gen_shown_tempo(&gmut, gs.gi + 1u);            /* (0.5.1) the shown genre's tempo and swing */
+        g = gs.g = &gmut;
         gs.mutant = 0;
         if (!gp.genre && dice_force_style < 0 && gch(45)) {   /* (0.6.95) RANDOM: a mutant, the drums of one genre, the bass
                                                              * of another, the rest from either; a name of its own: "EBM+JAZZ" */
             uint32_t bg = gen_random_genre(), k2;
-            const ggenre_t *b = &GENRE[bg - 1u], *c = &GENRE[gen_random_genre() - 1u];
+            ggenre_t bt = GENRE[bg - 1u];
+            const ggenre_t *b = &bt, *c = &GENRE[gen_random_genre() - 1u];
+            gen_shown_tempo(&bt, bg);
             gmut.drum = b->drum; gmut.kit = b->kit; gmut.ghosts = b->ghosts; gmut.hats = b->hats; gmut.fills = b->fills;
             gmut.sd_micro = b->sd_micro; gmut.snd[GP_DRUMS] = b->snd[GP_DRUMS];
             gmut.drum_pct = (uint8_t)(b->drum_pct > g->drum_pct ? b->drum_pct : g->drum_pct);

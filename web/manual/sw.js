@@ -3,7 +3,7 @@
 // Portions Copyright (C) 2026 NorfolkHacker
 // The manual offline: its page, scripts and screens cached (network first for the page and scripts, so a new version
 // shows at once; cache first for the screens). Only the manual's own folder; the emulator needs the network.
-const CACHE = "acid-manual-v3";   /* (0.5 news; a new name drops the old cache) */
+const CACHE = "acid-manual-v4";   /* (0.5.1 news; a new name drops the old cache) */
 const CORE = ["./", "index.html", "manual.js", "data.js", "nav.js"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {

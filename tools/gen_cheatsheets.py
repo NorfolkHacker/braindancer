@@ -356,8 +356,8 @@ def sound():
     b.append(card('DICE · GEN', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'setting moved up to a quarter of its range (DRUM-X: both sides of every sound around the factory kit). Heard at once: '
                   'OCT+ keeps it, OCT− brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. '
-                  '<b>HOME + SELECT</b>: GEN, HOME\'s last three pages: GENRE (EXPLORE, RANDOM, or IDM, BROKEN BEAT, BREAKS, '
-                  'DRILL\'N\'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP; '
+                  '<b>HOME + SELECT</b>: GEN, HOME\'s last three pages: GENRE (EXPLORE, RANDOM, or IDM, GLITCH HOP, BREAKS, '
+                  'DRILL\'N\'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP; '
                   'LEAD · COMPLEX · SWING · HUMAN. OCT+ makes the piece, OCT− back to TRACKS. GLO + G4 undoes.</p>'))
     b.append('</div>')
 

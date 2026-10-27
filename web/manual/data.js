@@ -270,7 +270,7 @@ commands: [
   {s: "gen", k: "OCT+", shot: 'gen', t: "Another seed, or the same piece with one change",
    d: "OCT+ with nothing changed: a new seed, a new piece. Turn a knob and OCT+: the same piece with that changed (each part has its own random stream). Screen: LAST: EXPLORE 0421."},
   {s: "gen", k: "PRESETS", shot: 'gen', t: "Pick a genre (or EXPLORE / RANDOM)",
-   d: "GEN 1: KNOB 1 GENRE (or PRESETS): EXPLORE (no genre, every rule broken), RANDOM or one of the ten (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT); KNOB 2 SEED, KNOB 3 ENERGY, KNOB 4 FORM (LOOP, PARTS, SONG)."},
+   d: "GEN 1: KNOB 1 GENRE (or PRESETS): EXPLORE (no genre, every rule broken), RANDOM or one of the ten (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO); KNOB 2 SEED, KNOB 3 ENERGY, KNOB 4 FORM (LOOP, PARTS, SONG)."},
   {s: "gen", k: "SELECT", shot: 'gen_parts', t: "Weigh the parts (GEN 2 / GEN 3)",
    d: "GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % or AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Lower DRUMS and OCT+: the same piece, fewer drums."},
   {s: "gen", k: "OCT-", t: "Leave GEN / go back to before",
@@ -604,6 +604,10 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.5.1", items: [
+    "0.5.1: GEN's genres retuned from research into the real styles. BROKEN BEAT is now GLITCH HOP (82–100, swung) and DRIFT is now AMB TECHNO (106–126).",
+    "Each genre has its own tempo: DRILL'N'BASS 155–172, ELECTRO 124–138, ACID up to 140, IDM 96–132, MICRO 116–126 with more swing, RETROBOC 68–100.",
+    "Following an external clock (USB or TRS) now holds a steady tempo: the beat is measured over a whole beat of clocks and smoothed, so a hardware sequencer's clock no longer makes the tempo wander."]},
   {v: "0.5", items: [
     "0.5: SEQ, GLO and MIDI in the ACID look. SEQ is STEPS, STEP EXTRAS, PATTERN and MORE: STEP EXTRAS holds a step's chance, ratchet, condition and micro-timing; with a step held, MORE's rows lock on it (the ACID lock card).",
     "GLO is LIVE, MIX, MIDI and MORE. LIVE is the performance page (rate, loop, thin, DJ filter and the keys' tricks); MIX has the six tracks' levels, pan and sends; MORE has the rest.",
@@ -614,7 +618,7 @@ news: [
   {v: "0.4", items: [
     "0.4: the sound sections in the ACID look: EDIT (a picture of the sound, four knobs and MORE for the rest), ENV, ARP, SCL, LFO and FX. Names in plain words; the creature pictures are gone.",
     "The held layers (EDIT, MACRO, FX, SCL) in the same look: the keys and knobs say what they do. With a step held, MORE's rows also keep their value on that step.",
-    "GEN: ten IDM genres (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT), plus EXPLORE and RANDOM. Techno and house are hidden; a song saved with one still generates as before.",
+    "GEN: ten IDM genres (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO), plus EXPLORE and RANDOM. Techno and house are hidden; a song saved with one still generates as before.",
     "At power-on, PLAY plays a short demo (beat, acid line, pad, at 124 BPM); NEW PROJECT still starts empty.",
     "The first time 0.4 starts, MENU › TRACKS switches to 6 once (the demo uses T5 and T6); if you pick 4 after that, it stays 4.",
     "HOME › TRACKS: KNOB 1–3 are three tracks' levels (the selected one's group) and KNOB 4 the BPM.",

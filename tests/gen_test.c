@@ -962,10 +962,10 @@ int main(void)
             char v[16];
             uint8_t g0 = gp.genre;
             int ok = 1;
-            static const char *const WALK[12] = {"EXPLORE", "RANDOM", "IDM", "BROKEN", "BREAKS", "D'N'BASS", "ACID",
-                                                 "ELECTRO", "MICRO", "RETRO", "AMBIENT", "DRIFT"};
-            static const char *const FULL[10] = {"IDM", "BROKEN BEAT", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO", "MICRO",
-                                                 "RETROBOC", "AMBIENT", "DRIFT"};
+            static const char *const WALK[12] = {"EXPLORE", "RANDOM", "IDM", "GLITCH", "BREAKS", "D'N'BASS", "ACID",
+                                                 "ELECTRO", "MICRO", "RETRO", "AMBIENT", "AMBTECH"};
+            static const char *const FULL[10] = {"IDM", "GLITCH HOP", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO", "MICRO",
+                                                 "RETROBOC", "AMBIENT", "AMB TECHNO"};
             uint32_t w;
             gp.genre = GEN_EXPLORE;
             for (w = 0; w < 24u; w++) {                 /* (3b) ten genres shown: forward twice round, then back twice */
@@ -1000,6 +1000,23 @@ int main(void)
             gp.genre = 1; gen_value(0, 0, v);
             bad += gcheck("  (3b) ... and its name shows as JIANT's", !strcmp(v, "HOUSE"));
             gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF;
+        }
+        {   /* (0.5.1) each shown genre plays its own tempo range and swing (docs/acid-fm/genre-research.md): RETROBOC 68..100,
+             * DRILL'N'BASS 155..172, ELECTRO 124..138 ...; a hidden genre keeps its template's */
+            uint32_t i, sd, ok = 1, sw = 1;
+            for (i = 0; i < GEN_NSHOWN; i++)
+                for (sd = 1; sd <= 40u; sd++) {
+                    uint32_t lo = GEN_SHOWN_TEMPO[i][0], hi = GEN_SHOWN_TEMPO[i][1];
+                    gen_with(1u + GEN_SHOWN[i], sd, (sd * 37u) % 101u, 0);
+                    ok &= song.g[G_BPM] >= (int32_t)lo - 3 && song.g[G_BPM] <= (int32_t)hi + 3;
+                    sw &= gp.swing != GA_AUTO || song.g[G_SWING] == GEN_SHOWN_TEMPO[i][2];
+                }
+            bad += gcheck("  (0.5.1) every shown genre's tempo within its own range (+-3, the energy's nudge)", ok);
+            bad += gcheck("  (0.5.1) ... and its own swing", sw);
+            bad += gcheck("  (0.5.1) the names: GLITCH HOP, AMB TECHNO; RETROBOC kept", !strcmp(GEN_SHOWN_NAME[1], "GLITCH HOP") &&
+                          !strcmp(GEN_SHOWN_NAME[9], "AMB TECHNO") && !strcmp(GEN_SHOWN_NAME[7], "RETROBOC"));
+            gen_with(1, 421, 50, 0);
+            bad += gcheck("  (0.5.1) a hidden genre (HOUSE) keeps its template's tempo", song.g[G_BPM] >= 119 && song.g[G_BPM] <= 130);
         }
         {   /* (3b final review I2) RANDOM's mutants are named from the shown names only ("ACID+D'N'BASS 0421"), never JIANT's
              * hidden ones; the name fits the GEN panel's LAST line and the status line */

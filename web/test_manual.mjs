@@ -63,7 +63,7 @@ const walk = (v, key) => {
 };
 walk({ c: M.commands, r: M.recipes, n: M.news, s: M.sections, k: M.controls });
 ok(texts.length > 300 && texts.every((x) => x.trim()) && !pairs.length, `manual: ${texts.length} texts, each one English string` + (pairs.length ? ` (${pairs.length} pairs left)` : ""));
-ok(M.news[0].v === fwv.slice(1) && M.news[M.news.length - 1].v === "0.1" && M.news.every((n) => /^0\.[1-9]$/.test(n.v)),
+ok(M.news[0].v === fwv.slice(1) && M.news[M.news.length - 1].v === "0.1" && M.news.every((n) => /^0\.[1-9](\.[0-9])?$/.test(n.v)),
    "manual: what's new from the current version back to ACID FM 0.1, nothing older");
 const ids = M.sections.map((s) => s.id);
 ok([...M.commands, ...M.recipes].every((e) => ids.includes(e.s)), "manual: every command and recipe in a known section");
