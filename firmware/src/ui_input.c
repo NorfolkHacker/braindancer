@@ -1138,6 +1138,11 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
         seq_view_turn(id, steps);
         return;
     }
+    if (!t && lvv_is(id)) {                             /* (3c-1 task 6) GLO > MORE's RAILS: the inherited second LIVE page's
+                                                         * knobs (ui_live.c) */
+        live_rail(id, steps);
+        return;
+    }
     d = param_ref(t, id, &vp);
     if (!d || !vp || d->max == d->min)
         return;
@@ -1182,7 +1187,7 @@ static void edit_param(uint32_t slot, int32_t steps)
             (void)ux_more_knob(slot, steps);
         return;
     }
-    if (pg->graph == GR_LIVE) {                         /* (0.9.11) GLO > LIVE (ui_live.c) */
+    if (pg->graph == GR_LIVE) {                         /* (0.9.11) GLO > LIVE (ui_live.c; 3c-1 task 6: its RAILS GLO > MORE's) */
         live_knob(slot, steps);
         return;
     }

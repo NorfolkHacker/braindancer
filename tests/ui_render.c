@@ -644,7 +644,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_SCL_MORE, S_SCL_WHITE, S_ARP_CHORD, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE,
        S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK, S_DRUM_X4, S_DRUM_GHOST,
        S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP,
-       S_GEN_EXPLORE, S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS, S_MIXER_T4, S_MOCK_HOME,
+       S_GEN_EXPLORE, S_GLO_LIVE, S_GLO_LIVE_TRICKS, S_GLO_LIVE_LATCH, S_GLO_MORE, S_MIXER_T4, S_MOCK_HOME,
        S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_TOAST_ENV, S_TOAST_MUTATE,
        S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
        S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI,
@@ -692,7 +692,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs",
     "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "drum_hit_x4",
     "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum",
-    "comp_jump", "gen_explore", "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys", "mixer_tracks4",
+    "comp_jump", "gen_explore", "glo_live", "glo_live_tricks", "glo_live_latch", "glo_more", "mixer_tracks4",
     "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu", "toast_env",
     "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
     "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi",
@@ -708,9 +708,10 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end", "seq_more_drum", "seq_lock",
     "seq_extras_echo"};
 
-/* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
- * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
- * where they would be; RIELES (KNOB 1 ALL or T3), MANO (black key 3 and C4 held, A4 PING latched on T5, LATCH on) */
+/* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's); (ACID FM 3c-1 task 6)
+ * the ux pages: LIVE idle (stopped, nothing live); with tricks (T2 THIN 70 %, T3 x2 RATCH x3, T4 LOOP 8, T5 2/3; black key 3 held:
+ * T3 picked, KNOB 1 just turned), played two seconds from PLAY so the bar's line is where it would be; latched (LATCH on, A4
+ * PING latched on T5, C4 held on T3); GLO > MORE's RAILS (TRACKS T3) */
 static void live_scene(int s)
 {
     static const uint8_t NN[5] = {60, 67, 63, 72, 58};
@@ -732,18 +733,23 @@ static void live_scene(int s)
         if (k < 7u && k != 4u) { trk[2].step[k].time = ST_NOTE; trk[2].step[k].n = 1; trk[2].step[k].note[0] = NN[k % 5u] - 12u; trk[2].step[k].vel = 100; }
     }
     memset(&lv, 0, sizeof lv);
+    song.sel = 2;
+    nav_put(SEC_GLO, s == S_GLO_MORE ? "MORE" : "LIVE");
+    if (s == S_GLO_LIVE)
+        return;
     lv.dn[1] = -3; lv.rate[2] = 2; lv.dn[2] = 2; lv.cut[3] = 5; lv.here = 1u << 3; lv.rate[4] = -1;
-    if (s == S_LIVE_RIELES_T3) lv.tgt = 3;
-    if (s == S_LIVE_MANO_KEYS) {
+    if (s == S_GLO_MORE) lv.tgt = 3;
+    if (s == S_GLO_LIVE_TRICKS) lv.kb = 1u << key_at(1, 2);
+    if (s == S_GLO_LIVE_LATCH) {
+        memset(&lv, 0, sizeof lv);
         lv.latch = 1; lv.lt[9] = 1u << 4; lv.tk[5] = 1u << 2;
         lv.kb = 1u << key_at(1, 2) | 1u << key_at(0, 5);
     }
-    song.sel = 2;
+    lv.kprev = lv.kb;
     seq_start();
     live_publish();
     for (k = 0; k < 2800u; k++) { events_block(CTL); if (!(k % 64u)) live_publish(); }
-    nav_put(SEC_GLO, s >= S_LIVE_MANO ? "MANO" : "RIELES");
-    if (s == S_LIVE_RIELES_T3) { ui.hot_col = 0; ui.hot_t = 30; }
+    if (s == S_GLO_LIVE_TRICKS) ux_knob_touch(0);
 }
 /* the scenes of the UI design screens: the state the UI-redesign
  * prototype drew them from (its setup(): two pattern tracks, the drum pattern on track 4, a synthetic scope),
@@ -1830,7 +1836,7 @@ static void setup(int s)
         song.octave = s == S_DRUM_OCT_UP ? 3 : -3;
         ui_message(drum_oct_name(song.octave));
         break;
-    case S_LIVE_RIELES: case S_LIVE_RIELES_T3: case S_LIVE_MANO: case S_LIVE_MANO_KEYS: live_scene(s); break;
+    case S_GLO_LIVE: case S_GLO_LIVE_TRICKS: case S_GLO_LIVE_LATCH: case S_GLO_MORE: live_scene(s); break;
     case S_COMP_TOUCH: case S_COMP_EVEN:
         drum(0);
         trk[3].step[0].comp = s == S_COMP_TOUCH ? CP_TOUCH : CP_ECHO;

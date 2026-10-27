@@ -333,14 +333,12 @@ enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PA
                                    * keep the diced sequence / LFO / effects?;
                                    * SAVE over a used slot; a pattern over the user's steps;
                                    * USER ERASE; (0.9.3) MUTATE turned OFF: BACK TO BEFORE MUTATE?; (0.9.11) LIVE's COMMIT */
-/* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c, included by ui_layer.c) */
+/* (0.9.11) GLO > LIVE (ui_live.c, included by ui_layer.c; ACID FM 3c-1 task 6: drawn by ux_glo.c, the RAILS rows GLO > MORE's) */
 static int live_page(void);
 static int live_mano(void);
 static void live_frame(void);
 static void live_knob(uint32_t slot, int32_t steps);
-static void live_cards(void);
-static void graph_live(void);
-static uint32_t live_sig(uint32_t h);
+static void live_rail(uint32_t id, int32_t steps);
 static uint32_t live_leds(void);
 static void live_commit(uint32_t m);
 
@@ -720,8 +718,9 @@ static int lock_page_ok(uint32_t i)
 {
     uint32_t k;
     if (i < NPAGES && PAGES[i].graph == GR_MORE)        /* (3b task 9, the user: every MORE row) its rows: KNOB 2 locks the */
-        return PAGES[i].more != 0 && PAGES[i].fam != FAM_SEQ;   /* one picked when the lock store holds it (ux_more.c
-                                                         * uxm_lock_why); (3c-1 task 4) not SEQ's: a step locks the sound */
+        return PAGES[i].more != 0 && PAGES[i].fam != FAM_SEQ && PAGES[i].fam != FAM_GLO;   /* one picked when the lock store
+                                                         * holds it (ux_more.c uxm_lock_why); (3c-1 task 4) not SEQ's: a step locks
+                                                         * the sound; (task 6) nor GLO's: the song's */
     if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD)
         return 0;
     for (k = 0; k < 4u; k++)

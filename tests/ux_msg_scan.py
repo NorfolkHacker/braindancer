@@ -12,7 +12,8 @@ str_cpy(ui.msg / ui.msg2, ...) (msg2 becomes the message after msg), the ux_*.c 
 UX_STOP) HOME's hints (ux_nav.c UXH_PAGES) and the ten GEN genre names (gen_tables.c GEN_SHOWN_NAME, said by gen_go's "GEN: name seed"). UX_MSG_LBL (UF_LBL, the footer's face): the literals of ux_footer( calls; (3b task 9) the held layers' key names (ui_layer.c
 ly_keyname's str_cpy(nm, .., PF_NAME: ux_layer.c's MAP) and STATE's chips (lst_chip(: UF_HDR)
 and UXH_PAGES (the footer's HOME . page); (3b) both: the literals of the ux_*.c tables named UX*_* (ux_section.c UXS_NAME and UXS_LABEL's
-plain words, ux_more.c UXM_HEAD / UXM_ACT: knob labels, MORE rows; the values a MORE row can take: tests/ui_test.c); (3b task 4)
+plain words, ux_more.c UXM_HEAD / UXM_ACT: knob labels, MORE rows; the values a MORE row can take: tests/ui_test.c; 3c-1 task 6: one named
+UX*_*_LBL UF_LBL's alone, a picture's words); (3b task 4)
 both: ui_lens.c SEC_NAME and the chains' CE_* / CG_* names (the footer's SECTION . PAGE, the hint "EDIT AGAIN: .."), the settings'
 labels (params.c PD( / PE(, the engines' {"LABEL", F_..} descriptors: a page's knob row and readout; UXS_LABEL's renamed
 ones left out, never drawn). tests/ux_font_test.c checks every byte of them has a glyph. Comments are blanked first; the script fails if it finds fewer
@@ -76,7 +77,10 @@ def main(out):
                 hdr.extend(LIT.findall(t.group(1)))
                 lbl.extend(LIT.findall(t.group(1)))
             for t in re.finditer(r'\b(UX[A-Z]*_[A-Z_]+)\s*\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S):
-                if t.group(1) != 'UXH_PAGES':         # (3b: ux_section.c UXS_LABEL, ux_more.c UXM_HEAD / UXM_ACT: a knob's
+                if t.group(1).endswith('_LBL'):       # (3c-1 task 6: a picture's own words, drawn in UF_LBL alone: ux_glo.c
+                    tables += 1                       # UXG_ARROW_LBL, LIVE's REVERSE / PING-PONG arrows)
+                    lbl.extend(LIT.findall(t.group(2)))
+                elif t.group(1) != 'UXH_PAGES':       # (3b: ux_section.c UXS_LABEL, ux_more.c UXM_HEAD / UXM_ACT: a knob's
                     tables += 1                       # label, a MORE row, the status line: both faces)
                     hdr.extend(LIT.findall(t.group(2)))
                     lbl.extend(LIT.findall(t.group(2)))

@@ -1163,10 +1163,6 @@ static void draw_columns(void)
     const char *unit;
     (void)motion_mask(song.sel, card_mot_mask);       /* (PLAY OFF: no scan) */
     /* (ACID FM 3a: HOME's cards, the sound's four and MACROS' M1..M4, are ux_home.c's knob row) */
-    if (cur_page()->graph == GR_LIVE) {                /* (0.9.11) GLO > LIVE (ui_live.c) */
-        live_cards();
-        return;
-    }
     if (cur_page()->graph == GR_SONG) {
         uint32_t row = ui.song_row < CHAIN_ROWS ? ui.song_row : CHAIN_ROWS - 1u;
         int used = row < chain_config.count;
@@ -1437,8 +1433,8 @@ static void confirm_text(char *a, char *b)
         str_cpy(a, "BUILD CPU TEST SONG?", 24);
         str_cpy(b, "UNDO AFTER: GLO + G4", 24);
         break;
-    case CF_LIVE_COMMIT:                             /* (0.9.11) GLO > LIVE (k: the tracks; their numbers lit there) */
-        str_cpy(a, "WRITE LIVE CHANGES?", 24);
+    case CF_LIVE_COMMIT:                             /* (0.9.11) GLO > LIVE (k: the tracks); (3c-1 task 6) OCT+ KEEP */
+        str_cpy(a, "KEEP THE LIVE TRICKS?", 24);
         str_cpy(b, "UNDO AFTER: GLO + G4", 24);
         break;
     case CF_MUT_BACK:                                /* (0.9.3) MUTATE turned OFF on track k (project.c mut_ask_poll) */

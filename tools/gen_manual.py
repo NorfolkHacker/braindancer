@@ -39,8 +39,8 @@ PAGE_SHOT = {
     'SEQ': {'STEPS': 'seq_steps', 'STEP EXTRAS': 'seq_extras', 'PATTERN': 'seq_pattern', 'MORE': 'seq_more'},   # (3c-1 tasks 2-4:
             # STEPS, STEP EXTRAS, PATTERN, MORE on the ux pages; JIANT's STRETCH .. AUTO LIST MORE's rows)
     'FX': {'SENDS': 'fx_1', 'SPACE': 'fx_2', 'MASTER': 'fx_3', 'MORE': 'fx_more'},   # (3b task 8: FX on the ux pages)
-    'GLO': {'MANO': 'live_mano', 'RIELES': 'live_rieles', 'MIXER': 'mixer', 'SENDS': 'glo_sends',
-            'GLOBAL': 'global', 'SYSTEM': 'system'},
+    'GLO': {'LIVE': 'glo_live_tricks', 'MIXER': 'mixer', 'SENDS': 'glo_sends', 'GLOBAL': 'global', 'SYSTEM': 'system',
+            'MORE': 'glo_more'},   # (3c-1 task 6: LIVE and MORE on the ux pages; the inherited second LIVE page MORE's RAILS rows)
     'ENV': {'AMP': 'env_1', 'ENV TO': 'env_2'},   # (3b task 6: ENV, SCL, ARP on the ux pages)
     'LFO': {'LFO': 'lfo_1', 'DEST': 'lfo_2', 'MOD MATRIX': 'lfo_3', 'MORE': 'lfo_more'},   # (3b task 7: LFO on the ux pages)
     'SCL': {'KEY': 'scl_1', 'CHORD': 'scl_2', 'MORE': 'scl_more'},

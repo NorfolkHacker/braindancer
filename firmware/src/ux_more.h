@@ -19,7 +19,7 @@ typedef struct ux_more_s { const ux_row_t *rows; uint8_t n; } ux_more_t;
 /* the headings (UXR_HEAD rows' ids; ux_more.c UXM_HEAD their words) and the actions (UXR_ACTION rows' ids; UXM_ACT) */
 enum { UXM_H_ARP, UXM_H_VOICE, UXM_H_FILTER, UXM_H_TONE, UXM_H_MOD, UXM_H_MSEQ, UXM_H_DELAY, UXM_H_REVERB, UXM_H_CHORUS,
        UXM_H_SLICER, UXM_H_WORDS, UXM_H_KIT, UXM_H_OP, UXM_H_DRUM, UXM_H_MLFO, UXM_H_PATCH, UXM_H_LFO, UXM_H_DIST, UXM_H_APAN,
-       UXM_H_SLPIT, UXM_H_LANE, UXM_H_TRACK, UXM_H_STEP, UXM_H_MUTATE, UXM_H_SHAPE, UXM_H_HEADS, UXM_H_AUTO, UXM_H_N };   /* (3c-1
+       UXM_H_SLPIT, UXM_H_LANE, UXM_H_TRACK, UXM_H_STEP, UXM_H_MUTATE, UXM_H_SHAPE, UXM_H_HEADS, UXM_H_AUTO, UXM_H_LIVE, UXM_H_N };   /* (3c-1 task 6: GLO's LIVE, the RAILS rows) */   /* (3c-1
                                                          * task 4: SEQ's; STEP names the step picked, "STEP 5") */   /* (3b task 8: FX's DISTORT, AUTO PAN, SLICE PITCH, PUNCH LANE) */   /* (3b task 5: OP and DRUM name the
                                                          * operator and the drum picked, "OP 3", "DRUM \xB7 SD": ux_more.c;
                                                          * task 7: LFO's MORE, LFO and MSEQ: "STEPS") */

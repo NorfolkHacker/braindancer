@@ -229,7 +229,7 @@ function paintLayer() {
     $(".klay", g).textContent = v.length > 11 ? v.slice(0, 10) + "…" : v;
     g.classList.toggle("has", !!v);
   }
-  const btn = layer === "MANO" ? "GLO" : layer === "NAME" ? "" : layer;
+  const btn = layer === "LIVE" ? "GLO" : layer === "NAME" ? "" : layer;
   $$(".ctl.button").forEach((g) => g.classList.toggle("held", g.dataset.ctl === btn));
   $$("#layers button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.layer === layer)));
 }

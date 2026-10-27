@@ -616,6 +616,13 @@ enum { ID_SQ_STRETCH = 0xA0, ID_SQ_REPEAT, ID_SQ_NUDGE, ID_SQ_HEAD, ID_SQ_HRATE,
                                                          * WALK's, OCT's and an ARP's RANGE, MODE / ORDER's own row) */
 typedef char sqv_ids_ok[(uint32_t)P_COUNT <= (uint32_t)ID_SQ_STRETCH && (uint32_t)ID_SQ_END <= (uint32_t)ID_FO_OP ? 1 : -1];
 static int sqv_is(uint32_t id) { return id >= ID_SQ_STRETCH && id < ID_SQ_END; }
+/* (ACID FM 3c-1 task 6) GLO > MORE's RAILS (spec 3.1): LIVE's latched layer as the inherited second LIVE page's knobs set it
+ * (ui_live.c live_rail): TRACKS (ALL, T1 .. T6, SYNTHS, DRUMS: the tracks the other three and OCT- / OCT+ act on there), RATE,
+ * CUT (the first N steps), DENSITY (THIN 90 .. 10 %, the middle all, RATCH x2 .. x4). Nothing stored: views of seq_live.c's lv
+ * (ux_glo.c uxg_vtext its words), global rows (no step lock). Ids past every global, below the views of 0xF9 */
+enum { ID_LV_TGT = 0xF5, ID_LV_RATE, ID_LV_CUT, ID_LV_DENS, ID_LV_END };
+typedef char lvv_ids_ok[(uint32_t)G_COUNT <= (uint32_t)ID_LV_TGT && (uint32_t)ID_LV_END <= 0xF9u ? 1 : -1];
+static int lvv_is(uint32_t id) { return id >= ID_LV_TGT && id < ID_LV_END; }
 static const param_desc_t *fld_ref(uint32_t id, int16_t **valp);   /* (ui_dx.c) its descriptor, its value (a scratch) */
 static void fld_turn(uint32_t id, int32_t steps, uint32_t knob);    /* (ui_dx.c) turned steps detents of KNOB knob (0..3) */
 static uint32_t dx_lane_picked(void);                   /* (ui_dx.c) the drum picked, 0..7 (BD .. CB): DRUM-X's SOUND's LEVEL */
@@ -778,6 +785,13 @@ static const ux_row_t UXM_SEQ_ROWS[] = {
     {ID_SQ_EVAL, UXR_TRACK, 0},
 };
 static const ux_more_t UXM_SEQ = {UXM_SEQ_ROWS, (uint8_t)(sizeof UXM_SEQ_ROWS / sizeof UXM_SEQ_ROWS[0])};
+/* (ACID FM 3c-1 task 6) GLO's MORE (spec 3.3): LIVE's RAILS (the inherited second LIVE page's four knobs, spec 3.1); (task 7)
+ * SYSTEM, TEMPO, UNDO */
+static const ux_row_t UXM_GLO_ROWS[] = {
+    {UXM_H_LIVE, UXR_HEAD, 0}, {ID_LV_TGT, UXR_GLOBAL, 0}, {ID_LV_RATE, UXR_GLOBAL, 0}, {ID_LV_CUT, UXR_GLOBAL, 0},
+    {ID_LV_DENS, UXR_GLOBAL, 0},
+};
+static const ux_more_t UXM_GLO = {UXM_GLO_ROWS, (uint8_t)(sizeof UXM_GLO_ROWS / sizeof UXM_GLO_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -858,9 +872,10 @@ static const page_t PAGES[] = {
                                                          * the six tracks' as bars (ui_graph.c track_col6) */
     /* (0.9.18) SEQ > BAR gone (0.9.2 .. 0.9.17: KNOB 1 the bar, KNOB 2 LEN): the bar is the roll's cursor / strip and
      * STEP's KNOB 1 walks all 64 steps, LEN is PATTERN's */
-    {"MANO", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.11) GLO > LIVE: the keys a board of live
-                                                         * modifiers (ui_live.c, seq_live.c) */
-    {"RIELES", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* .. the six sequences as rails, four knobs */
+    {"LIVE", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.11) GLO > LIVE: the keys a board of live
+                                                         * tricks (ui_live.c, seq_live.c); (ACID FM 3c-1 task 6) on the ux pages
+                                                         * (ux_glo.c), its title was MANO; the inherited second page's knobs
+                                                         * (RIELES) GLO > MORE's RAILS rows (UXM_GLO) */
     /* (ACID FM 3b task 7) LFO 2 (0.9.18: PHASE, where TRIG starts) gone: LFO's MORE row */
     /* (ACID FM 3b) EDIT on a synth track (ui_lens.c CE_SYN): SOUND (EDIT 1), TONE (EDIT 2), then ANALOG's VOICE or the
      * others' FILTER, then MORE. Titles of their own: nav_page takes the first page shown with its chain entry's title */
@@ -888,6 +903,8 @@ static const page_t PAGES[] = {
     {"FX MORE", FAM_FX, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_FX},
     /* (ACID FM 3c-1 task 4) SEQ's MORE (ui_lens.c CE_SEQ: STEPS, STEP EXTRAS, PATTERN, MORE): a track page */
     {"SEQ MORE", FAM_SEQ, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SEQ},
+    /* (ACID FM 3c-1 task 6) GLO's MORE (ui_lens.c CE_GLO: LIVE, MIX, MIDI, MORE): the song's (its rows globals and views) */
+    {"GLO MORE", FAM_GLO, SC_GLOBAL, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_GLO},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot_tr[NTRK];   /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit, a track each (3b task 7: as FM6's
@@ -939,7 +956,8 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
     }
     if (t && fld_is(id))                              /* (3b task 5) FM6's operator, DRUM-X's kit: their bytes */
         return fld_ref(id, valp);
-    if (sqv_is(id)) {                                 /* (3c-1 task 4) SEQ > MORE's views: no value of their own (ux_seq.c) */
+    if (sqv_is(id) || lvv_is(id)) {                   /* (3c-1 task 4) SEQ > MORE's views, (task 6) GLO > MORE's RAILS: no value
+                                                         * of their own (ux_seq.c, ux_glo.c) */
         *valp = 0;
         return 0;
     }

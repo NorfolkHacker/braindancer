@@ -83,9 +83,13 @@ static const ng_t CG_SEQ[] = {{"STEPS", 0}, {"STEP EXTRAS", "EXTRAS"}, {"PATTERN
 static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, 0), NV("FX SPACE", "SPACE", 1, 0), NV("MASTER", 0, 2, 0),
                              NV("FX MORE", "MORE", 3, 0)};
 static const ng_t CG_FX[] = {{"SENDS", 0}, {"SPACE", 0}, {"MASTER", 0}, {"MORE", 0}};
-static const nv_t CE_GLO[] = {NV("MANO", 0, 0, 0), NV("RIELES", 0, 0, 0), NV("MIXER", 0, 1, 0), NV("SENDS", 0, 1, 0),
-                              NV("GLOBAL", 0, 2, 1), NV("SYSTEM", 0, 3, 2)};   /* (0.9.11) LIVE first (ui_live.c) */
-static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}};
+/* (ACID FM 3c-1 task 6) GLO = LIVE -> MIX -> MIDI -> MORE (spec 3), a page a group (its button steps them round): LIVE (0.9.11's
+ * first page, on the ux pages: ux_glo.c), MIX (task 7) and MIDI (task 8) no PAGES row yet (hidden), MORE (the inherited second LIVE
+ * page's knobs: the RAILS rows). Until task 7 the inherited MIXER, SENDS (MIX's group), GLOBAL and SYSTEM after MIDI, before MORE
+ * (MORE the chain's last: SELECT there scrolls its rows) */
+static const nv_t CE_GLO[] = {NV("LIVE", 0, 0, 0), NV("MIX", 0, 1, 0), NV("MIDI", 0, 2, 0), NV("MIXER", 0, 1, 0),
+                              NV("SENDS", 0, 1, 0), NV("GLOBAL", 0, 3, 1), NV("SYSTEM", 0, 4, 2), NV("GLO MORE", "MORE", 5, 0)};
+static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"MIDI", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}, {"MORE", 0}};
 /* (ACID FM 3b task 6) ENV, SCL, ARP on the ux pages (ux_section.c), a page a group (the button steps them round, spec 2.2,
  * 2.5): ENV's AMP (ATTACK DECAY SUSTAIN RELEASE) and ENV TO (the same envelope's FILTER PITCH SHAPE amounts, LOOP; the
  * user's name, task 6 fix: the spec's MOD ENV read as a second envelope), JIANT's
@@ -115,9 +119,10 @@ static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, CG_HOME), CH(CE_SYN, CG_SYN), 
                                       CH(CE_DIG, CG_DIG)};
 /* the page each opens on at power-on (the mock-up's): SEQ its STEP (STEPS), ENV its ENV, LFO its LFO, (0.9.11) GLO its MIXER (LIVE's
  * pages before it: a GLO tap inside, rule 2); ui.nmem holds it ^ this */
-static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0};   /* (3b task 6: ENV its AMP, 0; task 7: LFO
+static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0};   /* (3b task 6: ENV its AMP, 0; task 7: LFO
                                                          * its LFO, now the first) */   /* (0.9.11: GLO its MIXER; 0.9.18: SEQ its
-                                                         * STEP, 5 with BAR gone; ACID FM 3c-1 task 2: SEQ its STEPS, the first) */
+                                                         * STEP, 5 with BAR gone; ACID FM 3c-1 task 2: SEQ its STEPS, the first;
+                                                         * task 6: GLO its MIXER, 3, until task 7's MIX) */
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }
 static uint32_t nav_mem(uint32_t key) { return (uint32_t)(ui.nmem[key] ^ NAV_DEF[key]); }

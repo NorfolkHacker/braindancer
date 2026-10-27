@@ -10,17 +10,20 @@
 
 /* the sections drawn by ux_section_draw, a bit per SEC_* (ui_lens.c; ux_section.c checks the numbers): EDIT (1) on a synth,
  * FM6 or DRUM-X track (ui_lens.c edit_kind 0..2: 3b tasks 4 and 5; DIGITAL, FELUCCA_FM4's, keeps JIANT's pages); (task 6) ENV (5),
- * SCL (7), ARP (8); (task 7) LFO (6); (task 8) FX (3); (3c-1 task 2) SEQ (2): its pages drawn here are ux_page_owns' (below) */
+ * SCL (7), ARP (8); (task 7) LFO (6); (task 8) FX (3); (3c-1 task 2) SEQ (2), (task 6) GLO (4): their pages drawn here are
+ * ux_page_owns' (below) */
 #include "ux_seq.h"
+#include "ux_glo.h"
 #define UXS_SEC_EDIT 1u
 #define UXS_SEC_SEQ 2u
 #define UXS_SEC_FX 3u
+#define UXS_SEC_GLO 4u
 #define UXS_SEC_ENV 5u
 #define UXS_SEC_LFO 6u
 #define UXS_SEC_SCL 7u
 #define UXS_SEC_ARP 8u
 #define UXS_OWN (1u << UXS_SEC_EDIT | 1u << UXS_SEC_SEQ | 1u << UXS_SEC_FX | 1u << UXS_SEC_ENV | 1u << UXS_SEC_LFO | \
-                 1u << UXS_SEC_SCL | 1u << UXS_SEC_ARP)
+                 1u << UXS_SEC_SCL | 1u << UXS_SEC_ARP | 1u << UXS_SEC_GLO)
 static uint32_t edit_kind(void);  /* (ui_lens.c) 0 a synth, 1 FM6, 2 DRUM, 3 DIGITAL */
 /* section sec is on the ux engine (ui.c page_jiant: its MORE page shown, from any of its pages) */
 static int ux_section_owns(uint32_t sec)
@@ -30,13 +33,14 @@ static int ux_section_owns(uint32_t sec)
 
 /* (3c-1 task 2 fix 1) the page shown is drawn by ux_section_draw (ui_draw.c routes it, ui_input.c lights its knob column): its
  * section's on the ux engine, and on SEQ one of the pages ux_seq.c draws (uxq_owns: STEPS, task 3: STEP EXTRAS, PATTERN) or
- * (task 4) its MORE; PHRASES (PRESETS' pattern loader) JIANT's */
+ * (task 4) its MORE; PHRASES (PRESETS' pattern loader) JIANT's; (task 6) on GLO LIVE (uxg_owns) and its MORE, the inherited MIXER,
+ * SENDS, GLOBAL, SYSTEM JIANT's until task 7 */
 static uint32_t nav_sec(void);
 static int ux_page_owns(void)
 {
     uint32_t sec = nav_sec();
-    return ux_section_owns(sec) && (sec != UXS_SEC_SEQ || uxq_owns() || (!ui.home && ui.page < NPAGES &&
-                                                                         PAGES[ui.page].graph == GR_MORE));
+    int more = !ui.home && ui.page < NPAGES && PAGES[ui.page].graph == GR_MORE;
+    return ux_section_owns(sec) && (sec == UXS_SEC_SEQ ? uxq_owns() || more : sec == UXS_SEC_GLO ? uxg_owns() || more : 1);
 }
 static void ux_section_draw(void);   /* cur_page(): header, knobs from its PAGES row, its picture, status, footer */
 /* the panel's list (between ux_panel_begin / ux_panel_end): each shown row's name and value, the picked one (sel, a

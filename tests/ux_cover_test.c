@@ -227,7 +227,10 @@ static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",  
                                        "EXTRAS CONDITION",
                                        "MORE RATE", "MORE ORDER", "MORE MODE", "MORE TYPE", "MORE PULSE", "MORE CONDITION",
                                        "MORE SHIFT", "MORE DIRECTION", "MORE RANGE", "MORE FOCUS", "MORE BEND", "MORE LAP",
-                                       "MORE INTERVAL", "MORE RATCHET", "MORE EVERY"};   /* (3c-1 task 4: SEQ > MORE's step options
+                                       "MORE INTERVAL", "MORE RATCHET", "MORE EVERY",
+                                       "LIVE DJ FILTER", "MORE CUT", "MORE DENSITY", "MORE TRACKS"};   /* (3c-1 task 6: the DJ FILTER's cutoff and
+                                                         * its side, "5.4K HP"; the RAILS rows' steps, RATCHET X3, SYNTHS, spelled in
+                                                         * UF_HDR on the list) */   /* (3c-1 task 4: SEQ > MORE's step options
                                                          * and heads in words with their unit, "UP 5 DEG", "1ST OF 4", "PING-PONG":
                                                          * the list's row spells them in UF_HDR, KNOB 2 a smaller face) */   /* (ACID FM 3c-1 task 3: the conditions in plain words, 3c-1 spec
                                                          * 2.2: EVERY 2ND, 1ST OF 4 .., none fits UF_VAL's 48 px) */
@@ -527,6 +530,44 @@ static int uxc_widths(void)
         *TSEL = keep;
         ui.pr_focus = 0; shp_i = 7u; shp_r = 0u; fg_ui = 0; ui.comp_at = 0;
         memset(&fg_set[song.sel % NTRK], 0, sizeof fg_set[0]);
+    }
+    {   /* (ACID FM 3c-1 task 6) GLO > LIVE's knobs (ux_glo.c uxg_knobs: RATE LOOP THIN of every value, the DJ FILTER's every
+         * value) and GLO > MORE's RAILS rows as KNOB 2 shows them (TRACKS RATE CUT DENSITY, uxg_vtext) */
+        static const uint8_t RAILS[4] = {ID_LV_TGT, ID_LV_RATE, ID_LV_CUT, ID_LV_DENS};
+        int16_t djf = song.g[G_DJF];
+        ux_knob_t k[4];
+        uint8_t keep[sizeof lv];
+        memcpy(keep, &lv, sizeof lv);
+        memset(&lv, 0, sizeof lv);
+        nav_put(SEC_GLO, "LIVE");
+        for (x = -9; x <= 12; x++) {
+            uint32_t c;
+            for (c = 0; c < NTRK; c++) {
+                lv.rate[c] = (int8_t)clamp(x, -4, 4); lv.cut[c] = (uint8_t)((x + 9) % LV_NCUT); lv.dn[c] = (int8_t)clamp(x, -9, 3);
+            }
+            lv.tgt = (uint8_t)((x + 9) % 9);
+            for (song.g[G_DJF] = -64; song.g[G_DJF] <= 63; song.g[G_DJF] = (int16_t)(song.g[G_DJF] + (x == 0 ? 1 : 64))) {
+                uxg_knobs(k);
+                for (c = 0; c < 4u; c++) {
+                    char w[32];
+                    str_cpy(w, "LIVE ", sizeof w);
+                    str_cpy(w + str_len(w), k[c].label, sizeof w - str_len(w));
+                    uxc_wfit(w, k[c].value);
+                    if (text_w(&UF_LBL, k[c].label) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+                }
+            }
+            for (c = 0; c < 4u; c++) {
+                char v[24], w[32];
+                uint8_t bar;
+                const char *nm = uxg_vtext(RAILS[c], v, sizeof v, &bar);
+                str_cpy(w, "MORE ", sizeof w);
+                str_cpy(w + str_len(w), nm, sizeof w - str_len(w));
+                uxc_wfit(w, v);
+                uxc_wmore++;
+            }
+        }
+        memcpy(&lv, keep, sizeof lv);
+        song.g[G_DJF] = djf;
     }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);

@@ -1,23 +1,28 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
-/* LIVE (0.9.11, GLO > LIVE: MANO and RIELES; firmware/src/seq_live.c, ui_live.c) on the real sequencer and UI sources
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
+/* LIVE (0.9.11, GLO > LIVE and, ACID FM 3c-1 task 6, GLO > MORE's RAILS rows: the inherited pages MANO and RIELES;
+ * firmware/src/seq_live.c, ui_live.c, ux_glo.c) on the real sequencer and UI sources
  * (with the stubs of tests/ui_test.c):
- *   TIMING     RATE goes in on the next beat (MANO's rate keys: the next 1/16), CORTE / LOOP / RATCH / THIN on the next
- *              1/16; CORTE plays steps 1..N, a LOOP the N steps the playhead was in; RATCH xN that many parts a step, never
+ *   TIMING     RATE goes in on the next beat (LIVE's rate keys: the next 1/16), CUT / LOOP / RATCH / THIN on the next
+ *              1/16; CUT plays steps 1..N, a LOOP the N steps the playhead was in; RATCH xN that many parts a step, never
  *              shorter than ~1.4 ms; THIN the same steps on the same loop every PLAY, about its share; REV backwards, PING
  *              to and fro.
  *   GHOST      while modified the ghost walks as an unmodified track does (block for block); RETURN lands the playhead on it
  *              on the next beat (and the track is plain again); BYPASS (OCT- held) the original at once, the modifiers back.
- *   COMMIT     RATE into DIV (x2 of 1/16: 1/32), else STRETCH (x3: LEN / 3), else live (2/3 of 1/16); CORTE into LEN, a
+ *   COMMIT     RATE into DIV (x2 of 1/16: 1/32), else STRETCH (x3: LEN / 3), else live (2/3 of 1/16); CUT into LEN, a
  *              LOOP's steps to the start; GIRO into ROTATE; THIN into CHANCE; the dialog (OCT+, OCT+) and GLO + G4's UNDO.
  *   RECORD     a note played while modified lands at the ghost's step (where it is in the written pattern).
- *   PAGES      RIELES' KNOB 1: ALL, T1 .. T6 one by one (then SYN, DRM); MANO's keys are its board only on MANO (black keys
- *              pick tracks, several at once; white keys hold modifiers; LATCH; G5 RETURN; KNOB 4 the DJ FILTER) and play
+ *   PAGES      RAILS' TRACKS: ALL, T1 .. T6 one by one (then SYNTHS, DRUMS); LIVE's keys are its board only on LIVE (black
+ *              keys pick tracks, several at once; white keys hold tricks; LATCH; G5 RETURN; KNOB 4 the DJ FILTER) and play
  *              notes again off it; OCT- tapped RETURN, held BYPASS, the octave untouched; the GLO chain (LIVE first).
+ *   SAME       (3c-1 task 6) one sequence of keys, knobs and OCT gestures leaves the state the inherited pages left
+ *              (tests/live_trace.h).
  * Built and run by tests/run_tests.sh. */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
+#include "live_trace.h"
 
 typedef struct { uint32_t at, idx; } lev_t;            /* a note-on of track 1: the sample, the step it played */
 static uint32_t lv_clock;                               /* samples since the transport started (lsetup) */
@@ -99,18 +104,18 @@ static int timing(void)
 
     t = lsetup();
     lrun(3u * p / 2u, 0, 0, 0);
-    lv.tk[1] = 1;                                       /* MANO's G3 (x2) held on track 1 */
+    lv.tk[1] = 1;                                       /* LIVE's G3 (x2) held on track 1 */
     live_publish();
     n = lrun(2u * p, ev, 0, 64);
     ok = n >= 3u && near(ev[0].at, 2u * p) && near(ev[1].at, 2u * p + p / 2u) && near(ev[2].at, 3u * p);
-    bad += check("  MANO's x2 key: on the next 1/16 (step 3 already twice as fast)", ok);
+    bad += check("  LIVE's x2 key: on the next 1/16 (step 3 already twice as fast)", ok);
     lv.tk[1] = 0;
     live_publish();
     lrun(2u * p, 0, 0, 0);
     bad += check("  let go: back in phase with the transport (the ghost's place)", t->seq_idx == lv.gidx[0] ||
                  !LV_ON(0));
 
-    t = lsetup();                                       /* CORTE 4 from step 6 */
+    t = lsetup();                                       /* CUT 4 from step 6 */
     lrun(11u * p / 2u, 0, 0, 0);
     lv.cut[0] = 7;
     live_publish();
@@ -118,9 +123,9 @@ static int timing(void)
     ok = n >= 8u && ev[0].idx == 0u;
     for (k = 0; k < 8u && k < n; k++)
         ok &= ev[k].idx == k % 4u && near(ev[k].at, (6u + k) * p);
-    bad += check("CORTE 4 asked in step 6: from the next 1/16 steps 1 2 3 4 1 2 3 4", ok);
+    bad += check("CUT 4 asked in step 6: from the next 1/16 steps 1 2 3 4 1 2 3 4", ok);
 
-    t = lsetup();                                       /* LOOP 2 (MANO's E4) in step 10 */
+    t = lsetup();                                       /* LOOP 2 (LIVE's E4) in step 10 */
     lrun(19u * p / 2u, 0, 0, 0);
     lv.tk[6] = 1;
     live_publish();
@@ -274,7 +279,7 @@ static int commit(void)
     bad += check("  x3: STRETCH (LEN 16 -> 6); 2/3 of 1/16 has no DIV: it stays live", ok);
 
     t = lsetup();
-    lv.cut[0] = 7;                                      /* CORTE 4 */
+    lv.cut[0] = 7;                                      /* CUT 4 */
     live_publish();
     lrun(p, 0, 0, 0);
     live_commit(1);
@@ -287,7 +292,7 @@ static int commit(void)
     live_publish();
     live_commit(1);
     ok &= t->p[P_SLEN] == 4 && t->step[0].note[0] == 56 && t->step[3].note[0] == 59;
-    bad += check("  CORTE 4: LEN 4; a LOOP of 4 from step 10: its steps to the start, LEN 4", ok);
+    bad += check("  CUT 4: LEN 4; a LOOP of 4 from step 10: its steps to the start, LEN 4", ok);
 
     t = lsetup();
     lv.rot[0] = 2;
@@ -296,10 +301,10 @@ static int commit(void)
     lrun(p, 0, 0, 0);
     live_commit(1);
     ok = t->p[P_SOFS] == -2 && t->p[P_TCHAN] == 64 && lv_neutral(&lv.want[0]);
-    bad += check("  GIRO +2: ROTATE -2; THIN 50 %: the track's CHANCE 50 %", ok);
+    bad += check("  TURN +2: ROTATE -2; THIN 50 %: the track's CHANCE 50 %", ok);
 
-    t = lsetup();                                       /* the dialog, on RIELES */
-    nav_put(SEC_GLO, "RIELES");
+    t = lsetup();                                       /* the dialog, on a RAILS row (GLO > MORE) */
+    nav_put(SEC_GLO, "MORE");
     frame();
     lv.rate[0] = 2;
     frame();
@@ -346,20 +351,20 @@ static int pages(void)
     stop_transport();
     for (k = 0; k < NTRK; k++)
         *(drum_track(&trk[k]) ? &kdrm : &ksyn) |= 1u << k;
-    nav_put(SEC_GLO, "RIELES");
+    nav_put(SEC_GLO, "MORE");
     frame();
-    ok = lv_tracks() == 0x3Fu;
+    ok = lv_tracks() == 0x3Fu && live_page();
     for (k = 1; k < 9u; k++) {
-        turn(EN_K1, 1);
+        lt_rails(0, 1);
         ok &= lv.tgt == k && lv_tracks() == (k < 7u ? TG[k] : k == 7u ? ksyn : kdrm);
     }
-    for (k = 0; k < 9u; k++) turn(EN_K1, -1);
+    for (k = 0; k < 9u; k++) lt_rails(0, -1);
     ok &= lv.tgt == 0 && lv_tracks() == 0x3Fu && song.grid == 0;
-    bad += check("RIELES KNOB 1 PISTAS: ALL, then T1 .. T6 one by one, then SYN and DRM; the keys play notes here", ok);
-    turn(EN_K1, 3);                                     /* T3: RATE x2, CORTE 8, DENS 70 % */
-    turn(EN_K2, 2);
-    turn(EN_K3, 5);
-    turn(EN_K4, -3);
+    bad += check("RAILS' TRACKS: ALL, then T1 .. T6 one by one, then SYNTHS and DRUMS; the keys play notes here", ok);
+    lt_rails(0, 3);                                     /* T3: RATE x2, CUT 8, DENSITY 70 % */
+    lt_rails(1, 2);
+    lt_rails(2, 5);
+    lt_rails(3, -3);
     frame();
     ok = lv.rate[2] == 2 && !lv.rate[0] && lv.want[2].cut == 8 && !(lv.want[2].fl & LF_HERE) && lv.want[2].drop == 30;
     if (!ok) printf("  tgt %u rate %d %d cut %u fl %u drop %u\n", lv.tgt, lv.rate[2], lv.rate[0], lv.want[2].cut, lv.want[2].fl, lv.want[2].drop);
@@ -367,8 +372,8 @@ static int pages(void)
     press(B_OCTDN);
     frames(64);
     ok &= !lv.rate[2] && lv_neutral(&lv.want[2]) && song.octave == (int8_t)k;
-    bad += check("  T3: RATE x2 CORTE 8 DENS 70 %; OCT- tapped RETURN (the octave untouched)", ok);
-    turn(EN_K2, 2);
+    bad += check("  T3: RATE x2 CUT 8 DENSITY 70 %; OCT- tapped RETURN (the octave untouched)", ok);
+    lt_rails(1, 2);
     fm1_in.buttons |= 1u << panel.btn[B_OCTDN];
     host_pressed |= 1u << panel.btn[B_OCTDN];
     frames(480);
@@ -381,7 +386,7 @@ static int pages(void)
 
     lsetup();
     stop_transport();
-    nav_put(SEC_GLO, "MANO");
+    nav_put(SEC_GLO, "LIVE");
     frame();
     kx2 = key_at(0, 1);
     kb1 = key_at(1, 0);
@@ -396,7 +401,7 @@ static int pages(void)
     fm1_in.notes &= ~(1u << kx2);
     keyboard_block(); frame();
     for (k = 0; k < NTRK; k++) ok &= lv_neutral(&lv.want[k]);
-    bad += check("MANO: the keys are its board (G3 held: x2 on every track, no note); let go, nothing", ok);
+    bad += check("LIVE: the keys are its board (G3 held: x2 on every track, no note); let go, nothing", ok);
     fm1_in.notes |= 1u << kb1 | 1u << kb3; keyboard_block(); frame();
     fm1_in.notes |= 1u << kd2; keyboard_block(); frame();
     ok = lv.want[0].rate == -2 && lv.want[2].rate == -2 && !lv.want[1].rate && !lv.want[3].rate && lv_tracks() == 5u;
@@ -430,19 +435,17 @@ static int pages(void)
     keyboard_block(); frame();
     ok = song.grid == 0 && vage != v0 && !((lv.kb >> kx2) & 1u);
     fm1_in.notes = 0; keyboard_block(); frame();
-    bad += check("  off MANO (MIXER) the keys play notes again", ok);
+    bad += check("  off LIVE (MIXER) the keys play notes again", ok);
 
     ui_power_on();
     frame();
     press(B_GLO); frame();
     ok = str_eq(cur_page()->title, "MIXER");
     turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "RIELES") && crumb_is("GLO \xB7 LIVE \xB7 RIELES", "2/6");
-    turn(EN_SELECT, -1); frame();
-    turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "MANO") && crumb_is("GLO \xB7 LIVE \xB7 MANO", "1/6") && tabs_lit(&k) == 4u && !k &&
-          song.grid == 3;
-    bad += check("GLO: MIXER at power-on; SELECT back RIELES, MANO (the chain's first, LIVE · four tabs)", ok);
+    ok &= str_eq(cur_page()->title, "LIVE") && ux_page_owns() && uxg_owns() && song.grid == 3 && !strcmp(uxs_count(), "1 / 6");
+    turn(EN_SELECT, 10); frame();
+    ok &= str_eq(cur_page()->title, "GLO MORE") && ux_page_owns() && song.grid == 0 && live_page() && !strcmp(uxs_count(), "6 / 6");
+    bad += check("GLO: MIXER at power-on; SELECT back LIVE (the chain's first), on to MORE (its last; both on the ux pages)", ok);
     ui_power_on();
     return bad;
 }
@@ -538,9 +541,26 @@ static int macros(void)
     return bad;
 }
 
+/* (ACID FM 3c-1 task 6) the same input on LIVE and the RAILS rows leaves the state the inherited MANO and RIELES left */
+static int same(void)
+{
+    static const uint32_t LT_WANT[LT_N] = {0xD7D5F0EBu, 0x79516141u, 0x496C13EDu, 0x9A41A082u, 0x06BB3096u, 0x7499D6FEu,
+                                           0xB83C115Fu, 0x9987044Bu, 0xD458C13Du};   /* (taken at 1b2ac25: tests/live_trace.h LT_OLD) */
+    uint32_t got[LT_N], i;
+    int ok = 1;
+    lt_run(got);
+    for (i = 0; i < LT_N; i++)
+        if (got[i] != LT_WANT[i]) {
+            printf("  stage %u: 0x%08X, the inherited pages 0x%08X\n", (unsigned)i, (unsigned)got[i], (unsigned)LT_WANT[i]);
+            ok = 0;
+        }
+    ui_power_on();
+    return check("3c-1 task 6: LIVE's keys, knobs and OCT gestures, then the RAILS rows: the state MANO and RIELES left, stage by stage", ok);
+}
+
 int main(void)
 {
-    int bad = timing() + ghost() + commit() + record() + pages() + macros();
+    int bad = timing() + ghost() + commit() + record() + pages() + macros() + same();
     printf("%s\n", bad ? "LIVE TEST FAILED" : "live tests passed");
     return bad != 0;
 }

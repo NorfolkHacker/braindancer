@@ -599,8 +599,6 @@ static uint32_t graph_signature(void)
             h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
     }
     /* (ACID FM 3c-1 task 4) AUTOMATION's, AUTO LIST's, PLAYHEADS', MUTATE's and COMP's: SEQ > MORE's (ux_section.c) */
-    if (pg->graph == GR_LIVE)                        /* (0.9.11) GLO > LIVE: the playheads, the ghosts, the keys */
-        h = live_sig(h);
     if (FELUCCA_FM4 && pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DIGITAL)   /* (ACID FM 3b task 5: FM6's and DRUM-X's EDIT
                                                          * are ux_section.c's, their creatures gone) */
         h ^= (ui.hot_t ? ui.hot_col + 1u : 0u) * 65537u;
@@ -1063,9 +1061,6 @@ static void draw_graph(void)
     } else if (ui.confirm == CF_DICE_ALL) {          /* (0.8.5) GEN, HOME's lens's last level (gen.c) */
         cv_oy = 0;
         gen_panel();
-    } else if (pg->graph == GR_LIVE) {               /* (0.9.11) GLO > LIVE: the rails, MANO's board (ui_live.c) */
-        cv_oy = 0;
-        graph_live();                             /* (ACID FM 3a: HOME is ux_home.c's: its lens, ECO / BEING, gone) */
     } else if (lz_on() && lz_fam() == LZ_SAVE) {     /* (0.8.5) SAVE's lens */
         cv_oy = 0;
         graph_save_lz(pg);

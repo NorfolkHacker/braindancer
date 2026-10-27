@@ -26,7 +26,8 @@
  * specific row wins (its section over every section's, then its engine over every engine's). JIANT's labels themselves
  * (TP / GP: the web editor reads them, editor.c) stay as they are. Each fits a knob's column in UF_LBL (tests/ui_test.c) */
 typedef char uxs_sec_edit_ok[SEC_EDIT == UXS_SEC_EDIT && SEC_ENV == UXS_SEC_ENV && SEC_SCL == UXS_SEC_SCL &&
-                            SEC_ARP == UXS_SEC_ARP && SEC_LFO == UXS_SEC_LFO && SEC_FX == UXS_SEC_FX && SEC_SEQ == UXS_SEC_SEQ ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
+                            SEC_ARP == UXS_SEC_ARP && SEC_LFO == UXS_SEC_LFO && SEC_FX == UXS_SEC_FX && SEC_SEQ == UXS_SEC_SEQ &&
+                            SEC_GLO == UXS_SEC_GLO ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
 #define UXS_ALL 0xFFu
 typedef struct { uint8_t sec, eng, glo, id; const char *p; } uxs_name_t;   /* id: a P_* (glo 0) or G_* (glo 1), or a view */
 static const uxs_name_t UXS_NAME[] = {
@@ -867,6 +868,10 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         k[c].bar = 0;
         k[c].off = 0;
     }
+    if (pg->graph == GR_LIVE) {                         /* (3c-1 task 6) GLO > LIVE: RATE LOOP THIN DJ FILTER (ux_glo.c) */
+        uxg_knobs(k);
+        return;
+    }
     if (pg->fam == FAM_SEQ && pg->graph != GR_MORE && uxq_knobs(pg, k))   /* (3c-1 task 2) SEQ's: ux_seq.c (STEPS: STEP NOTE
                                                          * ACC/SLD GATE, the grid's; task 3: STEP EXTRAS'; PATTERN its settings', below) */
         return;
@@ -964,6 +969,10 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
         *col = UX_TEXT;
         return b;
     }
+    if (h >= 0 && pg->graph == GR_LIVE) {               /* (3c-1 task 6) LIVE's in its words (ux_glo.c) */
+        *col = UX_TEXT;
+        return uxg_say((uint32_t)h, b, sizeof b);
+    }
     if (h >= 0) {
         const char *nm = 0;
         char v[32];                                     /* (3b task 7 fix: a matrix name and what it is, uxs_mtx_say) */
@@ -1012,6 +1021,10 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
     }
     if (pg->more == &UXM_SEQ && uxq_more_say())         /* (3c-1 task 4) SEQ > MORE: what OCT+ does on the row picked */
         return uxq_more_say();
+    if (pg->graph == GR_LIVE)                           /* (3c-1 task 6) LIVE: what the keys do (LATCH on) */
+        return uxg_idle();
+    if (uxg_more_live())                                /* .. GLO > MORE's RAILS: OCT- and OCT+ there */
+        return UXG_SAY[2];
     if (pg->graph == GR_MORE && pg->more) {             /* (3b task 8) a PUNCH LANE row picked: how a lane is recorded */
         uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
         uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
@@ -2812,6 +2825,10 @@ static void uxs_picture(const page_t *pg)
         uxq_picture(pg);
         return;
     }
+    if (pg->graph == GR_LIVE) {                         /* (3c-1 task 6) GLO > LIVE: the bar, the tracks' tricks (ux_glo.c) */
+        uxg_picture();
+        return;
+    }
     if (pg->graph == GR_MORE) {
         ux_more_draw(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top);
         return;
@@ -2871,7 +2888,7 @@ static void ux_section_draw(void)
     static uint32_t head_sig, panel_sig, foot_sig;
     const page_t *pg = cur_page();
     uint32_t sec = nav_sec(), sig, all, c, scr = uxs_lfo_sc, win = uxs_rh.win, spw = uxs_sp_win;
-    int32_t mtr = uxs_mtr_px, qph = uxq_ph_drawn;
+    int32_t mtr = uxs_mtr_px, qph = uxq_ph_drawn, gph = uxg_ph_drawn;
     int due = 0;
     ux_knob_t k[4];
     const char *st;
@@ -3035,6 +3052,14 @@ static void ux_section_draw(void)
         due = qph != uxq_ph_drawn && ux_pace_at(fm1_ms, uxq_ph_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_TRK_MS,
                                                 UX_TRK_SLOW_MS).draw;
     }
+    if (pg->graph == GR_LIVE) {                         /* (3c-1 task 6) LIVE: what it is drawn from (uxg_sig); the bar's line
+                                                         * as it moves, as STEPS' playhead: one panel a 1/16 at most while a trick
+                                                         * runs, none idle */
+        gph = uxg_ph();
+        sig = sig * 31u + uxg_sig();
+        due = gph != uxg_ph_drawn && ux_pace_at(fm1_ms, uxg_ph_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_TRK_MS,
+                                                UX_TRK_SLOW_MS).draw;
+    }
     if (!all && sig != panel_sig && !due && pg == uxs_heavy_pg && pg->fam == FAM_EDIT && pg->graph != GR_MORE &&
         (edit_kind() == 2u || (!edit_kind() && trk_eng(TSEL) == ENGI_NOISE)) &&
         !ux_pace_at(fm1_ms, uxs_heavy_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UX_VIS_MS, UX_VIS_SLOW_MS).draw)
@@ -3057,6 +3082,10 @@ static void ux_section_draw(void)
         if (pg->fam == FAM_SEQ) {                       /* (3c-1 task 2: the playhead drawn, when) */
             uxq_ph_drawn = qph;
             uxq_ph_ms = fm1_ms;
+        }
+        if (pg->graph == GR_LIVE) {                     /* (task 6: the bar's line drawn, when) */
+            uxg_ph_drawn = gph;
+            uxg_ph_ms = fm1_ms;
         }
         if (pg->fam == FAM_FX) {                        /* (3b task 8: the paced pictures' state, drawn from now) */
             uxs_mtr_px = mtr;

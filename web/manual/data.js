@@ -203,10 +203,10 @@ layers: {
   REC: {shot: 'layer_rec', t: ["REC mantenido", "REC held"], keys: {"F3": "CLEAR", "G3": "CLICK"}},
   LFO: {shot: 'layer_macro', t: ["LFO mantenido: macros", "LFO held: macros"], keys: {"F3": ["DADOS RUTAS", "ROLL ROUTES"], "G3": ["BORRA RUTAS", "CLEAR ROUTES"]}},
   SCL: {shot: 'layer_scl_active', t: ["SCL mantenido: tónica", "SCL held: root"], all: "ROOT"},
-  MANO: {shot: 'live_mano_keys', t: ["GLO › LIVE › MANO (en la página, sin mantener)", "GLO › LIVE › MANO (on the page, nothing held)"], keys: {
+  LIVE: {shot: 'glo_live_latch', t: ["GLO › LIVE (en la página, sin mantener)", "GLO › LIVE (on the page, nothing held)"], keys: {
     "F3": "/2", "G3": "x2", "A3": "TR 3/2", "B3": "DT 2/3", "C4": "LOOP 8", "D4": "LOOP 4", "E4": "LOOP 2", "F4": "LOOP 1",
     "G4": "REV", "A4": "PING", "B4": "RATCH x2", "C5": "RATCH x3", "D5": "THIN 50%", "E5": "OCT+", "F5": "OCT−", "G5": "RETURN",
-    "F#3": "T1", "G#3": "T2", "A#3": "T3", "C#4": "T4", "D#4": "T5", "F#4": "T6", "G#4": "LATCH", "A#4": "ALL", "C#5": "GIRO <", "D#5": "GIRO >", "F#5": "RND"}},
+    "F#3": "T1", "G#3": "T2", "A#3": "T3", "C#4": "T4", "D#4": "T5", "F#4": "T6", "G#4": "LATCH", "A#4": "ALL", "C#5": "TURN <", "D#5": "TURN >", "F#5": "RANDOM"}},
   NAME: {shot: 'name_typing', t: ["Pantalla NAME (escribir)", "NAME screen (typing)"], keys: {
     "F3": "AB", "G3": "CD", "A3": "EF", "B3": "GH", "C4": "IJK", "D4": "LM", "E4": "NO", "F4": "PQ", "G4": "RS", "A4": "TU", "B4": "VW",
     "C5": "XYZ", "D5": "123", "E5": "456", "F5": "789", "G5": "0-",
@@ -232,7 +232,7 @@ pages: {
   "SEQ/PATTERN": ["LENGTH", "DIVISION", "SWING", "GATE"], "SEQ/MORE": ["SETTING", "(its value)", "—", "—"],
   "FX/SENDS": ["DISTORT", "CHORUS", "DELAY", "REVERB"], "FX/SPACE": ["DLY TIME", "DLY FDBK", "REV TYPE", "REV SIZE"],
   "FX/MASTER": ["CLIP", "PUNCH", "DUCK", "DUCK TIME"], "FX/MORE": ["SETTING", "(its value)", "—", "—"],
-  "GLO/MANO": ["RATE", "LOOP", "THIN", "DJ FILT"], "GLO/RIELES": ["PISTAS", "RATE", "CORTE", "DENS"], "GLO/MIXER": ["LEVEL", "PAN", "REV", "DJ FILT"],
+  "GLO/LIVE": ["RATE", "LOOP", "THIN", "DJ FILTER"], "GLO/MORE": ["SETTING", "(its value)", "—", "—"], "GLO/MIXER": ["LEVEL", "PAN", "REV", "DJ FILT"],
   "GLO/SENDS": ["DIST", "CHORUS", "DLY", "REV"], "GLO/GLOBAL": ["BPM", "SWING", "CLOCK", "TUNE"], "GLO/SYSTEM": ["TRACKS", "LOAD", "ROUTE", "CPU %"],
   "ENV/AMP": ["ATTACK", "DECAY", "SUSTAIN", "RELEASE"], "ENV/ENV TO": ["FILTER", "PITCH", "SHAPE", "LOOP"],
   "LFO/LFO": ["RATE", "WAVE", "MODE", "FADE"], "LFO/DEST": ["PITCH", "FILTER", "SHAPE", "AMP"],
@@ -392,15 +392,15 @@ commands: [
   {s: "glo", k: "GLO+SELECT", t: ["Tempo y tap tempo", "Tempo and tap tempo"],
    d: ["GLO + SELECT: tempo desde cualquier página. GLO + F4: tap (desde el tercer toque, clock interno). GLO › GLOBAL: BPM (40–240), SWING, CLOCK (INT, USB, TRS), TUNE. MENU › AUDIO › BPM LOCK lo deja fijo para los dados.", "GLO + SELECT: tempo from any page. GLO + F4: tap (from the third tap, internal clock). GLO › GLOBAL: BPM (40–240), SWING, CLOCK (INT, USB, TRS), TUNE. MENU › AUDIO › BPM LOCK keeps it for the dice."]},
   {s: "glo", k: "KNOB 4", shot: 'mixer', t: ["DJ FILTER en el master", "The master DJ FILTER"],
-   d: ["GLO › MIXER › KNOB 4 (y MANO KNOB 4): a la izquierda pasa-bajos, a la derecha pasa-altos, al medio fuera de la cadena. Automatizable, guardado con el proyecto.", "GLO › MIXER › KNOB 4 (and MANO KNOB 4): left a low-pass, right a high-pass, in the middle out of the chain. Automatable, saved with the project."]},
+   d: ["GLO › MIXER › KNOB 4 (y LIVE KNOB 4): a la izquierda pasa-bajos, a la derecha pasa-altos, al medio fuera de la cadena. Automatizable, guardado con el proyecto.", "GLO › MIXER › KNOB 4 (and LIVE KNOB 4): left a low-pass, right a high-pass, in the middle out of the chain. Automatable, saved with the project."]},
   {s: "glo", k: "GLO", shot: 'system', t: ["TRACKS, LOAD, ROUTE, CPU", "TRACKS, LOAD, ROUTE, CPU"],
    d: ["GLO › SYSTEM: TRACKS 4 / 6, LOAD FULL / LITE / ECO (más liviano), ROUTE CH1-6 o SEL, CPU %. T5/T6 mudos = TRACKS 4.", "GLO › SYSTEM: TRACKS 4 / 6, LOAD FULL / LITE / ECO (lighter), ROUTE CH1-6 or SEL, CPU %. T5/T6 silent = TRACKS 4."]},
-  {s: "glo", k: "GLO", shot: 'live_rieles', t: ["LIVE › RIELES: modificadores en vivo", "LIVE › RIELES: live modifiers"],
-   d: ["GLO › LIVE › RIELES: las seis secuencias como rieles con su cabezal y su fantasma. KNOB 1 PISTAS (ALL, T1…T6, SYN, DRM), KNOB 2 RATE (/4 … x4), KNOB 3 CORTE (los primeros N pasos), KNOB 4 DENS (THIN ← → RATCH). Nunca toca los pasos.", "GLO › LIVE › RIELES: the six sequences as rails with their playhead and ghost. KNOB 1 PISTAS (ALL, T1…T6, SYN, DRM), KNOB 2 RATE (/4 … x4), KNOB 3 CORTE (the first N steps), KNOB 4 DENS (THIN ← → RATCH). Never touches the steps."]},
-  {s: "glo", k: "F3", shot: 'live_mano_keys', t: ["LIVE › MANO: el teclado como tablero", "LIVE › MANO: the keys as a board"],
-   d: ["GLO › LIVE › MANO: negras 1–6 eligen pistas mientras se mantienen (ninguna o A#4: todas). Blancas mientras se mantienen: F3 /2, G3 x2, A3 3/2, B3 2/3, C4–F4 LOOP 8 4 2 1, G4 REV, A4 PING, B4 C5 RATCH, D5 THIN, E5 F5 OCT±, G5 RETURN. G#4 LATCH, C#5/D#5 GIRO, F#5 RND.", "GLO › LIVE › MANO: black keys 1–6 pick tracks while held (none or A#4: all). White keys while held: F3 /2, G3 x2, A3 3/2, B3 2/3, C4–F4 LOOP 8 4 2 1, G4 REV, A4 PING, B4 C5 RATCH, D5 THIN, E5 F5 OCT±, G5 RETURN. G#4 LATCH, C#5/D#5 GIRO, F#5 RND."]},
-  {s: "glo", k: "OCT+", t: ["LIVE: RETURN, BYPASS y COMMIT", "LIVE: RETURN, BYPASS and COMMIT"],
-   d: ["En LIVE: OCT− tocado = RETURN (vuelven a su fantasma en el pulso siguiente); OCT− mantenido = BYPASS (el original); OCT+ dos veces = COMMIT (WRITE LIVE CHANGES?): escribe en DIV/STRETCH, LEN, ROTATE y CHANCE. UNDO: GLO + G4. Los modificadores no se guardan.", "On LIVE: OCT− tapped = RETURN (back on their ghost at the next beat); OCT− held = BYPASS (the original); OCT+ twice = COMMIT (WRITE LIVE CHANGES?): writes into DIV/STRETCH, LEN, ROTATE and CHANCE. UNDO: GLO + G4. The modifiers are not saved."]},
+  {s: "glo", k: "GLO", shot: 'glo_more', t: ["GLO › MORE › LIVE: los RAILS", "GLO › MORE › LIVE: the RAILS"],
+   d: ["GLO › MORE, filas bajo LIVE: TRACKS (ALL, T1…T6, SYNTHS, DRUMS), RATE (/4 … X4), CUT (los primeros N pasos), DENSITY (THIN ← → RATCHET), enganchados. OCT− y OCT+ como en LIVE con una de esas filas elegida. Nunca toca los pasos.", "GLO › MORE, the rows under LIVE: TRACKS (ALL, T1…T6, SYNTHS, DRUMS), RATE (/4 … X4), CUT (the first N steps), DENSITY (THIN ← → RATCHET), latched. OCT− and OCT+ as on LIVE while one of those rows is picked. Never touches the steps."]},
+  {s: "glo", k: "F3", shot: 'glo_live_tricks', t: ["LIVE: el teclado como tablero", "LIVE: the keys as a board"],
+   d: ["GLO › LIVE: negras 1–6 eligen pistas mientras se mantienen (ninguna o A#4: todas). Blancas mientras se mantienen: F3 /2, G3 X2, A3 3/2, B3 2/3, C4–F4 LOOP 8 4 2 1, G4 REVERSE, A4 PING-PONG, B4 C5 RATCHET, D5 THIN, E5 F5 OCT±, G5 RETURN. G#4 LATCH, C#5/D#5 TURN, F#5 RANDOM. La pantalla: un compás, cada pista una fila con sus trucos.", "GLO › LIVE: black keys 1–6 pick tracks while held (none or A#4: all). White keys while held: F3 /2, G3 X2, A3 3/2, B3 2/3, C4–F4 LOOP 8 4 2 1, G4 REVERSE, A4 PING-PONG, B4 C5 RATCHET, D5 THIN, E5 F5 OCT±, G5 RETURN. G#4 LATCH, C#5/D#5 TURN, F#5 RANDOM. The screen: one bar, a row a track with its tricks on it."]},
+  {s: "glo", k: "OCT+", t: ["LIVE: RETURN, BYPASS y KEEP", "LIVE: RETURN, BYPASS and KEEP"],
+   d: ["En LIVE: OCT− tocado = RETURN (vuelven a su fantasma en el pulso siguiente); OCT− mantenido = BYPASS (el original); OCT+ dos veces = KEEP (KEEP THE LIVE TRICKS?): escribe en DIV/STRETCH, LEN, ROTATE y CHANCE. UNDO: GLO + G4. Los trucos no se guardan.", "On LIVE: OCT− tapped = RETURN (back on their ghost at the next beat); OCT− held = BYPASS (the original); OCT+ twice = KEEP (KEEP THE LIVE TRICKS?): writes into DIV/STRETCH, LEN, ROTATE and CHANCE. UNDO: GLO + G4. The tricks are not saved."]},
 
   // FX
   {s: "fx", k: "FX", shot: 'fx_1', t: ["SENDS: los envíos de la pista", "SENDS: the track's sends"],
@@ -575,11 +575,11 @@ recipes: [
     ["Grabar: REC armado y sonando, FX + D4–F5, B3, C4, C#5 o un barrido. Se escriben en el carril de la sección (FX › MORE › PUNCH LANE). FX + G5 borra.", "Record: REC armed and playing, FX + D4–F5, B3, C4, C#5 or a sweep. They are written into the section's lane (FX › MORE › PUNCH LANE). FX + G5 erases."],
     ["Manos libres: mantené FX hasta ver el mapa y soltá sin tocar nada ([FX] LOCKED). FX otra vez lo cierra.", "Hands free: hold FX until the map shows and let go without touching anything ([FX] LOCKED). FX again closes it."],
     ["Que queden prendidos: MENU › SYSTEM › FX LATCH ON; FX + OCT− apaga todo.", "To keep them on: MENU › SYSTEM › FX LATCH ON; FX + OCT− turns all off."]]},
-  {id: "liveP", s: "glo", shots: ['live_mano', 'live_rieles'], t: ["Páginas LIVE (MANO y RIELES)", "LIVE pages (MANO and RIELES)"], steps: [
-    ["GLO, y SELECT a la izquierda de MIXER (o toques de GLO): LIVE › MANO y RIELES.", "GLO, then SELECT left of MIXER (or GLO taps): LIVE › MANO and RIELES."],
-    ["MANO: mantené negras 1–6 para elegir pistas y blancas para modificar (/2, x2, LOOP, REV, RATCH, THIN, OCT±). G#4 LATCH.", "MANO: hold black keys 1–6 to pick tracks and white keys to modify (/2, x2, LOOP, REV, RATCH, THIN, OCT±). G#4 LATCH."],
-    ["RIELES: KNOB 1 PISTAS, 2 RATE, 3 CORTE, 4 DENS, enganchados.", "RIELES: KNOB 1 PISTAS, 2 RATE, 3 CORTE, 4 DENS, latched."],
-    ["OCT− tocado: RETURN; mantenido: BYPASS. OCT+ dos veces: COMMIT a la secuencia (UNDO: GLO + G4).", "OCT− tapped: RETURN; held: BYPASS. OCT+ twice: COMMIT into the sequence (UNDO: GLO + G4)."]]},
+  {id: "liveP", s: "glo", shots: ['glo_live_tricks', 'glo_more'], t: ["LIVE y sus RAILS", "LIVE and its RAILS"], steps: [
+    ["GLO, y SELECT a la izquierda de MIXER (o toques de GLO): LIVE.", "GLO, then SELECT left of MIXER (or GLO taps): LIVE."],
+    ["LIVE: mantené negras 1–6 para elegir pistas y blancas para los trucos (/2, X2, LOOP, REVERSE, RATCHET, THIN, OCT±). G#4 LATCH.", "LIVE: hold black keys 1–6 to pick tracks and white keys for the tricks (/2, X2, LOOP, REVERSE, RATCHET, THIN, OCT±). G#4 LATCH."],
+    ["GLO › MORE, filas bajo LIVE (RAILS): TRACKS, RATE, CUT, DENSITY, enganchados.", "GLO › MORE, the rows under LIVE (RAILS): TRACKS, RATE, CUT, DENSITY, latched."],
+    ["OCT− tocado: RETURN; mantenido: BYPASS. OCT+ dos veces: KEEP en la secuencia (UNDO: GLO + G4).", "OCT− tapped: RETURN; held: BYPASS. OCT+ twice: KEEP into the sequence (UNDO: GLO + G4)."]]},
   {id: "learn", s: "menu", shots: [], t: ["MIDI LEARN", "MIDI LEARN"], steps: [
     ["Mantené HOME (MENU), ALGORITHM a la pestaña MIDI, KNOB 2 a la derecha (ON). HOME cierra el menú.", "Hold HOME (MENU), ALGORITHM to the MIDI tab, KNOB 2 to the right (ON). HOME closes the menu."],
     ["Girá una perilla de un parámetro de pista: LEARN T2 CUT: SEND A CC.", "Turn a knob of a track parameter: LEARN T2 CUT: SEND A CC."],
@@ -683,7 +683,7 @@ news: [
     ["Parameter locks: paso mantenido + SELECT elige la página EDIT a bloquear.", "Parameter locks: step held + SELECT picks the EDIT page to lock."],
     ["El nombre USB es “JIANT” (también en Windows).", "The USB name is “JIANT” (Windows too)."]]},
   {v: "0.9.11", items: [
-    ["GLO › LIVE: MANO y RIELES, modificadores en vivo sobre las seis secuencias (RETURN, BYPASS, COMMIT).", "GLO › LIVE: MANO and RIELES, live modifiers over the six sequences (RETURN, BYPASS, COMMIT)."],
+    ["GLO › LIVE: dos páginas de modificadores en vivo sobre las seis secuencias (RETURN, BYPASS, COMMIT).", "GLO › LIVE: two pages of live modifiers over the six sequences (RETURN, BYPASS, COMMIT)."],
     ["LOFI más suave, BYTEBEAT sobre todo; el instalador web se diagnostica solo (What to do, COPY REPORT).", "LOFI quieter, BYTEBEAT above all; the web installer diagnoses itself (What to do, COPY REPORT)."]]},
   {v: "0.9.10", items: [
     ["VOICE dibuja su tracto vocal vivo; LOFI se vuelve un chip.", "VOICE draws its living vocal tract; LOFI becomes a chip."],

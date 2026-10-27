@@ -15,7 +15,7 @@
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "STEPS", "DELAY", "REVERB", "CHORUS",
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
                                               "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
-                                              "PLAYHEADS", "AUTOMATION"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "PLAYHEADS", "AUTOMATION", "LIVE"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -67,7 +67,8 @@ static int uxm_row_ok(const ux_row_t *r)
 {
     uint32_t id = r->id;
     int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT;
-    return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) || sqv_is(id) : r->kind == UXR_GLOBAL ? id < G_COUNT || view :
+    return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) || sqv_is(id) :
+           r->kind == UXR_GLOBAL ? id < G_COUNT || view || lvv_is(id) :
            r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
 }
 /* (3b task 8) a global LOAD ECO takes out of the sound (fx.c fx_buses: no chorus; slicer.c slicer_on: no SLICER): its row not
@@ -87,6 +88,8 @@ static int ux_row_shown(const ux_row_t *r)
         return uxm_act_ok(r->id);
     if (r->kind == UXR_TRACK && sqv_is(r->id))          /* (3c-1 task 4) SEQ's views: by the step picked, the track (ux_seq.c) */
         return uxq_vshown(r->id);
+    if (glo && lvv_is(r->id))                           /* (3c-1 task 6) GLO's RAILS: always */
+        return 1;
     if (r->kind != UXR_TRACK && !glo)
         return 0;
     if (!glo) {
@@ -412,6 +415,8 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
     }
     if (r->kind == UXR_TRACK && sqv_is(r->id))          /* (3c-1 task 4) SEQ's views: their words (ux_seq.c) */
         return uxq_vtext(r->id, val, nv, bar);
+    if (r->kind == UXR_GLOBAL && lvv_is(r->id))         /* (3c-1 task 6) GLO's RAILS: their words (ux_glo.c) */
+        return uxg_vtext(r->id, val, nv, bar);
     d = param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp);
     if (!d || !vp)
         return "";
