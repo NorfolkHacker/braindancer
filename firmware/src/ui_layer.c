@@ -6,11 +6,11 @@
  * are its shortcuts and its map shows over the page. One table (LAYERS) drives the gesture, the keys, the knobs,
  * the LEDs and the overlay:
  *   FX   HOLD  the performance effects (perform.c) and the track mutes while held; KNOB 1..4 its macros
- *   GLO  SET   black keys 1..4 (F#3 G#3 A#3 C#4) T1..T4 MUTE (latched; lit = sounding), F3..B3 SOLO T1..T4 while
- *              held (HOLD cells, a corner triangle), C4 UNMUTE ALL, F4 TAP tempo; KNOB 1..4 T1..T4 LEVEL;
- *              black keys 5..8 (D#4 F#4 G#4 A#4) the DRUM group mutes KICK SNARE HAT PERC (eng_drum.c dx_mute; the
- *              row shows while a track plays DRUM; C4 unmutes them too);
- *              GLO + PLAY: from the top without stopping
+ *   GLO  SET   black keys 1..6 (F#3 G#3 A#3 C#4 D#4 F#4) T1..T6 MUTE (latched; lit = sounding), black keys 7..10 (G#4 A#4
+ *              C#5 D#5) the DRUM group mutes KICK SNARE HAT PERC (eng_drum.c dx_mute; shown while a track plays DRUM);
+ *              white keys F3..D4 SOLO T1..T6 while held (perform.c perf_solo), E4 UNMUTE ALL (tracks and groups), F4 TAP
+ *              tempo (the inside clock only), G4 UNDO, A4 MUTATE FREEZE, B4 REVERT ALL; KNOB 1..4 T1..T4 LEVEL (T5, T6
+ *              selected: T3..T6); GLO + PLAY: from the top without stopping (the inside clock only); drawn by ux_layer.c
  *   SCL  SET   any key: its note name is ROOT; KNOB 1..4 ROOT SCALE ROTATE PITCH (LY_SCL: P_ROOT P_SCALE, the SCL page's
  *              first two, then P_SOFS P_POFS, SEQ > MORE's ROTATE and SEQ PITCH since ACID FM 3c-1 task 4, kept on the layer:
  *              its knobs keep their job; 3b task 9: named as SCL names them, ux_layer.c); the LEDs show the root lit and the
@@ -58,7 +58,7 @@ typedef struct {
 static const layer_t LAYERS[LAYER_N] = {
     {0, 0, 0, "", {{0, 0}, {0, 0}, {0, 0}}},
     {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_KEYS, "EFFECTS"}, {KC_K14, "MACROS"}, {0, 0}}},   /* (LET GO: the header's HOLD) */
-    {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{KC_PLAY, "RESTART"}, {KC_GLO, "DONE"}, {0, 0}}},
+    {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{0, 0}, {0, 0}, {0, 0}}},   /* (3c-1 task 9: drawn by ux_layer.c) */
     {B_SCL, LK_SET, FAM_SCL, "[SCL] SET", {{KC_KEYS, "ROOT"}, {KC_SCL, "DONE"}, {0, 0}}},
     {B_EDIT, LK_SET, FAM_EDIT, "[EDIT] SET", {{KC_KEYS, "INIT / RECALL"}, {KC_EDIT, "DONE"}, {0, 0}}},
     {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS", {{0, 0}, {0, 0}, {0, 0}}},   /* (3c-1: drawn by ux_layer.c, its status
@@ -1025,20 +1025,11 @@ static void ly_piano(uint32_t l)
             cv_text_up(x0 + HALF_UP(10 - AF_X_CAP_H) - AF_X_CAP_Y, y + bh - 4, &AF_X, nm, fill == T_BG ? T_DIM : ink, fill, bh - 8);
     }
 }
-/* (3c-1 task 5) GLO's and SAVE's cards: the rest are ux_layer.c's knob row */
+/* (3c-1 tasks 5, 9) SAVE's cards: the rest are ux_layer.c's knob row */
 static void layer_cards(uint32_t l)
 {
     char val[12];
-    const char *unit;
-    uint32_t c;
-    if (l == LAYER_GLO) {                               /* T1..T4 LEVEL (T5, T6 selected: T3..T6; the icon; muted: dim) */
-        for (c = 0; c < 4u; c++) {
-            uint32_t t = c + trk_base4();
-            param_format(&TP[P_LEVEL], trk[t].p[P_LEVEL], val, &unit);
-            draw_column(c, "LEVEL", val, unit, glo_sounding(t) ? VAL(c) : T_DIM, RATIO(&TP[P_LEVEL], trk[t].p[P_LEVEL]),
-                        trk_icon(t, 1));
-        }
-    } else if (l == LAYER_SAVE) {                       /* the section, LOOP / SONG, SONG REC, the song row */
+    if (l == LAYER_SAVE) {                              /* the section, LOOP / SONG, SONG REC, the song row */
         uint32_t n = lys.song ? lys.song - 1u : song_cur;
         fmt_int(val, (int32_t)n + 1);
         draw_column(0, "SONG", val, n != song_cur ? "NEXT" : "", VAL(0u), (int32_t)(n * 1000u / (NSONG - 1u)),

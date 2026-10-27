@@ -11605,14 +11605,11 @@ static int test_lz_layer(void)
     int16_t b0;
     ui_power_on(); frame();
     btn_down(B_GLO); frames(800);
-    ok = ui.layer == LAYER_GLO && lz_on() && lz_fam() == LZ_LAYER && ui.lylv == 0u && lz_tab_lit(0) &&
-         lz_crumb_is("GLO \xB7 MAP");
+    ok = ui.layer == LAYER_GLO && lz_on() && lz_fam() == LZ_LAYER && !uxl_state(LAYER_GLO) && lz_crumb_is("GLO \xB7 MAP");
     turn(EN_ALGO, 1); frame();
-    ok &= ui.lylv == 1u && lz_tab_lit(1) && song.sel == 0u && lz_crumb_is("GLO \xB7 KNOBS");
+    ok &= uxl_state(LAYER_GLO) == 1u && ui.lylv == 0u && song.sel == 0u;   /* (3c-1 task 9: MAP and STATE, its own bit) */
     turn(EN_ALGO, 1); frame();
-    ok &= ui.lylv == 2u && lz_tab_lit(2);
-    turn(EN_ALGO, 1); frame();
-    ok &= ui.lylv == 2u && song.sel == 0u;                          /* (no wrap) */
+    ok &= uxl_state(LAYER_GLO) == 1u && song.sel == 0u;             /* (no further, no wrap) */
     b0 = song.g[G_BPM];
     turn(EN_SELECT, 2); frame();
     ok &= song.g[G_BPM] != b0;                                      /* (GLO + SELECT: the tempo, as before) */
@@ -11622,10 +11619,10 @@ static int test_lz_layer(void)
     ok &= song.sel == 1u;                                           /* (let go: ALGORITHM the track again) */
     turn(EN_ALGO, -1); frame();
     btn_down(B_GLO); frames(800);
-    ok &= ui.lylv == 2u && lz_tab_lit(2);                           /* (remembered) */
+    ok &= uxl_state(LAYER_GLO) == 1u;                               /* (remembered) */
     btn_up(B_GLO); frame(); frame();
-    ui.lylv = 0;
-    bad += check("0.8.5 LENTE layers: MAP <-> KNOBS <-> STATE by ALGORITHM while held (remembered); SELECT keeps its combos", ok);
+    ui.uxlv = 0;
+    bad += check("0.8.5 LENTE layers: MAP <-> STATE by ALGORITHM while held (remembered; 3c-1 task 9: GLO's own bit, no KNOBS); SELECT keeps its combos", ok);
     ui_power_on();
     return bad;
 }
@@ -17411,7 +17408,7 @@ static int test_t9_knobs(void)
             for (s = 0; s < 2u; s++) okw &= 8 + uxf_w(UXL_WHERE[k]) + 16 + uxf_w(UXL_ALGO[s]) <= 232;
         for (dm = 0; dm < 3u; dm++) {                    /* (3c-1 task 5: a synth, a DRUM track on each kit: CLEAR <lane>) */
         set_engine_of(TSEL, dm ? ENGI_DRUM : ENGI_ANALOG); TSEL->engine = TSEL->eng_req; TSEL->p[P_E0] = (int16_t)(dm ? dm - 1u : 0u);
-        for (l = 0; l < 6u; l++)                         /* every key's name a layer can show, in the list's column */
+        for (l = 0; l < 7u; l++)                         /* every key's name a layer can show (3c-1 task 9: GLO's too), in the list's column */
             for (s = 0; s < 3u; s++) {
                 pfx_tgt = (uint8_t)s;
                 rp_put(RP_CLICK, s);                     /* (CLICK OFF / REC / ON on REC's G3) */
@@ -17419,7 +17416,7 @@ static int test_t9_knobs(void)
                     char nm[12], nt[4];
                     int blk;
                     uint32_t p = uxl_key(k, &blk, nt);
-                    (void)ly_keyname(l < 4u ? UXT9_L[l] : l == 4u ? LAYER_SEQ : LAYER_REC, blk, p, nm);
+                    (void)ly_keyname(l < 4u ? UXT9_L[l] : l == 4u ? LAYER_SEQ : l == 5u ? LAYER_REC : LAYER_GLO, blk, p, nm);
                     if (nm[0] && UXL_LS_NM + text_w(&UF_LBL, uxl_word(nm)) > UXL_LS_W - 1) {
                         printf("  key %s: \"%s\" %d px\n", nt, uxl_word(nm), (int)text_w(&UF_LBL, uxl_word(nm))); okw = 0;
                     }
@@ -17513,6 +17510,77 @@ static int test_c5_layers(void)
     ui.uxlv = 0;
     bad += check("  .. REC: the knob row (K1 CLICK), the blend, its own view bit", ok);
     bad += check("  .. SEQ and REC are drawn by ux_layer.c", own);
+    ui_power_on();
+    return bad;
+}
+/* ---------------------------------------------- (ACID FM 3c-1 task 9) the GLO layer in the ACID look --- */
+static uint16_t uxc9_black(uint32_t j) { return ux_px(8u + PK_BLK[j] * UXL_KB_W - 5u + 4u, UX_Y_PANEL + UXL_KB_Y + 5u); }
+static uint16_t uxc9_white(uint32_t i) { return ux_px(8u + i * UXL_KB_W + 3u, UX_Y_PANEL + UXL_KB_Y + 25u); }
+static int test_c9_glo(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t c;
+    ux_knob_t k[4];
+    uint16_t sc;
+    char nm[12];
+    ui_power_on(); frame();
+    go_title("ENV"); frame();
+    trk[1].p[P_MUTE] = 1; trk[3].p[P_MUTE] = 1;
+    btn_down(B_GLO); frames(800);
+    ok &= ui.layer == LAYER_GLO && ux_layer_owns(LAYER_GLO);
+    if (!ok) printf("  GLO: not open\n");
+    ui.force = 1; frame();
+    if (!uxt9_blend(ux_px(120, 0)) || !uxt9_blend(ux_px(2, 238))) { printf("  GLO: no blend line / band footer\n"); ok = 0; }
+    if (ux_px(236, UX_Y_STATUS + 10u) != UX_BG) { printf("  GLO: status not on BG\n"); ok = 0; }
+    if (uxc9_black(1) != UX_VIOLET || uxc9_black(3) != UX_VIOLET) { printf("  GLO: muted black keys %04x %04x\n", uxc9_black(1), uxc9_black(3)); ok = 0; }
+    if (uxc9_black(0) == UX_VIOLET) { printf("  GLO: T1 sounding but violet\n"); ok = 0; }
+    uxl_knobs(LAYER_GLO, k);                             /* KNOB 1..4: T1..T4 LEVEL, as HOME's window */
+    ok &= str_eq(k[0].label, "T1 LEVEL") && str_eq(k[3].label, "T4 LEVEL") && k[0].value[0] && k[1].off && !k[0].off;
+    if (!ok) printf("  GLO: knobs \"%s\" \"%s\" off %u %u\n", k[0].label, k[3].label, k[1].off, k[0].off);
+    for (c = 0; c < 4u; c++) {
+        uint32_t x = UX_COL_X0 + c * UX_COL_PITCH;
+        uint16_t r = ux_px(x + 20u, UX_Y_KNOBS);
+        if (r != UX_LINE && r != ux_knob_col(c)) { printf("  GLO knob %u: rule %04x\n", (unsigned)c, r); ok = 0; }
+    }
+    ok &= !strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK") && strstr(uxl_status(LAYER_GLO, k, &sc), "RESTART");
+    if (!ok) printf("  GLO: status \"%s\"\n", uxl_status(LAYER_GLO, k, &sc));
+    (void)ly_keyname(LAYER_GLO, 0, 7u, nm);              /* F4 TAP: breathes with the inside clock, in the ux fill */
+    if (uxc9_white(7) != ux_mix(UX_BG, UX_MID, 55) || !str_eq(nm, "TAP")) { printf("  GLO: F4 %04x want %04x\n", uxc9_white(7), ux_mix(UX_BG, UX_MID, 55)); ok = 0; }
+    turn(EN_K1, 3); frame();                             /* a knob turned: its readout on the status line */
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "T1 LEVEL") != 0 && sc == UX_TEXT;
+    if (!ok) printf("  GLO: turn status \"%s\"\n", uxl_status(LAYER_GLO, k, &sc));
+    key_down(white(2)); frames(4);                       /* a SOLO held: T3's key ACCENT, perf_solo */
+    ui.force = 1; frame();
+    if (uxc9_white(2) != UX_ACCENT || perf_solo != 4u) { printf("  GLO: solo key %04x solo %u\n", uxc9_white(2), (unsigned)perf_solo); ok = 0; }
+    key_up(white(2)); frames(4);
+    song.g[G_CLOCK] = 1; ui.force = 1; ui.msg_t = 0; ux_hot_k = -1; frame();   /* an outside clock: TAP dim, the status line says so */
+    if (uxc9_white(7) != UX_LINE) { printf("  GLO ext: F4 %04x\n", uxc9_white(7)); ok = 0; }
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: USB") != 0;
+    if (!ok) printf("  GLO ext: status \"%s\"\n", uxl_status(LAYER_GLO, k, &sc));
+    song.g[G_CLOCK] = 2;
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: TRS") != 0;
+    song.g[G_CLOCK] = 0;
+    ui.lylv = 0; ui.uxlv = 0;                            /* ALGORITHM: its own view bit; MAP <-> STATE */
+    turn(EN_ALGO, 1); frame();
+    ok &= ((ui.uxlv >> LAYER_GLO) & 1u) && !ui.lylv && uxl_state(LAYER_GLO);
+    turn(EN_ALGO, -1); frame();
+    ok &= !((ui.uxlv >> LAYER_GLO) & 1u);
+    btn_up(B_GLO); frames(400);
+    ui.uxlv = 0;
+    bad += check("ACID FM 3c-1 task 9: GLO in the ACID look: muted keys VIOLET, a solo held ACCENT, K1..K4 T1..T4 LEVEL, CLOCK: USB / TRS, own view bit", ok);
+    ok = 1;                                              /* DRUM-X group mutes on black 7..10 */
+    ui_power_on(); frame();
+    set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req;
+    go_title("ENV"); frame();
+    btn_down(B_GLO); frames(800);
+    dx_mute_set(DXG_KICK | DXG_HAT);
+    ui.force = 1; frame();
+    (void)ly_keyname(LAYER_GLO, 1, 6u, nm);
+    ok &= str_eq(nm, "KICK");
+    if (uxc9_black(6) != UX_VIOLET || uxc9_black(8) != UX_VIOLET || uxc9_black(7) == UX_VIOLET) { printf("  GLO DRUM: group keys %04x %04x %04x\n", uxc9_black(6), uxc9_black(7), uxc9_black(8)); ok = 0; }
+    btn_up(B_GLO); frames(400);
+    dx_mute_set(0);
+    bad += check("  .. a DRUM track: KICK SNARE HAT PERC on black 7..10, muted ones VIOLET", ok);
     ui_power_on();
     return bad;
 }
@@ -17716,18 +17784,18 @@ static int test_t9_fix(void)
     btn_up(B_FX); frames(400);
     if (fx_lock) { press(B_FX); frames(100); }
     btn_down(B_GLO); frames(800);
-    ok &= ui.layer == LAYER_GLO && ui.lylv == 0u;
+    ok &= ui.layer == LAYER_GLO && uxl_state(LAYER_GLO) == 0u;
     turn(EN_ALGO, 1); frame();
-    ok &= ui.lylv == 1u;
+    ok &= uxl_state(LAYER_GLO) == 1u && ui.lylv == 0u;
     btn_up(B_GLO); frames(400);
     btn_down(B_FX); frames(800);
-    ok &= ui.layer == LAYER_FX && uxl_state(LAYER_FX) == 1u && ui.lylv == 1u;
+    ok &= ui.layer == LAYER_FX && uxl_state(LAYER_FX) == 1u && uxl_state(LAYER_GLO) == 1u;
     btn_up(B_FX); frames(400);
     if (fx_lock) { press(B_FX); frames(100); }
     btn_down(B_EDIT); frames(800);
     ok &= ui.layer == LAYER_EDIT && uxl_state(LAYER_EDIT) == 0u;
     btn_up(B_EDIT); frames(400);
-    if (!ok) printf("  views: FX %u EDIT %u GLO %u\n", (unsigned)uxl_state(LAYER_FX), (unsigned)uxl_state(LAYER_EDIT), ui.lylv);
+    if (!ok) printf("  views: FX %u EDIT %u GLO %u\n", (unsigned)uxl_state(LAYER_FX), (unsigned)uxl_state(LAYER_EDIT), (unsigned)uxl_state(LAYER_GLO));
     bad += check("  a layer's view (ALGORITHM) its own: FX's STATE not GLO's, GLO's KNOBS not FX's, EDIT still MAP", ok);
     /* 5. EDIT's status line says SELECT dices (a synth and DRUM) */
     ok = strstr(UXL_SAY[UXL_S_EDIT], "SELECT DICE") && strstr(UXL_SAY[UXL_S_EDRM], "SELECT DICE");
@@ -19627,6 +19695,7 @@ int main(void)
     bad += test_t8_names();
     bad += test_t8_fix();                               /* (ACID FM 3b task 8 fix) */
     bad += test_t9_look();                              /* (ACID FM 3b task 9) */
+    bad += test_c9_glo();                               /* (ACID FM 3c-1 task 9) */
     bad += test_c5_layers();                            /* (ACID FM 3c-1 task 5) */
     bad += test_t9_knobs();
     bad += test_t9_names();

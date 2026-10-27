@@ -1345,7 +1345,7 @@ static void setup(int s)
         perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
         perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[0] = 1u << 23;   /* (0.9.14: the macros) */
         break;
-    case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.lylv = 2; break;
+    case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.uxlv = 1u << LAYER_GLO; break;   /* (3c-1 task 9: its own bit) */
     case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.9.18) the knob just turned: COLOR's card lit (SCREEN), LED GLOW's
                                                          * (LEDS, KNOB 1) */
         ui.menu = 1; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; ui.hot_col = 0u; ui.hot_t = 30;

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Copyright (C) 2026 NorfolkHacker */
-/* ACID FM's held layers (ux_layer.h; 3b spec 2.6; 3c-1 task 5 spec 2.6): EDIT, LFO's MACRO, FX's performance layer, SCL, SEQ TOOLS
- * and REC in the 3a look. The keys,
+/* ACID FM's held layers (ux_layer.h; 3b spec 2.6; 3c-1 tasks 5, 9 spec 2.6, 3.4): EDIT, LFO's MACRO, FX's performance layer, SCL,
+ * SEQ TOOLS, REC and GLO (the mutes, the solos, KNOB 1..4 the levels) in the 3a look. The keys,
  * the knobs, the LEDs, the gesture and the latches are ui_layer.c's (ly_keyname names each key and its state, layer_knob turns
  * the knobs, layer_state lists what is on): only the drawing is here. The screen as a section page's (ux_section.c): the header
  * (T3 . the sound, the transport), the knob row (the layer's four in KNOB 1..4's colours, plain names: FX's macros or the
@@ -13,7 +13,8 @@
 
 static int ux_layer_owns(uint32_t l)
 {
-    return l == LAYER_EDIT || l == LAYER_MACRO || l == LAYER_FX || l == LAYER_SCL || l == LAYER_SEQ || l == LAYER_REC;
+    return l == LAYER_EDIT || l == LAYER_MACRO || l == LAYER_FX || l == LAYER_SCL || l == LAYER_SEQ || l == LAYER_REC ||
+           l == LAYER_GLO;
 }
 
 /* FX's KNOB 1..4, the performance macros (perform.c perf_m), by what they do (spec 0 rule 4; one name a meaning): STEP LOOP
@@ -26,16 +27,18 @@ static const char *const UXL_IVL[8] = {"OFF", "+2ND", "+3RD", "+4TH", "+5TH", "+
 /* .. while a glitcher's key is down, its four (ui_layer.c GX_K: GLITCH, TAPE STOP, SHUFFLE, FREEZE; JIANT's DENS VARI) */
 static const char *const UXL_GX[16] = {"DENSITY", "PITCH", "SIZE", "VARIANT", "SCRATCH", "TIME", "CURVE", "",
                                        "AMOUNT", "SIZE", "SPEED", "VARIANT", "DENSITY", "PITCH", "SPRAY", "SIZE"};
+static const char *const UXL_LV[NTRK] = {"T1 LEVEL", "T2 LEVEL", "T3 LEVEL", "T4 LEVEL", "T5 LEVEL", "T6 LEVEL"};   /* GLO's */
 static const char *const UXL_MAC[4] = {"MACRO 1", "MACRO 2", "MACRO 3", "MACRO 4"};   /* (the matrix's SOURCE names) */
 /* the keys' words (ly_keyname's, JIANT's) in plain ones on the MAP; the others as they are */
-static const char *const UXL_KEYJ[16] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+",
-                                         "STUT 1/8", "STUT 1/16", "ATK+", "TRK ALL", "TRK SYN", "TRK DRM", "INIT+KIT", "RCL+KIT"};
-static const char *const UXL_KEYP[16] = {"REPEAT 1/8", "REPEAT 1/16", "REPEAT 1/32", "OCT DOWN", "OCT UP", "HALF TEMPO",
+static const char *const UXL_KEYJ[17] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+",
+                                         "STUT 1/8", "STUT 1/16", "ATK+", "TRK ALL", "TRK SYN", "TRK DRM", "INIT+KIT", "RCL+KIT",
+                                         "UNMUTE"};
+static const char *const UXL_KEYP[17] = {"REPEAT 1/8", "REPEAT 1/16", "REPEAT 1/32", "OCT DOWN", "OCT UP", "HALF TEMPO",
                                          "DECAY -", "DECAY +", "STUTTER 1/8", "STUTTER 1/16", "ATTACK +", "ON ALL", "ON SYNTHS",
-                                         "ON DRUMS", "INIT + KIT", "RECALL + KIT"};
+                                         "ON DRUMS", "INIT + KIT", "RECALL + KIT", "UNMUTE ALL"};
 /* the status line's words when nothing else is said: the layer, what its keys and OCT do */
 enum { UXL_S_FX, UXL_S_LATCH, UXL_S_LOCK, UXL_S_EDIT, UXL_S_EDRM, UXL_S_SCL, UXL_S_MAC, UXL_S_MLAT, UXL_S_TOOLS, UXL_S_TDRM,
-       UXL_S_TBUSY, UXL_S_REC, UXL_S_N };
+       UXL_S_TBUSY, UXL_S_REC, UXL_S_GLO, UXL_S_GUSB, UXL_S_GTRS, UXL_S_N };
 static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK KEYS MUTE", "FX LATCH: KEYS ON / OFF \xB7 OCT- ALL OFF",
                                              "FX LOCKED: PRESS FX TO UNLOCK", "EDIT: F3 INIT \xB7 G3 RECALL \xB7 SELECT DICE",
                                              "EDIT: SELECT DICE \xB7 BLACK KEYS MUTE",
@@ -44,15 +47,19 @@ static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK K
                                              "SEQ TOOLS: WHITE KEYS \xB7 REC CLEARS ALL",
                                              "SEQ TOOLS: LANES ON BLACK \xB7 REC CLEARS ALL",
                                              "STOP TO EDIT \xB7 REC CLEARS ALL",
-                                             "REC: F3 CLEAR \xB7 G3 CLICK \xB7 KNOB 1 CLICK"};
+                                             "REC: F3 CLEAR \xB7 G3 CLICK \xB7 KNOB 1 CLICK",
+                                             "BLACK MUTE \xB7 WHITE SOLO \xB7 PLAY RESTART",   /* (3c-1 task 9) */
+                                             "CLOCK: USB \xB7 NO TAP \xB7 NO RESTART",
+                                             "CLOCK: TRS \xB7 NO TAP \xB7 NO RESTART"};
 static const char *const UXL_GXSAY[4] = {"GLITCH HELD: ITS FOUR KNOBS", "TAPE STOP HELD: KNOB 1 SCRATCHES",
                                          "SHUFFLE HELD: ITS FOUR KNOBS", "FREEZE HELD: ITS FOUR KNOBS"};
 /* the footer: the layer and how it is open; ALGORITHM's next view (MAP, STATE) */
-enum { UXL_W_FX, UXL_W_LATCH, UXL_W_LOCK, UXL_W_EDIT, UXL_W_SCL, UXL_W_MAC, UXL_W_MLAT, UXL_W_TOOLS, UXL_W_REC, UXL_W_N };
+enum { UXL_W_FX, UXL_W_LATCH, UXL_W_LOCK, UXL_W_EDIT, UXL_W_SCL, UXL_W_MAC, UXL_W_MLAT, UXL_W_TOOLS, UXL_W_REC, UXL_W_GLO, UXL_W_N };
 static const char *const UXL_WHERE[UXL_W_N] = {"FX \xB7 HOLD", "FX \xB7 LATCH", "FX \xB7 LOCKED", "EDIT \xB7 HELD", "SCL \xB7 HELD",
-                                               "LFO \xB7 MACROS", "LFO \xB7 LATCHED", "SEQ \xB7 TOOLS", "REC \xB7 HELD"};
+                                               "LFO \xB7 MACROS", "LFO \xB7 LATCHED", "SEQ \xB7 TOOLS", "REC \xB7 HELD",
+                                               "GLO \xB7 HELD"};
 static const char *const UXL_ALGO[2] = {"1 / 2 \xB7 ALGORITHM: STATE", "2 / 2 \xB7 ALGORITHM: MAP"};
-/* (3b task 9 fix) layer l's view: 1 STATE, 0 MAP (its own: ui.uxlv; GLO SAVE keep ui.lylv) */
+/* (3b task 9 fix) layer l's view: 1 STATE, 0 MAP (its own: ui.uxlv; SAVE keeps ui.lylv) */
 static uint32_t uxl_state(uint32_t l) { return (ui.uxlv >> l) & 1u; }
 static uint32_t uxl_panels;                             /* the panels drawn (tests/ui_test.c: one a change, none idle) */
 
@@ -105,6 +112,16 @@ static void uxl_knobs(uint32_t l, ux_knob_t k[4])
             str_cpy(k[c].value + str_len(k[c].value), "%", sizeof k[c].value - str_len(k[c].value));
             k[c].bar = (uint8_t)(macro_v[c] * 255u / 127u);
         }
+    } else if (l == LAYER_GLO) {                        /* T1..T4 LEVEL (T5, T6 selected: T3..T6), as HOME's window; a muted or
+                                                         * unsoloed track's dim */
+        for (c = 0; c < 4u; c++) {
+            uint32_t t = c + trk_base4();
+            int16_t v = trk[t].p[P_LEVEL];
+            k[c].label = UXL_LV[t % NTRK];
+            uxs_val(&TP[P_LEVEL], v, k[c].value, sizeof k[c].value);
+            k[c].bar = (uint8_t)clamp((v - TP[P_LEVEL].min) * 255 / (TP[P_LEVEL].max - TP[P_LEVEL].min), 0, 255);
+            k[c].off = (uint8_t)!glo_sounding(t);
+        }
     } else if (l == LAYER_REC) {                        /* K1 CLICK (OFF REC ON); K2..K4 are nobody's (ui_layer.c RL_N) */
         uint32_t v = rp_get(RL_F[0]);
         k[0].label = RL_LABEL[0];
@@ -153,6 +170,8 @@ static const char *uxl_status(uint32_t l, const ux_knob_t k[4], uint16_t *col)
         return UXL_SAY[UXL_S_SCL];
     if (l == LAYER_REC)
         return UXL_SAY[UXL_S_REC];
+    if (l == LAYER_GLO)                                 /* (an outside clock: TAP and RESTART refuse, tempo_ext / layer_play) */
+        return UXL_SAY[song.g[G_CLOCK] ? song.g[G_CLOCK] == 1 ? UXL_S_GUSB : UXL_S_GTRS : UXL_S_GLO];
     if (l == LAYER_SEQ)
         return UXL_SAY[chain_busy() ? UXL_S_TBUSY : drum_track(TSEL) ? UXL_S_TDRM : UXL_S_TOOLS];
     return UXL_SAY[layer_open() ? UXL_S_MAC : UXL_S_MLAT];
@@ -161,8 +180,8 @@ static const char *uxl_where(uint32_t l)
 {
     if (l == LAYER_FX)
         return UXL_WHERE[fx_lock && !ui.ly ? UXL_W_LOCK : perf_latch_on ? UXL_W_LATCH : UXL_W_FX];
-    if (l == LAYER_SEQ || l == LAYER_REC)
-        return UXL_WHERE[l == LAYER_SEQ ? UXL_W_TOOLS : UXL_W_REC];
+    if (l == LAYER_SEQ || l == LAYER_REC || l == LAYER_GLO)
+        return UXL_WHERE[l == LAYER_SEQ ? UXL_W_TOOLS : l == LAYER_REC ? UXL_W_REC : UXL_W_GLO];
     return UXL_WHERE[l == LAYER_EDIT ? UXL_W_EDIT : l == LAYER_SCL ? UXL_W_SCL : layer_open() ? UXL_W_MAC : UXL_W_MLAT];
 }
 
