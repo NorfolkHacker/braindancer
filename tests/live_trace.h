@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Copyright (C) 2026 NorfolkHacker */
 /* (ACID FM 3c-1 task 6) GLO > LIVE against the inherited MANO / RIELES pages, input for input: one sequence of keys, knobs and
- * OCT gestures (LIVE's own, then the RAILS rows that were RIELES' knobs), the live state hashed after each stage. The hashes
+ * OCT gestures (LIVE's own, then the RAILS rows that were RIELES' knobs, then LIVE again with the transport running and a KEEP),
+ * the live state hashed after each stage. The hashes
  * LT_WANT were taken from the inherited pages (1b2ac25, MANO and RIELES' knobs: LT_OLD); the same input must leave the same
  * state. Included by tests/live_test.c (after tests/ui_test.c); the page reached by lt_live() / lt_rails() */
 static uint32_t lt_h;
@@ -11,7 +12,8 @@ static void lt_mix(const void *p, uint32_t n)
     while (n--)
         lt_h = (lt_h ^ *b++) * 16777619u;
 }
-/* what the main loop keeps (not the ISR's side, not the ms OCT- went down), the tracks' settings a COMMIT writes, the DJ FILTER */
+/* what the main loop keeps (not the ms OCT- went down), what the ISR made of it (the tricks sounding, the playheads, the ghosts),
+ * the tracks' settings and steps a KEEP writes, the DJ FILTER */
 static uint32_t lt_state(void)
 {
     uint32_t i;
@@ -22,7 +24,10 @@ static uint32_t lt_state(void)
     lt_mix(lv.rq, sizeof lv.rq); lt_mix(lv.rk, sizeof lv.rk);
     for (i = 0; i < NTRK; i++) {
         lt_mix(&trk[i].p[P_SDIV], 2); lt_mix(&trk[i].p[P_SLEN], 2); lt_mix(&trk[i].p[P_SOFS], 2); lt_mix(&trk[i].p[P_TCHAN], 2);
+        lt_mix(trk[i].step, sizeof trk[i].step); lt_mix(&trk[i].seq_idx, sizeof trk[i].seq_idx);
+        lt_mix(&trk[i].seq_pos, sizeof trk[i].seq_pos);
     }
+    lt_mix(lv.cur, sizeof lv.cur); lt_mix(&lv.act, 1); lt_mix(lv.gidx, sizeof lv.gidx); lt_mix(lv.gpos, sizeof lv.gpos);
     lt_mix(&song.g[G_DJF], 2); lt_mix(&song.octave, 1); lt_mix(&ui.confirm, sizeof ui.confirm);
     return lt_h;
 }
@@ -51,7 +56,8 @@ static void lt_rails(uint32_t row, int32_t s) { nav_put(SEC_GLO, "RIELES"); fram
 static void lt_live(void) { nav_put(SEC_GLO, "LIVE"); frame(); }
 static void lt_rails(uint32_t row, int32_t s) { uxg_t_rails(row, s); }   /* (tests/ui_test.c: the row picked, KNOB 2) */
 #endif
-#define LT_N 9
+#define LT_N 13
+static void lt_blocks(uint32_t n) { while (n--) events_block(CTL); }   /* the ISR's blocks, as many on every page */
 static void lt_run(uint32_t got[LT_N])
 {
     ui_power_on();
@@ -87,4 +93,23 @@ static void lt_run(uint32_t got[LT_N])
     press(B_OCTUP); frame();
     got[8] = lt_state();
     press(B_OCTDN); frame();                            /* (the dialog's OCT-: no) */
+    lt_live();                                          /* black 4 held: D#5 (TURN on); A#4 (ALL) held: C5 (RATCH x3) */
+    lt_key(1, 3, 1); lt_tap(1, 9); lt_key(1, 3, 0);
+    lt_key(1, 7, 1); lt_key(0, 11, 1);
+    got[9] = lt_state();
+    lt_key(0, 11, 0); lt_key(1, 7, 0);
+    lt_key(1, 1, 1); lt_tap(0, 15); lt_key(1, 1, 0);    /* black 2 held: G5 (RETURN on T2) */
+    got[10] = lt_state();
+    seq_start();                                        /* the transport running: C4 (LOOP 4) held from the playhead, RATE */
+    lt_blocks(700);
+    lt_key(0, 5, 1); lt_blocks(500); turn(EN_K1, 2); lt_blocks(900);
+    press(B_OCTUP); frame();                            /* (OCT+ while playing: KEEP asks; OCT-: no) */
+    got[11] = lt_state();
+    press(B_OCTDN); frame();
+    lt_key(0, 5, 0); lt_blocks(300); lt_key(0, 5, 1); lt_blocks(300);
+    stop_transport(); frame();                          /* stopped, C4 still held: OCT+, OCT+ (KEEP: the LOOP's steps to the
+                                                         * start, RATE into DIV) */
+    press(B_OCTUP); frame(); press(B_OCTUP); frame();
+    lt_key(0, 5, 0); lt_blocks(100);
+    got[12] = lt_state();
 }

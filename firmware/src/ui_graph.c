@@ -124,33 +124,6 @@ static void pr_split(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uin
     for (k = 0; k < (int32_t)hits; k++)
         cv_rect(x + k * (pw + 1), y, pw, h, c);
 }
-/* a note's colour in the lens's pictures: the notes ACCENT, an accent TEXT (the highlight); (until ACID FM 0.3 JIANT's
- * palette on the heat ramp) */
-static uint16_t lz_note(const step_t *st, int acc, uint16_t c)
-{
-    (void)c; (void)st;
-    return acc ? T_TEXT : T_ACCENT;
-}
-/* the pattern's range of notes (GLO > LIVE's rails, ui_live.c; 0.8.3 .. 3c-1 task 4: LENTE's bars too) */
-static void pat_range(const track_t *t, int32_t *plo, int32_t *phi)   /* the pattern's notes, 30 semitones at least */
-{
-    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, j;
-    int32_t lo = 127, hi = -1;
-    for (i = 0; i < len; i++)
-        for (j = 0; j < seq_steps(t)[i].n && seq_steps(t)[i].time == ST_NOTE; j++) {
-            int32_t n = seq_steps(t)[i].note[j];
-            lo = n < lo ? n : lo;
-            hi = n > hi ? n : hi;
-        }
-    if (hi < lo)
-        lo = hi = 60;
-    if (hi - lo < 29) {                              /* (centred in the window) */
-        lo -= (29 - (hi - lo)) / 2;
-        hi = lo + 29;
-    }
-    *plo = lo;
-    *phi = hi;
-}
 /* (ACID FM 3c-1 task 4) LENTE's bars and the roll and DRUM grid as JIANT's SEQ pages drew them (graph_roll, graph_grid) gone:
  * SEQ is ux_seq.c's */
 static uint32_t steps_hash(const track_t *t)

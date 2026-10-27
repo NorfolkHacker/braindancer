@@ -544,8 +544,10 @@ static int macros(void)
 /* (ACID FM 3c-1 task 6) the same input on LIVE and the RAILS rows leaves the state the inherited MANO and RIELES left */
 static int same(void)
 {
-    static const uint32_t LT_WANT[LT_N] = {0xD7D5F0EBu, 0x79516141u, 0x496C13EDu, 0x9A41A082u, 0x06BB3096u, 0x7499D6FEu,
-                                           0xB83C115Fu, 0x9987044Bu, 0xD458C13Du};   /* (taken at 1b2ac25: tests/live_trace.h LT_OLD) */
+    static const uint32_t LT_WANT[LT_N] = {0x62910441u, 0x712EE943u, 0x0C1105EDu, 0x40F13488u, 0x0935E10Au, 0x367895C2u,
+                                           0x8D282C71u, 0x5342387Du, 0xE050C0EBu, 0x8BF9BA4Cu, 0xB73BC5C2u, 0xCBB05775u,
+                                           0xB80980DCu};   /* (taken at 1b2ac25: tests/live_trace.h LT_OLD; fix round 1: TURN +1,
+                                                         * ALL, G5 RETURN, the transport running, KEEP's steps) */
     uint32_t got[LT_N], i;
     int ok = 1;
     lt_run(got);
@@ -555,7 +557,7 @@ static int same(void)
             ok = 0;
         }
     ui_power_on();
-    return check("3c-1 task 6: LIVE's keys, knobs and OCT gestures, then the RAILS rows: the state MANO and RIELES left, stage by stage", ok);
+    return check("3c-1 task 6: LIVE's keys, knobs and OCT gestures, then the RAILS rows, then playing and a KEEP: the state MANO and RIELES left, stage by stage", ok);
 }
 
 int main(void)

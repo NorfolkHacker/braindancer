@@ -60,6 +60,8 @@ static const aafont_t *ux_val_face(const char *v, int32_t *dy)
     *dy = UF_VAL_CAP_Y + UF_VAL_CAP_H / 2 - UF_LBL_CAP_Y - UF_LBL_CAP_H / 2;
     return &UF_LBL;
 }
+static int32_t uxf_w(const char *s);
+static void uxf_text(int32_t x, int32_t y, const char *s, uint16_t ink, uint16_t bg);
 static void ux_knobs(const ux_knob_t k[4], int32_t hot)
 {
     int32_t i;
@@ -73,7 +75,10 @@ static void ux_knobs(const ux_knob_t k[4], int32_t hot)
             cv_rect(x, 0, UX_COL_W, 38, UX_BG2);
         GFX_HOOK_CELL(x, 0, x + UX_COL_W, 38);
         cv_rect(x, 0, UX_COL_W, 2, on ? col : UX_LINE);                    /* the column's rule: its knob's colour while hot */
-        cv_text_on(x + 2, 4, &UF_LBL, k[i].label, on ? UX_TEXT : UX_MID, bg);
+        if (uxf_w(k[i].label) <= UX_COL_W - 4)          /* (3c-1 task 6 fix: a two-word label's space as the footer's, */
+            uxf_text(x + 2, 4, k[i].label, on ? UX_TEXT : UX_MID, bg);   /* "DJ FILTER" not "DJFILTER", when it fits) */
+        else
+            cv_text_on(x + 2, 4, &UF_LBL, k[i].label, on ? UX_TEXT : UX_MID, bg);
         {
             int32_t dy;
             const aafont_t *vf = ux_val_face(k[i].value, &dy);

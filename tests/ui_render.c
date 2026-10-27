@@ -734,6 +734,11 @@ static void live_scene(int s)
     }
     memset(&lv, 0, sizeof lv);
     song.sel = 2;
+    if (s == S_GLO_MORE) {                              /* (fix round 1: the RAILS' own line, OCT- / OCT+ there, not the section's
+                                                         * first-time hint) */
+        uxs_seen |= (uint16_t)(1u << SEC_GLO);
+        uxs_hint_sec = 0xFF;
+    }
     nav_put(SEC_GLO, s == S_GLO_MORE ? "MORE" : "LIVE");
     if (s == S_GLO_LIVE)
         return;
