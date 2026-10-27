@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
-/* (0.9.1) the master DJ FILTER (src/fx.c djf_block, G_DJF: GLO > MIXER KNOB 4) through the real sources (ui_test.c's).
+/* (0.9.1) the master DJ FILTER (src/fx.c djf_block, G_DJF: GLO > MIXER KNOB 4; 3c-1 task 7: LIVE's) through the real sources (ui_test.c's).
  *   build/host/djf_test
  * 1. centred: a four-part mix with its FX, sequenced, rendered with the knob in the middle: bit for bit 0.9.0's (the
  *    hash of the same render from 0.9.0's sources, DJF_CENTRE_090), and djf_block never runs (out of the chain).
@@ -218,7 +218,7 @@ static void test_automation(void)
     t = &trk[0];
     song.sel = 0;
     song.g[G_DJF] = 5;                                  /* the knob before */
-    open_family(FAM_TRK);
+    nav_put(SEC_GLO, "LIVE");                           /* (3c-1 task 7: GLO > LIVE's KNOB 4, the MIXER gone) */
     song.rec = 1;
     seq_start();
     seq_tick(t, CTL);                                   /* step 1 */

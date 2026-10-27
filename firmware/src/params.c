@@ -529,10 +529,11 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
 /* ------------------------------------------------------------ pages --- */
 enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE, FAM_ARP, FAM_SEQ, FAM_TRK,
        FAM_COUNT };
-enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACKS page (ui_input.c tracks_edit) */
-enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
+enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP };   /* (ACID FM 3c-1 task 7: SC_TRK, JIANT's MIXER's, gone with it) */
+enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER,
        GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MORPH, GR_DXIMG,
-       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP };   /* (ACID FM 3c-1 task 4 fix 1: GR_MOTION GR_EVENTS GR_COMP GR_MUTATE
+       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP, GR_MIX };   /* (ACID FM 3c-1 task 7) GR_MIX: GLO > MIX (ux_glo.c); GR_TRK,
+                                                         * JIANT's MIXER and SENDS, gone with them */   /* (ACID FM 3c-1 task 4 fix 1: GR_MOTION GR_EVENTS GR_COMP GR_MUTATE
                                                          * GR_FUGUE GR_SHAPE gone with SEQ's pages; no value is stored, PAGES' own) */   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
                                                          * (task 5) GR_FM6P FM6's OPERATOR, OP ENV; GR_DXP DRUM-X's SOUND, SOUND 2 */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
                                                          * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone; task 7: GR_MSEQ, MSEQ's;
@@ -786,10 +787,15 @@ static const ux_row_t UXM_SEQ_ROWS[] = {
 };
 static const ux_more_t UXM_SEQ = {UXM_SEQ_ROWS, (uint8_t)(sizeof UXM_SEQ_ROWS / sizeof UXM_SEQ_ROWS[0])};
 /* (ACID FM 3c-1 task 6) GLO's MORE (spec 3.3): LIVE's RAILS (the inherited second LIVE page's four knobs, spec 3.1); (task 7)
- * SYSTEM, TEMPO, UNDO */
+ * SYSTEM (JIANT's GLO > SYSTEM: TRACKS 4 / 6, LOAD, CPU a readout; ROUTE, inert since 0.5, gone), TEMPO (GLOBAL's BPM, the rules
+ * HOME's KNOB 4 has: ui_input.c param_knob; its CLOCK until task 8's MIDI page, which then holds it: uxm_mask leaves a row out
+ * when a page of the chain shows it), UNDO (the GLO layer's G4: ui_layer.c glo_undo) */
 static const ux_row_t UXM_GLO_ROWS[] = {
     {UXM_H_LIVE, UXR_HEAD, 0}, {ID_LV_TGT, UXR_GLOBAL, 0}, {ID_LV_RATE, UXR_GLOBAL, 0}, {ID_LV_CUT, UXR_GLOBAL, 0},
     {ID_LV_DENS, UXR_GLOBAL, 0},
+    {UXM_H_SYSTEM, UXR_HEAD, 0}, {G_TRKS, UXR_GLOBAL, 0}, {G_LOADP, UXR_GLOBAL, 0}, {G_INFO, UXR_GLOBAL, 0},
+    {UXM_H_TEMPO, UXR_HEAD, 0}, {G_BPM, UXR_GLOBAL, 0}, {G_CLOCK, UXR_GLOBAL, 0},
+    {UXM_H_UNDO, UXR_HEAD, 0}, {UXM_A_UNDO, UXR_ACTION, 0},
 };
 static const ux_more_t UXM_GLO = {UXM_GLO_ROWS, (uint8_t)(sizeof UXM_GLO_ROWS / sizeof UXM_GLO_ROWS[0])};
 static const page_t PAGES[] = {
@@ -833,9 +839,8 @@ static const page_t PAGES[] = {
     {"OP4 ENV", FAM_EDIT, SC_TRACK, GR_ADSR, {P_FM4_ATK, P_FM4_DEC, P_FM4_SUS, P_FM4_REL}},
     {"OP LEVEL", FAM_EDIT, SC_TRACK, GR_NONE, {P_FM1_LEVEL, P_FM2_LEVEL, P_FM3_LEVEL, P_FM4_LEVEL}},
     {"VOICE", FAM_EDIT, SC_TRACK, GR_NONE, {P_VOICE, P_GLIDE, P_GLMODE, P_PRIO}},
-    {"GLOBAL", FAM_GLO, SC_GLOBAL, GR_NONE, {G_BPM, G_SWING, G_CLOCK, G_TUNE}},
-    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TRKS, G_LOADP, G_ROUTE, G_INFO}},   /* (0.6.18) TRACKS 4 / 6; (0.6.30)
-                                                         * LOAD ECO / LITE / FULL (the USB card: the header's icon) */
+    /* (ACID FM 3c-1 task 7) JIANT's GLOBAL (BPM SWING CLOCK TUNE) and SYSTEM (TRACKS LOAD ROUTE CPU) gone: SWING and TUNE GLO >
+     * MIX's knobs, the rest GLO > MORE's rows (UXM_GLO; ROUTE, inert since 0.5's per-track MIDI, on none) */
     {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
     {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
     {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */
@@ -859,7 +864,8 @@ static const page_t PAGES[] = {
      * as it was: PATTERN (PATTERN STRETCH PLAYHEADS TRACK MUTATE), BAR (STEP NOTE AUTOMATION AUTO LIST), STEP (NOTE
      * COMP COMP 2); SELECT zooms, a SEQ tap the level's next set */
     {"PHRASES", FAM_SEQ, SC_GLOBAL, GR_PATS, {0xFF, 0xFF, 0xFF, 0xFF}},    /* pattern loader (ui.c pat_load); 0.6.37: hidden */
-    {"MIXER", FAM_TRK, SC_TRK, GR_TRK, {0, 1, 2, 3}},   /* GLO button; LEVEL PAN REV, (0.9.1) the DJ FILTER (was MUTE) */
+    /* (ACID FM 3c-1 task 7) JIANT's MIXER (LEVEL PAN REV, the DJ FILTER) gone: GLO > MIX (below), REV FX > SENDS', the DJ FILTER
+     * GLO > LIVE's KNOB 4 */
     {"SONG", FAM_SEQ, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"STEP EXTRAS", FAM_SEQ, SC_STEP, GR_CHANCE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (ACID FM 3c-1 task 3: was CHANCE, hidden since
                                                          * 0.6.37) the picked step's RATCHET CHANCE CONDITION MICRO (ux_seq.c) */
@@ -868,8 +874,7 @@ static const page_t PAGES[] = {
                                                          * TP since Felucca, on no page until now) */
     /* (ACID FM 3b) EDIT > FOCUS gone (a view into the LFO's MOD matrix for one setting: the matrix keeps it all) */
     /* (ACID FM 3b task 6) ENV > STAGE gone: it turned the four values ENV's AMP page turns (spec 2.2) */
-    {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),
-                                                         * the six tracks' as bars (ui_graph.c track_col6) */
+    /* (ACID FM 3c-1 task 7) GLO > MIX > SENDS (the track's sends again) gone: FX > SENDS has them (3c-1 spec 3.2) */
     /* (0.9.18) SEQ > BAR gone (0.9.2 .. 0.9.17: KNOB 1 the bar, KNOB 2 LEN): the bar is the roll's cursor / strip and
      * STEP's KNOB 1 walks all 64 steps, LEN is PATTERN's */
     {"LIVE", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.11) GLO > LIVE: the keys a board of live
@@ -905,6 +910,9 @@ static const page_t PAGES[] = {
     {"SEQ MORE", FAM_SEQ, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SEQ},
     /* (ACID FM 3c-1 task 6) GLO's MORE (ui_lens.c CE_GLO: LIVE, MIX, MIDI, MORE): the song's (its rows globals and views) */
     {"GLO MORE", FAM_GLO, SC_GLOBAL, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_GLO},
+    /* (ACID FM 3c-1 task 7) GLO > MIX (3c-1 spec 3.2, ux_glo.c): KNOB 1 LEVEL, 2 PAN of the selected track (no id: ui_input.c
+     * tracks_edit, the inherited MIXER's write), 3 SWING, 4 TUNE (the song's, as JIANT's GLOBAL turned them) */
+    {"MIX", FAM_GLO, SC_GLOBAL, GR_MIX, {0xFF, 0xFF, G_SWING, G_TUNE}},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot_tr[NTRK];   /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit, a track each (3b task 7: as FM6's
@@ -982,7 +990,7 @@ static uint32_t page_id(const page_t *pg, uint32_t slot)
         return ID_NONE;
     if (id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT)
         return id;
-    if (pg->scope == SC_STEP || pg->scope == SC_TRK)
+    if (pg->scope == SC_STEP)
         return ID_NONE;
     if (pg->scope == SC_GLOBAL)
         return id;                                      /* (3b task 8: SL PITCH's step picked gone: MORE's rows) */

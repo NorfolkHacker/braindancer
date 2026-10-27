@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Copyright (C) 2026 NorfolkHacker */
 /* ACID FM's GLO pages on the screen (3c-1 spec 3; ux_glo.h), drawn through ux_section.c's page (header, knob row, panel, status
- * line, footer) as the SEQ pages are:
+ * line, footer) as the SEQ pages are (task 7: GLO opens on LIVE, the user's "LIVE first in GLO"):
  *   LIVE     (spec 3.1; the inherited first LIVE page, MANO) what it does is ui_live.c's, as before: the white keys the tricks
  *            (LOOP 8 / 4 / 2 / 1, /2, x2, 3/2, 2/3, REVERSE, PING-PONG, RATCHET, THIN, OCT+-, RETURN), the black keys the tracks
  *            they act on, G#4 LATCH, C#5 / D#5 TURN, F#5 RANDOM; OCT- tapped RETURN, held BYPASS, OCT+ KEEP.
@@ -11,8 +11,15 @@
  *            a CUT from step 1), a track with any other trick a VIOLET band, and under it its tricks in words (the speed,
  *            REVERSE / PING-PONG arrows, RANDOM, THIN, RATCHET, OCT, TURN); while a trick runs and the song plays, a line
  *            where the bar is (its 1/16). LATCH on: said at the top right.
+ *   MIX      (spec 3.2; task 7) KNOB 1 LEVEL, 2 PAN of the selected track (ui_input.c tracks_edit, the inherited MIXER's write),
+ *            3 SWING, 4 TUNE (the song's, param_knob as the inherited GLOBAL's). The picture: six columns T1 .. T6, each its number
+ *            (lit: the selected track), a level bar on the mixer's dB (ux_home.c ux_lvl_bar, HOME TRACKS' rule) with 0 dB marked
+ *            beside it, its dB number (the knob row's), a pan mark; muted dim, asleep (TRACKS 4) grey. The inherited SENDS are FX >
+ *            SENDS', MIXER's REV FX's, its DJ FILTER LIVE's KNOB 4.
  *   MORE     (spec 3.3) its LIVE rows: the RAILS (the inherited second LIVE page's knobs, ui_live.c live_rail): TRACKS, RATE,
- *            CUT, DENSITY (uxg_vtext); OCT- / OCT+ there as on LIVE (ui_live.c live_page, uxg_more_live).
+ *            CUT, DENSITY (uxg_vtext); OCT- / OCT+ there as on LIVE (ui_live.c live_page, uxg_more_live). (task 7) SYSTEM: TRACKS
+ *            4 / 6, LOAD, CPU (a readout, uxg_cpu_text: sampled at most once a second); TEMPO: BPM (HOME's rules), CLOCK (until
+ *            task 8's MIDI page); UNDO (the GLO layer's G4). The inherited SYSTEM's ROUTE, inert since 0.5, on none.
  * The picture is redrawn when what it shows changes (uxg_sig), the bar's line as it moves at most every UX_TRK_MS (UX_TRK_SLOW_MS
  * under load): a panel a 1/16 at most while tricks run, none while nothing changes. Included after ux_seq.c, before
  * ux_section.c. */
@@ -40,13 +47,17 @@ enum { UXG_W_OFF, UXG_W_STEPS, UXG_W_PCT, UXG_W_PLAY, UXG_W_ALL, UXG_W_RATCH, UX
        UXG_W_UP, UXG_W_DN, UXG_W_TURN, UXG_W_PLUS, UXG_W_K, UXG_W_LP, UXG_W_HP, UXG_W_LOW, UXG_W_HIGH, UXG_W_HZ, UXG_W_SP,
        UXG_W_STEP };
 static const char *const UXG_ARROW_LBL[2] = {"<<", "<>"};   /* (the picture's REVERSE, PING-PONG: UF_LBL alone has < and >) */
-/* the status line on LIVE with no knob turned (what the keys do; LATCH on), on a RAILS row (GLO > MORE: OCT- and OCT+ there) */
-static const char *const UXG_SAY[3] = {"WHITE: TRICKS \xB7 BLACK: TRACKS", "LATCH ON: A KEY TURNS IT ON / OFF",
-                                       "RAILS: OCT- RETURN \xB7 OCT+ KEEP"};
+/* the status line on LIVE with no knob turned (what the keys do; LATCH on), on a RAILS row (GLO > MORE: OCT- and OCT+ there),
+ * (task 7) on MORE's UNDO (what it takes back) */
+static const char *const UXG_SAY[4] = {"WHITE: TRICKS \xB7 BLACK: TRACKS", "LATCH ON: A KEY TURNS IT ON / OFF",
+                                       "RAILS: OCT- RETURN \xB7 OCT+ KEEP", "THE LAST BIG CHANGE \xB7 AGAIN: REDO"};
 static int32_t uxg_ph_drawn = -1;                       /* the bar's 1/16 drawn (-1: none), when (ms): ux_section_draw's pace */
 static uint32_t uxg_ph_ms;
 
-static int uxg_owns(void) { return !ui.home && ui.page < NPAGES && PAGES[ui.page].graph == GR_LIVE; }
+static int uxg_owns(void)
+{
+    return !ui.home && ui.page < NPAGES && (PAGES[ui.page].graph == GR_LIVE || PAGES[ui.page].graph == GR_MIX);
+}
 static int uxg_more_live(void)
 {
     uint32_t s, t;
@@ -272,4 +283,115 @@ static __attribute__((noinline)) uint32_t uxg_sig(void)
         h = h * 31u + (uint32_t)trk[i].p[P_SLEN];
     }
     return h;
+}
+
+/* ------------------------------------------------------------------------------------------------------- MIX (task 7) --- */
+static const char *uxs_label(uint32_t sec, uint32_t glo, uint32_t id, const char *l);   /* (ux_section.c) */
+static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t id, char *b, uint32_t nb);
+#define UXG_MX0 12               /* the columns: the first's left, the pitch (6 x 36 = 216 px) */
+#define UXG_MP 36
+#define UXG_MBW 12               /* a level bar: its width, its top (y), its height (the dB's 0..255 over it) */
+#define UXG_MBY 26
+#define UXG_MBH 84
+#define UXG_MBX(c) (UXG_MX0 + (int32_t)(c) * UXG_MP + (UXG_MP - UXG_MBW) / 2)   /* (track c's bar: its left) */
+#define UXG_MNY 116              /* the dB number's row, the pan mark's (y), its width */
+#define UXG_MPY 134
+#define UXG_MPW 28
+/* MIX's KNOB 1 and 2 (3 SWING and 4 TUNE: ux_section.c uxs_knobs' own, page ids): the selected track's LEVEL (its dB number as
+ * HOME's, the bar in dB: ux_lvl_bar), PAN; dim while it is muted */
+static void uxg_mix_knobs(ux_knob_t k[4])
+{
+    const track_t *t = TSEL;
+    int32_t pan = clamp(t->p[P_PAN], -64, 63);
+    k[0].label = uxs_label(SEC_GLO, 0, P_LEVEL, TP[P_LEVEL].label);
+    (void)ux_lvl_fmt(song.sel % NTRK, k[0].value);
+    k[0].bar = ux_lvl_bar(t->p[P_LEVEL]);
+    k[0].off = (uint8_t)(t->p[P_MUTE] != 0);
+    k[1].label = uxs_label(SEC_GLO, 0, P_PAN, TP[P_PAN].label);
+    uxs_vtext(&TP[P_PAN], pan, 0, P_PAN, k[1].value, sizeof k[1].value);
+    k[1].bar = (uint8_t)((pan + 64) * 255 / 127);
+    k[1].off = k[0].off;
+}
+/* the status line for MIX's KNOB 1 or 2 just turned: "T3 LEVEL . -6.0DB", "T3 PAN . +20" (the track's: no page id says so) */
+static const char *uxg_mix_say(uint32_t c, char *b, uint32_t n)
+{
+    const param_desc_t *d = &TP[c ? P_PAN : P_LEVEL];
+    uint32_t id = c ? P_PAN : P_LEVEL;
+    b[0] = 'T';
+    b[1] = (char)('1' + song.sel % NTRK);
+    b[2] = ' ';
+    b[3] = 0;
+    uxg_cat(b, n, uxs_label(SEC_GLO, 0, id, d->label));
+    uxg_cat(b, n, UXG_WORD[UXG_W_DOT]);
+    uxs_vtext(d, TSEL->p[id], 0, id, b + str_len(b), n - str_len(b));
+    return b;
+}
+/* the six columns: the number (lit picked), the level bar (KNOB 1's colour; its 0 dB a tick beside it), the dB number, the pan
+ * mark (KNOB 2's colour) from the middle */
+static __attribute__((noinline)) void uxg_mix_picture(void)
+{
+    int32_t z = UXG_MBH * ux_lvl_bar(112) / 255;       /* (0 dB's height) */
+    uint32_t c;
+    for (c = 0; c < NTRK; c++) {
+        const track_t *t = &trk[c];
+        int sel = c == song.sel % NTRK, awake = c < trk_live, mute = t->p[P_MUTE] != 0;
+        int32_t bx = UXG_MBX(c), cx = bx + UXG_MBW / 2, h = UXG_MBH * ux_lvl_bar(t->p[P_LEVEL]) / 255, w, pan, px;
+        uint16_t box = sel ? UX_ACID : UX_BG2, lc = sel ? UX_ACID : ux_mix(UX_BG, UX_ACID, 55),
+                 pc = sel ? UX_SLIDE : ux_mix(UX_BG, UX_SLIDE, 55), tc = sel ? UX_TEXT : UX_MID;
+        char d[16] = {(char)('1' + c), 0};
+        if (mute || !awake) {
+            lc = UX_DIM(lc, 55);
+            pc = UX_DIM(pc, 55);
+            tc = UX_DIM(UX_MID, 55);
+        }
+        cv_rect(cx - UXG_BW / 2, 4, UXG_BW, UXG_BHT, box);
+        cv_text_on(cx - UXG_BW / 2 + (UXG_BW - text_w(&UF_LBL, d)) / 2, 4 + (UXG_BHT - UF_LBL_CAP_H) / 2 - UF_LBL_CAP_Y, &UF_LBL, d,
+                   sel ? UX_BG : UX_MID, box);
+        cv_rect(bx, UXG_MBY, UXG_MBW, UXG_MBH, UX_BG2);
+        if (awake && h > 0)
+            cv_rect(bx, UXG_MBY + UXG_MBH - h, UXG_MBW, h, lc);
+        cv_rect(bx + UXG_MBW + 1, UXG_MBY + UXG_MBH - z, 3, 1, UX_MID);
+        (void)ux_lvl_fmt(c, d);
+        w = text_w(&UF_LBL, d);
+        cv_text_on(cx - w / 2, UXG_MNY, &UF_LBL, d, tc, ux_under(cx, UXG_MNY + 4));
+        cv_rect(cx - UXG_MPW / 2, UXG_MPY + 2, UXG_MPW, 1, UX_LINE);
+        cv_rect(cx, UXG_MPY, 1, 5, UX_MID);
+        pan = clamp(t->p[P_PAN], -64, 63);
+        px = cx + pan * (UXG_MPW / 2) / 64;
+        cv_rect(px - 1, UXG_MPY - 1, 3, 7, pc);
+    }
+}
+/* what the columns are drawn from: the selected track, the tracks awake, each one's LEVEL, PAN, mute */
+static uint32_t uxg_mix_sig(void)
+{
+    uint32_t h = song.sel * 131u + trk_live * 7u + 1u, c;
+    for (c = 0; c < NTRK; c++)
+        h = (h ^ (uint32_t)(uint16_t)trk[c].p[P_LEVEL] ^ (uint32_t)(uint16_t)trk[c].p[P_PAN] << 8 ^
+             (uint32_t)(trk[c].p[P_MUTE] != 0) << 24) * 16777619u;
+    return h;
+}
+
+/* ----------------------------------------------------------------------------------------------- MORE's CPU (task 7) --- */
+#define UXG_CPU_MS 1000u         /* the CPU readout taken at most once a second (twice as slow under load): a row a panel */
+#define UXG_CPU_SLOW_MS 2000u
+static uint8_t uxg_cpu, uxg_cpu_on;
+static uint32_t uxg_cpu_ms;
+static uint32_t uxg_cpu_pct(void)                       /* the load now, % (song.cpu_q8: audio.c), as last taken */
+{
+    if (!uxg_cpu_on || ux_pace_at(fm1_ms, uxg_cpu_ms, load_tight, UX_NO_SHED, 0, sys_load || gov_lite, 0, UXG_CPU_MS,
+                                  UXG_CPU_SLOW_MS).draw) {
+        uxg_cpu = (uint8_t)clamp((int32_t)(song.cpu_q8 * 100u / 256u), 0, 100);
+        uxg_cpu_ms = fm1_ms;
+        uxg_cpu_on = 1;
+    }
+    return uxg_cpu;
+}
+static const char *uxg_cpu_text(char *val, uint32_t nv, uint8_t *bar)   /* GLO > MORE's CPU row: "25%" */
+{
+    uint32_t p = uxg_cpu_pct();
+    val[0] = 0;
+    uxg_num(val, nv, (int32_t)p);
+    uxg_cat(val, nv, UXG_WORD[UXG_W_PCT]);
+    *bar = (uint8_t)(p * 255u / 100u);
+    return GP[G_INFO].label;
 }

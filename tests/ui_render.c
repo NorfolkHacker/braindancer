@@ -658,7 +658,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_EDIT_DRUM_MORE, S_EDIT_DRUM_MUTED, S_EDIT_DRUM_MORE_END, S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL,
        S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS, S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM,
        S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_SEQ_MORE, S_SEQ_MORE_END, S_SEQ_MORE_DRUM,
-       S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_COUNT };
+       S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_GLO_MIX, S_GLO_MORE_END, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo", "home_t5", "home_turn",
     "home_rec", "home_batt0", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo",
@@ -706,7 +706,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "edit_drum_muted", "edit_drum_more_end", "layer_edit", "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state",
     "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64", "seq_steps_drum",
     "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end", "seq_more_drum", "seq_lock",
-    "seq_extras_echo"};
+    "seq_extras_echo", "glo_mix", "glo_more_end"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's); (ACID FM 3c-1 task 6)
  * the ux pages: LIVE idle (stopped, nothing live); with tricks (T2 THIN 70 %, T3 x2 RATCH x3, T4 LOOP 8, T5 2/3; black key 3 held:
@@ -797,7 +797,7 @@ static void mock_state(int s)
     case S_MOCK_SEQ: song.sel = 0; song.rec = 1; go_page(GR_ROLL); ui.cursor = 6; ui.hot_col = 0; ui.hot_t = 30; break;
     case S_MOCK_DRUM: song.sel = 3; go_page(GR_ROLL); ui.cursor = 4; ui.lane = 1; trk[3].seq_idx = 9; ui.hot_col = 0; ui.hot_t = 30; break;
     case S_MOCK_MIXER:
-        go_page(GR_TRK);
+        go_page(GR_MIX);                                /* (3c-1 task 7: GLO > MIX, the MIXER gone) */
         trk[0].p[P_LEVEL] = 100; trk[1].p[P_LEVEL] = 84; trk[2].p[P_LEVEL] = 64; trk[3].p[P_LEVEL] = 110;
         trk[0].p[P_PAN] = -20; trk[1].p[P_PAN] = 24; trk[2].p[P_PAN] = 0; trk[3].p[P_PAN] = -4;
         trk[0].p[P_REV] = 30; trk[1].p[P_REV] = 80; trk[2].p[P_REV] = 10; trk[3].p[P_REV] = 0;
@@ -975,6 +975,35 @@ static void fx_more_at(uint32_t id, uint32_t kind)      /* FX > MORE, the row (k
 }
 /* (ACID FM 3c-1 task 4) SEQ > MORE, the row (kind, id) picked and in sight: JIANT's SEQ pages' scenes (COMP, PLAYHEADS, MUTATE,
  * AUTOMATION, AUTO LIST, TRACK, STRETCH, NOTE) are its rows now; the step picked kept */
+/* (ACID FM 3c-1 task 7) GLO > MORE, row (kind, id) picked, in sight (the first-time hint seen) */
+static void glo_more_at(uint32_t kind, uint32_t id)
+{
+    uint32_t r, sl, t;
+    memset(uxm_at, 0, sizeof uxm_at);
+    uxs_seen |= (uint16_t)(1u << SEC_GLO);
+    uxs_hint_sec = 0xFF;
+    nav_scene(SEC_GLO, "MORE");
+    for (r = 0; r < UXM_GLO.n && !(UXM_GLO.rows[r].kind == kind && UXM_GLO.rows[r].id == id); r++)
+        ;
+    sl = r; t = r && r < UXM_GLO.n && UXM_GLO.rows[r - 1u].kind == UXR_HEAD ? r - 1u : r;   /* (its heading on top) */
+    uxg_cpu_on = 0;                                     /* (the CPU readout taken now: song.cpu_q8 as the scene sets it) */
+    uxm_fix(&UXM_GLO, uxm_mask(&UXM_GLO), &sl, &t);
+    uxm_at[uxm_key()].sel = (uint8_t)sl;
+    uxm_at[uxm_key()].top = (uint8_t)t;
+}
+/* (ACID FM 3c-1 task 7) GLO > MIX: six tracks' levels (OFF .. +7.5 dB), pans, T3 muted, T2 selected; KNOB 1 just turned */
+static void glo_mix_scene(void)
+{
+    static const int16_t LV[NTRK] = {112, 100, 88, 127, 64, 0}, PN[NTRK] = {-20, 24, 0, -64, 63, 10};
+    uint32_t c;
+    for (c = 0; c < NTRK; c++) { trk[c].p[P_LEVEL] = LV[c]; trk[c].p[P_PAN] = PN[c]; }
+    trk[2].p[P_MUTE] = 1;
+    song.sel = 1; song.g[G_SWING] = 12; song.g[G_TUNE] = -3;
+    uxs_seen |= (uint16_t)(1u << SEC_GLO);
+    uxs_hint_sec = 0xFF;
+    nav_scene(SEC_GLO, "MIX");
+    ux_knob_touch(0);
+}
 static void seq_more_at(uint32_t kind, uint32_t id)
 {
     uint32_t r, c = ui.cursor;
@@ -1237,30 +1266,30 @@ static void setup(int s)
     case S_COUNTIN: song.playing = 0; song.rec = 1; cin_total = 4; cin_left = 3; go_home(); break;
     case S_COUNTIN2: song.playing = 0; song.rec = 1; cin_total = 8; cin_left = 8; go_page(GR_ROLL); break;
     case S_MENU_AUDIO: ui.menu = 1; ui.menu_sel = MI_CLICK; rp_put(RP_CLICK, 1u); rp_put(RP_COUNTIN, 1u); break;
-    /* 1.2: the header's three slots (ui_draw.c draw_head): playing with the selected track armed; another track armed;
+    /* (3c-1 task 7: on SAVE's TOOLS, a JIANT page and its header; GLO > GLOBAL gone) 1.2: the header's three slots (ui_draw.c draw_head): playing with the selected track armed; another track armed;
      * the BPM being turned (the accent's); BPM LOCK ON (the lock right of the BPM), and its message after a turn;
      * GLO with the tempo turned and BPM LOCK ON (the label right of the lock); the metronome on the bar's 1st beat
      * (the accent's) and its 2nd (mirrored) */
-    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_title("GLOBAL"); break;
-    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_title("GLOBAL"); break;
-    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_title("GLOBAL"); break;
-    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_title("GLOBAL"); break;
-    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_title("GLOBAL"); ui_message("BPM LOCKED"); break;
+    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_title("TOOLS"); break;
+    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_title("TOOLS"); break;
+    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_title("TOOLS"); break;
+    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_title("TOOLS"); break;
+    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_title("TOOLS"); ui_message("BPM LOCKED"); break;
     case S_HEAD_GLO_TURN: ui_prefs |= PREF_BPM_LOCK; go_home(); ui.layer = LAYER_GLO; ui.bpm_t = 40; break;
-    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_title("GLOBAL"); break;
-    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_title("GLOBAL"); break;
+    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_title("TOOLS"); break;
+    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_title("TOOLS"); break;
     case S_DRUM: drum(0); go_page(GR_ROLL); ui.cursor = 4; ui.lane = 1; trk[3].seq_idx = 9; break;
     case S_DRUM_HAND: drum(1); go_page(GR_ROLL); ui.lane = 5; ui.cursor = 7; break;
     case S_DRUM_CYM: drum(2); go_page(GR_ROLL); ui.lane = 7; break;
-    case S_MIXER:
-        go_page(GR_TRK);
+    case S_MIXER:                                       /* (3c-1 task 7: GLO > MIX, the MIXER gone; its DJ FILTER LIVE's) */
+        go_page(GR_MIX);
         trk[0].p[P_LEVEL] = 100; trk[1].p[P_LEVEL] = 84; trk[2].p[P_LEVEL] = 64; trk[3].p[P_LEVEL] = 110;
         trk[0].p[P_PAN] = -20; trk[1].p[P_PAN] = 24; trk[3].p[P_PAN] = -4; trk[1].p[P_REV] = 80;
         trk[2].p[P_MUTE] = 1; trk[3].p[P_MUTE] = 1; song.rec = 2u | 8u; trk[0].peak = 9000;
         song.g[G_DJF] = -24;                     /* (0.9.1) KNOB 4: the DJ FILTER, a low-pass */
         break;
     case S_MIXER_T4:                             /* (0.6.22) TRACKS 4: T5, T6 asleep, grey, OFF */
-        go_page(GR_TRK); trk_live = 4; break;
+        go_page(GR_MIX); trk_live = 4; break;
     case S_ED_FILTER: case S_ED_FILTER_BP:             /* (0.8.5) EDIT's lens: TONE, FILTER (3b task 5: FM6's MORE, its */
         eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; TSEL->p[P_FRES] = 90;   /* filter rows; a synth's is EDIT's page 3) */
         if (s == S_ED_FILTER_BP) TSEL->p[P_FTYPE] = 2, TSEL->p[P_DIST] = 60;
@@ -1308,9 +1337,10 @@ static void setup(int s)
                                                          * (LEDS, KNOB 1) */
         ui.menu = 1; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; ui.hot_col = 0u; ui.hot_t = 30;
         break;
-    case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS */
+    case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS; (3c-1 task 7) FX > SENDS, the sends' one
+                                                         * place */
         trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
-        go_title("SENDS"); ui.hot_col = 2; ui.hot_t = 30;
+        song.sel = 3; nav_scene(SEC_FX, "SENDS"); ux_knob_touch(3);
         break;
     case S_KEY_CHORD: case S_KEY_CHORD_OFF:             /* (3b task 6) SCL's CHORD: A minor, 7TH LEAD strummed, a line rotated 3 */
         uxs_seen = 0x3FFu; ux_hot_k = -1;
@@ -1347,7 +1377,7 @@ static void setup(int s)
         break;
     case S_GEN_LEAD: ui.confirm = CF_DICE_ALL; gp.page = 2; gp.hot = 1; gp.form = 2; break;   /* (0.8.5) GEN 3/3, SONG */
     case S_MIXER_PAN:                            /* PAN just turned, the ends of each knob, OFF, armed while stopped */
-        go_page(GR_TRK); song.playing = 0; song.sel = 1;
+        go_page(GR_MIX); song.playing = 0; song.sel = 1;
         trk[0].p[P_LEVEL] = 127; trk[1].p[P_LEVEL] = 0; trk[2].p[P_LEVEL] = 1; trk[3].p[P_LEVEL] = 104;
         trk[0].p[P_PAN] = -64; trk[1].p[P_PAN] = 63; trk[2].p[P_PAN] = 0; trk[3].p[P_PAN] = 1;
         trk[0].p[P_REV] = 127; trk[2].p[P_REV] = 1; trk[3].p[P_MUTE] = 1;
@@ -1403,8 +1433,10 @@ static void setup(int s)
         eng(ENGI_FM6); TSEL->engine = TSEL->eng_req;    /* MORE, its VOICE rows) */
         memset(uxm_at, 0, sizeof uxm_at); nav_scene(SEC_EDIT, "MORE"); (void)ux_more_knob(0, 15);
         break;
-    case S_GLOBAL: go_title("GLOBAL"); break;
-    case S_SYSTEM: go_title("SYSTEM"); break;
+    case S_GLOBAL: glo_more_at(UXR_GLOBAL, G_BPM); break;   /* (3c-1 task 7: GLO > MORE's TEMPO, GLOBAL gone) */
+    case S_SYSTEM: song.cpu_q8 = 87; glo_more_at(UXR_GLOBAL, G_TRKS); break;   /* (.. its SYSTEM, the page gone) */
+    case S_GLO_MIX: glo_mix_scene(); break;
+    case S_GLO_MORE_END: song.cpu_q8 = 87; glo_more_at(UXR_ACTION, UXM_A_UNDO); break;   /* (scrolled to its end) */
     case S_EDIT_ANALOG: go_title("EDIT 1"); break;
     case S_EDIT_DIGITAL: eng(E_FM); go_title("EDIT 1"); break;
     case S_OP_ENV: eng(1); go_title("OP1 ENV"); break;
@@ -1485,11 +1517,11 @@ static void setup(int s)
     }
     case S_UBOOT: ui.uboot = 3; break;
     /* the header's battery at each stock level (raw ADC: under 531, 531.., 561.., 591..) and on USB power */
-    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_title("GLOBAL"); break;
-    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_title("GLOBAL"); break;
-    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("GLOBAL"); break;
-    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("GLOBAL"); break;
-    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("GLOBAL"); break;
+    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_title("TOOLS"); break;
+    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_title("TOOLS"); break;
+    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("TOOLS"); break;
+    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("TOOLS"); break;
+    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("TOOLS"); break;
     case S_MOTION_REC: song.rec = 1u << song.sel; seq_more_at(UXR_TRACK, ID_SQ_PLAY); break;    /* recording into the motion */
     case S_MOTION_OFF: song.playing = 0; seq_more_at(UXR_ACTION, UXM_A_CLRAUTO); break;  /* stopped, CLEAR picked */
     case S_MOTION_CARD: {                                          /* #63: EDIT 1 (ACID FM 3a: was HOME), MOTION drives KNOB 1
@@ -1506,7 +1538,7 @@ static void setup(int s)
         song.playing = 0; project_save(0); project_save(1);
         chain_config.count = 2;
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4};
-        go_page(GR_SONG); chain_prepare(); events_block(32); go_title("GLOBAL"); ui.msg_t = 0;   /* (3a: a lens page's header) */
+        go_page(GR_SONG); chain_prepare(); events_block(32); go_title("TOOLS"); ui.msg_t = 0;   /* (3a: a lens page's header) */
         break;
     /* the FX layer's map: held alone; REPEAT 1/16 + GLITCH + the CRUSH sweep + a mute playing with the macros turned;
      * at 72 BPM: a REPEAT 1/16 waiting for its 1/16 (shown THEME) beside the FILTER sweep playing, and REPEAT 1/8
@@ -1577,7 +1609,7 @@ static void setup(int s)
     case S_EDIT_USER: song.playing = 0; eng(2); up_store(6, "MY LONG PHASE NAME");   /* (ACID FM 0.2: PHASE, WHEEL retired) */
         up_load(6); favorite_set(NENGINES, 6, 1);
         go_home(); ui.layer = LAYER_EDIT; break;
-    case S_LAYER_HINT: go_page(GR_TRK); ui.msg_t = 0; layer_tap(LAYER_GLO); break;
+    case S_LAYER_HINT: go_page(GR_MIX); ui.msg_t = 0; layer_tap(LAYER_GLO); break;
     /* #83: locked open by a double tap (the lock after the header's name): EDIT and FX */
     case S_LAYER_LOCK: go_title("ENV"); ui.layer = LAYER_EDIT; break;   /* (TONIC: no lock; the map as held) */
     case S_LAYER_LOCK_FX: go_title("ENV"); ui.layer = LAYER_FX; break;
@@ -2282,18 +2314,6 @@ static void sweep_columns(void)
                 }
                 *st = keep;
             }
-            if (PAGES[i].scope == SC_TRK && !e) {        /* (0.9.1) MIXER's KNOB 4: every DJ FILTER value */
-                int32_t v;
-                for (v = -64; v <= 63; v++) {
-                    song.g[G_DJF] = (int16_t)v;
-                    nscr = npend = 0;
-                    ui.force = 1;
-                    draw_columns();
-                    lint();
-                    nsweep++;
-                }
-                song.g[G_DJF] = 0;
-            }
             draw(-1);                                    /* the whole page */
             lint();
             sweep_motion();
@@ -2318,17 +2338,18 @@ static void sweep_columns(void)
     }
 }
 
-/* the rolling digits (ui_draw.c roll_*): GLOBAL, SELECT and KNOB 4 turned together, BPM 129 -> 130 in the header
- * and TUNE 19 -> 20 on a card, then back. Every frame is linted and (GREY, MONO) checked for gray; with a directory,
+/* the rolling digits (ui_draw.c roll_*): PHRASES (3c-1 task 7: GLO > GLOBAL gone, the default build's last JIANT card with a
+ * number: the pattern), the tempo and KNOB 1 turned together, BPM 129 -> 130 in the header and the pattern 09 -> 10 on a card,
+ * then back. Every frame is linted and (GREY, MONO) checked for gray; with a directory,
  * filmstrips of both (each frame side by side, x4: the static frame before, then the roll's frames) as
  * DIR/<PALETTE>_bpm_roll.ppm and DIR/<PALETTE>_card_roll.ppm, the up roll above the down roll. */
 #define FS_N (1u + ROLL_FRAMES)                   /* frames per filmstrip row */
 #define FS_Z 4u                                   /* zoom */
 #define FS_GAP 2u                                 /* px between frames, before the zoom */
-static void roll_turns(int32_t s)                 /* one UI frame with the tempo and KNOB 4 moved by s */
+static void roll_turns(int32_t s)                 /* one UI frame with the tempo and KNOB 1 moved by s */
 {
     song.g[G_BPM] = (int16_t)(song.g[G_BPM] + s);  /* (0.6.67: SELECT alone scrolls the pages; the tempo set here) */
-    host_enc[panel.enc[EN_K4]] += s * panel.dir[EN_K4];
+    host_enc[panel.enc[EN_K1]] += s * panel.dir[EN_K1];
     host_ticks += 16000u; fm1_ms += 16u;
     ui_input();
     ui_draw();
@@ -2370,8 +2391,8 @@ static void roll_frames(const char *dir)
         memset(bimg, 90, sizeof bimg);
         memset(cimg, 90, sizeof cimg);
         state(); song.playing = 0; pal(p);
-        song.g[G_BPM] = 129; song.g[G_TUNE] = 19;
-        go_title("GLOBAL");
+        song.g[G_BPM] = 129; ui.ppick = 8;
+        go_title("PHRASES");
         snprintf(name, sizeof name, "%s/roll", UI_PALETTES[p].name);
         cur_name = name;
         draw(-1);
@@ -2379,17 +2400,17 @@ static void roll_frames(const char *dir)
         lint();
         for (row = 0; row < 2u; row++) {
             roll_film_put(bimg, biw, row, 0, HX, 0, HW, HH);
-            roll_film_put(cimg, ciw, row, 0, CARD_X(3), Y_LABEL, COL_W, COL_H);
+            roll_film_put(cimg, ciw, row, 0, CARD_X(0), Y_LABEL, COL_W, COL_H);
             for (k = 1; k < FS_N; k++) {
                 if (k == 1u) roll_turns(row ? -1 : 1);
                 else ui_draw();
                 lint();
                 roll_film_put(bimg, biw, row, k, HX, 0, HW, HH);
-                roll_film_put(cimg, ciw, row, k, CARD_X(3), Y_LABEL, COL_W, COL_H);
+                roll_film_put(cimg, ciw, row, k, CARD_X(0), Y_LABEL, COL_W, COL_H);
             }
-            if (ui.roll[3].from[0] || ui.roll[ROLL_BPM].from[0] || song.g[G_BPM] != (row ? 129 : 130) ||
-                song.g[G_TUNE] != (row ? 19 : 20)) {
-                fprintf(rep, "ROLL %s: not over after %u frames (BPM %d TUNE %d)\n", name, ROLL_FRAMES, song.g[G_BPM], song.g[G_TUNE]);
+            if (ui.roll[0].from[0] || ui.roll[ROLL_BPM].from[0] || song.g[G_BPM] != (row ? 129 : 130) ||
+                ui.ppick != (row ? 8u : 9u)) {
+                fprintf(rep, "ROLL %s: not over after %u frames (BPM %d pattern %u)\n", name, ROLL_FRAMES, song.g[G_BPM], ui.ppick);
                 nfind++;
             }
             for (k = 0; k < 8u; k++) ui_draw();
@@ -2411,8 +2432,8 @@ static void roll_cost(void)
     for (i = 0; i < N; i++) {
         clock_t c0;
         state(); song.playing = 0; pal(1);
-        song.g[G_BPM] = 129; song.g[G_TUNE] = 19;
-        go_title("GLOBAL");
+        song.g[G_BPM] = 129; ui.ppick = 8;
+        go_title("PHRASES");
         draw(-1);
         for (k = 0; k < 8u; k++) { ui.hot_t = 0; ui.bpm_t = 0; ui_draw(); }
         px_visited = 0; blit_px = 0;
@@ -2429,7 +2450,7 @@ static void roll_cost(void)
             nscr = npend = 0;
         }
     }
-    fprintf(rep, "  roll frame (header BPM 129->130 and card TUNE 19->20, strips only): %.2f us, %llu glyph px, %llu px blitted;"
+    fprintf(rep, "  roll frame (header BPM 129->130 and card 09->10, strips only): %.2f us, %llu glyph px, %llu px blitted;"
             " header + 4 cards redrawn whole: %.2f us, %llu glyph px, %llu px blitted\n",
             t_roll / CLOCKS_PER_SEC / (double)nroll * 1e6, (unsigned long long)(px_roll / nroll), (unsigned long long)(bl_roll / nroll),
             t_full / CLOCKS_PER_SEC / N * 1e6, (unsigned long long)(px_full / N), (unsigned long long)(bl_full / N));
@@ -2534,18 +2555,9 @@ static void align_sweeps(void)
         name_close();
         /* (ACID FM 3c-1 task 4) JIANT's piano roll and DRUM grid sweeps gone with them (ux_seq.c's roll, grid: the SEQ scenes) */
         state(); pal(UI_ACID_INDEX);
-        cur_name = st ? "sweep LINE: mixer" : "sweep FLAT: mixer";
-        go_page(GR_TRK);
-        for (v = 0; v < 256; v++) {                    /* (then with LARGE: the strip) */
-            ui_prefs = v >= 128 ? PREF_LARGE : 0u;
-            trk[0].p[P_LEVEL] = (int16_t)(v & 127); trk[0].p[P_PAN] = (int16_t)((v & 127) - 64); trk[0].p[P_REV] = (int16_t)(v & 127);
-            trk[1].p[P_MUTE] = (int16_t)(v & 1); song.rec = v & 2 ? 2u : 0u; ui.hot_t = (uint8_t)(v & 4); ui.hot_col = 3;
-            ts.meter[0] = (uint8_t)(v % (TS_MH - 1));
-            ui.force = 1;
-            draw_tracks();
-        }
-        ui_prefs = 0; ui.hot_t = 0;
-        ui.force = 0;
+        /* (ACID FM 3c-1 task 7) JIANT's mixer sweep (draw_tracks: LEVEL PAN REV, LARGE's strip) gone with the MIXER: GLO > MIX the
+         * ux pages' (scenes glo_mix, mixer*) */
+
     }
     state();
     nscr = npend = nrules = 0;
@@ -2881,7 +2893,9 @@ int main(int argc, char **argv)
     fprintf(rep, "\n%u lint findings, %u inks on their own colour, %u ellipsised free texts; "
             "%u column values swept; %u FM6 charts linted; %u cards linted with MOTION's icon\n", nfind, nink, nfree,
             nsweep, fmp_charts, nmotion);
-    if (!nmotion) { fprintf(stderr, "ui_render: the MOTION sweep marked no card\n"); nfind++; }
+    if (!nmotion && FELUCCA_FM4) { fprintf(stderr, "ui_render: the MOTION sweep marked no card\n"); nfind++; }   /* (3c-1 task 7:
+                                                         * GLO > SENDS and the MIXER gone, no JIANT card holds a track's setting
+                                                         * but DIGITAL's, a FELUCCA_FM4 build's) */
     fclose(rep);
     printf("ui_render: %u screens x %u palettes + the page/value sweep; %u lint findings, %u ellipsised free texts (%u distinct), "
            "%u inks on their own colour; report %s\n",

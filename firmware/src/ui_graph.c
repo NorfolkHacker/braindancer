@@ -304,9 +304,10 @@ static const char *graph_project_name(uint32_t slot)  /* (after graph_project_us
     return graph_pname[slot & 3u];
 }
 
-/* MENU > LARGE's strip under the tall cards (ui.c LK_TALL): HOME's scope, DIGITAL's ADSR, PATTERN's steps,
- * MIXER's tracks drawn small; on the other pages the page's title and number (their charts need the whole panel) */
-enum { SK_NONE, SK_SCOPE, SK_ADSR, SK_STEPS, SK_TRK, SK_TITLE };   /* (3b task 7: SK_LFO gone, LFO the ux pages') */
+/* MENU > LARGE's strip under the tall cards (ui.c LK_TALL): HOME's scope, DIGITAL's ADSR, PATTERN's steps; on the other pages
+ * the page's title and number (their charts need the whole panel) */
+enum { SK_NONE, SK_SCOPE, SK_ADSR, SK_STEPS, SK_TITLE };   /* (3b task 7: SK_LFO gone, LFO the ux pages'; 3c-1 task 7: SK_TRK,
+                                                         * MIXER's tracks drawn small, gone with it) */
 static uint32_t strip_kind(void)
 {
     uint32_t g;
@@ -315,7 +316,7 @@ static uint32_t strip_kind(void)
     if (ui.home)
         return SK_SCOPE;
     g = cur_page()->graph;
-    return g == GR_ADSR && FELUCCA_FM4 ? SK_ADSR : g == GR_STEPS ? SK_STEPS : g == GR_TRK ? SK_TRK : SK_TITLE;
+    return g == GR_ADSR && FELUCCA_FM4 ? SK_ADSR : g == GR_STEPS ? SK_STEPS : SK_TITLE;
 }
 /* the page's title and its number in its family ("ENV DEST 2/2", EDIT: the engine's "OSC 1/2"); the piano roll: its
  * scale ("C MIN"); ti holds 20 (the footer, the strip) */
@@ -649,291 +650,9 @@ static void graph_pats(void)
         list_row(LIST_Y(row), k == cur, tag, T_MID, nm, T_TEXT, 232);
     }
 }
-/* MIXER page: four SURF columns, one under each card: the track number on its cushion (in the accent:
- * the selected track) with a REC / ARM / MUTE badge (P_MUTE: the GLO layer's black keys), the sound's short name (a MUTE badge
- * when armed and muted), the LEVEL knob (dB inside) with the output meter beside it, then the PAN and REV
- * knobs with their values. Knobs: a 270 degree ring, the track RAISE, the value arc THEME (the knob just
- * turned: ACCENT; muted: DIM); PAN from 12 o'clock. Each column is its own canvas with its own signature:
- * while the transport runs only the meters move. */
-#define TS_MY 39                                     /* meter slot: column rows 39 .. 70 */
-#define TS_MH 32
-#define KB_X 4                                       /* LEVEL knob: box 4..37 x 37..70, centre (21, 54) */
-#define KB_Y 37
-#define KS_Y 86                                      /* PAN / REV knobs: boxes 86..105, centres x 15 and 42 */
-static struct {
-    uint32_t col[NTRK];                              /* (the cards: JIANT's six columns, else the four from trk_base4) */
-    uint8_t meter[NTRK];
-    uint32_t frame;                                  /* (0.9.0) ui.frame of the meters' last step */
-} ts;
-
-static int32_t meter_px(int32_t a)                   /* |sample| (Q15) -> px: 60 dB over the slot */
-{
-    int32_t lg = 0, v;
-    if (a < 64)
-        return 0;
-    while ((a >> lg) > 1)
-        lg++;
-    v = lg * 8 + (((a << 3) >> lg) & 7);             /* 8 log2(a): 48 (-54 dB) .. 128 (+6 dB) */
-    return clamp((v - 48) * (TS_MH - 2) / 80, 0, TS_MH - 2);
-}
-
-/* a knob's ring: 270 degrees (7:30 .. 4:30 o'clock), 2 px, anti-aliased, from the quadrant mask of its size
- * (tools/gen_aa_keycaps.py: coverage and angle; the other three quadrants mirror it, no trigonometry here).
- * Box top-left (x, y), outer radius r. Angles: 1/1024 turn from 12 o'clock, clockwise, -384 .. 384; the value
- * arc is lo .. hi (in vc), the rest of the ring the track (tr); bg lies under the ring */
-#define KA_END 384
-static void knob_arc(int32_t x, int32_t y, int32_t r, const uint8_t *cov, const uint8_t *ang, int32_t lo, int32_t hi,
-                     uint16_t tr, uint16_t vc, uint16_t bg)
-{
-    const uint16_t *rt = ramp(tr, bg), *rv = ramp(vc, bg);
-    int32_t i, j, m;
-    for (j = 0; j < r; j++)
-        for (i = 0; i < r; i++) {
-            uint32_t k = (uint32_t)(j * r + i), a = (cov[k >> 1] >> ((k & 1u) ? 0 : 4)) & 15u;
-            int32_t q = ang[k];
-            if (!a)
-                continue;
-            for (m = 0; m < 4; m++) {                /* top right, bottom right, bottom left, top left */
-                int32_t s = m == 0 ? q : m == 1 ? 512 - q : m == 2 ? q - 512 : -q;
-                int32_t px = m < 2 ? x + r + i : x + r - 1 - i, py = (m == 0 || m == 3 ? y + r - 1 - j : y + r + j) + cv_oy;
-                if (s < -KA_END || s > KA_END || (uint32_t)px >= cv_w || (uint32_t)py >= cv_h)
-                    continue;
-                cv_px[(uint32_t)py * cv_w + (uint32_t)px] = (s >= lo && s <= hi ? rv : rt)[a];
-            }
-        }
-}
-/* value v of lo..hi as an arc: from the start, or (bipolar, lo < 0) from 12 o'clock with a 1 px nub at 0 */
-static void knob(int32_t x, int32_t y, int32_t r, const uint8_t *cov, const uint8_t *ang, int32_t v, int32_t lo,
-                 int32_t hi, uint16_t vc)
-{
-    int32_t a0, a1;
-    if (lo < 0) {
-        int32_t s = v * KA_END / (v < 0 ? -lo : hi);
-        a0 = (s < 0 ? s : 0) - 8;
-        a1 = (s > 0 ? s : 0) + 8;
-    } else {
-        a0 = -KA_END;
-        a1 = v > lo ? -KA_END + (v - lo) * 2 * KA_END / (hi - lo) : -KA_END - 1;
-    }
-    knob_arc(x, y, r, cov, ang, a0, a1, T_RAISE, vc, T_SURF);
-}
-
-static uint32_t trk_level(uint32_t c) { return (uint32_t)trk[c].p[P_LEVEL] & 127u; }   /* LEVEL 0..127 */
-
-static void trk_short_name(uint32_t c, char *b)      /* the track's sound, b holds 13 */
-{
-    const track_t *t = &trk[c];
-    const engine_t *e = trk_engp(t);
-    if (user_of(t) < UP_SLOTS)
-        up_name(user_of(t), b);
-    else if (e->npresets)
-        str_cpy(b, e->presets[t->preset % e->npresets].name, 13);
-    else
-        str_cpy(b, e->name, 13);
-}
-
-/* MENU > LARGE: the four tracks in the strip under the tall cards (57 x LG_H_GRAPH each): the cushion (the selected
- * one the accent), REC / ARM / MUTE as on the full mixer, the sound's name, LEVEL as a gauge (THEME: the cards'),
- * the output meter under it (MID); a muted track DIM */
-#define TSS_GY 40                                    /* the LEVEL gauge, 3 px */
-#define TSS_MY 48                                    /* the meter, 3 px */
-static void track_strip(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uint32_t arm, uint32_t hot, uint32_t lvl,
-                        const char *b)
-{
-    int32_t gw = CARD_W - 10, m = ts.meter[c] * gw / (TS_MH - 2), fx = (int32_t)lvl * gw / 127;
-    uint16_t vc = mute ? T_DIM : T_THEME;
-    cv_begin(CARD_W, LG_H_GRAPH, T_BG);
-    cv_rrect(0, 0, CARD_W, LG_H_GRAPH, 5, T_SURF, T_BG);
-    cv_trk(4, 4, 16, c, sel ? T_ACCENT : T_MID, T_SURF);
-    if (st)
-        GFX_HOOK_ALIGN(0, 4, 0, 20, AL_V, "mixer badge on the cushion's line");
-    if (st == 1u || st == 2u)
-        cv_keycap(53 - kc_w(st == 1u ? KC_REC : KC_ARM), 5, st == 1u ? KC_REC : KC_ARM, st == 1u ? T_REC : T_ACCENT,
-                  T_INK, T_SURF);
-    else if (st)
-        cv_keycap(53 - kc_w(KC_MUTE), 5, KC_MUTE, T_KEY, T_INK, T_SURF);
-    if (mute && arm)                                 /* armed and muted: MUTE in place of the name */
-        GFX_HOOK_ALIGN(0, 22 + AF_S_CAP_Y, 0, 22 + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "mixer MUTE badge on the name's line");
-    if (mute && arm)
-        cv_keycap(5, 22 + AF_S_CAP_Y + HALF_UP(AF_S_CAP_H - KC_H), KC_MUTE, T_KEY, T_INK, T_SURF);
-    else
-        cv_free_text(5, 22, &AF_S, b, mute ? T_DIM : sel ? T_TEXT : T_MID, T_SURF, CARD_W - 10);
-    cv_rrect(5, TSS_GY, gw, 3, 1, T_BG, T_SURF);
-    cv_rrect(5, TSS_GY, fx < 3 ? 3 : fx, 3, 1, hot == 1u ? T_ACCENT : vc, T_BG);
-    cv_rrect(5, TSS_MY, gw, 3, 1, T_RAISE, T_SURF);
-    if (m)
-        cv_rrect(5, TSS_MY, m < 3 ? 3 : m, 3, 1, T_MID, T_RAISE);
-    cv_blit((uint32_t)CARD_X(c - trk_base4()), graph_y());
-}
-/* (JIANT 0.6) the JIANT style's mixer: the six tracks side by side, 38 px each. The track's cushion (armed: a dot,
- * red recording), the sound's name (muted: MUTE), LEVEL as the thermal column with the meter brighter over it, its dB
- * beside it, PAN (from the middle) and the REV send as the two bars under it */
-#define T6_W 38
-#define T6_X(c) (3 + 39 * (int32_t)(c))
-static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uint32_t hot, uint32_t lvl, int32_t pan,
-                       int32_t rv, const char *b)
-{
-    char v[8];
-    int32_t k, lv = (int32_t)lvl * 14 / 127, mt = ts.meter[c] * 14 / TS_MH, pw = T6_W - 8;
-    uint16_t lc = hot == 1u ? T_ACCENT : lvl ? (mute ? T_DIM : T_TEXT) : T_DIM;
-    cv_begin(T6_W, H_GRAPH, T_BG);
-    cv_rrect(0, 0, T6_W, H_GRAPH, 5, T_SURF, T_BG);
-    cv_trk(4, 5, 16, c, sel ? T_ACCENT : mute ? T_DIM : T_MID, T_SURF);
-    if (st == 1u || st == 2u)                        /* armed: a dot (recording: red) */
-        cv_rrect(T6_W - 11, 10, 6, 6, 3, st == 1u ? T_REC : T_ACCENT, T_SURF);
-    if (mute == 2u)                                  /* asleep (TRACKS 4) */
-        cv_text_in(2, 22, T6_W - 4, &AF_S, "OFF", T_DIM, T_SURF);
-    else {                                           /* (0.6.24) the sound's name cut to the column (its first word, as
-                                                      * many letters as fit, no "..."); muted: in MUTE's colour, still
-                                                      * there (it said MUTE instead: which sound, gone) */
-        char sn[13];
-        uint32_t n;
-        for (n = 0; b[n] && b[n] != ' ' && n < 12u; n++)
-            sn[n] = b[n];
-        sn[n] = 0;
-        while (n > 1u && text_w(&AF_S, sn) > T6_W - 7)
-            sn[--n] = 0;
-        cv_text_on(4, 22, &AF_S, sn, mute ? T_ACCENT : sel ? T_TEXT : T_MID, T_SURF);
-    }
-    if (cur_page()->id[0] == P_DIST) {               /* (0.8.5) GLO > MIX > SENDS: DIST CHORUS DLY REV as bars */
-        static const char *const SN[4] = {"D", "C", "D", "R"};
-        for (k = 0; k < 4; k++) {
-            int32_t v = trk[c].p[P_DIST + (uint32_t)k] * 60 / 127;   /* (P_DIST P_CHOR P_DLY P_REV: in a row) */
-            cv_rect(4 + k * 8, 38, 6, 62, T_RAISE);
-            if (v)
-                cv_rect(4 + k * 8, 100 - v, 6, v, mute ? T_DIM : sel && hot == (uint32_t)k + 1u ? T_ACCENT :
-                        T_THEME);
-            cv_text(4 + k * 8, 106 - AF_X_CAP_Y, &AF_X, SN[k], T_DIM);
-        }
-        cv_blit((uint32_t)T6_X(c), lz_on() ? graph_y() + 9u : Y_GRAPH);
-        return;
-    }
-    for (k = 0; k < 14; k++) {                       /* LEVEL: cold at the bottom, hot at the top */
-        int32_t sy = 95 - k * 4;
-        uint16_t sc = heat_col(20 + k * 220 / 13);
-        sc = mute ? (k < lv ? T_DIM : T_RAISE) : k < mt ? sc : k < lv ? ux_mix(T_SURF, sc, 42) : T_RAISE;
-        cv_rect(4, sy, 12, 3, sc);
-    }
-    if (lvl) {
-        int32_t d = LEVEL_DB_X10[lvl];
-        fmt_int(v, (d + (d < 0 ? -5 : 5)) / 10);
-    } else {
-        str_cpy(v, "OFF", sizeof v);
-    }
-    cv_text_in(17, 44, T6_W - 18, &AF_S, v, lc, T_SURF);
-    cv_text_in(17, 58, T6_W - 18, &AF_S, "dB", T_DIM, T_SURF);
-    cv_rect(4, 104, pw, 3, T_RAISE);                 /* PAN, from the middle */
-    cv_rect(4 + pw / 2, 102, 1, 7, hot == 2u ? T_ACCENT : T_MID);
-    if (pan)
-        cv_rect(pan > 0 ? 4 + pw / 2 + 1 : 4 + pw / 2 + pan * (pw / 2) / 64, 104, (pan > 0 ? pan : -pan) * (pw / 2) / 64 + 1,
-                3, mute ? T_DIM : hot == 2u ? T_ACCENT : heat_col(70 + (pan > 0 ? pan : -pan) * 2));
-    cv_rect(4, 113, pw, 3, T_RAISE);                 /* the REV send */
-    if (rv)
-        cv_rect(4, 113, rv * pw / 127 + 1, 3, mute ? T_DIM : hot == 3u ? T_ACCENT : heat_col(40 + rv * 3 / 2));
-    cv_blit((uint32_t)T6_X(c), lz_on() ? graph_y() + 9u : Y_GRAPH);   /* (0.8.5: GLO's lens, the panel under the cards) */
-}
-static void draw_tracks(void)
-{
-    uint32_t c, sk = strip_kind() == SK_TRK, six = !sk;   /* (0.6.80: the six columns with every COLOR and STYLE;
-                                                         * MENU > LARGE: four, bigger) */
-    uint32_t b4 = six ? 0u : trk_base4(), n = six ? NTRK : 4u;
-    if (ui.force) {
-        lcd_fill(0, graph_y(), 240, graph_h(), T_BG);
-        if (ui.frame - ts.frame > 1u)                /* (0.9.0) a redraw while they fall (a toast, a knob's page)
-                                                      * keeps them falling: only meters left long ago start at 0
-                                                      * (they jumped to 0 and the panel kept the old segments lit) */
-            for (c = 0; c < NTRK; c++)
-                ts.meter[c] = 0;
-    }
-    ts.frame = ui.frame;
-    for (c = b4; c < b4 + n; c++) {                  /* (JIANT 0.6: the six, or four of them) */
-        track_t *t = &trk[c];
-        uint32_t sel = c == song.sel, lvl = trk_level(c), mute = t->p[P_MUTE] != 0;
-        uint32_t arm = (song.rec >> c) & 1u, st = arm ? (song.playing ? 1u : 2u) : mute ? 3u : 0u, sig;
-        if (c >= trk_live)                           /* (0.6.22) TRACKS 4: asleep, grey as muted, "OFF" (mute 2) */
-            mute = 2u;
-        uint32_t hot = sel && ui.hot_t ? ui.hot_col + 1u : 0u;   /* the knob just turned (hot_col + 1): 1 LEVEL, 2 PAN,
-                                                                * 3 REV (4: the DJ FILTER, on its card) */
-        int32_t pk = ux_trk_peak(c), m, pan = clamp(t->p[P_PAN], -64, 63), rv = clamp(t->p[P_REV], 0, 127);   /* (ACID FM
-                                                         * 3a: ux_home.c reads the peaks, once a frame) */
-        uint16_t vc = mute ? T_DIM : T_THEME;
-        char b[16];
-        trk_short_name(c, b);
-        m = mute ? 0 : meter_px(pk);
-        if (m < ts.meter[c] - 1)
-            m = ts.meter[c] - 1;                     /* falls ~2 dB a frame */
-        ts.meter[c] = (uint8_t)(m < 0 ? 0 : m);
-        sig = str_hash(1u + sel + st * 2u + (mute && arm) * 16u + hot * 32u, b) + lvl * 7919u +
-              ts.meter[c] * 131u + (uint32_t)(pan + 128) * 104729u + (uint32_t)rv * 1299709u + mute * 3u + sk * 0x9E37u + c * 0x51u +
-              six * 0x3C6Fu + (cur_page()->id[0] == P_DIST ? 0x7F4Au + (uint32_t)t->p[P_DIST] * 3u + (uint32_t)t->p[P_CHOR] * 389u +
-                                (uint32_t)t->p[P_DLY] * 6151u + (uint32_t)t->p[P_REV] * 98317u : 0u);   /* (SENDS) */
-        if (!ui.force && sig == ts.col[c - b4])
-            continue;
-        ts.col[c - b4] = sig;
-        if (sk) {
-            track_strip(c, sel, st, mute, arm, hot, lvl, b);
-            continue;
-        }
-        if (six) {
-            track_col6(c, sel, st, mute, hot, lvl, pan, rv, b);
-            continue;
-        }
-        cv_begin(CARD_W, H_GRAPH, T_BG);
-        cv_rrect(0, 0, CARD_W, H_GRAPH, 5, T_SURF, T_BG);
-        cv_trk(4, 5, 16, c, sel ? T_ACCENT : T_MID, T_SURF);
-        if (st)
-            GFX_HOOK_ALIGN(0, 5, 0, 21, AL_V, "mixer badge on the cushion's line");
-        if (st == 1u || st == 2u)                    /* REC (recording) / ARM (armed, stopped) */
-            cv_keycap(53 - kc_w(st == 1u ? KC_REC : KC_ARM), 6, st == 1u ? KC_REC : KC_ARM, st == 1u ? T_REC : T_ACCENT,
-                      T_INK, T_SURF);
-        else if (st)                                 /* muted */
-            cv_keycap(53 - kc_w(KC_MUTE), 6, KC_MUTE, T_KEY, T_INK, T_SURF);
-        if (mute && arm)                             /* armed and muted: MUTE in place of the name */
-            GFX_HOOK_ALIGN(0, 21 + AF_S_CAP_Y, 0, 21 + AF_S_CAP_Y + AF_S_CAP_H, AL_V,
-                           "mixer MUTE badge on the name's line");
-        if (mute && arm)                             /* (on the name's capitals) */
-            cv_keycap(5, 21 + AF_S_CAP_Y + HALF_UP(AF_S_CAP_H - KC_H), KC_MUTE, T_KEY, T_INK, T_SURF);
-        else
-            cv_free_text(5, 21, &AF_S, b, mute ? T_DIM : sel ? T_TEXT : T_MID, T_SURF, CARD_W - 10);
-        {   /* (the JIANT style: track_col6) */
-        {   /* LEVEL: the knob, its dB inside (OFF at 0), and the meter of the output */
-            char v[8];
-            knob(KB_X, KB_Y, KNOB_BIG_R, KNOB_BIG_COV, KNOB_BIG_ANG, (int32_t)lvl, 0, 127, hot == 1u ? T_ACCENT : vc);
-            if (lvl) {
-                int32_t d = LEVEL_DB_X10[lvl];
-                fmt_int(v, (d + (d < 0 ? -5 : 5)) / 10);
-                GFX_HOOK_ALIGN(KB_X, 0, KB_X + 2 * KNOB_BIG_R, 0, AL_H, "mixer level text centred across");
-                cv_text_in(KB_X, KB_Y + KNOB_BIG_R + 5, 2 * KNOB_BIG_R, &AF_S, "dB", T_DIM, T_SURF);
-            } else {
-                str_cpy(v, "OFF", sizeof v);
-            }
-            GFX_HOOK_ALIGN(KB_X, KB_Y, KB_X + 2 * KNOB_BIG_R, KB_Y + 2 * KNOB_BIG_R, AL_HV, "mixer level value in its knob");
-            cv_text_in(KB_X, KB_Y + CAP_IN(S, 2 * KNOB_BIG_R), 2 * KNOB_BIG_R, &AF_S, v, hot == 1u ? T_ACCENT : lvl ? vc : T_DIM, T_SURF);
-            cv_rrect(45, TS_MY, 4, TS_MH, 2, T_RAISE, T_SURF);
-            if (ts.meter[c])
-                cv_rrect(45, TS_MY + TS_MH - 1 - ts.meter[c], 4, ts.meter[c] + 1, ts.meter[c] >= 4 ? 2 : 0, T_MID, T_RAISE);
-        }
-        {   /* PAN (from the centre) and the REV send: captions, knobs, values */
-            char v[8];
-            uint16_t pc = hot == 2u ? T_ACCENT : vc, rc = hot == 3u ? T_ACCENT : vc;
-            GFX_HOOK_ALIGN(15 - KNOB_SMALL_R, 0, 15 + KNOB_SMALL_R, 0, AL_H, "mixer caption over its knob");
-            cv_text_in(15 - KNOB_SMALL_R, 72, 2 * KNOB_SMALL_R, &AF_S, "PAN", T_DIM, T_SURF);   /* (by their ink) */
-            GFX_HOOK_ALIGN(42 - KNOB_SMALL_R, 0, 42 + KNOB_SMALL_R, 0, AL_H, "mixer caption over its knob");
-            cv_text_in(42 - KNOB_SMALL_R, 72, 2 * KNOB_SMALL_R, &AF_S, "REV", T_DIM, T_SURF);
-            knob(15 - KNOB_SMALL_R, KS_Y, KNOB_SMALL_R, KNOB_SMALL_COV, KNOB_SMALL_ANG, pan, -64, 63, pc);
-            knob(42 - KNOB_SMALL_R, KS_Y, KNOB_SMALL_R, KNOB_SMALL_COV, KNOB_SMALL_ANG, rv, 0, 127, rc);
-            v[0] = '+';                              /* the cards' numbers, without the % */
-            fmt_int(pan > 0 ? v + 1 : v, pan * 100 / 64);
-            GFX_HOOK_ALIGN(15 - KNOB_SMALL_R, 0, 15 + KNOB_SMALL_R, 0, AL_H, "mixer value under its knob");
-            cv_text_in(15 - KNOB_SMALL_R, KS_Y + 17, 2 * KNOB_SMALL_R, &AF_S, v, pc, T_SURF);
-            fmt_int(v, (rv * 100 + 63) / 127);
-            GFX_HOOK_ALIGN(42 - KNOB_SMALL_R, 0, 42 + KNOB_SMALL_R, 0, AL_H, "mixer value under its knob");
-            cv_text_in(42 - KNOB_SMALL_R, KS_Y + 17, 2 * KNOB_SMALL_R, &AF_S, v, rc, T_SURF);
-        }
-        }
-        cv_blit((uint32_t)CARD_X(c - b4), Y_GRAPH);
-    }
-}
+/* (ACID FM 3c-1 task 7) JIANT's MIXER (four SURF columns: the cushion, REC / ARM / MUTE, LEVEL's knob with the meter, PAN and REV;
+ * MENU > LARGE's strip; the JIANT style's six columns, SENDS' bars: draw_tracks, track_col6, track_strip, the knob rings) gone with
+ * the page: GLO > MIX is ux_glo.c's */
 /* oscilloscope of the output, triggered on a rising zero crossing: a RAISE centre line, the trace 2 px (in silence
  * a flat line on it; MENU > SCREEN OFF keeps it from staying on the panel for hours) */
 static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c);
@@ -984,7 +703,7 @@ static uint16_t sec_col(uint32_t s)
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
 /* (ACID FM 3b task 8: ui_lzfx.c, FX's lens, gone: FX is ux_section.c's) */
 #include "ui_lzedit.c"                               /* (0.8.5) EDIT's lens panels */
-#include "ui_lzpage.c"                               /* (0.8.5) ENV's, LFO . MOD's, SCL . ARP's, GLO's */
+/* (ACID FM 3c-1 task 7) ui_lzpage.c gone: its last panel, GLO's SYSTEM (graph_system), with the page (GLO > MORE's SYSTEM rows) */
 /* (0.9.17 .. ACID FM 3c-1 task 4) the SEQ pages' own marks over the roll (seq_overlay) gone: SEQ is ux_seq.c's */
 static void draw_graph(void)
 {
@@ -992,10 +711,6 @@ static void draw_graph(void)
     const track_t *t = TSEL;
     uint16_t c = ACC;
     uint32_t sig;
-    if (!ui.home && pg->graph == GR_TRK) {
-        draw_tracks();
-        return;
-    }
     sig = graph_signature();
     if (!ui.force && sig == ui.graph_sig)
         return;
@@ -1040,9 +755,6 @@ static void draw_graph(void)
 #if FELUCCA_FM4
     } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c): DIGITAL's */
 #endif
-    } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
-        cv_oy = 0;
-        graph_system();
     } else {
         cv_oy = GOY;
         switch (pg->graph) {

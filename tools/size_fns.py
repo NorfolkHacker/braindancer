@@ -29,7 +29,7 @@ SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "cpu_safe.c", "icons.c", "u
               # art, the beings, the tech graphs, the tools, the FM6 bank and VOICE's words (its sound side, reached
               # from the audio ISR through ENG[]'s hooks, keeps -Os: isr_reach follows globals)
               "gen.c", "gen_tables.c", "song_dice.c", "ui_lens.c", "ui_organic.c", "ui_fm6op.c",   # (ACID FM 3b task 5:
-              "ui_tech.c", "ui_lzsave.c", "ui_lzedit.c", "ui_lzpage.c", "ui_dx.c",   # ui_being.c, ui_engvis.c, ui_lzfx.c gone)
+              "ui_tech.c", "ui_lzsave.c", "ui_lzedit.c", "ui_dx.c",   # ui_being.c, ui_engvis.c, ui_lzfx.c gone; 3c-1 task 7: ui_lzpage.c)
               "ui_tools.c", "fm6_vbank.c", "sing.c", "seq_live.c", "ui_live.c",
               # (0.9.7) the main-loop functions of the sound files (what the interrupts reach stays -Os, as above): the
               # MASTER pot's boot and poll, FM6's patch store, the kit's names and grids, MOD's names, the PUNCH lane

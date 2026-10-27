@@ -105,8 +105,27 @@ static uint32_t ux_trk_first(void)                     /* the knobs' three: from
 static const char *ux_lvl_fmt(uint32_t c, char val[16])
 {
     const char *unit = "";
+    uint32_t i, n;
     param_format(&TP[P_LEVEL], trk[c].p[P_LEVEL], val, &unit);
+    i = val[0] == '-';
+    if (val[i] == '.') {                                /* (3c-1 task 7: under 1 dB a 0 before the point, "0.0", "-0.5"; fmt_fix */
+        for (n = str_len(val) + 1u; n > i; n--)          /* writes ".0") */
+            val[n] = val[n - 1u];
+        val[i] = '0';
+    }
     return unit ? unit : "";
+}
+/* (ACID FM 3c-1 task 7, the 3a backlog) a LEVEL's bar, 0..255, on the mixer's dB (fx.c LEVEL_Q12, LEVEL_DB_X10: (LEVEL - 112) / 2
+ * dB, +7.5 at the top) from UX_LVL_DB0 at the foot, OFF empty: the bar and the number it is shown with agree. One rule for every
+ * level bar: HOME TRACKS' knobs, GLO > MIX's KNOB 1 and its columns (ux_glo.c) */
+#define UX_LVL_DB0 (-480)                               /* (tenths of a dB: -48 dB at the foot) */
+static uint8_t ux_lvl_bar(int32_t v)
+{
+    int32_t d, top = LEVEL_DB_X10[127];
+    if (v <= 0)
+        return 0;
+    d = LEVEL_DB_X10[v > 127 ? 127 : v];
+    return (uint8_t)clamp((d - UX_LVL_DB0) * 255 / (top - UX_LVL_DB0), 0, 255);
 }
 /* a name fitted to w px (UF_LBL): first the vowels after each word's first letter go ("T4 BYTEBEAT" -> "T4 BYTBT", still
  * readable), then letters off its end */
@@ -337,7 +356,7 @@ static void ux_home_knobs(ux_knob_t k[4], char lbl[4][10])
             (void)ux_lvl_fmt(f + c, d);                 /* the number ("-10.0dB" does not fit a column: "dB" in the status
                                                          * line on a turn, so every column reads the same way) */
             str_cpy(k[c].value, d, sizeof k[c].value);
-            k[c].bar = (uint8_t)((uint32_t)clamp(trk[f + c].p[P_LEVEL], 0, 127) * 255u / 127u);
+            k[c].bar = ux_lvl_bar(trk[f + c].p[P_LEVEL]);   /* (3c-1 task 7: in dB, as the number) */
         }
         k[c].label = lbl[c];
         k[c].off = 0;

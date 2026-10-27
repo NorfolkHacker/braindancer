@@ -473,7 +473,8 @@ static void knob_cap(track_t *t, uint32_t id)
 
 /* MIXER page: KNOB 1 LEVEL, 2 PAN, 3 REV send of the selected track (the track itself is ALGORITHM's, on every page),
  * (0.9.1) KNOB 4 the master DJ FILTER (G_DJF: was the track's MUTE, which the GLO layer's black keys latch, as before).
- * Pattern length stays on SEQ. */
+ * Pattern length stays on SEQ. (ACID FM 3c-1 task 7) The MIXER page gone, its writes kept: GLO > MIX's KNOB 1 and 2, LIVE's
+ * KNOB 4 (ui_live.c) */
 static void tracks_edit(uint32_t slot, int32_t steps)
 {
     track_t *t = TSEL;
@@ -1258,7 +1259,8 @@ static void edit_param(uint32_t slot, int32_t steps)
         step_edit(slot, steps);
         return;
     }
-    if (pg->scope == SC_TRK) {
+    if (pg->graph == GR_MIX && slot < 2u) {            /* (ACID FM 3c-1 task 7) GLO > MIX: LEVEL, PAN of the selected track as the
+                                                         * inherited MIXER wrote them; SWING, TUNE below (param_knob, as GLOBAL) */
         tracks_edit(slot, steps);
         return;
     }
@@ -2146,7 +2148,7 @@ static void ui_input_frame(void)
         if (asleep_hit) { asleep_hit = 0; said |= quiet; }
         if (said) {
             ui_say("T5-T6 ASLEEP: ", "");
-            str_cpy(ui.msg2, "GLO>SYSTEM>TRACKS 6", sizeof ui.msg2);
+            str_cpy(ui.msg2, "GLO>MORE>TRACKS 6", sizeof ui.msg2);   /* (3c-1 task 7: GLO > MORE's SYSTEM) */
             said_ms = fm1_ms | 1u;
         }
         sel0 = song.sel;
@@ -2623,7 +2625,7 @@ static void ui_input_frame(void)
             ui.hot_t = 40;
             continue;
         }
-        if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
+        if (ui.home || pg->scope == SC_STEP || pg->graph == GR_MIX || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_PATS) &&
              k == 0u)
             || pg->graph == GR_SONG ||

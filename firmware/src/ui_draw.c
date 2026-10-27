@@ -1202,24 +1202,7 @@ static void draw_columns(void)
         for (c = 0; c < 4u; c++) draw_act_column(c, labels[c], VAL(c), icons[c]);
         return;
     }
-    if (cur_page()->scope == SC_TRK) {                 /* LEVEL PAN REV of the selected track, the DJ FILTER */
-        const track_t *t = TSEL;
-        uint32_t lvl = trk_level(song.sel);
-        param_format(&TP[P_LEVEL], (int32_t)lvl, val, &unit);   /* (0: OFF) */
-        card_mot_of(&TSEL->p[P_LEVEL]);
-        draw_column(0, "LEVEL", val, unit, lvl && !t->p[P_MUTE] ? VAL(0u) : T_DIM, (int32_t)lvl * 1000 / 127, ICON_AUTO);
-        param_format(&TP[P_PAN], t->p[P_PAN], val, &unit);
-        card_mot_of(&TSEL->p[P_PAN]);
-        draw_column(1, "PAN", val, unit, VAL(1u), RATIO(&TP[P_PAN], t->p[P_PAN]), param_icon(&TP[P_PAN], t->p[P_PAN]));
-        param_format(&TP[P_REV], t->p[P_REV], val, &unit);
-        card_mot_of(&TSEL->p[P_REV]);
-        draw_column(2, "REV", val, unit, VAL(2u), RATIO(&TP[P_REV], t->p[P_REV]), ICON_AUTO);
-        djf_format(song.g[G_DJF], val, &unit);          /* (0.9.1) KNOB 4: the master DJ FILTER (was the track's MUTE) */
-        card_mot_next = (uint8_t)motion_djf_any();
-        card_curve_next = (int16_t)(song.g[G_DJF] + 256);
-        draw_column(3, "DJ FILT", val, unit, VAL(3u), RATIO(&GP[G_DJF], song.g[G_DJF]), ICON_AUTO);
-        return;
-    }
+    /* (ACID FM 3c-1 task 7) JIANT's MIXER cards (LEVEL PAN REV, the DJ FILTER) gone with it: GLO > MIX (ux_glo.c) */
     if (cur_page()->graph == GR_BROWSE) {
         uint32_t total, cur = preset_pos(&total);
         char u[8];

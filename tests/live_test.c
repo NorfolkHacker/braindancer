@@ -428,24 +428,24 @@ static int pages(void)
     ok = song.g[G_DJF] != (int16_t)k && lv.rate[0] == 1 && lv.rate[5] == 1;
     if (!ok) printf("  djf %d was %d rate %d %d kb %x page %s\n", song.g[G_DJF], (int)k, lv.rate[0], lv.rate[5], lv.kb, cur_page()->title);
     bad += check("  KNOB 4 the DJ FILTER (as MIXER's), KNOB 1 RATE on every track (none held)", ok);
-    nav_put(SEC_GLO, "MIXER");
+    nav_put(SEC_GLO, "MIX");
     frame();
     v0 = vage;
     fm1_in.notes |= 1u << kx2; host_notes |= 1u << kx2;
     keyboard_block(); frame();
     ok = song.grid == 0 && vage != v0 && !((lv.kb >> kx2) & 1u);
     fm1_in.notes = 0; keyboard_block(); frame();
-    bad += check("  off LIVE (MIXER) the keys play notes again", ok);
+    bad += check("  off LIVE (MIX) the keys play notes again", ok);
 
     ui_power_on();
     frame();
     press(B_GLO); frame();
-    ok = str_eq(cur_page()->title, "MIXER");
+    ok = str_eq(cur_page()->title, "LIVE") && ux_page_owns() && uxg_owns() && song.grid == 3 && !strcmp(uxs_count(), "1 / 3");
     turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "LIVE") && ux_page_owns() && uxg_owns() && song.grid == 3 && !strcmp(uxs_count(), "1 / 6");
+    ok &= str_eq(cur_page()->title, "LIVE");
     turn(EN_SELECT, 10); frame();
-    ok &= str_eq(cur_page()->title, "GLO MORE") && ux_page_owns() && song.grid == 0 && live_page() && !strcmp(uxs_count(), "6 / 6");
-    bad += check("GLO: MIXER at power-on; SELECT back LIVE (the chain's first), on to MORE (its last; both on the ux pages)", ok);
+    ok &= str_eq(cur_page()->title, "GLO MORE") && ux_page_owns() && song.grid == 0 && live_page() && !strcmp(uxs_count(), "3 / 3");
+    bad += check("GLO: LIVE at power-on (3c-1 task 7), the chain's first; SELECT on to MORE (its last; both on the ux pages)", ok);
     ui_power_on();
     return bad;
 }

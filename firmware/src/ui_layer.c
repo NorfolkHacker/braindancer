@@ -288,6 +288,17 @@ static uint32_t snd_id(void) { return TSEL->eng_req | (uint32_t)TSEL->preset << 
 /* EDIT RECALL: the section playing has a stored sound to come back to */
 static int edit_recallable(void) { return project_recall_slot() >= 0; }
 
+/* (0.6.21) G4 UNDO: the last big change back (project.c undo_do; again: forward), not while a song plays; (ACID FM 3c-1 task 7)
+ * GLO > MORE's UNDO too (ux_more.c) */
+static void glo_undo(void)
+{
+    if (chain_busy())
+        ui_message("STOP TO EDIT");
+    else if (undo_do())
+        ui_message("NOTHING TO UNDO");
+    else
+        ui_message("UNDONE (AGAIN: REDO)");
+}
 /* GLO TAP: from the third tap the tempo of the taps (the last 4); 2 s without one starts over. INT clock only */
 static void glo_tap(void)
 {
@@ -547,12 +558,7 @@ static void layer_key(uint32_t l, uint32_t k)
         } else if (p == GLO_RVA) {
             mut_revert_ui(1);
         } else if (p == GLO_UNDO) {
-            if (chain_busy())
-                ui_message("STOP TO EDIT");
-            else if (undo_do())
-                ui_message("NOTHING TO UNDO");
-            else
-                ui_message("UNDONE (AGAIN: REDO)");
+            glo_undo();
         }
     } else if (l == LAYER_SCL) {
         TSEL->p[P_ROOT] = (int16_t)((k + 5u) % 12u);    /* the key's note name (F3 = F) */

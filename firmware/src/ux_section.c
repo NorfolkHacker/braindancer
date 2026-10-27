@@ -916,6 +916,8 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
             k[c].bar = (uint8_t)(d->fmt == F_PCTINV ? 255 - b : b);
         }
     }
+    if (pg->graph == GR_MIX)                            /* (3c-1 task 7) GLO > MIX: LEVEL PAN the selected track's (ux_glo.c) */
+        uxg_mix_knobs(k);
 }
 
 /* the page the section's button goes to from here, by its name in the chain ("OPERATOR"); 0: none (ui_lens.c nav_next) */
@@ -972,6 +974,10 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
     if (h >= 0 && pg->graph == GR_LIVE) {               /* (3c-1 task 6) LIVE's in its words (ux_glo.c) */
         *col = UX_TEXT;
         return uxg_say((uint32_t)h, b, sizeof b);
+    }
+    if (h >= 0 && h < 2 && pg->graph == GR_MIX) {       /* (3c-1 task 7) MIX's LEVEL, PAN: the track's (ux_glo.c) */
+        *col = UX_TEXT;
+        return uxg_mix_say((uint32_t)h, b, sizeof b);
     }
     if (h >= 0) {
         const char *nm = 0;
@@ -1030,6 +1036,8 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
         uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
         if (uxm_head_of(pg->more, s) == UXM_H_LANE)
             return UXS_LANE_SAY;
+        if (uxm_head_of(pg->more, s) == UXM_H_UNDO)     /* (3c-1 task 7) GLO's UNDO: what it takes back */
+            return UXG_SAY[3];
     }
     return pg->graph == GR_MORE ? UXM_HINT : 0;
 }
@@ -2829,6 +2837,10 @@ static void uxs_picture(const page_t *pg)
         uxg_picture();
         return;
     }
+    if (pg->graph == GR_MIX) {                          /* (3c-1 task 7) GLO > MIX: the six tracks' levels in dB, their pans */
+        uxg_mix_picture();
+        return;
+    }
     if (pg->graph == GR_MORE) {
         ux_more_draw(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top);
         return;
@@ -2935,6 +2947,10 @@ static void ux_section_draw(void)
                     sig = sig * 33u + (uint16_t)*vp;
             }
     }
+    if (pg->more == &UXM_GLO)                           /* (3c-1 task 7) GLO > MORE's CPU: the readout as last taken (ux_glo.c: */
+        sig = sig * 31u + uxg_cpu_pct();                /* at most once a second, a panel then) */
+    if (pg->graph == GR_MIX)                            /* (3c-1 task 7) GLO > MIX: the six tracks' columns */
+        sig = sig * 31u + uxg_mix_sig();
     if (pg->more == &UXM_SEQ) {                         /* (3c-1 task 4) SEQ > MORE's views: what they are read from (the step
                                                          * picked, STRETCH's picks, the heads, the automation and the list's place) */
         const uint8_t *sp = (const uint8_t *)&TSEL->step[ui.cursor % NSTEP];

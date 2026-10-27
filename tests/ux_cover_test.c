@@ -111,6 +111,13 @@ static const uxc_id_t UXC_JIANT[] = {
     {UXC_DRM, TRK, ID_DX_CLANG}, {UXC_DRM, TRK, ID_DX_LFB}, {UXC_DRM, TRK, ID_DX_SENDTO}, {UXC_DRM, TRK, ID_DX_SEND},
     {UXC_DRM, TRK, ID_DX_BP}, {UXC_DRM, TRK, ID_DX_KFB}, {UXC_DRM, TRK, ID_DX_HANDS}, {UXC_DRM, TRK, ID_DX_XRATE},
     {UXC_DRM, TRK, ID_DX_XDEP}, {UXC_DRM, TRK, ID_DX_XSHP}, {UXC_DRM, TRK, ID_DX_XRND},
+    /* (ACID FM 3c-1 task 7) GLO: what the inherited GLO pages reached (as 0db7884 left them): MIXER (the selected track's LEVEL PAN
+     * REV, the DJ FILTER: SC_TRK, ui_input.c tracks_edit), SENDS (the track's DIST CHORUS DLY REV), GLOBAL (BPM SWING CLOCK TUNE),
+     * SYSTEM (TRACKS LOAD ROUTE CPU), LIVE's second page (task 6: the RAILS, GLO > MORE's views) */
+    {SEC_GLO, TRK, P_LEVEL}, {SEC_GLO, TRK, P_PAN}, {SEC_GLO, TRK, P_REV}, {SEC_GLO, GLO, G_DJF}, {SEC_GLO, TRK, P_DIST},
+    {SEC_GLO, TRK, P_CHOR}, {SEC_GLO, TRK, P_DLY}, {SEC_GLO, GLO, G_BPM}, {SEC_GLO, GLO, G_SWING}, {SEC_GLO, GLO, G_CLOCK},
+    {SEC_GLO, GLO, G_TUNE}, {SEC_GLO, GLO, G_TRKS}, {SEC_GLO, GLO, G_LOADP}, {SEC_GLO, GLO, G_ROUTE}, {SEC_GLO, GLO, G_INFO},
+    {SEC_GLO, GLO, ID_LV_TGT}, {SEC_GLO, GLO, ID_LV_RATE}, {SEC_GLO, GLO, ID_LV_CUT}, {SEC_GLO, GLO, ID_LV_DENS},
 };
 
 /* the settings left off every page and MORE list on purpose, each with why. They keep their stored value */
@@ -127,14 +134,61 @@ static const uxc_hid_t UXC_HIDDEN[] = {
     {UXC_DRM, TRK, P_PRIO, "PRIORITY on a kit: no effect, it picks the note of a MONO voice (voice.c mono_stack)"},
     {UXC_DRM, TRK, P_DIST, "the FILTER page's DRV on a kit: the same setting as FX > SENDS DISTORT (P_DIST); the kit has its own "
                            "DRIVE (KIT 2), three drives were one too many"},
+    {SEC_GLO, GLO, G_ROUTE, "SYSTEM's ROUTE (MIDI IN CH1-6 / SEL): inert since ACID FM 0.5 task 1, per-track MIDI routing replaced it; "
+                            "read only when a project without its 'MR' block loads (project.c proj_import)"},
 };
 
-static const uint8_t UXC_SECS[] = {UXC_SYN, UXC_FM6, UXC_DRM, UXC_DIG, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL, SEC_SEQ};
+/* (ACID FM 3c-1 task 7) settings the inherited GLO pages reached that GLO's chain does not hold as a page's id or a MORE row, each
+ * with where it is now, checked: on FX (FX's chain reaches it: SENDS' four, the REVERB send) or on a knob of a GLO page drawn by
+ * ux_glo.c (MIX's LEVEL and PAN, LIVE's DJ FILTER: no page id; a turn of that knob there writes it) */
+enum { UXC_ON_FX, UXC_ON_KNOB };
+typedef struct { uint8_t glo, id, on, slot; const char *page, *why; } uxc_else_t;
+static const uxc_else_t UXC_GLO_ELSE[] = {
+    {TRK, P_LEVEL, UXC_ON_KNOB, 0, "MIX", "GLO > MIX KNOB 1 (ux_glo.c: the inherited MIXER's write, tracks_edit)"},
+    {TRK, P_PAN, UXC_ON_KNOB, 1, "MIX", "GLO > MIX KNOB 2 (as MIXER's)"},
+    {GLO, G_DJF, UXC_ON_KNOB, 3, "LIVE", "GLO > LIVE KNOB 4 (the DJ FILTER, as MIXER's KNOB 4; 3c-1 spec 3.2 says FX: FX has no "
+                                         "DJ FILTER, LIVE's KNOB 4 is where it is)"},
+    {TRK, P_REV, UXC_ON_FX, 0, 0, "FX > SENDS REVERB (3c-1 spec 3.2: SENDS not repeated)"},
+    {TRK, P_DIST, UXC_ON_FX, 0, 0, "FX > SENDS DISTORT"},
+    {TRK, P_CHOR, UXC_ON_FX, 0, 0, "FX > SENDS CHORUS"},
+    {TRK, P_DLY, UXC_ON_FX, 0, 0, "FX > SENDS DELAY"},
+};
+static const uxc_else_t *uxc_glo_else(uint32_t glo, uint32_t id)
+{
+    uint32_t i;
+    for (i = 0; i < NELEM(UXC_GLO_ELSE); i++)
+        if (UXC_GLO_ELSE[i].glo == glo && UXC_GLO_ELSE[i].id == id)
+            return &UXC_GLO_ELSE[i];
+    return 0;
+}
+static void uxc_reach(uint32_t key, int more, uint8_t got[2][256]);
+/* e holds: FX's chain reaches it, or a turn of its GLO page's knob writes it */
+static int uxc_else_ok(const uxc_else_t *e)
+{
+    static uint8_t fx[2][256];
+    int16_t *vp, was;
+    int ok;
+    if (e->on == UXC_ON_FX) {
+        uxc_reach(SEC_FX, 1, fx);
+        return fx[e->glo][e->id];
+    }
+    nav_put(SEC_GLO, e->page);
+    vp = e->glo ? &song.g[e->id] : &TSEL->p[e->id];
+    was = *vp;
+    *vp = 0;
+    edit_param(e->slot, 3);
+    ok = *vp != 0 && str_eq(cur_page()->title, e->page);
+    *vp = was;
+    return ok;
+}
+
+static const uint8_t UXC_SECS[] = {UXC_SYN, UXC_FM6, UXC_DRM, UXC_DIG, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL, SEC_SEQ,
+                                   SEC_GLO};
 static const char *uxc_key_name(uint32_t key)
 {
     return key == UXC_FM6 ? "UXC_FM6" : key == UXC_DRM ? "UXC_DRM" : key == UXC_DIG ? "UXC_DIG" : key == UXC_SYN ? "UXC_SYN" :
            key == SEC_ENV ? "SEC_ENV" : key == SEC_LFO ? "SEC_LFO" : key == SEC_FX ? "SEC_FX" : key == SEC_ARP ? "SEC_ARP" :
-           key == SEC_SCL ? "SEC_SCL" : key == SEC_SEQ ? "SEC_SEQ" : "?";
+           key == SEC_SCL ? "SEC_SCL" : key == SEC_SEQ ? "SEC_SEQ" : key == SEC_GLO ? "SEC_GLO" : "?";
 }
 
 /* the settings chain key reaches now, a bit each ([glo][id]): its pages' knobs (MOD's slots, the drum picked's: all), and
@@ -259,7 +313,8 @@ static void uxc_wfit(const char *where, const char *v)
 }
 static int uxc_widths(void)
 {
-    static const uint8_t KEYS[] = {SEC_EDIT, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL};
+    static const uint8_t KEYS[] = {SEC_EDIT, SEC_ENV, SEC_LFO, SEC_FX, SEC_ARP, SEC_SCL, SEC_GLO};   /* (3c-1 task 7: GLO's MIX
+                                                         * SWING TUNE, its MORE's SYSTEM and TEMPO rows) */
     uint8_t mo = mod_ui_slot, dl = dx_ui_lane, eng0 = TSEL->engine, req0 = TSEL->eng_req;
     uint32_t e, s, i, sl, v;
     int32_t x;
@@ -569,6 +624,25 @@ static int uxc_widths(void)
         memcpy(&lv, keep, sizeof lv);
         song.g[G_DJF] = djf;
     }
+    {   /* (ACID FM 3c-1 task 7) GLO > MIX's LEVEL and PAN (ux_glo.c uxg_mix_knobs: every value of the selected track's) */
+        int16_t l0 = TSEL->p[P_LEVEL], p0 = TSEL->p[P_PAN];
+        ux_knob_t k[4];
+        nav_put(SEC_GLO, "MIX");
+        for (x = -64; x <= 127; x++) {
+            uint32_t c;
+            TSEL->p[P_LEVEL] = (int16_t)clamp(x, 0, 127);
+            TSEL->p[P_PAN] = (int16_t)clamp(x, -64, 63);
+            uxs_knobs(cur_page(), k);
+            for (c = 0; c < 2u; c++) {
+                char w[32];
+                str_cpy(w, "MIX ", sizeof w);
+                str_cpy(w + str_len(w), k[c].label, sizeof w - str_len(w));
+                uxc_wfit(w, k[c].value);
+                if (text_w(&UF_LBL, k[c].label) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+            }
+        }
+        TSEL->p[P_LEVEL] = l0; TSEL->p[P_PAN] = p0;
+    }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);
     printf("ux widths: %u values a 3b knob can show (%u on MORE pages' knob rows), %u names kept whole in a smaller face "
@@ -584,7 +658,7 @@ static int uxc_widths(void)
 int main(int argc, char **argv)
 {
     static uint8_t got[2][256];
-    uint32_t i, s, n = 0, nh = 0;
+    uint32_t i, s, n = 0, nh = 0, ne = 0;
     int bad = 0, ok = 1;
     setvbuf(stdout, NULL, _IONBF, 0);
     ui_power_on();
@@ -606,13 +680,34 @@ int main(int argc, char **argv)
                 nh++;
                 continue;
             }
+            if (key == SEC_GLO && uxc_glo_else(j->glo, j->id)) {   /* (3c-1 task 7: on FX, or a GLO page's own knob: checked) */
+                const uxc_else_t *e = uxc_glo_else(j->glo, j->id);
+                if (uxc_else_ok(e)) {
+                    ne++;
+                    continue;
+                }
+                printf("  SEC_GLO: %s %u (%s) said to be at \"%s\", not reached there\n", j->glo ? "global" : "track setting",
+                       (unsigned)j->id, uxc_label(j->glo, j->id), e->why);
+                ok = 0;
+                continue;
+            }
             printf("  %s: %s %u (%s) is on no page or MORE row, and not in UXC_HIDDEN\n", uxc_key_name(key),
                    j->glo ? "global" : "track setting", (unsigned)j->id, uxc_label(j->glo, j->id));
             ok = 0;
         }
     }
-    bad += check("ux cover: every setting JIANT's six sections (3c-1 task 4: and SEQ) reached is on a page or a MORE row, or hidden on "
-                 "purpose", ok && n > 190u);
+    bad += check("ux cover: every setting JIANT's six sections (3c-1 task 4: and SEQ; task 7: and GLO) reached is on a page or a MORE "
+                 "row, or hidden on purpose", ok && n > 210u && ne == NELEM(UXC_GLO_ELSE));
+    ok = 1;                                             /* (3c-1 task 7) the GLO list: each one the inherited GLO pages reached */
+    for (i = 0; i < NELEM(UXC_GLO_ELSE); i++)
+        ok &= uxc_in_jiant(SEC_GLO, UXC_GLO_ELSE[i].glo, UXC_GLO_ELSE[i].id) && UXC_GLO_ELSE[i].why && str_len(UXC_GLO_ELSE[i].why) > 8u;
+    uxc_reach(SEC_GLO, 1, got);                         /* (MIX's SWING TUNE on its page; MORE's rows; the RAILS views) */
+    ok &= got[GLO][G_SWING] && got[GLO][G_TUNE] && got[GLO][G_BPM] && got[GLO][G_CLOCK] && got[GLO][G_TRKS] &&
+          got[GLO][G_LOADP] && got[GLO][G_INFO] && got[GLO][ID_LV_DENS] && !got[GLO][G_ROUTE];
+    uxc_reach(SEC_GLO, 0, got);
+    ok &= got[GLO][G_SWING] && got[GLO][G_TUNE] && !got[GLO][G_BPM] && !got[GLO][G_TRKS];
+    bad += check("ux cover: GLO (3c-1 task 7): MIX's SWING TUNE, MORE's SYSTEM and TEMPO; LEVEL PAN DJ FILTER on its knobs, the sends on "
+                 "FX, ROUTE hidden", ok);
     ok = 1;                                             /* the hidden list: reviewed rows only */
     for (i = 0; i < NELEM(UXC_HIDDEN); i++) {
         const uxc_hid_t *h = &UXC_HIDDEN[i];
@@ -679,7 +774,8 @@ int main(int argc, char **argv)
     }
     bad += check("ux cover: the reach counts the pages' knobs (every step and slot) and the MORE rows, and sees a gap", ok);
     bad += uxc_widths();
-    printf("ux cover: %u settings JIANT reached, %u hidden on purpose\n", (unsigned)n, (unsigned)nh);
+    printf("ux cover: %u settings JIANT reached, %u hidden on purpose, %u GLO's elsewhere (checked)\n", (unsigned)n, (unsigned)nh,
+           (unsigned)ne);
     if (bad)
         printf("ux cover: %d FAILED\n", bad);
     return bad ? 1 : 0;

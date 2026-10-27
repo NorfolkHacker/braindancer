@@ -15,7 +15,7 @@
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "STEPS", "DELAY", "REVERB", "CHORUS",
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
                                               "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
-                                              "PLAYHEADS", "AUTOMATION", "LIVE"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -41,8 +41,11 @@ static const uxm_act_t UXM_ACT[UXM_A_N] = {
     {"CLEAR LANE", CF_CLEAR_PFX},                       /* (3b task 8) FX: the punch-in lane emptied (was FX > PUNCH's CLEAR) */
     {"CLEAR", CF_CLEAR_MOTION},                         /* (3c-1 task 4) SEQ: the track's automation and locks (was AUTOMATION's
                                                          * CLEAR, OCT+ then the same dialog) */
+    {"UNDO", 0},                                        /* (3c-1 task 7) GLO: the last big change back, again forward (the GLO
+                                                         * layer's G4: ui_layer.c glo_undo) */
 };
 #define UXM_GO "\x86"                                   /* (an action's value in the list: UF_HDR's arrow) */
+#define UXM_CPU_SAY "CPU: A READOUT"                    /* (3c-1 task 7) KNOB 2 on GLO > MORE's CPU */
 static int uxm_act_ok(uint32_t a) { return a == UXM_A_LYRIC ? trk_engp(TSEL) == &ENG_FORMANT : a < UXM_A_N; }
 static void uxm_act_do(uint32_t a)
 {
@@ -58,6 +61,8 @@ static void uxm_act_do(uint32_t a)
     }
     if (a == UXM_A_LYRIC)
         name_open(NK_LYRIC, song.sel);
+    if (a == UXM_A_UNDO)
+        glo_undo();
 }
 
 /* row r names something real: a track setting (< P_COUNT) or a global (< G_COUNT) or a view (params.c param_ref: else
@@ -99,7 +104,7 @@ static int ux_row_shown(const ux_row_t *r)
     }
     for (i = 0; i < NPAGES; i++) {
         const page_t *pg = &PAGES[i];
-        if (pg->graph == GR_MORE || pg->scope == SC_STEP || pg->scope == SC_TRK || (pg->scope == SC_GLOBAL) != glo ||
+        if (pg->graph == GR_MORE || pg->scope == SC_STEP || (pg->scope == SC_GLOBAL) != glo ||
             (seq && pg->fam != FAM_SEQ))                /* (3c-1 task 4: SEQ's by SEQ's pages alone: TRACK's and MUTATE's ids */
             continue;                                   /* are DIGITAL's operator slots too, core.h) */
         for (k = 0; k < 4u && pg->id[k] != r->id; k++)
@@ -260,6 +265,8 @@ static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32
             return 1;
         if (r->kind == UXR_TRACK)
             param_knob(TSEL, r->id, steps, 1u);
+        else if (r->kind == UXR_GLOBAL && r->id == G_INFO)   /* (3c-1 task 7) GLO's CPU: shown, not set (spec 0 rule 6: said) */
+            ui_message(UXM_CPU_SAY);
         else if (r->kind == UXR_GLOBAL)
             param_knob(0, r->id, steps, 1u);
         else if (r->kind == UXR_ACTION && steps > 0)
@@ -417,6 +424,8 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
         return uxq_vtext(r->id, val, nv, bar);
     if (r->kind == UXR_GLOBAL && lvv_is(r->id))         /* (3c-1 task 6) GLO's RAILS: their words (ux_glo.c) */
         return uxg_vtext(r->id, val, nv, bar);
+    if (r->kind == UXR_GLOBAL && r->id == G_INFO)       /* (3c-1 task 7) GLO's CPU: the load now, as JIANT's SYSTEM card read it */
+        return uxg_cpu_text(val, nv, bar);
     d = param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp);
     if (!d || !vp)
         return "";
