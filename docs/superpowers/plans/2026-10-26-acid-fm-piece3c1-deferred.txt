@@ -1,0 +1,48 @@
+ACID FM piece 3c-1 (SEQ, GLO, MIDI page) — deferred items, each tagged with the piece that should pick it up.
+Read this when writing the plan for that piece. [3c-2] the remaining screens (SAVE, the MENU, the dialogs),
+[piece N] the numbered ACID FM feature steps (README), [device] the device check, [later] when convenient.
+
+[3c-2]    Non-panel BPM writers ignore the external clock: GEN (gen.c ~2480, respects BPM LOCK not CLOCK), CPU TEST
+          (song_dice.c:94), the power-on demo (ui.c ~1564), editor PARAM_SET. The running clock overwrites the BPM
+          (midi_clock.c:65), so GEN briefly shows its genre BPM. Make them follow "CLOCK: USB/TRS" (Task 8 #1).
+[3c-2]    SAVE, the MENU and the dialogs keep their inherited layouts in ACID colours.
+[later]   MIDI (Task 1 minors): lt_mch is kept per track, not per note (two latched chords across a channel change
+          note off on the new channel).
+[later]   MIDI (Task 1): midi_forget_track checks the current claims, not the note-on claims (routing changed mid-note).
+[later]   MIDI (Task 1): the bend kept under KEYBOARD PLAYS SELECTED is not zeroed when the selection moves, until the
+          next bend or reroute.
+[later]   Two TRIGs on one step (COMP + COMP 2 both TRIG): CONDITION shows and edits only the first; ALWAYS clears one
+          (Task 3 #1; the COMP rows are MORE rows now, check whether it can still happen).
+[later]   STEP EXTRAS PATTERN write tests (test_t33_pattern) check direction only (>0, <, !=), not equality with the
+          inherited handler (Task 3 #4; ids and write path unchanged).
+[later]   The pace test (ui_test.c ~18865) checks the total, 8-15 panels over 15 sixteenths, not "at most one within
+          each 1/16"; the ISR side (lv.cur change when a trick enters) is not host-testable (Task 6 #4).
+[later]   tests/ux_msg_scan.py:80 opts a table out of the HDR check by the _LBL suffix; use an explicit list
+          ({'UXG_ARROW_LBL'}) before a second _LBL table exists (Task 6 #5).
+[later]   tools/gen_aa_keycaps.py still generates the knob-arc tables (584 B in the build log); unused, not in the image
+          (Task 7 #6).
+[later]   N_MONOTES "K+SEQ" is a third short form; unreachable on screen (Task 8 #3). Stacked trailing comments on the
+          ux_more.h enum lines (Task 8 #4).
+[later]   Layers: the SEQ/REC LAYERS[].foot and .head hints are no longer drawn; "REC CLEARS ALL" is not shown on DRUM
+          or while a song plays; REC K2-K4 call ux_knob_touch on an empty knob column; uxl_word returns a static
+          buffer (Task 5 lows).
+[later]   Layer tests are thin: no assertions for GLO E4/G4/A4/B4 states, no DRUM lane-tool width sweep, no REC pixel
+          check; GLO branches of layer_state / layer_sig / layer_knobs may be dead (Task 5, Task 9 lows).
+[later]   Stale comments: tests/ui_render.c:997 and tests/ui_test.c:11693 (hint_tick, Task 4 N2); web/EDITOR_PROTOCOL.md
+          lines naming GLO > MIXER (Task 7 #5).
+[later]   Under an external clock the GLO layer line says "NO RESTART", true only while playing (Task 9 #1).
+[later]   Mark rule: knobs built outside the generic path (GLO LIVE's DJ FILTER, MIX levels, MORE rows, SEQ step
+          pages) get no automation / lock mark (Task 10).
+[later]   docs/MANUAL.md: long technical passages from earlier releases (delay, reverb, GEN internals, stems) may still
+          use older page words (DLY 2 / DLY 3 / REVERB 2 / SL PITCH as group names in chapter 9's subsections)
+          (Task 10b). A full rewrite of the SEQ / GLO / MIDI manual entries is 3d's.
+[later]   tools/gen_readme_hero.py still builds the inherited JIANT README images (docs/jiant-hero.png, jiant-screens.png)
+          from renders that no longer exist (AIR_JIANT); docs/JIANT-README.md (the upstream README, kept) links them
+          and tests/built_on_test.py checks its wording, so it stays. tools/video still has JIANT's captions.
+[device]  CPU TEST late blocks/s on SEQ STEPS, GLO LIVE with tricks, and the MIDI page (Task 11 step 2); a DAW or second
+          device on USB sending clock and notes; the no-manual checks (step 5 a ratchet, T5's notes every other bar,
+          T2 to MIDI channel 10, follow the clock from USB, loop the last bar live and let it go).
+[later]   No Playwright here: the cheat-sheet and navigation-map PNG/PDF renders came from the system Chromium (slightly
+          different antialiasing); re-render them with tools/render_cheatsheets.mjs / gen_nav_map's Playwright path, and
+          run the Chromium part of web/test_manual.mjs, where Playwright is installed (CI).
+[later]   No emcc here: the browser-emulator build and its tests are skipped; run them in CI.

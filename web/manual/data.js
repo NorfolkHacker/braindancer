@@ -604,6 +604,13 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.5", items: [
+    "0.5: SEQ, GLO and MIDI in the ACID look. SEQ is STEPS, STEP EXTRAS, PATTERN and MORE: STEP EXTRAS holds a step's chance, ratchet, condition and micro-timing; with a step held, MORE's rows lock on it (the ACID lock card).",
+    "GLO is LIVE, MIX, MIDI and MORE. LIVE is the performance page (rate, loop, thin, DJ filter and the keys' tricks); MIX has the six tracks' levels, pan and sends; MORE has the rest.",
+    "The MIDI page: per track MIDI in, out and channel; the clock INT, USB or TRS; clock out over USB; the keyboard plays the selected track. Older projects and settings load and sound as before.",
+    "SEQ TOOLS, REC and the GLO layer in the ACID look: each key shows its name and state.",
+    "Level bars in dB on LIVE, MIX and HOME.",
+    "The manual is English only and ACID FM's own."]},
   {v: "0.4", items: [
     "0.4: the sound sections in the ACID look: EDIT (a picture of the sound, four knobs and MORE for the rest), ENV, ARP, SCL, LFO and FX. Names in plain words; the creature pictures are gone.",
     "The held layers (EDIT, MACRO, FX, SCL) in the same look: the keys and knobs say what they do. With a step held, MORE's rows also keep their value on that step.",

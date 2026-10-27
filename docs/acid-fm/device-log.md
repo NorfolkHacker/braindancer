@@ -67,3 +67,16 @@
 - Console under the CPU TEST song (worst case, ~11 min uptime): cpu_pct 50, audio_max 3277 us, audio_lost 0; the
   governor sheds voices as designed (per-page late blocks/s not read this time)
 - Proven commit: 041f010
+
+## 2026-10-27 — piece 3c-1, ACID FM 0.5 (SEQ, GLO, MIDI page)
+
+Pending (Step 2, run with the user; nothing below has been done yet):
+
+- Backup before (`softkey --port "ACID FM" --yes`, then `fm1_unbrick.py backup`): pending
+- Release build `./build.sh --release 0.5` on the clean HEAD, then `tools/fm1_install.py build/acid-fm-0.5.fwsc --port "ACID FM" --yes`: pending
+- Serial `status` (version v0.5, cpu_pct, audio_late): pending
+- No-manual checks: make step 5 a ratchet; make T5's notes play only every other bar; send T2 to MIDI channel 10; follow
+  the clock from USB; loop the last bar live and let it go: pending
+- CPU TEST song, late audio blocks per second on SEQ STEPS, GLO LIVE with tricks, and the MIDI page: pending
+- A DAW or second device on USB sending clock and notes: pending
+- Merge ff to main and push, on the user's go-ahead: pending

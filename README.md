@@ -8,9 +8,21 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/acid-fm/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/acid-fm/manual/)**
 
-## Status: 0.4
+## Status: 0.5
 
-0.4 is the sound sections in the ACID look (piece 3b), on top of 0.3:
+0.5 is SEQ, GLO and MIDI in the ACID look (piece 3c-1), on top of 0.4:
+
+- SEQ is STEPS, STEP EXTRAS, PATTERN and MORE. STEP EXTRAS holds the chance, ratchet, condition and micro-timing of the
+  picked step; with a step held, MORE's rows lock on it (the ACID lock card).
+- GLO is LIVE, MIX, MIDI and MORE. LIVE is the performance page (rate, loop, thin, DJ filter, the keys' tricks); MIX is
+  the six tracks' levels, pan and sends; MORE holds the rest (rails, tempo, system, undo).
+- The MIDI page: per track MIDI in, out and channel; the clock INT, USB or TRS; clock out over USB; the keyboard plays
+  the selected track. Older settings and projects load as before.
+- SEQ TOOLS, REC and GLO layers (the held layers) in the ACID look, with the keys' names and states on the keys.
+- Level bars in dB on LIVE, MIX and HOME.
+- The manual is English only and ACID FM's own.
+
+Before that, 0.4 was the sound sections in the ACID look (piece 3b), on top of 0.3:
 
 - EDIT, ENV, ARP, SCL, LFO and FX in the ACID look: a picture of the sound, four knobs, and MORE for the rest, with
   names in plain words. The old creatures are removed.
@@ -21,7 +33,7 @@ the Rephlex catalogue.
 - The first time 0.4 starts, MENU › TRACKS switches to 6 once (the demo uses T5 and T6); a 4 picked after that stays.
 - HOME TRACKS: KNOB 1-3 are three tracks' levels, KNOB 4 the BPM.
 - Steadier timing: the screen draws more slowly when the audio is busy.
-- SEQ, GLO, SAVE, the MENU and the dialogs keep their inherited layouts in ACID colours until 3c.
+- SAVE, the MENU and the dialogs keep their inherited layouts in ACID colours until 3c-2.
 
 Before that, 0.3 was the new look (piece 3a, UI foundations), on top of 0.2:
 
@@ -40,12 +52,12 @@ The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-aci
 
 1. Pipeline (0.1)
 2. Trim (0.2): engines for IDM, the voice ceiling measured, room made for samples
-3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c next)
+3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c-1 in 0.5: SEQ, GLO, MIDI; 3c-2 next)
 4. BREAK: load breakbeats from the web page, chop and rearrange them
 5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
 6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, RETROBOC, AMBIENT, GLITCH
 
-Parts of the manual still describe inherited features; it is rewritten as ACID FM's features land.
+The manual is ACID FM's own; it grows as ACID FM's features land.
 
 ## Built on
 
