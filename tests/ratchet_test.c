@@ -355,6 +355,7 @@ static uint32_t card_px(uint32_t k, uint16_t c)
             n += swap16(host_screen[y * 240 + x]) == c;
     return n;
 }
+static uint16_t rpx(uint32_t x, uint32_t y) { return swap16(host_screen[y * 240u + x]); }
 static int screens(void)
 {
     int bad = 0, ok;
@@ -393,7 +394,32 @@ static int screens(void)
         bad += check("  RATCHET shows dimmed on a REST, a TIE or an empty step (a note or a hit: not)", ok);
         t->step[0] = (step_t){{0}, 0, ST_REST, 0, 0};
     }
-    /* (3c-1 task 4) JIANT's roll and grid gone (NOTE's page): STEPS' x2 and the grid's x3 in parts, tests/ui_test.c test_t32_ratchet */
+    {   /* (final review 5) SEQ STEPS' roll (ux_seq.c uxq_roll): an x2 step in two parts, an x1 whole; a slide's connector, none from x2 */
+        uint32_t y0 = UX_Y_PANEL + UXQ_RY0, x1 = (uint32_t)UXQ_X(1), x3 = (uint32_t)UXQ_X(3), ry, k;
+        static const struct { uint8_t i, n, fl; } NT[4] = {{1, 60, SF_SLIDE}, {2, 64, 0}, {3, 60, SF_SLIDE}, {4, 64, 0}};
+        ui_power_on(); frame();                          /* (as ui_test.c's uxq_t_open, which sits behind its main guard) */
+        song.sel = 0;
+        set_engine_of(TSEL, ENGI_ANALOG); TSEL->engine = TSEL->eng_req;
+        track_defaults_steps(TSEL);
+        for (k = 0; k < NSTEP; k++) step_clear(&TSEL->step[k]);
+        TSEL->p[P_SLEN] = 16;
+        for (k = 0; k < 4u; k++) {
+            step_t *st = &TSEL->step[NT[k].i];
+            st->time = ST_NOTE; st->n = 1; st->note[0] = NT[k].n; st->flags = NT[k].fl; st->vel = 100;
+        }
+        step_set_ratchet(&TSEL->step[1], 2);
+        go_home(); frame();
+        press(B_SEQ); frame();
+        ui.cursor = 8; ui.force = 1; frames(UX_HOT_MS + 100u);
+        for (ry = y0; ry < y0 + UXQ_RH && rpx(x3 + 6u, ry) != UX_SLIDE; ry++)
+            ;
+        ok = ry < y0 + UXQ_RH && rpx(x1 + 2u, ry) == UX_SLIDE && rpx(x1 + 9u, ry) == UX_SLIDE &&   /* (x2: both parts) */
+             rpx(x1 + 6u, ry) != UX_SLIDE && rpx(x3 + 6u, ry) == UX_SLIDE;                       /* (the gap between; x1 whole) */
+        bad += check("SEQ STEPS' roll: a ratchet step (x2) shows its two parts, an x1 step whole", ok);
+        ok = ry < y0 + UXQ_RH && rpx(x3 + UX_STRIP_W, ry) == UX_SLIDE && rpx(x1 + UX_STRIP_W, ry) != UX_SLIDE;
+        bad += check("  a slide shows its connector across the gap to the next note (an x2 step's none)", ok);
+        ui_power_on();
+    }
     return bad;
 }
 

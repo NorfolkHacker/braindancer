@@ -2489,7 +2489,7 @@ static void align_sweeps(void)
         for (k = 0; k < NTRK; k++)
             for (i = 0; i < 3u; i++) {
                 cv_begin(40, 40, T_SURF);
-                cv_icon_on(4, 4, i == 0u ? 12u : i == 1u ? 16u : 24u, trk_icon(k, 1), T_ACCENT, T_SURF);
+                cv_icon_on(4, 4, i == 0u ? 12u : i == 1u ? 16u : 24u, ICON_TRK + k, T_ACCENT, T_SURF);
             }
         cur_name = st ? "sweep LINE: card icons" : "sweep FLAT: card icons";
         for (i = 0; i < ICON_COUNT; i++) {

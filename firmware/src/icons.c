@@ -18,7 +18,6 @@
  * icon's ink (the selected track's: the accent), the digit in what lies under it; rounded in every STYLE, as the
  * keycaps are. (filled: kept for the callers; every cushion is filled) */
 #define ICON_TRK 0xF0u                                /* + k (above ICON_COUNT, below ICON_AUTO) */
-static uint32_t trk_icon(uint32_t k, int filled) { (void)filled; return ICON_TRK + k % NTRK; }
 /* (JIANT 0.6) four tracks on screen of the six (MIXER, GLO's knobs): T1..T4, or T3..T6 with T5 / T6 selected */
 static uint32_t trk_base4(void) { return song.sel < 4u ? 0u : NTRK - 4u; }
 static int32_t cv_trk(int32_t x, int32_t y, uint32_t size, uint32_t k, uint16_t fill, uint16_t under)

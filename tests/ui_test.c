@@ -10952,9 +10952,6 @@ static int test_ux_tracks(void)
     trk[2].peak = 7000;                                             /* T3 sounds for a moment */
     fm1_ms += UXR_MS; ux_levels_tick();
     ok &= trk[2].peak == 0 && ux_hist(2, 0) > 200u && ux_hist(1, 0) == 0u;   /* (read and cleared: the one reader) */
-    ok &= ux_trk_peak(2) == 7000 && ux_trk_peak(2) == 7000;         /* (MIXER's meters, EDIT's creatures: every reader the */
-    ux_levels_tick();                                               /* same this frame, the next frame anew) */
-    ok &= ux_trk_peak(2) == 0;
     {
         uint32_t top = ux_hist(2, 0);
         for (i = 0; i < 10u; i++) { fm1_ms += UXR_MS; ux_levels_tick(); }

@@ -53,15 +53,6 @@ static const param_desc_t *motion_desc(const track_t *t, uint32_t id)
 }
 /* the DJ FILTER as the knob set it (what a save keeps): its records' value is the music's, not the knob's */
 static int16_t motion_djf_value(void) { return motion_djf_on ? motion_djf_base : song.g[G_DJF]; }
-/* a DJ FILTER record will play (a track with PLAY ON holds one): its card shows MOTION */
-static int motion_djf_any(void)
-{
-    uint32_t i;
-    for (i = 0; i < motion.count; i++)
-        if (MOTION_ID(&motion.event[i]) == MOT_DJF && ((motion.on >> MOTION_TRK(&motion.event[i])) & 1u))
-            return 1;
-    return 0;
-}
 /* track k's records stop moving it: the knob's value back when no track's does */
 static void motion_djf_off(uint32_t k)
 {

@@ -68,11 +68,6 @@ static void ux_levels_tick(void)
         uxr.at = (uint8_t)(uxr.at + 1u == UXR_N ? 0u : uxr.at + 1u);
     }
 }
-static int32_t ux_trk_peak(uint32_t c)
-{
-    uxr.pk_taken = 1;                                   /* (every reader this frame sees the same; the next frame anew) */
-    return c < NTRK ? uxr.pk[c] : 0;
-}
 static uint32_t ux_hist(uint32_t c, uint32_t age)       /* the point age points old (0: the newest) */
 {
     return uxr.h[c % NTRK][(uxr.at + UXR_N - 1u - age % UXR_N) % UXR_N];

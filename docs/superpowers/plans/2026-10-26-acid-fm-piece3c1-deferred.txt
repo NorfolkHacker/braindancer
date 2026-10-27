@@ -46,3 +46,7 @@ Read this when writing the plan for that piece. [3c-2] the remaining screens (SA
           different antialiasing); re-render them with tools/render_cheatsheets.mjs / gen_nav_map's Playwright path, and
           run the Chromium part of web/test_manual.mjs, where Playwright is installed (CI).
 [later]   No emcc here: the browser-emulator build and its tests are skipped; run them in CI.
+[later]   A 0.4 project within ~9 bytes of full gets SECTION FULL on save once its MIDI routing is changed from default
+          (project.c:880 proj_packed_size counts the 'MR' block's 9 bytes); the message is correct, the case rare.
+[later]   web/editor.html: the per-track MIDI settings (G 71..89: IN, OUT, CHANNEL, KEYBOARD PLAYS SELECTED) are not in
+          the editor (ROUTE, G 14, is hidden: inert on 0.5); add them in 3c-2.

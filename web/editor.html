@@ -2776,10 +2776,10 @@ const LAYOUT = (pe0) => [
   { t: "SCL", pages: [["SCL", 0, [25, 26, 27, 28]], ["SCL 2", 1, [36]]] },   /* (JIANT 0.4) G_STRN 36: every sequence along the scale */
   { t: "ARP", pages: [["ARP", 0, [17, 18, 19, 20]], ["ARP 2", 0, [21, 22, 23, 24]]] },
   { t: "SEQ PATTERN", tab: "seqgroups", pages: [["PATTERN", 0, [29, 30, 31, 32]], ...(pe0 >= 83 ? [["STRETCH · TRACK", 0, P_SHIFT]] : [])] },   /* ROTATE PITCH 81, 82 (SHIFT until 0.6.91) */
-  { t: "GLOBAL", tab: "setgroups", pages: [["GLOBAL", 1, [0, 1, 2, 3]], ["SYSTEM", 1, [14]]] },   /* G_ROUTE: MIDI IN */
+  { t: "GLOBAL", tab: "setgroups", pages: [["GLOBAL", 1, [0, 1, 2, 3]]] },   /* (G_ROUTE 14 is no setting on 0.5: per-track MIDI routing, G 71..89, replaced it; replaced by GLO > MIDI on the device) */
 ];
 /* globals that are actions or placeholders on the device: buttons instead, or hidden */
-const G_SKIP = new Set(["SLOT", "NAME", "LOAD", "SAVE", "ENG", "SET", "CLRSQ", "INIT", "MIDI", "SYNC", "CPU", "CLK"]);
+const G_SKIP = new Set(["SLOT", "NAME", "LOAD", "SAVE", "ENG", "SET", "CLRSQ", "INIT", "MIDI", "SYNC", "CPU", "CLK", "ROUTE"]);
 const key = (s, id) => s + ":" + id;
 const engName = () => (dev && dev.info && dev.dump ? dev.info.engines[dev.dump.engine] : "");
 const gEng = () => { const i = dev.gdesc.findIndex((d) => d && d.label === "ENG"); return i >= 0 ? i : 20; };

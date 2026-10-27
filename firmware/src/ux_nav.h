@@ -33,9 +33,6 @@ static void ux_home_draw(void);                         /* (ux_home.c) TRACKS / 
 #define UXR_STRIP_Y 128
 static void ux_levels_tick(void);                       /* every UI frame (ui_draw): the one reader of trk[c].peak */
 static void ux_levels_reset(void);                      /* the histories flat */
-static int32_t ux_trk_peak(uint32_t c);                 /* track c's peak since the last frame a reader took it, as fx.c
-                                                         * measured it (MIXER's meters, ui_engvis.c's creatures: what they
-                                                         * read of trk[c].peak before) */
 static void ux_knob_touch(uint32_t k);                  /* (ux_widgets.c) knob k just turned: its column lit UX_HOT_MS */
 static uint32_t ux_trk_first(void);                     /* (ux_home.c, 3b task 10) TRACKS' KNOB 1..3: the LEVELs of tracks from this
                                                          * one (the three holding the selected: T1 or T4); KNOB 4 the tempo */
