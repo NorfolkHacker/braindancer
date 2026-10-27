@@ -3,7 +3,7 @@
 // Portions Copyright (C) 2026 NorfolkHacker
 // The interactive manual (web/manual/index.html): the FM-1 drawn with every control, the command reference with its
 // search, the recipes, the navigation map (nav.js, generated from the firmware's chains by tools/gen_manual.py), what's
-// new, and the browser emulator. data.js holds the words ([es, en]). The logic part (JMANUAL) runs without a DOM, for
+// new, and the browser emulator. data.js holds the words (English only: 3c-1 task 10b). The logic part (JMANUAL) runs without a DOM, for
 // web/test_manual.mjs; the page is drawn only when there is a document with #fm1.
 (function (G) {
 "use strict";
@@ -27,9 +27,9 @@ for (let n = 0, w = 0, b = 0; n < 27; n++) {
 const CONTROL_IDS = [...KNOBS.map((k) => k[0]), "OCT-", "OCT+", ...ROW1, ...ROW2];
 
 // ------------------------------------------------------------------------------------------- text
-const L = (a, lang) => Array.isArray(a) ? (lang === "en" ? a[1] : a[0]) : (a == null ? "" : String(a));
+const L = (a) => (a == null ? "" : String(a));
 const norm = (s) => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-  .replace(/[−–]/g, "-").replace(/[›>·,;:()"“”/.¿?¡!]/g, " ").replace(/\s+/g, " ").trim();
+  .replace(/[−–]/g, "-").replace(/[›>·,;:()"“”/.?!]/g, " ").replace(/\s+/g, " ").trim();
 const tokens = (k) => (String(k).match(/OCT[+-]|[^+]+/g) || []).map((x) => x.trim()).filter(Boolean);   /* "A+B"; OCT+ is one */
 
 // the browser emulator's keys (web/emu/index.html KEYMAP): number row FX..REC, [ ] OCT, arrows SELECT / ALGORITHM,
@@ -40,36 +40,35 @@ const EMU_KEY = {};
 ["Z", "X", "C", "V", "B", "N", "M", ",", ".", "/"].forEach((c, i) => { EMU_KEY[keyName([0, 2, 4, 6, 7, 9, 11, 12, 14, 16][i])] = c; });
 [["S", 1], ["D", 3], ["F", 5], ["H", 8], ["J", 10], ["L", 13], [";", 15], ["'", 17]].forEach(([c, n]) => { EMU_KEY[keyName(n)] = c; });
 ["Q", "W", "E", "R", "T", "Y", "U", "I", "O"].forEach((c, i) => { EMU_KEY[keyName(18 + i)] = c; });
-function emuKey(tok, lang) {
+function emuKey(tok) {
   if (EMU_BTN[tok]) return EMU_BTN[tok];
   if (EMU_KEY[tok]) return EMU_KEY[tok];
-  if (tok === "STEP") return lang === "en" ? "a grid key" : "una tecla de la grilla";
-  return lang === "en" ? "mouse wheel on " + tok : "rueda del mouse sobre " + tok;
+  if (tok === "STEP") return "a grid key";
+  return "mouse wheel on " + tok;
 }
-function emuHint(k, lang) {
+function emuHint(k) {
   const t = tokens(k);
   if (!t.length) return "";
-  const keys = t.map((x) => { const k = emuKey(x, lang); return k.length <= 3 ? "«" + k + "»" : k; });
-  if (t.length === 1) return (lang === "en" ? "Emulator: " : "Emulador: ") + keys[0];
-  return (lang === "en" ? "Emulator: hold " : "Emulador: mantené ") + keys[0] +
-         (lang === "en" ? " + " : " + ") + keys.slice(1).join(" + ");
+  const keys = t.map((x) => { const k = emuKey(x); return k.length <= 3 ? "«" + k + "»" : k; });
+  if (t.length === 1) return "Emulator: " + keys[0];
+  return "Emulator: hold " + keys[0] + " + " + keys.slice(1).join(" + ");
 }
 
 // ------------------------------------------------------------------------------------------- search
-function entryText(e, lang) {
-  return norm([L(e.t, lang), L(e.d, lang), e.k || "", tokens(e.k || "").join(" "), L(e.t, lang === "en" ? "es" : "en"),
-               (e.steps || []).map((s) => L(s, lang)).join(" "), sectionName(e.s, lang)].join(" "));
+function entryText(e) {
+  return norm([L(e.t), L(e.d), e.k || "", tokens(e.k || "").join(" "), (e.steps || []).map((x) => L(x)).join(" "),
+               sectionName(e.s)].join(" "));
 }
-function sectionName(id, lang) { const s = M.sections.find((x) => x.id === id); return s ? L(s.t, lang) : id; }
-// every token must be in the entry (in either language); the title weighs more
-function search(q, lang, sec, list) {
+function sectionName(id) { const s = M.sections.find((x) => x.id === id); return s ? L(s.t) : id; }
+// every token must be in the entry; the title weighs more
+function search(q, sec, list) {
   const items = list || M.commands;
   const qt = norm(q).split(" ").filter(Boolean);
   const out = [];
   items.forEach((e, i) => {
     if (sec && sec !== "all" && e.s !== sec) return;
     if (!qt.length) { out.push({ e, i, score: 0 }); return; }
-    const txt = entryText(e, lang), tt = norm(L(e.t, lang) + " " + tokens(e.k || "").join(" "));
+    const txt = entryText(e), tt = norm(L(e.t) + " " + tokens(e.k || "").join(" "));
     let score = 0;
     for (const w of qt) {
       if (!txt.includes(w)) return;
@@ -81,19 +80,19 @@ function search(q, lang, sec, list) {
 }
 
 // what each key does in each layer (data.js layers)
-function keyLayers(name, lang) {
+function keyLayers(name) {
   const out = [];
   for (const [id, ly] of Object.entries(M.layers)) {
     let v = ly.all ? (ly.all === "ROOT" ? "ROOT = " + name.replace(/\d/, "") : ly.all) : ly.keys[name];
-    if (v != null) out.push({ layer: id, t: L(ly.t, lang), v: L(v, lang) });
+    if (v != null) out.push({ layer: id, t: L(ly.t), v: L(v) });
   }
   return out;
 }
-function keyLabel(layer, name, lang) {
+function keyLabel(layer, name) {
   const ly = M.layers[layer];
   if (!ly) return "";
   if (ly.all) return name.replace(/\d/, "");
-  return L(ly.keys[name], lang) || "";
+  return L(ly.keys[name]) || "";
 }
 
 // the shots the page shows: nav.js's pages and data.js's entries
@@ -108,40 +107,23 @@ function allShots() {
 }
 
 const UI = {
-  es: { lang: "es", nav_panel: "El panel", nav_ref: "¿Cómo hago…?", nav_rec: "Recetas", nav_map: "Mapa", nav_new: "Novedades", nav_emu: "Emulador",
-    kicker: "manual interactivo · firmware", h1a: "Manual", h1b: "interactivo",
-    lede: "Todo JIANT en una página: tocá cualquier control del FM-1 para ver qué hace solo, mantenido y en combinación, con la pantalla real a la que lleva. Buscá cualquier comando, seguí una receta o probalo en vivo en el emulador.",
-    p_eb: "El panel", p_h2: "Tocá un control", p_in: "Pasá el mouse o tocá cualquier perilla, botón o tecla. Elegí una capa para ver qué hace cada tecla mientras mantenés ese botón (como el MAP del firmware).",
-    layer: "Capa en el teclado:", none: "ninguna", pick: "Elegí un control…",
-    alone: "Solo", held: "Mantenido", combos: "Combinaciones", layers_k: "En cada capa", screen: "La pantalla", showlayer: "Ver esta capa en el teclado",
-    knob: "perilla / encoder", button: "botón", key: "tecla", black: "negra", white: "blanca", find: "Buscar en ¿Cómo hago…?",
-    r_eb: "Referencia", r_h2: "¿Cómo hago…?", r_in: "Cada comando y cada página, verificado contra el firmware 0.9.12 y su manual. Filtrá por sección o escribí lo que querés hacer.",
-    ph: "ej.: borrar un paso, grabar sin cuantizar, MIDI LEARN", all: "Todo", results: "resultados", noresults: "Nada con eso. Probá otra palabra (o en inglés).",
-    rc_eb: "Paso a paso", rc_h2: "Recetas", rc_in: "Las tareas de siempre, en orden.",
-    m_eb: "Orientarse", m_h2: "Mapa de navegación", m_in: "Cada sección, sus grupos (las pestañas) y sus páginas en el orden en que SELECT las recorre, leídos de las tablas del propio firmware. Tocá una página para ver su pantalla y sus cuatro perillas.",
-    m_full: "Abrir el mapa completo (SVG)", m_on: "naranja: la página al encender", m_cond: "punteada: solo en algunos motores o LOAD", m_rules: "Las seis reglas", m_hold: "mantener", m_sel: "+ SELECT", m_none: "sin capa", knobs4: "Las cuatro perillas", noshot: "(sin captura de esta página)",
-    n_eb: "Para los que vuelven", n_h2: "Novedades por versión", n_in: "Lo importante de cada versión, de la 0.9.12 a la 0.8. El detalle completo está en el changelog del README.", n_more: "Versiones anteriores",
-    e_eb: "En vivo", e_h2: "Probalo en el emulador", e_in: "El firmware completo corriendo en el navegador. Cada comando de este manual muestra qué teclas de la compu usar.", e_go: "Encender el emulador acá", e_tab: "Abrir en otra pestaña",
-    e_keys: "Teclado: Z–' y Q–O las teclas · 1 … = los botones FX … REC · [ ] OCT · ↑ ↓ SELECT · ← → ALGORITHM · Shift-clic mantiene un botón · perillas: rueda del mouse.",
-    close: "Cerrar", ver: "firmware", recipe_steps: "pasos", try: "Probar", emu_note: "(necesita conexión)",
-    foot: "ACID FM · built on JIANT FM and Felucca", home: "Inicio", manualmd: "Manual completo (texto)" },
-  en: { lang: "en", nav_panel: "The panel", nav_ref: "How do I…?", nav_rec: "Recipes", nav_map: "Map", nav_new: "What's new", nav_emu: "Emulator",
-    kicker: "interactive manual · firmware", h1a: "Interactive", h1b: "manual",
-    lede: "All of JIANT on one page: touch any control of the FM-1 to see what it does alone, held and in combination, with the real screen it leads to. Search any command, follow a recipe or try it live in the emulator.",
-    p_eb: "The panel", p_h2: "Touch a control", p_in: "Hover or tap any knob, button or key. Pick a layer to see what each key does while you hold that button (like the firmware's MAP).",
-    layer: "Layer on the keys:", none: "none", pick: "Pick a control…",
-    alone: "Alone", held: "Held", combos: "Combinations", layers_k: "In each layer", screen: "The screen", showlayer: "Show this layer on the keys",
-    knob: "knob / encoder", button: "button", key: "key", black: "black", white: "white", find: "Find in How do I…?",
-    r_eb: "Reference", r_h2: "How do I…?", r_in: "Every command and page, checked against firmware 0.9.12 and its manual. Filter by section or type what you want to do.",
-    ph: "e.g. clear a step, record unquantized, MIDI LEARN", all: "All", results: "results", noresults: "Nothing with that. Try another word (or in Spanish).",
-    rc_eb: "Step by step", rc_h2: "Recipes", rc_in: "The usual tasks, in order.",
-    m_eb: "Find your way", m_h2: "Navigation map", m_in: "Every section, its groups (the tabs) and its pages in the order SELECT walks them, read from the firmware's own tables. Touch a page to see its screen and its four knobs.",
-    m_full: "Open the full map (SVG)", m_on: "orange: the page at power-on", m_cond: "dashed: only on some engines or LOADs", m_rules: "The six rules", m_hold: "hold", m_sel: "+ SELECT", m_none: "no layer", knobs4: "The four knobs", noshot: "(no capture of this page)",
-    n_eb: "For returning users", n_h2: "What's new, by version", n_in: "What matters in each version, from 0.9.12 back to 0.8. The full details are in the README's changelog.", n_more: "Earlier versions",
-    e_eb: "Live", e_h2: "Try it in the emulator", e_in: "The whole firmware running in the browser. Every command in this manual shows which computer keys to use.", e_go: "Switch the emulator on here", e_tab: "Open in a new tab",
-    e_keys: "Keyboard: Z–' and Q–O the keys · 1 … = the buttons FX … REC · [ ] OCT · ↑ ↓ SELECT · ← → ALGORITHM · Shift-click holds a button · knobs: mouse wheel.",
-    close: "Close", ver: "firmware", recipe_steps: "steps", try: "Try", emu_note: "(needs a connection)",
-    foot: "ACID FM · built on JIANT FM and Felucca", home: "Home", manualmd: "Full manual (text)" }
+  nav_panel: "The panel", nav_ref: "How do I…?", nav_rec: "Recipes", nav_map: "Map", nav_new: "What's new", nav_emu: "Emulator",
+  kicker: "interactive manual · firmware", h1a: "Interactive", h1b: "manual",
+  lede: "All of ACID FM on one page: touch any control of the FM-1 to see what it does alone, held and in combination, with the real screen it leads to. Search any command, follow a recipe or try it live in the emulator.",
+  p_eb: "The panel", p_h2: "Touch a control", p_in: "Hover or tap any knob, button or key. Pick a layer to see what each key does while you hold that button (like the firmware's MAP).",
+  layer: "Layer on the keys:", none: "none", pick: "Pick a control…",
+  alone: "Alone", held: "Held", combos: "Combinations", layers_k: "In each layer", screen: "The screen", showlayer: "Show this layer on the keys",
+  knob: "knob / encoder", button: "button", key: "key", black: "black", white: "white", find: "Find in How do I…?",
+  r_eb: "Reference", r_h2: "How do I…?", r_in: "Every command and page, checked against the firmware. Filter by section or type what you want to do.",
+  ph: "e.g. clear a step, record unquantized, MIDI LEARN", all: "All", results: "results", noresults: "Nothing with that. Try another word.",
+  rc_eb: "Step by step", rc_h2: "Recipes", rc_in: "The usual tasks, in order.",
+  m_eb: "Find your way", m_h2: "Navigation map", m_in: "Every section, its groups (the tabs) and its pages in the order SELECT walks them, read from the firmware's own tables. Touch a page to see its screen and its four knobs.",
+  m_full: "Open the full map (SVG)", m_on: "orange: the page at power-on", m_cond: "dashed: only on some engines or LOADs", m_rules: "The six rules", m_hold: "hold", m_sel: "+ SELECT", m_none: "no layer", knobs4: "The four knobs", noshot: "(no capture of this page)",
+  n_eb: "For returning users", n_h2: "What's new, by version", n_in: "What matters in each ACID FM version. The full details are in the README.", n_more: "Earlier versions",
+  e_eb: "Live", e_h2: "Try it in the emulator", e_in: "The whole firmware running in the browser. Every command in this manual shows which computer keys to use.", e_go: "Switch the emulator on here", e_tab: "Open in a new tab",
+  e_keys: "Keyboard: Z–' and Q–O the keys · 1 … = the buttons FX … REC · [ ] OCT · ↑ ↓ SELECT · ← → ALGORITHM · Shift-click holds a button · knobs: mouse wheel.",
+  close: "Close", ver: "firmware", recipe_steps: "steps", try: "Try", emu_note: "(needs a connection)",
+  foot: "Built on JIANT FM (Juan Jiant) and Felucca (Hügelton Instruments)", home: "Home", manualmd: "Full manual (text)"
 };
 
 const API = { KNOBS, ROW1, ROW2, KEYS, CONTROL_IDS, keyName, norm, tokens, emuHint, search, keyLayers, keyLabel, allShots, UI, L, sectionName };
@@ -153,13 +135,11 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const NS = "http://www.w3.org/2000/svg";
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-let lang = "es", cur = null, layer = "", sec = "all";
-const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-                set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } } };
-const u = (k) => UI[lang][k] || k;
+let cur = null, layer = "", sec = "all";
+const u = (k) => UI[k] || k;
 const shotSrc = (n) => "shots/" + n + ".png";
 function caps(k) {
-  return tokens(k).map((t) => `<kbd class="cap${/^[A-G]#?\d$/.test(t) ? " note" : ""}">${esc(t === "STEP" ? (lang === "en" ? "STEP held" : "PASO") : t.replace("-", "−"))}</kbd>`)
+  return tokens(k).map((t) => `<kbd class="cap${/^[A-G]#?\d$/.test(t) ? " note" : ""}">${esc(t === "STEP" ? "STEP held" : t.replace("-", "−"))}</kbd>`)
     .join('<span class="plus">+</span>');
 }
 
@@ -225,7 +205,7 @@ function paintLayer() {
   for (const k of KEYS) {
     const g = $(`.ctl[data-ctl="${k.name}"]`);
     if (!g) continue;
-    const v = layer ? keyLabel(layer, k.name, lang) : "";
+    const v = layer ? keyLabel(layer, k.name) : "";
     $(".klay", g).textContent = v.length > 11 ? v.slice(0, 10) + "…" : v;
     g.classList.toggle("has", !!v);
   }
@@ -245,26 +225,26 @@ function show(id, pin) {
   let h = "", shot = null;
   if (c) {
     shot = c.shot || null;
-    h += `<p class="ikind">${esc(u(c.kind))} · ${esc(sectionName(c.sec, lang))}</p><h3 class="iname">${esc(id.replace("-", "−"))}</h3>`;
-    h += `<dl><dt>${u("alone")}</dt><dd>${esc(L(c.alone, lang))}</dd>`;
-    if (c.held) h += `<dt>${u("held")}</dt><dd>${esc(L(c.held, lang))}</dd>`;
+    h += `<p class="ikind">${esc(u(c.kind))} · ${esc(sectionName(c.sec))}</p><h3 class="iname">${esc(id.replace("-", "−"))}</h3>`;
+    h += `<dl><dt>${u("alone")}</dt><dd>${esc(L(c.alone))}</dd>`;
+    if (c.held) h += `<dt>${u("held")}</dt><dd>${esc(L(c.held))}</dd>`;
     h += "</dl>";
-    if (c.note) h += `<p class="inote">${esc(L(c.note, lang))}</p>`;
+    if (c.note) h += `<p class="inote">${esc(L(c.note))}</p>`;
     if (c.combos && c.combos.length) {
       h += `<h4>${u("combos")}</h4><ul class="combos">` + c.combos.map((x) =>
-        `<li><button type="button" class="combo" data-q="${esc(tokens(x.k).join(" "))}">${caps(x.k)}</button><span>${esc(L(x.t, lang))}</span></li>`).join("") + "</ul>";
+        `<li><button type="button" class="combo" data-q="${esc(tokens(x.k).join(" "))}">${caps(x.k)}</button><span>${esc(L(x.t))}</span></li>`).join("") + "</ul>";
     }
     if (c.layer) h += `<p><button type="button" class="ghost" data-layer="${c.layer}">${u("showlayer")}</button></p>`;
-    h += `<p class="emu">${esc(emuHint(id, lang))}</p>`;
+    h += `<p class="emu">${esc(emuHint(id))}</p>`;
   } else {
     const k = KEYS.find((x) => x.name === id);
     if (!k) return;
     h += `<p class="ikind">${esc(u("key"))} · ${k.black ? esc(u("black")) + " " + k.black : esc(u("white"))}</p><h3 class="iname">${esc(id)}</h3>`;
-    h += `<dl><dt>${u("alone")}</dt><dd>${esc(L(M.keyAlone, lang))}</dd></dl>`;
-    const ls = keyLayers(id, lang);
+    h += `<dl><dt>${u("alone")}</dt><dd>${esc(L(M.keyAlone))}</dd></dl>`;
+    const ls = keyLayers(id);
     if (ls.length) h += `<h4>${u("layers_k")}</h4><table class="klayers">` + ls.map((x) =>
       `<tr${x.layer === layer ? ' class="on"' : ""}><th><button type="button" class="ghost sm" data-layer="${x.layer}">${esc(x.t)}</button></th><td>${esc(x.v)}</td></tr>`).join("") + "</table>";
-    h += `<p class="emu">${esc(emuHint(id, lang))}</p>`;
+    h += `<p class="emu">${esc(emuHint(id))}</p>`;
     shot = layer && M.layers[layer] ? M.layers[layer].shot : null;
   }
   if (shot) {
@@ -278,19 +258,19 @@ function show(id, pin) {
 
 // ------------------------------------------------------------------------------------------- reference and recipes
 function cmdCard(e) {
-  return `<article class="cmd brk"><header><span class="tag">${esc(sectionName(e.s, lang))}</span><span class="keys">${caps(e.k)}</span></header>
-    <h3>${esc(L(e.t, lang))}</h3><p>${esc(L(e.d, lang))}</p>
-    <footer><span class="emu">${esc(emuHint(e.k, lang))}</span>${e.shot ? `<img src="${shotSrc(e.shot)}" alt="" width="96" height="96" loading="lazy" data-zoom>` : ""}</footer></article>`;
+  return `<article class="cmd brk"><header><span class="tag">${esc(sectionName(e.s))}</span><span class="keys">${caps(e.k)}</span></header>
+    <h3>${esc(L(e.t))}</h3><p>${esc(L(e.d))}</p>
+    <footer><span class="emu">${esc(emuHint(e.k))}</span>${e.shot ? `<img src="${shotSrc(e.shot)}" alt="" width="96" height="96" loading="lazy" data-zoom>` : ""}</footer></article>`;
 }
 function recipeCard(r, open) {
-  return `<details class="rec brk"${open ? " open" : ""}><summary><span class="tag">${esc(sectionName(r.s, lang))}</span>${esc(L(r.t, lang))}</summary>
-    <ol>${r.steps.map((s) => `<li>${esc(L(s, lang))}</li>`).join("")}</ol>
+  return `<details class="rec brk"${open ? " open" : ""}><summary><span class="tag">${esc(sectionName(r.s))}</span>${esc(L(r.t))}</summary>
+    <ol>${r.steps.map((s) => `<li>${esc(L(s))}</li>`).join("")}</ol>
     ${(r.shots || []).length ? `<div class="rshots">${r.shots.map((s) => `<img src="${shotSrc(s)}" alt="" width="120" height="120" loading="lazy" data-zoom>`).join("")}</div>` : ""}</details>`;
 }
 function renderRef() {
   const q = $("#q").value;
-  const res = search(q, lang, sec);
-  const rec = search(q, lang, sec, M.recipes);
+  const res = search(q, sec);
+  const rec = search(q, sec, M.recipes);
   $("#count").textContent = `${res.length + rec.length} ${u("results")}`;
   $("#cmds").innerHTML = res.length ? res.map(cmdCard).join("") : `<p class="empty">${u("noresults")}</p>`;
   $("#recipes").innerHTML = rec.map((r) => recipeCard(r, !!q.trim())).join("");
@@ -298,14 +278,14 @@ function renderRef() {
 }
 function renderChips() {
   const n = (id) => M.commands.filter((c) => id === "all" || c.s === id).length + M.recipes.filter((c) => id === "all" || c.s === id).length;
-  $("#secs").innerHTML = [{ id: "all", t: [u("all"), u("all")] }, ...M.sections].map((s) =>
-    `<button type="button" data-sec="${s.id}" aria-pressed="false">${esc(L(s.t, lang))} <i>${n(s.id)}</i></button>`).join("");
+  $("#secs").innerHTML = [{ id: "all", t: u("all") }, ...M.sections].map((s) =>
+    `<button type="button" data-sec="${s.id}" aria-pressed="false">${esc(L(s.t))} <i>${n(s.id)}</i></button>`).join("");
 }
 
 // ------------------------------------------------------------------------------------------- the map
 const ORDER = ["HOME", "EDIT", "SEQ", "FX", "GLO", "ENV", "LFO", "SCL", "ARP", "SAVE"];
 function renderMap() {
-  const T = NAV.lang[lang];
+  const T = NAV.words;
   let h = "";
   for (const s of ORDER) {
     const chains = NAV.chains.filter((c) => c.sec === s);
@@ -313,7 +293,7 @@ function renderMap() {
     h += `<section class="sec brk" id="map-${s}"><header><kbd class="cap big">${s}</kbd>
       <span class="hh">${u("m_hold")}: <b>${esc(hint.hold || u("m_none"))}</b></span><span class="hh">${u("m_sel")}: <b>${esc(hint.sel || "")}</b></span></header>`;
     for (const c of chains) {
-      if (c.label) h += `<p class="clabel">${esc(L([c.label.es, c.label.en], lang))}</p>`;
+      if (c.label) h += `<p class="clabel">${esc(c.label)}</p>`;
       h += `<div class="chain">`;
       c.groups.forEach((g, gi) => {
         const pages = c.pages.map((p, i) => ({ p, i })).filter((x) => x.p.g === gi);
@@ -327,8 +307,6 @@ function renderMap() {
   }
   $("#map").innerHTML = h;
   $("#rules").innerHTML = T.rules.map((r, i) => `<li><span class="circ">${i + 1}</span><b>${esc(r.t)}</b> ${esc(r.d)}</li>`).join("");
-  const sf = lang === "es" ? ".es" : "";
-  $("#mapfull").href = "../docs/navigation-map" + sf + ".svg";
 }
 function showPage(secName, ce, i) {
   const c = NAV.chains.find((x) => x.ce === ce), p = c.pages[i];
@@ -348,24 +326,21 @@ function showPage(secName, ce, i) {
 
 // ------------------------------------------------------------------------------------------- what's new
 function renderNews() {
-  const card = (n) => `<article class="ver brk"><h3><span>v</span>${esc(n.v)}</h3><ul>${n.items.map((x) => `<li>${esc(L(x, lang))}</li>`).join("")}</ul></article>`;
-  $("#news").innerHTML = M.news.slice(0, 4).map(card).join("") +
-    `<details class="older"><summary>${u("n_more")} (${esc(M.news[4].v)} – ${esc(M.news[M.news.length - 1].v)})</summary><div class="news">${M.news.slice(4).map(card).join("")}</div></details>`;
+  const card = (n) => `<article class="ver brk"><h3><span>v</span>${esc(n.v)}</h3><ul>${n.items.map((x) => `<li>${esc(L(x))}</li>`).join("")}</ul></article>`;
+  const older = M.news.slice(4);
+  $("#news").innerHTML = M.news.slice(0, 4).map(card).join("") + (older.length ?
+    `<details class="older"><summary>${u("n_more")} (${esc(older[0].v)} – ${esc(older[older.length - 1].v)})</summary><div class="news">${older.map(card).join("")}</div></details>` : "");
 }
 
-// ------------------------------------------------------------------------------------------- language and wiring
-function setLang(l) {
-  lang = l === "en" ? "en" : "es";
-  document.documentElement.lang = lang;
+// ------------------------------------------------------------------------------------------- wiring
+function fill() {
   $$("[data-i]").forEach((e) => { e.textContent = u(e.dataset.i); });
   $$("[data-iph]").forEach((e) => { e.placeholder = u(e.dataset.iph); });
-  $$(".lang button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
   $("#ctlsel").innerHTML = `<option value="">${esc(u("pick"))}</option>` +
     [...CONTROL_IDS, ...KEYS.map((k) => k.name)].map((id) => `<option value="${esc(id)}">${esc(id.replace("-", "−"))}</option>`).join("");
   $("#layers").innerHTML = `<span data-i="layer">${u("layer")}</span>` + ["", ...Object.keys(M.layers)].map((id) =>
     `<button type="button" data-layer="${id}" aria-pressed="false">${id ? esc(id) : esc(u("none"))}</button>`).join("");
   $("#ver").textContent = NAV.version;
-  store.set("jiant-lang", lang);
   renderChips(); renderRef(); renderMap(); renderNews(); paintLayer();
   show(cur || "SELECT");
 }
@@ -376,10 +351,7 @@ function zoom(src) {
 }
 function init() {
   drawPanel();
-  let l = new URLSearchParams(location.search).get("lang") || store.get("jiant-lang");
-  if (!l) l = (navigator.language || "es").toLowerCase().startsWith("en") ? "en" : "es";
-  setLang(l);
-  $$(".lang button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+  fill();
   $("#q").addEventListener("input", renderRef);
   $("#ctlsel").addEventListener("change", (e) => { if (e.target.value) show(e.target.value, true); });
   document.addEventListener("click", (e) => {

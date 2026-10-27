@@ -7,7 +7,11 @@ installer's scripts' messages, the landing page: comments left out, they may kee
 breaks, &nbsp; and HTML tags between the words do not hide a match). (fix 1) The installer's scripts' messages and report
 name no JIANT at all ("JIANT" in capitals in a string; the lower-case "jiant" is the firmware kind they detect), the report
 says "ACID FM installer report". The licence record stays as it is: LICENSING.md and every page's copyright lines (checked
-present)."""
+present).
+(Task 10b) The manual is English only and ACID FM's own: the web manual (its page, scripts, generated nav.js, service
+worker), docs/MANUAL.md, the navigation map and the cheat sheets (their generators' output and the generators' strings)
+carry no Spanish text, no language switch, no link to MANUAL.es.md (deleted, as the Spanish map), and name JIANT only
+on the one credits line "Built on JIANT FM (Juan Jiant) and Felucca (Hügelton Instruments)" (comments left out)."""
 import re
 import sys
 from pathlib import Path
@@ -78,7 +82,79 @@ for f, lines in KEEP.items():
     for s in lines:
         if s not in src:
             bad.append(f"{f}: lost its line {s!r}")
+
+# ---- (Task 10b) the manual: English only, JIANT on the credits line alone
+CREDITS = "Built on JIANT FM (Juan Jiant) and Felucca (Hügelton Instruments)"
+MANUAL = ["web/manual/index.html", "web/manual/manual.js", "web/manual/data.js", "web/manual/nav.js", "web/manual/sw.js",
+          "docs/MANUAL.md", "docs/navigation-map.svg", "docs/cheatsheet/controls.html", "docs/cheatsheet/sound.html"]
+GENERATORS = ["tools/gen_cheatsheets.py", "tools/gen_nav_map.py", "tools/gen_manual.py"]
+HERO = "tools/gen_readme_hero.py"   # (the inherited README images: "built on" wording, no "fork of")
+CREDITED = ["web/manual/index.html", "docs/MANUAL.md", "docs/cheatsheet/controls.html", "docs/cheatsheet/sound.html"]
+GONE = ["docs/MANUAL.es.md", "docs/navigation-map.es.svg", "docs/navigation-map.es.png"]
+LINKERS = MANUAL + GENERATORS + [HERO, "CONTRIBUTING.md", ".github/workflows/emulator.yml", "README.md"]
+SPANISH = re.compile(r"[ñ¿¡áéíóúÁÉÍÓÚ]|\b(el|los|las|una|del|para|pista|pistas|perilla|perillas|tecla|teclas|mantené|"
+                     r"página|páginas|también|sonido|paso|pasos|cuando|desde|elegí|tocá|manual interactivo|novedades|"
+                     r"capa|grabar|borrar|deshacer|recetas|mapa|navegación|español|idioma)\b")
+
+
+def py_strings(src: str) -> str:
+    """a Python file's string literals (its comments and docstrings left out), one a line"""
+    import ast
+    out = []
+    tree = ast.parse(src)
+    docs = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.ClassDef)) and node.body and \
+                isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Constant):
+            docs.add(id(node.body[0].value))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docs:
+            out.append(node.value)
+    return "\n".join(out)
+
+
+for f in GONE:
+    if (ROOT / f).exists():
+        bad.append(f"{f}: still there (the manual is English only)")
+for f in LINKERS:
+    if "MANUAL.es" in (ROOT / f).read_text(encoding="utf-8") or "navigation-map.es" in (ROOT / f).read_text(encoding="utf-8"):
+        bad.append(f"{f}: links the Spanish manual or map")
+def js_strings(src: str) -> str:
+    """a script's string literals (its code and comments left out), one a line"""
+    return "\n".join(m.group(2) for m in re.finditer(r"([\"'`])((?:(?!\1)[^\\\n]|\\.)*)\1", visible(src)))
+
+
+def manual_text(f: str) -> str:
+    src = re.sub(r"base64,[A-Za-z0-9+/=]+", "base64,", (ROOT / f).read_text(encoding="utf-8"))   # (a font's data, not words)
+    return js_strings(src) if f.endswith(".js") else plain(src, f.endswith((".html", ".svg")))
+
+
+texts = {f: manual_text(f) for f in MANUAL}
+texts.update({f: py_strings((ROOT / f).read_text(encoding="utf-8")) for f in GENERATORS})
+for f, text in texts.items():
+    for n, line in enumerate(text.splitlines(), 1):
+        rest = line.replace(CREDITS, "")
+        if re.search(r"jiant", rest, re.I):
+            bad.append(f"{f}: names JIANT outside the credits line (line {n}): {line.strip()[:90]!r}")
+        m = SPANISH.search(re.sub(r"(?<![A-Za-z])ñ(?![A-Za-z])", "", rest.replace("Hügelton", "")))   # (the letter named alone:
+                                                                                                       # VOICE's lyrics, ñ as NY)
+        if m:
+            bad.append(f"{f}: Spanish text (line {n}, {m.group(0)!r}): {line.strip()[:90]!r}")
+for m in BAD.finditer(py_strings((ROOT / HERO).read_text(encoding="utf-8"))):
+    bad.append(f'{HERO}: says "{m.group(0)}"')
+for f in CREDITED:
+    if CREDITS not in texts[f]:
+        bad.append(f"{f}: no credits line {CREDITS!r}")
+page = (ROOT / "web/manual/index.html").read_text(encoding="utf-8")
+if '<html lang="en">' not in page or re.search(r'class="lang"|data-lang=', page):
+    bad.append("web/manual/index.html: a language switch, or not lang=\"en\"")
+js = (ROOT / "web/manual/manual.js").read_text(encoding="utf-8")
+if re.search(r"setLang|\bes:\s*\{|lang\s*===\s*\"es\"|\"es\"", js):
+    bad.append("web/manual/manual.js: still switches language")
+if re.search(r'"es":|"label":\{', (ROOT / "web/manual/nav.js").read_text(encoding="utf-8")):
+    bad.append("web/manual/nav.js: still carries a second language")
 if bad:
     print("\n".join("FAIL: " + b for b in bad))
     sys.exit(1)
-print(f"ok   built on JIANT FM and Felucca: ABOUT and {len(WEB)} web files; the copyright lines kept")
+print(f"ok   built on JIANT FM and Felucca: ABOUT and {len(WEB)} web files; the copyright lines kept; the manual English "
+      f"only, JIANT on its credits line alone ({len(MANUAL) + len(GENERATORS)} files)")

@@ -2,15 +2,15 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only
      Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
      Portions Copyright (C) 2026 NorfolkHacker
-     The interactive manual: manual.js draws it from data.js (the words, Spanish and English) and nav.js (the firmware's
+     The interactive manual: manual.js draws it from data.js (the words, English only since 3c-1 task 10b) and nav.js (the firmware's
      page chains, tools/gen_manual.py); shots/ are the firmware's own screens (tests/ui_render.c). Published at
      /acid-fm/manual/ next to the front page (web/make_site.py manual, .github/workflows/emulator.yml). -->
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ACID FM manual</title>
-<meta name="description" content="Manual interactivo de ACID FM para el M-VAVE FM-1: cada control, combinación y página, con las pantallas reales del firmware. Interactive manual: every control, combo and page, with the firmware's real screens.">
+<meta name="description" content="The interactive manual of ACID FM for the M-VAVE FM-1: every control, combo and page, with the firmware's real screens.">
 <meta name="theme-color" content="#050409">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23050409%22/%3E%3Crect x=%224%22 y=%224%22 width=%228%22 height=%228%22 fill=%22%23ffe14d%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,10 +40,6 @@ a{color:inherit}
 .top b{color:var(--line)}
 .top nav{display:flex;gap:4px 14px;flex-wrap:wrap}
 .top nav a{text-decoration:none}.top nav a:hover{color:var(--yellow)}
-.lang{display:inline-flex;border:1px solid var(--rule)}
-.lang button{font:500 11px/1 var(--mono);letter-spacing:.1em;color:var(--dim);background:transparent;border:0;padding:8px 10px;cursor:pointer}
-.lang button+button{border-left:1px solid var(--rule)}
-.lang button[aria-pressed="true"]{background:var(--yellow);color:var(--void)}
 .kicker{font:500 12px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin:24px 0 14px}
 h1{font:400 clamp(40px,8vw,96px)/.95 var(--display);margin:0;color:var(--line)}
 h1 span{display:block;background:var(--heat);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -199,19 +195,18 @@ footer.foot a{color:var(--line)}
 <div class="wrap">
   <header class="top brk">
     <span><a href="../" style="text-decoration:none"><b>ACID</b> / FM</a> · MANUAL · <span data-i="ver">firmware</span> <b id="ver"></b></span>
-    <nav aria-label="Secciones"><a href="#panel" data-i="nav_panel">El panel</a><a href="#ref" data-i="nav_ref">¿Cómo hago…?</a><a href="#maps" data-i="nav_map">Mapa</a><a href="#new" data-i="nav_new">Novedades</a><a href="#emu" data-i="nav_emu">Emulador</a></nav>
-    <div class="lang" role="group" aria-label="Idioma / Language"><button type="button" data-lang="es" aria-pressed="true">ES</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
+    <nav aria-label="Sections"><a href="#panel" data-i="nav_panel">The panel</a><a href="#ref" data-i="nav_ref">How do I…?</a><a href="#maps" data-i="nav_map">Map</a><a href="#new" data-i="nav_new">What's new</a><a href="#emu" data-i="nav_emu">Emulator</a></nav>
   </header>
 
   <section>
-    <p class="kicker" data-i="kicker">manual interactivo · firmware</p>
-    <h1><b data-i="h1a" style="font-weight:400">Manual</b><span data-i="h1b">interactivo</span></h1>
-    <p class="lede" data-i="lede">Todo JIANT en una página.</p>
+    <p class="kicker" data-i="kicker">interactive manual · firmware</p>
+    <h1><b data-i="h1a" style="font-weight:400">Interactive</b><span data-i="h1b">manual</span></h1>
+    <p class="lede" data-i="lede">All of ACID FM on one page.</p>
   </section>
 
   <section id="panel">
-    <p class="eyebrow" data-i="p_eb">El panel</p>
-    <h2 data-i="p_h2">Tocá un control</h2>
+    <p class="eyebrow" data-i="p_eb">The panel</p>
+    <h2 data-i="p_h2">Touch a control</h2>
     <p class="intro" data-i="p_in"></p>
     <div class="panel">
       <div>
@@ -226,45 +221,45 @@ footer.foot a{color:var(--line)}
   </section>
 
   <section id="ref">
-    <p class="eyebrow" data-i="r_eb">Referencia</p>
-    <h2 data-i="r_h2">¿Cómo hago…?</h2>
+    <p class="eyebrow" data-i="r_eb">Reference</p>
+    <h2 data-i="r_h2">How do I…?</h2>
     <p class="intro" data-i="r_in"></p>
-    <div class="search"><input id="q" type="search" autocomplete="off" data-iph="ph" aria-label="Buscar / Search"><span id="count"></span></div>
+    <div class="search"><input id="q" type="search" autocomplete="off" data-iph="ph" aria-label="Search"><span id="count"></span></div>
     <div id="secs"></div>
     <div class="cmds" id="cmds"></div>
-    <h3 class="rech" data-i="rc_h2">Recetas</h3>
+    <h3 class="rech" data-i="rc_h2">Recipes</h3>
     <div id="recipes"></div>
   </section>
 
   <section id="maps">
-    <p class="eyebrow" data-i="m_eb">Orientarse</p>
-    <h2 data-i="m_h2">Mapa de navegación</h2>
+    <p class="eyebrow" data-i="m_eb">Find your way</p>
+    <h2 data-i="m_h2">Navigation map</h2>
     <p class="intro" data-i="m_in"></p>
     <ol class="rules" id="rules"></ol>
-    <p class="maplinks"><span><i class="sw"></i><span data-i="m_on"></span></span><span><i class="sw d"></i><span data-i="m_cond"></span></span><a id="mapfull" href="../docs/navigation-map.es.svg" target="_blank" rel="noopener" data-i="m_full">SVG</a></p>
+    <p class="maplinks"><span><i class="sw"></i><span data-i="m_on"></span></span><span><i class="sw d"></i><span data-i="m_cond"></span></span><a id="mapfull" href="../docs/navigation-map.svg" target="_blank" rel="noopener" data-i="m_full">SVG</a></p>
     <div id="map"></div>
   </section>
 
   <section id="new">
-    <p class="eyebrow" data-i="n_eb">Para los que vuelven</p>
-    <h2 data-i="n_h2">Novedades</h2>
+    <p class="eyebrow" data-i="n_eb">For returning users</p>
+    <h2 data-i="n_h2">What's new</h2>
     <p class="intro" data-i="n_in"></p>
     <div id="news"></div>
   </section>
 
   <section id="emu">
-    <p class="eyebrow" data-i="e_eb">En vivo</p>
-    <h2 data-i="e_h2">Probalo en el emulador</h2>
+    <p class="eyebrow" data-i="e_eb">Live</p>
+    <h2 data-i="e_h2">Try it in the emulator</h2>
     <p class="intro" data-i="e_in"></p>
     <div class="emubox brk">
-      <div id="emubox" class="emulinks"><button type="button" class="btn hot" id="emugo" data-i="e_go">Encender</button><a class="btn" href="../emu/" target="_blank" rel="noopener" data-i="e_tab">Abrir</a><span class="emu" data-i="emu_note"></span></div>
+      <div id="emubox" class="emulinks"><button type="button" class="btn hot" id="emugo" data-i="e_go">Switch on</button><a class="btn" href="../emu/" target="_blank" rel="noopener" data-i="e_tab">Open</a><span class="emu" data-i="emu_note"></span></div>
       <p class="keysline" data-i="e_keys"></p>
     </div>
   </section>
 
   <footer class="foot">
-    <span data-i="foot">ACID FM · built on JIANT FM and Felucca</span>
-    <span><a href="../" data-i="home">Inicio</a> · <a href="https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md" target="_blank" rel="noopener" data-i="manualmd">Manual</a> · <a href="https://github.com/NorfolkHacker/acid-fm" target="_blank" rel="noopener">GitHub</a> · GPL-3.0</span>
+    <span data-i="foot">Built on JIANT FM (Juan Jiant) and Felucca (Hügelton Instruments)</span>
+    <span><a href="../" data-i="home">Home</a> · <a href="https://github.com/NorfolkHacker/acid-fm/blob/main/docs/MANUAL.md" target="_blank" rel="noopener" data-i="manualmd">Full manual (text)</a> · <a href="https://github.com/NorfolkHacker/acid-fm" target="_blank" rel="noopener">GitHub</a> · GPL-3.0</span>
     <span style="flex-basis:100%">M-VAVE and FM-1 are trademarks of their respective owners; ACID FM is not affiliated with or endorsed by them, nor with Hügelton Instruments.</span>
   </footer>
 </div>

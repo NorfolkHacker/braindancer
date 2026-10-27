@@ -6,8 +6,8 @@
 with the six rules, the held layers and the combos, read from the firmware's own chain tables (firmware/src/ui_lens.c
 CE_* / CG_* / CHAINS / NAV_DEF), so the map cannot drift from the firmware.
 
-  python3 tools/gen_nav_map.py            docs/navigation-map.svg, .es.svg and their 2x PNGs
-  python3 tools/gen_nav_map.py --svg      the SVGs only (no Chromium needed)
+  python3 tools/gen_nav_map.py            docs/navigation-map.svg and its 2x PNG
+  python3 tools/gen_nav_map.py --svg      the SVG only (no Chromium needed)
   python3 tools/gen_nav_map.py --check    exit 1 if the committed SVGs differ from what the firmware's chains give
 
 Every page of every chain the firmware builds is checked onto the map (the DIGITAL engine's chain, CE_DIG, only when
@@ -67,13 +67,12 @@ def parse():
 
 
 # ------------------------------------------------------------------------------------------- the words ---
-K = ['#8A6CFF', '#FFD23C', '#5874FF', '#FF4B4B']       # COLORS skin, JIANT palette: KNOB 1..4 (gen_ui_palettes KNOBS)
+K = ['#8A6CFF', '#FFD23C', '#5874FF', '#FF4B4B']       # COLORS skin, the inherited palette: KNOB 1..4 (gen_ui_palettes KNOBS)
 ORANGE, VIOLET = '#FF7A00', '#B870FF'
 TXT, MID, DIM, FAINT = '#F4F1EA', '#A39D99', '#6A6470', '#2B2833'
 CARD, RAISE, BG = '#0A090E', '#131218', '#000000'
 
-L = {
- 'en': dict(
+T = dict(
   title='Navigation map', sub=f'firmware {VERSION}  ·  six rules, one chain of pages per section',
   lead='Ten buttons, ten sections. SELECT walks a section\'s pages as one chain; its button jumps group to group.',
   how=[('tab', 'a tab = a group (the button jumps to the next one, round)'), ('chain', 'the line = SELECT\'s order, stops at both ends'),
@@ -115,57 +114,10 @@ L = {
           (['ENV·SCL·ARP·SAVE', 'SELECT'], 'walk that chain from anywhere'),
           (['ALGORITHM'], 'the track, always'),
           (['SEQ', 'G5'], 'CLR STEP: the step and its locks'),
-          (['STEP HELD', 'SELECT'], 'the EDIT page its knobs lock (SEQ › STEP)'),
+          (['STEP HELD', 'SELECT'], 'the EDIT page its knobs lock (SEQ › STEPS)'),
           (['SAVE', 'C5'], 'NAME: rename the slot, section, project'),
           (['GLO', 'G4'], 'UNDO (again: redo)'),
-          (['OCT−', 'OCT+'], 'back / do it (NO / YES)')]),
- 'es': dict(
-  title='Mapa de navegación', sub=f'firmware {VERSION}  ·  seis reglas, una cadena de páginas por sección',
-  lead='Diez botones, diez secciones. SELECT recorre las páginas de una sección como una cadena; su botón salta de grupo en grupo.',
-  how=[('tab', 'pestaña = un grupo (el botón salta al siguiente, en ronda)'), ('chain', 'la línea = el orden de SELECT, frena en las puntas'),
-       ('on', 'naranja = la página al encender'), ('dash', 'punteado = solo en los motores (o el LOAD) que la tienen')],
-  hold='mantener', sel='+ SELECT', nolayer='sin capa',
-  synth='SINTES', synth_sub='ANALOG PHASE LOFI VOICE …',
-  rules_t='Las seis reglas', layers_t='Capas (mantené el botón)', combos_t='Combinaciones',
-  rules=[('SELECT', 'SELECT recorre las páginas', 'Una cadena por sección, una página por paso; frena en la primera y en la última. Sin niveles, sin zoom.'),
-         ('BOTÓN', 'El botón: entrar o saltar', 'Desde afuera, la página donde la dejaste. Adentro, la primera página del grupo siguiente, en ronda.'),
-         ('PRESETS', 'PRESETS carga presets', 'Los sonidos de la pista en todos lados, los patrones en SEQ, el género en GEN. Nunca una página, pista ni módulo.'),
-         ('KNOB 1', 'KNOB 1 elige', 'El paso, el compás, el slot, la etapa, el operador, el sonido del kit. La pista, siempre ALGORITHM.'),
-         ('MANTENER', 'Mantener = la capa', 'Un botón mantenido pone sus atajos en teclas y perillas; ALGORITHM mientras lo mantenés: MAP · KNOBS · STATE.'),
-         ('PANTALLA', 'La pantalla dice dónde', 'Arriba las pestañas: los grupos, un punto por página. Abajo: SECCIÓN · GRUPO · página y n/N.')],
-  hints={'HOME': ('MENU', 'GEN'), 'EDIT': ('INIT · RECALL', 'dados de sonido'), 'SEQ': ('SEQ TOOLS', 'dados de secuencia'),
-         'FX': ('FX punch-in', 'dados de FX'), 'GLO': ('mutes · solos · UNDO', 'tempo'), 'ENV': (None, 'recorre esta cadena'),
-         'LFO': ('MACROS M1–M4', 'dados de LFO'), 'SCL': ('ROOT en las teclas', 'recorre esta cadena'),
-         'ARP': (None, 'recorre esta cadena'), 'SAVE': ('secciones en vivo · NAME', 'recorre esta cadena')},
-  notes={'HOME': 'TRACKS → VISUAL → GEN: HOME otra vez (en ronda) o SELECT; HOME + SELECT directo a GEN. GEN 1–3: PRESETS el género, OCT+ arma la pieza, OCT− vuelve a TRACKS.',
-         'SEQ': 'PRESETS: los patrones (PHRASES). KNOB 1: los 64 pasos en STEPS (girado rápido, varios); SELECT en la última celda: los 16 siguientes.',
-         'EDIT': 'Sintes: la página 3 es VOICE en ANALOG, FILTER en los demás; MORE lista el resto (KNOB 1 elige, KNOB 2 cambia). FM6: KNOB 1 elige el operador en OPERATOR y OP ENV. DRUM-X: KNOB 1 elige el tambor en SOUND y SOUND 2 (una tecla tocada también).',
-         'FX': 'SENDS: DISTORT y los envíos de la pista en barras; SPACE: los ecos y la cola de la reverb; MASTER: el medidor de la salida. MORE: DELAY, REVERB, CHORUS, SLICER, el PUNCH LANE (CHORUS y SLICER se ocultan con LOAD ECO).',
-         'SAVE': 'Desde afuera, USER y SECTIONS llegan con SAVE elegido: SAVE · OCT+ · OCT+.',
-         'ARP': 'ARP otra vez: la otra página. El dibujo: las notas que toca con C G E apretadas.',
-         'SCL': 'TRANSPOSE en MORE; ROTATE y SEQ PITCH están en SEQ › MORE (y en la capa). El dibujo: qué toca cada tecla.',
-         'ENV': 'AMP: la envolvente como suena; ENV TO: qué mueve esa misma envolvente (FILTER, PITCH, SHAPE).', 'GLO': 'Opens on LIVE: the keys play the tricks (white) on the tracks held (black), KNOB 4 the DJ FILTER. MIX: level bars in dB. MIDI: IN, OUT, CHANNEL of each track; CLOCK. MORE: the RAILS, SYSTEM, TEMPO, MIDI, UNDO.',
-         'LFO': 'El dibujo: la onda corriendo. KNOB 1 elige el slot en MOD MATRIX (uno por pista). MORE: PHASE, los STEPS (era MSEQ).'},
-  layers=[('HOME', 'el MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (SELECT las páginas, ALGORITHM las pestañas, KNOB 1–4 los ajustes)'),
-          ('EDIT', 'F3 INIT · G3 RECALL · DRUM: negras 1–8 silencian cada sonido'),
-          ('SEQ', 'F3 CLEAR · G3 REVERSE · A3/B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO · D5 REVERT · **G5 CLR STEP** · REC: CLEAR ALL'),
-          ('FX', 'punch-in: F3–A3 REPEAT · B3 GLITCH · C4 TAPE STOP · D4/E4 OCT · F4 ½ TEMPO · G4/A4 DEC · B4/C5 STUTTER · D5–F5 ATK+ ARP RANDOM · G#4 FREEZE · C#5 SHUFFLE · D#5 F#5 barridos · perillas: macros (con un glitcher, las suyas)'),
-          ('GLO', 'negras 1–6 MUTE · F3–D4 SOLO · E4 desmutea todo · F4 TAP · A4 FREEZE · B4 REVERT ALL · **G4 UNDO** · PLAY reinicia · perillas: LEVEL'),
-          ('LFO', 'KNOB 1–4 = M1–M4, enganchadas · F3 rutas nuevas · G3 las borra'),
-          ('SCL', 'cualquier tecla fija la ROOT'),
-          ('SAVE', 'F3–B3 tocar A–D · C4–F4 guardar A–D · **C5 NAME** · D5 LOOP/SONG · E5 SONG REC · G5 ARRANGE'),
-          ('REC', 'F3 CLEAR · G3 CLICK')],
-  combos=[(['HOME', 'SELECT'], 'GEN, el generador de temas'),
-          (['EDIT·SEQ·LFO·FX', 'SELECT'], 'sus dados: BEFORE / NOW, quedarse o cancelar'),
-          (['GLO', 'SELECT'], 'el tempo, desde cualquier página'),
-          (['ENV·SCL·ARP·SAVE', 'SELECT'], 'recorre esa cadena desde cualquier lado'),
-          (['ALGORITHM'], 'la pista, siempre'),
-          (['SEQ', 'G5'], 'CLR STEP: el paso y sus locks'),
-          (['PASO', 'SELECT'], 'la página EDIT que bloquean sus perillas (SEQ › STEP)'),
-          (['SAVE', 'C5'], 'NAME: renombra slot, sección, proyecto'),
-          (['GLO', 'G4'], 'UNDO (otra vez: redo)'),
-          (['OCT−', 'OCT+'], 'atrás / hacerlo (NO / YES)')]),
-}
+          (['OCT−', 'OCT+'], 'back / do it (NO / YES)')])
 
 # pages shown only where they apply (the manual's "Some pages only appear when they apply"); drawn dashed
 COND = {('CE_SYN', 'VOICE'), ('CE_SYN', 'FILTER')}   # (3b: a synth's page 3, ANALOG's VOICE or the others' FILTER;
@@ -402,8 +354,7 @@ def key_cap(sv, x, y, name, accent):
     return w
 
 
-def card_head(sv, x, y, w, sec, lang, accent):
-    T = L[lang]
+def card_head(sv, x, y, w, sec, accent):
     kw = key_cap(sv, x, y, sec, accent)
     hold, sel = T['hints'][sec]
     a = (T['hold'] + ': ' + hold) if hold else T['nolayer']
@@ -425,8 +376,7 @@ def note(sv, x, y, w, text, accent):
     return y + len(lines) * 20 + 6
 
 
-def build(lang, keys):
-    T = L[lang]
+def build(keys):
     sv = Svg()
     bykey = {}
     for ch in keys: bykey.setdefault(ch['sec'], []).append(ch)
@@ -488,7 +438,7 @@ def build(lang, keys):
         bottom = y
         for sec, mine, cx, cw in layout:
             acc = ACCENT[sec]
-            hy = card_head(sub, cx + PAD, y + PAD, cw - 2 * PAD, sec, lang, acc)
+            hy = card_head(sub, cx + PAD, y + PAD, cw - 2 * PAD, sec, acc)
             bx = cx + PAD
             b = hy
             for i, (_, ch, lab) in enumerate(mine):
@@ -504,7 +454,7 @@ def build(lang, keys):
         sv.o += sub.o; sv.chars |= sub.chars; sv.glyphs |= sub.glyphs
         y = bottom + GAP
     # ---- the six rules
-    sv.px(M, y + 6, T['rules_t'].upper() if lang == 'en' else 'LAS SEIS REGLAS', 3, TXT)
+    sv.px(M, y + 6, T['rules_t'].upper(), 3, TXT)
     y += 40
     rc = [K[0], K[1], K[2], K[3], ORANGE, '#F4F1EA']
     tw3 = (W - 2 * M - 2 * GAP) / 3
@@ -561,9 +511,8 @@ def build(lang, keys):
     sv.rrect(M + lw + GAP, y, cw2, bottom - y, 16, fill=CARD, stroke='#1E1C25', sw=1.2)
     sv.o += sub.o; sv.chars |= sub.chars; sv.glyphs |= sub.glyphs
     y = bottom + 26
-    sv.text(M, y + 4, 'ACID FM  ·  GPL-3.0  ·  ' + ('generated by' if lang == 'en' else 'generado por') +
-            ' tools/gen_nav_map.py ' + ('from' if lang == 'en' else 'desde') + ' firmware/src/ui_lens.c', 14, DIM)
-    sv.text(W - M, y + 4, 'docs/MANUAL.md § 3' if lang == 'en' else 'docs/MANUAL.es.md § 3', 14, DIM, anchor='end')
+    sv.text(M, y + 4, 'ACID FM  ·  GPL-3.0  ·  generated by tools/gen_nav_map.py from firmware/src/ui_lens.c', 14, DIM)
+    sv.text(W - M, y + 4, 'docs/MANUAL.md § 3', 14, DIM, anchor='end')
     H = y + M
     return sv, H, drawn
 
@@ -582,20 +531,20 @@ def fonts_css(chars):
         opt.notdef_outline = True
         sub = subset.Subsetter(opt); sub.populate(text=text); sub.subset(f)
         b = io.BytesIO(); f.flavor = 'woff'; f.recalcTimestamp = False; f.save(b)
-        css.append(f"@font-face{{font-family:'JIANT Inter Tight';font-weight:{w};"
+        css.append(f"@font-face{{font-family:'ACID Inter Tight';font-weight:{w};"
                    f"src:url(data:font/woff;base64,{base64.b64encode(b.getvalue()).decode()}) format('woff')}}")
     return ''.join(css)
 
 
-def svg_doc(lang, keys):
-    sv, H, drawn = build(lang, keys)
+def svg_doc(keys):
+    sv, H, drawn = build(keys)
     sig = hashlib.sha1(repr([(c['ce'], [(p['name'], p['g']) for p in c['pages']], [g['nm'] for g in c['groups']], c['default'])
                              for c in keys]).encode()).hexdigest()[:12]
     head = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H:.0f}" width="{W}" height="{H:.0f}" '
-            f'role="img" aria-label="ACID FM {escape(L[lang]["title"])} {VERSION}">\n'
+            f'role="img" aria-label="ACID FM {escape(T["title"])} {VERSION}">\n'
             f'<!-- generated by tools/gen_nav_map.py from firmware/src/ui_lens.c (chains {sig}); do not edit -->\n'
-            f'<title>ACID FM · {escape(L[lang]["title"])} · {VERSION}</title>\n'
-            f'<style>{fonts_css(sv.chars)}text{{font-family:\'JIANT Inter Tight\',\'Inter Tight\',Inter,system-ui,sans-serif}}</style>\n'
+            f'<title>ACID FM · {escape(T["title"])} · {VERSION}</title>\n'
+            f'<style>{fonts_css(sv.chars)}text{{font-family:\'ACID Inter Tight\',\'Inter Tight\',Inter,system-ui,sans-serif}}</style>\n'
             f'{glyph_defs(sv.glyphs)}\n'
             f'<rect width="{W}" height="{H:.0f}" rx="28" fill="{BG}"/>\n'
             f'<rect x="1" y="1" width="{W - 2}" height="{H - 2:.0f}" rx="27" fill="none" stroke="#24212c" stroke-width="2"/>\n')
@@ -631,8 +580,8 @@ const [svg, png, w, h] = process.argv.slice(1);
 def main():
     sec, keys = parse()
     check = '--check' in sys.argv
-    for lang, name in (('en', 'navigation-map'), ('es', 'navigation-map.es')):
-        doc, H, drawn = svg_doc(lang, keys)
+    for name in ('navigation-map',):                  # (3c-1 task 10b: English only, the Spanish map gone)
+        doc, H, drawn = svg_doc(keys)
         verify(keys, drawn)
         out = R / 'docs' / f'{name}.svg'
         if check:

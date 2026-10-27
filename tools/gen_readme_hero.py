@@ -78,7 +78,7 @@ for i, (t, txt) in enumerate(cards):
     d.rectangle([cx, cy, cx + 5, cy + 92], fill=heat(i / (len(cards) - 1)))
     d.text((cx + 22, cy - 2), t, font=ft, fill=TXT)
     d.multiline_text((cx + 22, cy + 38), txt, font=fd, fill=MID, spacing=6)
-d.text((70, Hh - 50), "GPL-3.0  ·  fork of Felucca (Hügelton Instruments)  ·  song mode from SLOOP  ·  juanjiant-bit.github.io/JIANT",
+d.text((70, Hh - 50), "GPL-3.0  ·  built on JIANT FM and Felucca  ·  song mode from SLOOP  ·  juanjiant-bit.github.io/JIANT",
        font=font('Medium', 20), fill=DIM)
 im.save(OUT / 'jiant-hero.png', optimize=True); print(OUT / 'jiant-hero.png', im.size)
 

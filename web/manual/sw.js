@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+// Portions Copyright (C) 2026 NorfolkHacker
 // The manual offline: its page, scripts and screens cached (network first for the page and scripts, so a new version
 // shows at once; cache first for the screens). Only the manual's own folder; the emulator needs the network.
-const CACHE = "jiant-manual-v1";
+const CACHE = "acid-manual-v2";   /* (3c-1 task 10b: English only; a new name drops the old cache) */
 const CORE = ["./", "index.html", "manual.js", "data.js", "nav.js"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
