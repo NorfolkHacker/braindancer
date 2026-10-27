@@ -67,6 +67,7 @@ static const char *const UXQ_VAL1[COMP_N] = {"", "CHANCE", "RATCHET", "ORDER", "
 static const char *const UXQ_EVERY[EV_N] = {"ALWAYS", "1ST OF 2", "EVERY 2ND", "NEVER", "1ST OF 3", "2ND OF 3", "EVERY 3RD",
                                             "1ST OF 4", "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY", "NOT 1ST"};
 static const char *const UXQ_WAY[4] = {"UP", "DOWN", "UP-DOWN", "RANDOM"};   /* (an ARP's ORDER, WALK's MODE, a head's way: +PING) */
+static const char *const UXQ_PSTEPS[4] = {"OFF", "+1 DEG", "-1 DEG", "+OCT"};   /* (RATCH's PITCH STEP: core.h RP_*) */
 #define UXQ_PSTEP "PITCH STEP"                          /* (RATCH's pitch step, its own row: "PITCH" is NOTE's) */
 static const char *const UXQ_HDIR[4] = {"FORWARD", "REVERSE", "PING-PONG", "RANDOM"};   /* (fugue.c N_FGDIR) */
 static const char *const UXQ_VW[] = {" DEG", " OCT", " LOOPS", " LOOP", "FIT", " STEPS", "ALL", "CHORD", "NOTE ", "ADD", "ON",
@@ -218,7 +219,7 @@ static int uxq_select(int32_t s)
 /* the knob row: STEP NOTE ACC/SLD GATE (a DRUM track STEP LANE HIT ACC); a step held: the lock card (spec 2.5), what KNOB 1..4 lock
  * (ui_input.c lock_turn: the sound page's four, a MORE list's pick and row), a value not locked dim; (task 4) a chord being entered
  * on the roll: KNOB 4 its LENGTH, KNOB 1..3 the locks'; arpeggiated: KNOB 1..3 its RATE ORDER OCTAVES, KNOB 4 the lock's (a MORE
- * list's: its pick) */
+ * list's: the row KNOB 1 picked before, its lock: fix 1) */
 static const char *const UXQ_ENT[4] = {"RATE", "ORDER", "OCTAVES", "LENGTH"};
 static void uxq_lock_knobs(ux_knob_t k[4])
 {
@@ -239,7 +240,8 @@ static void uxq_lock_knobs(ux_knob_t k[4])
         } else if (more) {
             int32_t r;
             char v[24];
-            k[c].label = uxm_lock_card(lp, ent && ui.ent_arp && c == 3u ? 0u : c, st, v, sizeof v, &on, &r);
+            k[c].label = uxm_lock_card(lp, ent && ui.ent_arp && c == 3u ? 1u : c, st, v, sizeof v, &on, &r);   /* (fix 1: ARP, KNOB 4
+                                                         * the row picked, its lock) */
             str_cpy(k[c].value, v, sizeof k[c].value);
             k[c].bar = (uint8_t)(r >= 0 ? r * 255 / 1000 : 0);
         } else {
@@ -511,8 +513,7 @@ static __attribute__((noinline)) void uxq_cval(uint32_t k, uint32_t which, char 
         return;
     }
     if (which == 3u && v == COMP_RATCH) {               /* PITCH STEP: each hit a degree up, down, an octave up every other */
-        static const char *const PN[4] = {"OFF", "+1 DEG", "-1 DEG", "+OCT"};
-        uxq_cat(b, n, PN[rat_pit_of(st, k) & 3u]);
+        uxq_cat(b, n, UXQ_PSTEPS[rat_pit_of(st, k) & 3u]);
         return;
     }
     switch (v) {
@@ -702,7 +703,8 @@ static const char *uxq_more_say(void)                   /* the status line on SE
     }
 }
 
-/* (task 4) the status line while a step is held and no knob turned: "LOCK . STEP 5" (the card's: spec 2.5); 0 none held */
+/* (task 4) the status line while a step is held and no knob turned: "LOCK . STEP 5" (the card's: spec 2.5; fix 1: an ARP entry on a
+ * MORE list adds the row KNOB 4 locks, "LOCK . STEP 5 . MORPH"); 0 none held */
 static const char *uxq_lock_line(char *b, uint32_t n)
 {
     uint64_t held = uxq_owns() == UXQ_STEPS ? lock_held() : 0u;
@@ -715,6 +717,12 @@ static const char *uxq_lock_line(char *b, uint32_t n)
     uxq_cat(b, n, UXQ_WORD[UXQ_W_LOCKDOT]);
     uxq_cat(b, n, UXQ_WORD[UXQ_W_STEP]);
     uxq_num(b, n, (int32_t)st + 1);
+    if (ui.entry_open && ui.ent_arp && !grid_on() && lock_src() && lock_src()->graph == GR_MORE && uxm_lock_row(lock_src())) {
+        char v[24];                                     /* (fix 1: arpeggiated, the row KNOB 4 locks: ". MORPH") */
+        uint8_t bar;
+        uxq_cat(b, n, UXQ_WORD[UXQ_W_DOT]);
+        uxq_cat(b, n, uxm_row_text(uxm_lock_row(lock_src()), v, sizeof v, &bar));
+    }
     return b;
 }
 

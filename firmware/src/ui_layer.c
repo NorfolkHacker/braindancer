@@ -12,8 +12,9 @@
  *              row shows while a track plays DRUM; C4 unmutes them too);
  *              GLO + PLAY: from the top without stopping
  *   SCL  SET   any key: its note name is ROOT; KNOB 1..4 ROOT SCALE ROTATE PITCH (LY_SCL: P_ROOT P_SCALE, the SCL page's
- *              first two, then P_SOFS P_POFS, SCL > CHORD's ROTATE and SCL > MORE's SEQ PITCH; 3b task 9: named as SCL
- *              names them, ux_layer.c); the LEDs show the root lit and the scale's notes breathing
+ *              first two, then P_SOFS P_POFS, SEQ > MORE's ROTATE and SEQ PITCH since ACID FM 3c-1 task 4, kept on the layer:
+ *              its knobs keep their job; 3b task 9: named as SCL names them, ux_layer.c); the LEDs show the root lit and the
+ *              scale's notes breathing
  *   EDIT SET   (JIANT: Felucca's engine keys are gone, PRESETS picks engines and sounds) F3 INIT: the track's sound
  *              to its engine's first preset, a DRUM track's DRUM-X kit to the factory one; G3 RECALL: the track's
  *              sound (and a DRUM track's kit) as the section playing stored it, the safe state (project.c
@@ -281,38 +282,8 @@ static void hints_reset(void)
     uint32_t k;
     for (k = 0; k < HK_N; k++)
         hint_given(k) = 0;
-    ui.hint_k = 0;
     settings_save();
 }
-/* (0.9.5) a frame: the page's hint waiting (page_entered: MOTION, PUNCH, MUTATE) given once its page has been shown HINT_DWELL_MS (gone with
- * another page: walking past with SELECT says nothing), when nothing else is said or open over it, at most HINT_MAX times
- * ever (hint_given, kept with the settings); on its page only (ui.hint_pg) */
-static void hint_tick(void)
-{
-    uint32_t k = ui.hint_k, at = ui.home ? 255u : ui.page + 1u;
-    if (!k)
-        return;
-    if (ui.hint_at != at) {
-        ui.hint_k = 0;
-        return;
-    }
-    if (fm1_ms - ui.hint_ms < HINT_DWELL_MS || ui.msg_t || ui.menu || ui.confirm || ui.layer || name_on() || ui.uboot)
-        return;
-    ui.hint_k = 0;
-    if (hint_given(k) >= HINT_MAX)
-        return;
-    hint_given(k)++;
-    settings_save();                                    /* (the count kept: deferred while playing) */
-    if (k == HK_MOTION)
-        ui_message("REC + PLAY, TURN A KNOB");          /* (0.6.92) how it is recorded */
-    else {                                              /* HK_MUTATE (ACID FM 3b task 8: HK_PUNCH never set, FX > PUNCH gone:
-                                                         * FX > MORE's PUNCH LANE rows say it, ux_section.c UXS_LANE_SAY) */
-        ui_message("OCT+ KEEP  GLO+A4 FREEZE");
-        str_cpy(ui.msg2, "SEQ+D5 REVERT  GLO+B4 ALL", sizeof ui.msg2);   /* (0.9.3) back to the anchor */
-    }
-    ui.hint_pg = (uint8_t)at;                           /* (0.9.0: this page's only) */
-}
-
 static uint32_t snd_id(void) { return TSEL->eng_req | (uint32_t)TSEL->preset << 8 | (uint32_t)TSEL->user << 16; }
 /* EDIT RECALL: the section playing has a stored sound to come back to */
 static int edit_recallable(void) { return project_recall_slot() >= 0; }

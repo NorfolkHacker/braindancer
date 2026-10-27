@@ -247,14 +247,12 @@ static int32_t ratio_d(const param_desc_t *d, int32_t v) { return ratio_of(d->mi
 #define LA_CARD_Y 42
 #define LA_GRAPH_Y 77
 
-/* (0.9.5) the hints a page gives ("OCT+ KEEP  GLO+A4 FREEZE"): only once the page has been dwelt on HINT_DWELL_MS (never
- * while SELECT walks past it), each at most HINT_MAX times ever. The count kept with the settings, a byte a hint in engine
- * 15's spare favourite bytes 0..12 (no engine 15: 0 in older settings, a hint not yet given; 4..12 held the layer buttons'
- * "HOLD [X] QUICK" counts, gone: kept as saved, unused); INIT SYSTEM starts them over */
-enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_MUTATE, HK_N };   /* (3b task 8: HK_PUNCH kept, its count stored with the settings:
-                                                         * FX > PUNCH gone, its hint FX > MORE's PUNCH LANE status line) */
-#define HINT_DWELL_MS 800u
-#define HINT_MAX 2u
+/* (0.9.5) the hints a page gave ("OCT+ KEEP  GLO+A4 FREEZE") once dwelt on, each at most twice ever, counted with the settings:
+ * a byte a hint in engine 15's spare favourite bytes 0..12 (no engine 15: 0 in older settings, a hint not yet given; 4..12 held
+ * the layer buttons' "HOLD [X] QUICK" counts, gone: kept as saved, unused); INIT SYSTEM starts them over. (ACID FM 3c-1 task 4 fix
+ * 1: the pages that gave them gone, FX's PUNCH (3b task 8), SEQ's AUTOMATION and MUTATE: their words the MORE rows' status line,
+ * ux_section.c UXS_LANE_SAY, ux_seq.c uxq_more_say; the dwell gone, the bytes and their places kept as stored) */
+enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_MUTATE, HK_N };
 #define hint_given(k) (favorites.factory[15][(k)])
 static struct {
     uint8_t home;
@@ -311,11 +309,6 @@ static struct {
     uint32_t layer_sig;          /* drawn-state cache of the map */
     char msg[40];                /* (0.9.0: 40, was 24 and cut the long ones silently; longer: ellipsised, ui_say) */
     char msg2[40];               /* a second message, shown when the first is over */
-    uint8_t hint_pg;             /* (0.9.0) the page (+ 1, HOME 255) a page's hint (MUTATE's) was given on: gone
-                                  * on another (ui_draw_page) */
-    uint8_t hint_k;              /* (0.9.5) a hint waiting for its page to be dwelt on (HK_*; 0 none: ui_layer.c hint_tick) */
-    uint8_t hint_at;             /* .. the page it is for (+ 1, HOME 255) */
-    uint32_t hint_ms;            /* .. shown since */
     uint32_t enc_t[NE];
     /* drawn-state cache */
     char col[4][56];   /* (0.6.10: was 32, a key up to 51 lost its colour / gauge / icon tail) */
@@ -686,7 +679,6 @@ static void ui_say(const char *a, const char *b)
         ui.msg[sizeof ui.msg - 2u] = ELLIPSIS;
     ui.msg_t = 40;
     ui.msg2[0] = 0;
-    ui.hint_pg = 0;
 }
 
 static void ui_message(const char *s) { ui_say(s, ""); }
@@ -775,12 +767,6 @@ static void page_entered(void)
     if (!ui.home && lock_page_ok(ui.page))
         ui.plk_src = (uint8_t)(ui.page + 1u);
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
-    ui.hint_k = HK_NONE;                         /* (3c-1 task 4: AUTOMATION's and MUTATE's hints SEQ > MORE's status line,
-                                                         * ux_seq.c uxq_more_say; 0.9.5:
-                                                         * its hint once dwelt on: ui_layer.c hint_tick; 3b task 8: FX > PUNCH's,
-                                                         * HK_PUNCH, its MORE rows' status line, ux_section.c UXS_LANE_SAY) */
-    ui.hint_at = (uint8_t)(ui.home ? 255u : ui.page + 1u);
-    ui.hint_ms = fm1_ms;
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* clear the previous page's emphasis */
     ui.act = pg->graph == GR_USER ? 4u : 0u;     /* the save screen is ready for OCT+ */

@@ -1190,18 +1190,13 @@ static void edit_param(uint32_t slot, int32_t steps)
     if (pg->graph == GR_CHANCE) {                       /* (ACID FM 3c-1 task 3) SEQ > STEP EXTRAS, the step picked on STEPS: */
         step_t *st = &TSEL->step[ui.cursor];            /* RATCHET (the inherited CHANCE page's RATCH x1..x4), CHANCE (its */
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }   /* CHANCE), CONDITION (COMP's TRIG), MICRO (NOTE's) */
-        if (slot == 0u) {                               /* (task 4) the step's ratchet as shown (an ECHO's x2..x8 too): x1..x4 */
-            uint32_t sh;                                /* written; past x4 from an ECHO kept (SEQ > MORE's STEP rows set it) */
-            int32_t ek, to = (int32_t)uxq_ratch(st, &sh, &ek) + steps;
-            if (ek >= 0 && steps > 0 && to > 4) {         /* (left from x6: x4) */
-                ui_message("X5 TO X8: SEQ MORE, TYPE");
-                return;
-            }
-            if (ek == 0)
-                st->comp = st->carg = 0;
-            else if (ek == 1)
-                st->comp2 = st->carg2 = 0;
-            step_set_ratchet(st, (uint32_t)clamp(to, 1, 4));
+        if (slot == 0u) {                               /* (task 4) the step's ratchet as shown (an ECHO's x2..x8 too); (fix 1) */
+            uint32_t sh;                                /* from an ECHO a detent the next count, its shape and pitch step kept */
+            int32_t ek, to = (int32_t)uxq_ratch(st, &sh, &ek) + (steps > 0 ? 1 : -1);   /* (rat_ui_set: x1, or FLAT x2..x4 with */
+            if (ek < 0)                                 /* no pitch step, the flags'); the flags' own x1..x4 as before */
+                step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + steps, 1, 4));
+            else
+                rat_ui_set(st, (uint32_t)ek, to <= 1 ? 0u : sh * 7u + (uint32_t)clamp(to, 2, 8) - 1u, rat_pit_of(st, (uint32_t)ek));
         } else if (slot == 1u)
             step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
         else if (slot == 2u)                            /* (pre-review fix: the step's TRIG, the note on its loops) */
@@ -2612,11 +2607,12 @@ static void ui_input_frame(void)
             (ui.ent_arp ? k < 3u : k == 3u)) {          /* (0.6.37) a chord being entered: (3c-1 task 4) KNOB 4 its LEN, KNOB 1 */
             ent_knob(k, s);                             /* .. 3 the locks' (KNOB 1 a MORE row's pick, as on the grid); ARP: */
             ux_knob_touch(k);                           /* KNOB 1 RES, 2 ORDER, 3 OCT, KNOB 4 the lock's (a MORE list's: */
-            continue;                                   /* its pick) */
+            continue;                                   /* the row picked, its value: fix 1) */
         }
         if ((held = lock_held()) != 0u) {               /* a step held on STEP: KNOB k locks (parameter locks) */
-            lock_turn(ui.entry_open && ui.ent_arp && k == 3u && lock_src() && lock_src()->graph == GR_MORE ? 0u : k, s,
-                      held);                            /* (3c-1 task 4: ARP, KNOB 4 picks the MORE row, KNOB 1's job) */
+            lock_turn(ui.entry_open && ui.ent_arp && k == 3u && lock_src() && lock_src()->graph == GR_MORE ? 1u : k, s,
+                      held);                            /* (3c-1 task 4 fix 1: ARP, KNOB 4 locks the MORE row KNOB 1 picked
+                                                         * before, KNOB 2's job) */
             ux_knob_touch(k);
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;

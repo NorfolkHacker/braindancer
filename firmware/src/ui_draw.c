@@ -1656,7 +1656,6 @@ static void ui_draw(void)
     ui_draw_page(counting);
     scr_shown();
 }
-static void hint_tick(void);                            /* (ui_layer.c) */
 static uint8_t dlg_behind;                              /* (0.9.5) the page being drawn round a NOTICE */
 /* (0.9.5) a NOTICE (the OCT- / OCT+ questions) over the page: its tabs, its card, its breadcrumb the screen's holes (gfx.c
  * scr_holes), the page drawn round them as ever (DICE's BEFORE / NOW are the whole screen; over the menu, NAME, UPDATE MODE:
@@ -1671,7 +1670,6 @@ static void ui_draw_page(uint32_t counting)
     if (dlg_notice()) {
         const int16_t R[3][4] = {{0, LT_Y, 240, (int16_t)DLG_TAB_H}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
         uint8_t f = ui.force;
-        hint_tick();
         scr_holes(R, 3);
         dlg_behind = 1;
         ui_draw_body(counting);
@@ -1683,16 +1681,10 @@ static void ui_draw_page(uint32_t counting)
         }
         return;
     }
-    hint_tick();
     ui_draw_body(counting);
 }
 static void ui_draw_body(uint32_t counting)
 {
-    if (ui.hint_pg && ui.hint_pg != (ui.home ? 255u : ui.page + 1u)) {   /* (0.9.0) a layer's hint: its own page's only */
-        ui.hint_pg = 0;
-        ui.msg_t = 0;
-        ui.msg2[0] = 0;
-    }
     if (ui.uboot) {
         draw_uboot();
         draw_head();

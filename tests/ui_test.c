@@ -272,6 +272,9 @@ static uint32_t ux_rows_ink(uint32_t y0, uint32_t h)    /* pixels of LCD rows y0
     return n;
 }
 
+/* (3c-1 task 4 fix 1: the firmware's dwell hints gone) how long a test dwells on a page to see no hint comes; a stored count */
+#define UXT_DWELL_MS 800u
+#define UXT_HINT_MAX 2u
 /* one UI frame (input, then the drawing on the stub display) */
 struct ux_more_s;
 static void uxe_more_set(const ux_more_t *m, uint32_t id, int32_t s);   /* (3b task 7: LFO's MORE in the LFO tests) */
@@ -4343,7 +4346,7 @@ static int test_quick_layers(void)
         btn_up(LB[i]); frame();
         ok &= !flash && !ui.home && (LB[i] == B_GLO ? cur_page()->graph == GR_TRK :
                                      LB[i] == B_SCL ? cur_page()->fam == FAM_SCL : str_eq(cur_page()->title, "EDIT 1"));
-        hint &= !frames_layer_hint(HINT_DWELL_MS + 64u);   /* (0.9.5: no layer hint, dwelt on or not) */
+        hint &= !frames_layer_hint(UXT_DWELL_MS + 64u);   /* (0.9.5: no layer hint, dwelt on or not) */
         go_home(); frame();
         btn_down(LB[i]); frames(368);
         ok &= !ui.layer;
@@ -4353,7 +4356,7 @@ static int test_quick_layers(void)
         ok &= ui.home && !ui.layer;
         ui.msg_t = 0;
         press(LB[i]);
-        hint &= !frames_layer_hint(HINT_DWELL_MS + 64u);
+        hint &= !frames_layer_hint(UXT_DWELL_MS + 64u);
         go_home(); frame();
         btn_down(LB[i]); key_down(white(9)); frame();
         ok &= ui.layer == LL[i] && !gates();
@@ -4805,11 +4808,11 @@ static int test_bughunt_ui(void)
     go_page(GR_USER); ui.uslot = 0; frame();
     ui.msg_t = 0;
     name_key();
-    ok = name_on() && !frames_layer_hint(HINT_DWELL_MS + 64u);
+    ok = name_on() && !frames_layer_hint(UXT_DWELL_MS + 64u);
     ui_power_on();
     press(B_EDIT);
     bad += check("0.9.2 SAVE + C5 = RENAME on USER: no layer hint over NAME (0.9.5: nor after an EDIT tap elsewhere)",
-                 ok && !frames_layer_hint(HINT_DWELL_MS + 64u));
+                 ok && !frames_layer_hint(UXT_DWELL_MS + 64u));
     return bad;
 }
 
@@ -7082,7 +7085,7 @@ static int test_seq_tools(void)
         for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
             press(B_SEQ); frames(320);
             ok &= str_eq(cur_page()->title, ORD[q]);
-            if (!q) ok &= !frames_layer_hint(HINT_DWELL_MS);   /* (0.9.5: no layer hint, dwelt on) */
+            if (!q) ok &= !frames_layer_hint(UXT_DWELL_MS);   /* (0.9.5: no layer hint, dwelt on) */
         }
     }
     bad += check("  0.9.2 a tap on STEP: the next group's first, round (0.9.5: no layer hint; was BAR's next set)", ok);
@@ -10076,13 +10079,13 @@ static int test_skin(void)
     {   /* (0.9.0) a page's hint (MUTATE's) on its page only: gone when the page changes (0.9.5: the layers' gone) */
         ui_power_on(); frame();
         press(B_EDIT);
-        ok = !frames_layer_hint(HINT_DWELL_MS + 64u) && !ui.hint_pg;
+        ok = !frames_layer_hint(UXT_DWELL_MS + 64u);
         seqm_pick(UXR_TRACK, P_MSND); uxs_hint_sec = 0xFF;   /* (3c-1 task 4: MUTATE's hint SEQ > MORE's status line, a MUTATE
                                                          * row picked; the section's first hint gone) */
-        frames(HINT_DWELL_MS + 64u);
+        frames(UXT_DWELL_MS + 64u);
         ok &= str_eq(cur_page()->title, "SEQ MORE") && !ui.msg_t && uxq_t_is("hint", uxq_t_say(), "OCT+ KEEP  GLO+A4 FREEZE");
         go_title("ENV"); frame();
-        ok &= !ui.msg_t && !ui.hint_pg;
+        ok &= !ui.msg_t;
         bad += check("a page's hint goes when the page changes (MUTATE's: SEQ > MORE's line, a MUTATE row picked); no layer hint "
                      "after EDIT", ok);
     }
@@ -11687,7 +11690,7 @@ static int test_lz_dialogs(void)
 }
 
 /* (0.9.5) toasts and hints: a toast is a small pill over the page, never a cleared panel (every skin, palette, LARGE); a
- * NOTICE leaves the page round its box; a page's hint only once dwelt on, never while SELECT walks past, at most HINT_MAX
+ * NOTICE leaves the page round its box; a page's hint only once dwelt on, never while SELECT walks past, at most UXT_HINT_MAX
  * times a power-on */
 static uint16_t toast_snap[240 * 240];
 static void toast_box(const char *m, int32_t *b)        /* the pill on the screen (ui_graph.c toast_pill, toast_at) */
@@ -11789,17 +11792,17 @@ static int test_toasts(void)
         for (k = 0, lc = 0; k < 3u; k++) {              /* (0.9.5) SCL tapped: no layer hint, ever (nothing counted) */
             go_home(); frames(160); ui.msg_t = 0;
             press(B_SCL);
-            lc += (uint32_t)frames_layer_hint(HINT_DWELL_MS + 64u);
+            lc += (uint32_t)frames_layer_hint(UXT_DWELL_MS + 64u);
         }
         ok = lc == 0u;
         for (k = HK_N; k < 13u; k++)                    /* (the old layer counts' bytes: untouched) */
             ok &= favorites.factory[15][k] == 0u;
         bad += check("  0.9.5 SCL tapped three times, dwelt on: no \"HOLD [SCL] QUICK\", nothing counted", ok);
-        hint_given(HK_MUTATE) = HINT_MAX;
+        hint_given(HK_MUTATE) = UXT_HINT_MAX;
         p.magic = PERSIST_MAGIC; p.panel = panel;
         settings_export(&p);
         ui_power_on();                                  /* (a fresh power-on: favorites cleared, then the settings loaded) */
-        ok = hint_given(HK_MUTATE) == 0u && settings_import(&p, sizeof p) && hint_given(HK_MUTATE) == HINT_MAX;
+        ok = hint_given(HK_MUTATE) == 0u && settings_import(&p, sizeof p) && hint_given(HK_MUTATE) == UXT_HINT_MAX;
         bad += check("  the counts kept with the settings", ok);
         p.favorites.factory[15][HK_MUTATE] = 0;         /* (older settings: those bytes 0 = not given yet) */
         ui_power_on();
@@ -11808,7 +11811,7 @@ static int test_toasts(void)
     }
     ui_power_on();                                      /* (0.9.5) no layer hint: not before the layer is held, nor after */
     press(B_EDIT);
-    ok = !frames_layer_hint(HINT_DWELL_MS + 64u);
+    ok = !frames_layer_hint(UXT_DWELL_MS + 64u);
     go_home(); frames(160);
     fm1_in.buttons |= 1u << panel.btn[B_EDIT]; host_pressed |= 1u << panel.btn[B_EDIT];
     frames(480);
@@ -11818,7 +11821,7 @@ static int test_toasts(void)
     press(B_EDIT);
     bad += check("  0.9.5 no layer hint after an EDIT tap: before its layer is held, nor after", ok && !frames_layer_hint(120u));
     /* INIT SYSTEM (SAVE > TOOLS): the hints start over */
-    hint_given(HK_MUTATE) = HINT_MAX;
+    hint_given(HK_MUTATE) = UXT_HINT_MAX;
     confirm_open(CF_INIT_SYS, 0); ui.force = 1; frame();
     press(B_OCTUP); frames(160);
     ok = !ui.confirm && hint_given(HK_MUTATE) == 0u;
@@ -18484,18 +18487,29 @@ static int test_t34_lock(void)
     bad += check("ACID FM 3c-1 task 4: a step held on the roll: KNOB 1 picks the MORE row, KNOB 2 locks it, KNOB 4 the chord's LENGTH; "
                  "LOCK . NAME . VALUE, idle LOCK . STEP 5, the footer LOCK . MORE", ok);
     press(B_ARP); frames(4);
-    r0 = uxm_at[nav_key(SEC_EDIT) % NAV_KEYS].sel;
-    turn(EN_K1, 1); turn(EN_K2, 1); turn(EN_K3, 1); frames(4);
+    r0 = uxm_at[nav_key(SEC_EDIT) % NAV_KEYS].sel;      /* (MORPH, picked with KNOB 1 before ARP: the pick kept) */
+    turn(EN_K1, 1); turn(EN_K2, 1); turn(EN_K3, 1); frames(2000);   /* (the chord's messages gone) */
     ok = ui.ent_arp && ui.ent_res == 2u && ui.ent_ord == 1u && ui.ent_oct == 2u && uxm_at[nav_key(SEC_EDIT) % NAV_KEYS].sel == r0 &&
-         str_eq(uxe_labels(), "RATE|ORDER|OCTAVES|SETTING");
-    turn(EN_K4, -1); frames(4);
-    ok &= uxm_at[nav_key(SEC_EDIT) % NAV_KEYS].sel != r0;
+         uxq_t_is("ARP labels", uxe_labels(), "RATE|ORDER|OCTAVES|MORPH") && uxq_t_is("ARP idle", uxq_t_say(), "LOCK \xB7 STEP 5 \xB7 MORPH");
+    {
+        int16_t v0 = 0, v1 = 0;
+        char want[48];
+        ok &= motion_lock_get(TSEL, 4, P_MORPH, &v0);
+        turn(EN_K4, 3); frames(4);                      /* (fix round 1: KNOB 4 locks the picked row, KNOB 2's job) */
+        ok &= motion_lock_get(TSEL, 4, P_MORPH, &v1) && v1 > v0 && uxm_at[nav_key(SEC_EDIT) % NAV_KEYS].sel == r0 && ui.ent_arp;
+        str_cpy(want, "LOCK \xB7 MORPH \xB7 ", sizeof want);
+        str_cpy(want + str_len(want), uxe_value(3), sizeof want - str_len(want));
+        ok &= uxq_t_is("ARP lock", uxq_t_say(), want);
+        motion_clear_locks(TSEL, 4);                    /* (a fresh step: the lock lands from the sound's own value) */
+        turn(EN_K4, 2); frames(4);
+        ok &= motion_lock_get(TSEL, 4, P_MORPH, &v1);
+    }
     ui.plk_src = (uint8_t)(page_first(FAM_ENV) + 1u);   /* (a sound page: KNOB 4 locks its fourth, RELEASE) */
     turn(EN_K4, 3); frames(4);
     ok &= motion_lock_get(TSEL, 4, P_REL, &v);
     key_up(7); frames(4);
-    bad += check("  ARP entry: KNOB 1..3 RATE ORDER OCTAVES, KNOB 4 picks the MORE row; on a sound page KNOB 4 locks its fourth "
-                 "(a lock lands)", ok);
+    bad += check("  ARP entry: KNOB 1..3 RATE ORDER OCTAVES, KNOB 4 locks the MORE row picked (KNOB 1, before): LOCK . MORPH . value; "
+                 "idle LOCK . STEP 5 . MORPH; on a sound page KNOB 4 locks its fourth", ok);
     song.rec = 0;
     ui_power_on();
     return bad;
@@ -18556,17 +18570,23 @@ static int test_t34_extras(void)
         in = (uint32_t)on;
     }
     ok &= parts == 6u;
-    turn(EN_K1, 1); frames(200);
-    ok &= st->comp == CP_ECHO && st->carg == 4u && uxq_t_is("kept", uxq_t_say(), "X5 TO X8: SEQ MORE, TYPE");
-    turn(EN_K1, -1); frames(200);
-    ok &= st->comp == CP_NONE && step_ratchet(st) == 4u && uxq_t_is("x4", uxe_value(0), "X4");
+    st->carg |= (uint8_t)(RP_DOWN << 4);                /* (a pitch step: kept) */
+    turn(EN_K1, 1); frames(200);                        /* (fix 1: a detent the next value, its shape and pitch step kept) */
+    ok &= st->comp == CP_ECHO && uxq_t_is("x7", uxe_value(0), "X7 FADE") && CP_ECHO_PIT(st->carg) == RP_DOWN;
+    turn(EN_K1, -1); frames(200); turn(EN_K1, -1); frames(200);
+    ok &= st->comp == CP_ECHO && uxq_t_is("x5", uxe_value(0), "X5 FADE") && CP_ECHO_PIT(st->carg) == RP_DOWN;
+    for (int i = 0; i < 4; i++) { turn(EN_K1, -1); frames(200); }   /* (.. down to x1: the ECHO gone, the flags x1) */
+    ok &= st->comp == CP_NONE && step_ratchet(st) == 1u && uxq_t_is("x1", uxe_value(0), "X1");
     st->comp2 = CP_ECHO; st->carg2 = (uint8_t)(0u | CP_ECHO_RISE); step_set_ratchet(st, 1);   /* x2 RISE in COMP 2 */
     frames(20);
     ok &= uxq_t_is("echo 2", uxe_value(0), "X2 RISE");
     turn(EN_K1, 1); frames(200);
-    ok &= st->comp2 == CP_NONE && step_ratchet(st) == 3u && uxq_t_is("x3", uxe_value(0), "X3");
-    bad += check("  RATCHET shows an ECHO's x5..x8 and FADE / RISE (the picture its parts); right past x4 kept (said), left writes "
-                 "X4, from X2 RISE right X3 (what the knob shows)", ok);
+    ok &= st->comp2 == CP_ECHO && uxq_t_is("x3 rise", uxe_value(0), "X3 RISE");
+    step_clear(st); st->time = ST_NOTE; st->n = 1; st->note[0] = 43;   /* (the flags' x1..x4: as before) */
+    for (int i = 0; i < 6; i++) { turn(EN_K1, 1); frames(200); }
+    ok &= st->comp == CP_NONE && step_ratchet(st) == 4u;
+    bad += check("  RATCHET shows an ECHO's x5..x8 and FADE / RISE (the picture its parts); a detent from one the next value, its shape "
+                 "and pitch step kept (X6 FADE: X7, X5 .. X1; X2 RISE: X3 RISE); the flags' x1..x4 as before", ok);
     uxq_t_open(16, ENGI_DRUM);                          /* (task 3 #3) a DRUM track: a hit-only step */
     st = &TSEL->step[4];
     step_clear(st);

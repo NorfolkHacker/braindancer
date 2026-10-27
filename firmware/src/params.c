@@ -531,9 +531,9 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACKS page (ui_input.c tracks_edit) */
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
-       GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS,
-       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE,
-       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP };   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
+       GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MORPH, GR_DXIMG,
+       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP };   /* (ACID FM 3c-1 task 4 fix 1: GR_MOTION GR_EVENTS GR_COMP GR_MUTATE
+                                                         * GR_FUGUE GR_SHAPE gone with SEQ's pages; no value is stored, PAGES' own) */   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
                                                          * (task 5) GR_FM6P FM6's OPERATOR, OP ENV; GR_DXP DRUM-X's SOUND, SOUND 2 */   /* (ACID FM 3b) MORE: a section's last page, its list (ux_more.h; .more) */   /* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c) */   /* (0.8.5) EDIT > WORDS: VOICE's lyric (sing.c) */   /* (0.8.5:
                                                          * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (ACID FM 3b task 5: GR_FMOP GR_FMOP2 GR_FMENV GR_DXSND, JIANT's FM6 operator and DRUM-X sound pages, gone; task 7: GR_MSEQ, MSEQ's;
                                                          * task 8: GR_SLCR GR_SLPIT GR_PUNCH GR_BUSES, JIANT's FX pages': FX the ux
@@ -877,8 +877,8 @@ static const page_t PAGES[] = {
     {"DRUM SOUND", FAM_EDIT, SC_TRACK, GR_DXP, {ID_DX_LANE, P_LN0, ID_DX_PITCH, ID_DX_DECAY}},
     {"DRUM SOUND 2", FAM_EDIT, SC_TRACK, GR_DXP, {ID_DX_LANE, ID_DX_NOISE, ID_DX_COLOR, ID_DX_WAVE}},
     {"DRUM MORE", FAM_EDIT, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_DRM},
-    /* (ACID FM 3b task 6) SCL's MORE (ui_lens.c CE_SCL: KEY, CHORD, MORE): the sequence's PITCH (SEQ > TRACK's, the SCL layer's
-     * KNOB 4), TRANSPOSE (every note the track plays, on no page since 0.7.6) */
+    /* (ACID FM 3b task 6) SCL's MORE (ui_lens.c CE_SCL: KEY, CHORD, MORE): TRANSPOSE (every note the track plays, on no page since
+     * 0.7.6; 3c-1 task 4: SEQ PITCH SEQ > MORE's) */
     {"SCL MORE", FAM_SCL, SC_TRACK, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SCL},
     /* (ACID FM 3b task 7) LFO's MORE (ui_lens.c CE_LFO: LFO, DEST, MOD MATRIX, MORE): PHASE (JIANT's LFO 2), the STEPS (JIANT's
      * MSEQ, MSEQ 2: the modulation sequence the matrix's source STEPS reads) */
