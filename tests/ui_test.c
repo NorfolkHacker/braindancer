@@ -19245,6 +19245,19 @@ static int test_t38_pace(void)
     n0 = uxs_panels;
     frames(800);
     ok &= uxs_panels == n0 && !uxg_clk_lit();
+    {   /* (fix 1) entering the page under USB with no clock coming: a beat seen elsewhere does not light it; the next one does */
+        nav_put(SEC_GLO, "MIX"); frames(400);
+        midi_clock.npulse += 48u;                       /* (two beats received while on MIX) */
+        nav_put(SEC_GLO, "MIDI"); frame(); frame();
+        ok &= !uxg_clk_lit();
+        if (uxg_clk_lit()) printf("  MIDI: the diamond lit on entry from a stale beat\n");
+        frames(400);
+        { uint32_t t; for (t = 0; t < 24u; t++) midi_clock_pulse(fm1_ms); }
+        frame();
+        ok &= uxg_clk_lit();
+        frames(400);
+        n0 = uxs_panels;
+    }
     n0 = uxs_panels;
     for (f = 0; f < 3000u / 16u; f++) {                 /* 120 BPM: a clock every 20.8 ms, 24 a beat; 6 beats */
         uint32_t t;

@@ -408,6 +408,7 @@ static const char *const UXG_MIDI_SAY[] = {"CH 16 PROGRAM CHANGE: SECTION/PROJEC
                                            "ON: TURN A KNOB THEN SEND A CC", "FORGETS EVERY LEARNED CC"};
 enum { UXG_MS_CH16, UXG_MS_CLKOUT, UXG_MS_KBD, UXG_MS_NOTES, UXG_MS_LEARN, UXG_MS_LCLEAR };
 static uint32_t uxg_beat_n, uxg_beat_ms;                /* the beat last seen (midi_clock.c npulse / 24), when (ms) */
+static uint32_t uxg_beat_frame;                         /* the UI frame it was last looked at (one missed: the page entered) */
 static int32_t uxg_lit_drawn = -1;                      /* the diamond as drawn (-1: never), when: ux_section_draw's pace */
 static uint32_t uxg_lit_ms;
 /* the diamond lit: a beat received from the clock followed less than UXG_BEAT_MS ago (CLOCK USB / TRS) */
@@ -417,6 +418,9 @@ static int uxg_clk_lit(void)
     if (!song.g[G_CLOCK])
         return 0;
     b = midi_clock.npulse / 24u;
+    if (ui.frame - uxg_beat_frame > 1u)                 /* (fix 1: the page entered, or CLOCK just set: the beat now is seen, */
+        uxg_beat_n = b;                                 /* not lit; the next one received lights it) */
+    uxg_beat_frame = ui.frame;
     if (b != uxg_beat_n) {
         uxg_beat_n = b;
         uxg_beat_ms = fm1_ms;

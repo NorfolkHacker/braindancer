@@ -632,8 +632,8 @@ static int lvv_is(uint32_t id) { return id >= ID_LV_TGT && id < ID_LV_END; }
 enum { ID_MO_NOTES = 0xF2, ID_MO_CLOCK, ID_ML_LEARN, ID_MO_END };
 typedef char mov_ids_ok[(uint32_t)G_COUNT <= (uint32_t)ID_MO_NOTES && (uint32_t)ID_MO_END <= (uint32_t)ID_LV_TGT ? 1 : -1];
 static int mov_is(uint32_t id) { return id >= ID_MO_NOTES && id < ID_MO_END; }
-static const char *const N_MONOTES[] = {"OFF", "KEYS", "K+SEQ"};   /* (the ux pages: KEYS+SEQ, the status line KEYS + SEQUENCE: ux_section.c
-                                                         * uxs_vtext, uxs_vfull) */
+static const char *const N_MONOTES[] = {"OFF", "KEYS", "KEYS+SEQ"};   /* (the one short form; the status line KEYS + SEQUENCE:
+                                                         * ux_section.c uxs_vtext, past param_format's five letters, uxs_vfull) */
 static const param_desc_t MOV_DESC[3] = {PE("NOTES OUT", N_MONOTES, 1), PE("CLOCK OUT", N_ONOFF, 0), PE("LEARN", N_ONOFF, 0)};
 static int16_t mov_ui;
 static uint32_t mov_get(uint32_t id);                   /* (ui.c: the setting now) */
