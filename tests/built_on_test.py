@@ -94,7 +94,8 @@ GONE = ["docs/MANUAL.es.md", "docs/navigation-map.es.svg", "docs/navigation-map.
 LINKERS = MANUAL + GENERATORS + [HERO, "CONTRIBUTING.md", ".github/workflows/emulator.yml", "README.md"]
 SPANISH = re.compile(r"[ñ¿¡áéíóúÁÉÍÓÚ]|\b(el|los|las|una|del|para|pista|pistas|perilla|perillas|tecla|teclas|mantené|"
                      r"página|páginas|también|sonido|paso|pasos|cuando|desde|elegí|tocá|manual interactivo|novedades|"
-                     r"capa|grabar|borrar|deshacer|recetas|mapa|navegación|español|idioma)\b")
+                     r"capa|grabar|borrar|deshacer|recetas|mapa|navegación|español|idioma|de|en|con|la|que|por|pero|"
+                     r"sin|muy|esta|este|está)\b")   # (lower case, whole words: EN, LA … as names stay upper case)
 
 
 def py_strings(src: str) -> str:
@@ -136,6 +137,9 @@ for f, text in texts.items():
         rest = line.replace(CREDITS, "")
         if re.search(r"jiant", rest, re.I):
             bad.append(f"{f}: names JIANT outside the credits line (line {n}): {line.strip()[:90]!r}")
+        if f.endswith(".md"):
+            rest = re.sub(r"(?<![*\w])\*[^*\n]+\*(?![*\w])", "", rest)   # (*la, ta, ri*: sung sounds quoted, not prose)
+        rest = re.sub(r"\b[\w-]+=\"[^\"]*\"", "", rest)          # (an attribute's value: lang="en" is markup)
         m = SPANISH.search(re.sub(r"(?<![A-Za-z])ñ(?![A-Za-z])", "", rest.replace("Hügelton", "")))   # (the letter named alone:
                                                                                                        # VOICE's lyrics, ñ as NY)
         if m:
@@ -153,6 +157,71 @@ if re.search(r"setLang|\bes:\s*\{|lang\s*===\s*\"es\"|\"es\"", js):
     bad.append("web/manual/manual.js: still switches language")
 if re.search(r'"es":|"label":\{', (ROOT / "web/manual/nav.js").read_text(encoding="utf-8")):
     bad.append("web/manual/nav.js: still carries a second language")
+
+# ---- (Task 10b fix 1) no repo document links a local file that is not there (the deleted Spanish manual and map)
+LINKBASE = {"README.md": ".", "docs/JIANT-README.md": ".",   # (the archived upstream README: its links as they were, from
+             "docs/MANUAL.md": "docs", "CONTRIBUTING.md": "."}  # the repository's root)
+for f, base in LINKBASE.items():
+    src = (ROOT / f).read_text(encoding="utf-8")
+    for n, line in enumerate(src.splitlines(), 1):
+        for m in re.finditer(r"\]\(([^)\s]+)\)|\bsrc=\"([^\"]+)\"", line):
+            target = (m.group(1) or m.group(2)).split("#")[0]
+            if not target or re.match(r"[a-z]+:", target):
+                continue
+            if not (ROOT / base / target).exists():
+                bad.append(f"{f}: links {target}, which is not in the repository (line {n})")
+
+# ---- (Task 10b fix 1) the manual names pages and rows the firmware has: every "SECTION › PAGE (› ROW)" path in
+# docs/MANUAL.md and the web manual, and every page in MANUAL.md's knob tables, read against the firmware's own names
+# (the page chains of ui_lens.c through tools/gen_nav_map.py; the rows: every upper-case literal of firmware/src)
+sys.path.insert(0, str(ROOT / "tools"))
+import gen_nav_map  # noqa: E402
+_, chains = gen_nav_map.parse()
+PAGES = {}
+for c in chains:
+    PAGES.setdefault(c["sec"], set()).update(p["name"] for p in c["pages"])
+ALLPAGES = set().union(*PAGES.values())
+LITERALS = set()
+for c in sorted((ROOT / "firmware/src").glob("*.c")):
+    for lit in re.findall(r'"([A-Z0-9][A-Z0-9 +/.\-]*)"', c.read_text(encoding="latin-1")):
+        LITERALS.add(lit.strip())
+
+
+def known(words, names):
+    """the longest start of words that is one of names (a phrase may run on into the sentence), or None"""
+    for k in range(len(words), 0, -1):
+        if " ".join(words[:k]) in names:
+            return k
+    return None
+
+
+SECS = "|".join(PAGES)
+PATH = re.compile(r"\b(" + SECS + r") ?[›>] ?([A-Z0-9][A-Z0-9 +/\-]*?)((?: ?[›>] ?[A-Z0-9][A-Z0-9 +/\-]*?)*)(?=$|[^A-Z0-9 +/\-›>])")
+for f, text in (("docs/MANUAL.md", (ROOT / "docs/MANUAL.md").read_text(encoding="utf-8")),
+                ("web/manual/data.js", js_strings((ROOT / "web/manual/data.js").read_text(encoding="utf-8")))):
+    for n, line in enumerate(text.replace("**", "").splitlines(), 1):
+        for m in PATH.finditer(line):
+            sec, rest = m.group(1), [m.group(2)] + [x for x in re.split(r" ?[›>] ?", m.group(3)) if x]
+            words = rest[0].split()
+            if not known(words, PAGES[sec]):
+                bad.append(f"{f}: {sec} › {rest[0]}: no such page in {sec} (line {n})")
+                continue
+            for row in rest[1:]:
+                if not known(row.split(), LITERALS | ALLPAGES):
+                    bad.append(f"{f}: {sec} › … › {row}: no such page or row in the firmware (line {n})")
+    if f.endswith(".md"):
+        intable = False
+        for n, line in enumerate(text.splitlines(), 1):
+            if line.startswith("| Page | KNOB 1"):
+                intable = True
+                continue
+            if not line.startswith("|"):
+                intable = False
+            elif intable and not re.match(r"\|\s*-", line):
+                cell = re.sub(r"\(.*?\)", "", line.split("|")[1]).replace("**", "").strip()
+                if cell and not known(cell.split(), ALLPAGES):
+                    bad.append(f"{f}: knob table page {cell!r} is no firmware page (line {n})")
+
 if bad:
     print("\n".join("FAIL: " + b for b in bad))
     sys.exit(1)

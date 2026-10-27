@@ -234,10 +234,10 @@ SELECT goes down each row from left to right; the button goes to the next page.
 - **HOME › TRACKS**: six ridgelines, T1 at the top to T6 at the bottom, each its track's level over the last ~2 s; the
   three tracks the knobs control in their knobs' colours, the name at the left and the level at the right; under them the
   selected track's 16 steps, the playing one outlined and spelled out. **KNOB 1–3**: the LEVELs of the three tracks
-  in the selected one's group (T1–T3 or T4–T6), **KNOB 4**: the BPM (0.4).
+  in the selected one's group (T1–T3 or T4–T6), **KNOB 4**: the BPM.
 - **HOME › VISUAL**: six rings (T1 outside, T6 at the centre) of the blend, turning with the bar, each as bright as its
   track sounds; the song's name and where it is over them. **KNOB 1–4**: **MACRO 1–4** (as LFO held).
-- **ENV, LFO, FX, SCL, ARP and EDIT** (0.4): every page in the ACID look: a picture of what the page sets (the
+- **ENV, LFO, FX, SCL, ARP and EDIT**: every page in the ACID look: a picture of what the page sets (the
   envelope, the LFO's wave, the sends, the key on a keyboard, the engine's sound …), the four knobs in their colours,
   the status line and the footer ("2 / 4 · NEXT DEST"). **MORE** is a list of the section's other settings in groups:
   KNOB 1 picks a row, KNOB 2 sets it. The web manual describes each page.
@@ -257,14 +257,14 @@ SELECT goes down each row from left to right; the button goes to the next page.
 
 "—" means an empty card. An "action" card, picked (turn the knob right), is tinted violet with its name violet and says **OCT+**; press OCT+ to do it.
 
-**ENV** (per track; 0.4)
+**ENV** (per track)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | AMP | ATTACK | DECAY | SUSTAIN | RELEASE |
 | ENV TO | FILTER | PITCH | SHAPE | LOOP |
 
-**LFO** (per track; 0.4)
+**LFO** (per track)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
@@ -273,7 +273,7 @@ SELECT goes down each row from left to right; the button goes to the next page.
 | MOD MATRIX | SLOT (1–4) | SOURCE | DEST | AMOUNT |
 | MORE | the row (PHASE; STEPS: LENGTH, STEP RATE, SMOOTH, STEP 1–16) | its value | — | — |
 
-**FX** (SENDS is per track; the rest are global; 0.4)
+**FX** (SENDS is per track; the rest are global)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
@@ -282,7 +282,7 @@ SELECT goes down each row from left to right; the button goes to the next page.
 | MASTER | CLIP | PUNCH | DUCK | DUCK TIME |
 | MORE | the row (DISTORT, AUTO PAN, DELAY, REVERB, CHORUS, SLICER, SLICE PITCH, PUNCH LANE) | its value | — | — |
 
-**SCL** (0.4)
+**SCL**
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
@@ -290,7 +290,7 @@ SELECT goes down each row from left to right; the button goes to the next page.
 | CHORD | CHORD | VOICING | STRUM | — |
 | MORE | the row (TRANSPOSE) | its value | — | — |
 
-**EDIT** (per track; the pages depend on the engine; 0.4)
+**EDIT** (per track; the pages depend on the engine)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 | Shown on |
 | --- | --- | --- | --- | --- | --- |
@@ -999,9 +999,9 @@ the transport without leaving the screen.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: **EXPLORE** (the screen always opens on it: no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B from the two genres' names) or one of the ten, in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
-| 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's) |
-| 3/3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
+| GEN 1 | **GENRE**: **EXPLORE** (the screen always opens on it: no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B from the two genres' names) or one of the ten, in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| GEN 2 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's) |
+| GEN 3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
 
 The piece is **deterministic**: the same settings make the same piece every time, so a seed you like can be dialled
 back. **OCT+ with the settings unchanged throws a new seed** (another piece); turn a knob and press OCT+ and you get
@@ -1096,10 +1096,11 @@ What a piece is made of:
   Chords are triads, sevenths, ninths (never a b9), add9, sus2 / sus4 (a perfect fourth only), sixths, quartal stacks,
   power chords, recoloured by the genre (plain, rich, suspended, quartal, power, parallel).
 - **Bass** from about fifty **archetypes written against the kick**: house offbeat and bounce, deep walking
-  sixteenths, techno rolling sixteenths and octave bounce, Detroit, EBM, italo, psy, UK garage, Jamerson, around the
-  kick, on the one, slap, Good Times, jazz walking and two-feel, boogie, country, ska, tumbao, bossa, rock eighths,
-  punk sixteenths, McCartney, Peter Hook, motorik, angular post punk, indie, one drop, steppers, rockers, dub,
-  boom bap, trap 808s, DnB, jungle, wobble, pedal, fifths, Suicide, Kraftwerk; and **acid** by the 303's rules
+  sixteenths, techno rolling sixteenths and octave bounce, Detroit, EBM, italo, psy, UK garage, a busy soul line with
+  chromatic approaches, around the kick, on the one, slap, a disco octave groove, jazz walking and two-feel, boogie,
+  country, ska, tumbao, bossa, rock eighths, punk sixteenths, a melodic pop line, a high melodic bass played like a
+  lead, motorik, angular post punk, indie, one drop, steppers, rockers, dub, boom bap, trap 808s, DnB, jungle, wobble,
+  pedal, fifths, a minimal two-note drone pulse, a sequenced electro line; and **acid** by the 303's rules
   (accents on 3–5 steps, slides on 2–3, an octave jump after a slide, the accents varied over the bars). **The root at
   every chord change** (a chord that comes in mid-bar gets its root there), the archetype's third, fifth and seventh
   the chord's own (a borrowed or raised chord's too), approaches by a semitone into the next root on a weak beat (they
@@ -1133,7 +1134,7 @@ What a piece is made of:
   third on, a short figure stepping into it now and then), a **tintinnabuli** line (stepwise, a chord tone on each long
   note, a passing note between). Never above A5 (B5 in a section lifted a step); high notes softer. Each lead, figure
   and drum pattern is the genre's own for a seed (the same seed in two genres: two tunes).
-- **Sounds** by **recipe** a role: sub, acid, Reese, FM bass, rock bass, Hook's chorused bass, wow bass; pad,
+- **Sounds** by **recipe** a role: sub, acid, detuned saw bass, FM bass, rock bass, high chorused bass, wow bass; pad,
   strings, choir, organ, electric piano, stab, dub chord, pluck, bell, lead, vox lead, chip, keys, drone,
   noise, texture, hoover, a shoegaze wall, a tremolo guitar. A recipe picks an engine, a factory sound whose name fits,
   moves its parameters a little, shapes the envelope, the filter (type, cutoff, resonance, the envelope on it), a slow
@@ -1222,38 +1223,40 @@ The sections below name the settings by their group; the rows are on FX › MORE
 
 ### Per track
 
-- **FX**: DIST amount and the three sends (CHORUS, DLY, REV).
-- **DIST**: amount, **TYPE** (SOFT, HARD, FOLD, CRUSH, RECT, **AMP**), **TONE** (darker / brighter). **AMP** is a guitar
-  amp: two valve stages that clip unevenly (low DIST clean, then crunch, then lead), the bias breathing with the level,
-  and a speaker cabinet with its presence peak; TONE moves the cabinet's brightness.
-- **AUTO PAN**: the track's pan swung left and right around its PAN. **DEPTH** (0 = off), **RATE**, **SYNC** (BEAT:
-  RATE in divisions 4BAR … 1/32, locked to the bar; FREE: RATE in Hz), **WAVE** (SIN, TRI, SAW, SQR, S&H).
+- **FX › SENDS**: DISTORT (the track's distortion) and the three sends, CHORUS, DELAY, REVERB.
+- **DISTORT** (MORE): **DIST TYPE** (SOFT, HARD, FOLD, CRUSH, RECTIFY, **AMP**), **DIST TONE** (darker / brighter).
+  **AMP** is a guitar amp: two valve stages that clip unevenly (low DISTORT clean, then crunch, then lead), the bias
+  breathing with the level, and a speaker cabinet with its presence peak; DIST TONE moves the cabinet's brightness.
+- **AUTO PAN** (MORE): the track's pan swung left and right around its PAN. **PAN DEPTH** (0 = off), **PAN RATE**,
+  **PAN SYNC** (BEAT: PAN RATE in divisions 4 BARS … 1/32, locked to the bar; FREE: PAN RATE in Hz), **PAN WAVE**
+  (SINE, TRI, SAW, SQR, RAND).
 - **FILTER**: see [4](#4-engines).
 
-### SLICER (one, on a bus)
+### SLICER (one, on its own bus)
 
-- **SLICER**: **MODE** OFF, GATE, STUT; **PAT** 1–16; **RATE** 1/8 … 32T; **DEPTH**.
-- **SL BUS / SL BUS 2**: ON / OFF for what goes in: **T1–T6** and **FX** (the delay, reverb and chorus returns).
-  Everything on chops the whole mix after the effects; with FX off the tails ring free.
-- **SL PITCH**: the repeats follow a 16-step pitch sequence (±24 semitones). KNOB 1 the step, KNOB 2 its pitch, LEN,
-  QUANT (CHR or SCL: the song's scale).
+- **SLICER** (MORE): **SLICE MODE** OFF, GATE, STUTTER; **SLICE PAT** 1–16; **SLICE RATE** 1/8 … 1/32T; **SLICE DEPTH**.
+- **SLICE T1 … SLICE T6** and **SLICE FX**: ON / OFF for what goes in: the tracks and the FX returns (the delay, reverb
+  and chorus). Everything on chops the whole mix after the effects; with SLICE FX off the tails ring free.
+- **SLICE PITCH** (MORE): the repeats follow a 16-step pitch sequence, **PITCH 1 … PITCH 16** (±24 semitones each),
+  **PITCH LOOP** (how many steps before it goes round), **PITCH SNAP** (ANY: every semitone; SCALE: onto the song's
+  scale).
 - Each section keeps its own SLICER settings. With **LOAD ECO** there is no SLICER (its tracks go straight to the mix).
 
 ### Delay
 
-- **DLY**: **TIME** (synced divisions 4BAR … 1/32, or free times from 5 ms to 2.95 s), **FEEDBK**, **TONE** (below the
-  middle darker, above thinner), **MIX**. FEEDBK behaves like an analog delay's (a tape, a PT2399):
-  with **TONE in the middle (50 %)** each repeat is a copy of what went in; at **100 %** the echoes hold their level
+- **FX › SPACE**: **DLY TIME** (synced divisions 4 BARS … 1/32, or free times from 5 ms to 2.95 s), **DLY FDBK**; on
+  MORE **DLY TONE** (below the middle darker, above thinner) and **DLY MIX**. DLY FDBK behaves like an analog delay's (a tape, a PT2399):
+  with **DLY TONE in the middle (50 %)** each repeat is a copy of what went in; at **100 %** the echoes hold their level
   for a long time (they fade very slowly and are never cut off), and **past 100 %** they grow into themselves and
-  hold, saturating softly instead of clipping (turn it back down to let them die). Up to 80 % it is as before.
-  **TONE** is resonant: from the middle down a low-pass sweeping from ~8 kHz to ~250 Hz, from the middle up a low cut
+  hold, saturating softly instead of clipping (turn it back down to let them die). 
+  **DLY TONE** is resonant: from the middle down a low-pass sweeping from ~8 kHz to ~250 Hz, from the middle up a low cut
   sweeping from ~70 Hz to ~3 kHz, both with a peak at the cutoff, so the repeats get darker or thinner and narrow to
-  a band each pass (dub style), and at either end with FEEDBK high the loop self-oscillates at that band.
+  a band each pass (dub style), and at either end with DLY FDBK high the loop self-oscillates at that band.
 - **Long times**: every division plays its real length up to **2.97 s**, the longest (before, anything past
   1.49 s was cut to 1.49 s: 1/2 below 81 BPM, 1/1 below 162 BPM, 2BAR, 4BAR). To fit them the delay's line runs at
-  three rates, chosen by TIME on its own:
+  three rates, chosen by DLY TIME on its own:
 
-  | TIME | Line | Top end of the repeats |
+  | DLY TIME | Line | Top end of the repeats |
   | --- | --- | --- |
   | up to 0.74 s | full rate | full range, as before |
   | 0.74 s – 1.49 s | half rate | flat to ~9.5 kHz, -3 dB at ~10.4 kHz |
@@ -1261,39 +1264,41 @@ The sections below name the settings by their group; the rows are on FX › MORE
 
   So the longer the time, the darker the tail, like a tape or bucket-brigade delay. Only the top end is lost:
   there is no grit or aliasing (anything folded back is more than 70 dB down) and no extra noise. The rate is
-  applied once, so the repeats do not get darker with each pass (only TONE and FEEDBK do that). MOD, the GRAIN delay,
-  PING, WIDE, TYPE and TONE work the same at every rate. On the two slower rates the first echo comes ~1 ms (half)
-  or ~4 ms (quarter) late; the repeats stay exactly TIME apart. When TIME crosses 0.74 s or 1.49 s (knob, tempo,
+  applied once, so the repeats do not get darker with each pass (only DLY TONE and DLY FDBK do that). DLY MOD, the grain delay,
+  DLY PING, DLY WIDE, DLY TYPE and DLY TONE work the same at every rate. On the two slower rates the first echo comes ~1 ms (half)
+  or ~4 ms (quarter) late; the repeats stay exactly DLY TIME apart. When DLY TIME crosses 0.74 s or 1.49 s (knob, tempo,
   automation, a project or section load, an external clock) the delay fades out over 3 ms and starts again empty.
   That leaves a short gap: the echoes already in the line are dropped, but there is no click. A clock that wavers
   around a boundary does not restart it again and again. Long echoes come back at full level even when nothing else
   is playing.
-- **DLY 2**: **WIDE** (the right echo later), and the **GRAIN** delay: **PITCH** (±12 semitones per repeat) and
-  **SPRAY**. With LOAD LITE or ECO the GRAIN delay plays as a plain delay (the card says LITE / ECO). **MOD**
- : the tape's drift, slow WOW and fast FLUTTER on the repeats (0, the default: none, exact copies; ~20 a
+- **DLY WIDE** (the right echo later), and the **grain** delay: **DLY PITCH** (±12 semitones per repeat) and
+  **DLY SPRAY**. With LOAD LITE or ECO the grain delay plays as a plain delay (the value says LITE / ECO). **DLY MOD**:
+  the tape's drift, slow WOW and fast FLUTTER on the repeats (0, the default: none, exact copies; ~20 a
   tape's; up to a seasick chorus); the repeats stay bright while they drift; saved with the project.
-- **DLY 3**: **TYPE**: **ANALOG** (the default: the soft saturation, the resonant TONE, FEEDBK past 100 %
-  self-oscillating) or **DIGITAL** (clean repeats, TONE a plain filter, FEEDBK 100 % at most: past it the repeats
-  just hold, never grow). **PING**: **ON** sends the repeats left, right, left … across the stereo field, each one
-  FEEDBK softer (TIME up to 1.49 s, the right side at twice TIME; WIDE and the GRAIN delay out of it).
+- **DLY TYPE**: **ANALOG** (the default: the soft saturation, the resonant DLY TONE, DLY FDBK past 100 %
+  self-oscillating) or **DIGITAL** (clean repeats, DLY TONE a plain filter, DLY FDBK 100 % at most: past it the repeats
+  just hold, never grow). **DLY PING**: **ON** sends the repeats left, right, left … across the stereo field, each one
+  DLY FDBK softer (DLY TIME up to 1.49 s, the right side at twice DLY TIME; DLY WIDE and the grain delay out of it).
   Saved with the project.
 
 ### Reverb (five models)
 
-**REVERB > TYPE** picks the model; **SIZE** is the decay on every model. KNOB 3 and 4 change meaning with the type:
+**REV TYPE** (FX › SPACE, KNOB 3) picks the model; **REV SIZE** (KNOB 4) is the decay on every model. Two MORE rows
+change with the type: **REV DAMP** (on RESO it is **FOLLOW**) and **REV PRE** (on SHIMMER and CLOUD **REV AIR**, on
+RESO **REV PITCH**):
 
-| TYPE | What it is | KNOB 3 | KNOB 4 |
+| REV TYPE | What it is | REV DAMP row | REV PRE row |
 | --- | --- | --- | --- |
-| **ROOM** | Classic room | DAMP | PRE (pre-delay, ms) |
-| **SPRING** | Amp spring tank | DAMP | PRE |
-| **SHIMR** (shimmer) | Rises an octave on every pass | DAMP | **AIR** (±24 st: darker and lower / airier and higher) |
-| **RESO** | Four strings tuned to the song's scale | **FOLLOW** (OFF / T1–T6: the chord follows the lowest note that track plays) | **PITCH** (the chord 0–14 steps up the scale) |
-| **CLOUD** | Granular wash; SIZE at max freezes it | DAMP | **AIR** |
+| **ROOM** | Classic room | REV DAMP | REV PRE (pre-delay, ms) |
+| **SPRING** | Amp spring tank | REV DAMP | REV PRE |
+| **SHIMMER** | Rises an octave on every pass | REV DAMP | **REV AIR** (±24 st: darker and lower / airier and higher) |
+| **RESO** | Four strings tuned to the song's scale | **FOLLOW** (OFF / T1–T6: the chord follows the lowest note that track plays) | **REV PITCH** (the chord 0–14 steps up the scale) |
+| **CLOUD** | Granular wash; REV SIZE at max freezes it | REV DAMP | **REV AIR** |
 
-**REVERB 2**: **MOD** (modulation depth), **RATE**, **FILT** (input tone: darker / brighter; resonant, a band at the cutoff to carve the room's place), **WIDE**.
+And on MORE: **REV MOD** (modulation depth), **REV RATE**, **REV TONE** (input tone: darker / brighter; resonant, a band at the cutoff to carve the room's place), **REV WIDE**.
 
 With **LOAD LITE**, SHIMMER and CLOUD play as ROOM and RESO as SPRING; with **LOAD ECO** every reverb plays as SPRING.
-The settings stay; the TYPE card shows LITE or ECO under its value.
+The settings stay; REV TYPE says LITE or ECO.
 
 Changing the model (the knob, automation or motion, a project or song section, MIDI, the editor, or LOAD going LITE /
 ECO and back) cuts the old model's tail with a short fade (under a millisecond, no click) and the new one starts
@@ -1301,14 +1306,14 @@ silent. Coming back to **CLOUD** starts an empty cloud, a frozen one too.
 
 ### Chorus
 
-**CHORUS**: RATE, DEPTH, **STEREO** (0 as always, down to mono, up to about twice as wide). Hidden with LOAD ECO
-(a track's chorus send card then says ECO).
+**CHORUS** (MORE): **CHO RATE**, **CHO DEPTH**, **CHO WIDE** (0 as always, down to mono, up to about twice as wide).
+Hidden with LOAD ECO (a track's CHORUS send then says ECO).
 
 ### MASTER
 
 - **CLIP**: saturation that adds character, not volume.
 - **PUNCH**: fattens the DRUM tracks.
-- **DUCK**: the kick pulls the rest down; **REL** is its release.
+- **DUCK**: the kick pulls the rest down; **DUCK TIME** is its release.
 
 ### DJ FILTER (GLO › LIVE KNOB 4)
 
@@ -1620,7 +1625,7 @@ on SAVE > USER, SECTIONS or PROJECTS (renames the selected slot, section or proj
 
 An empty name: a project section gets none, a user preset an automatic one.
 
-The same screen types a VOICE track's **lyric** (EDIT > WORDS, OCT+): up to 63 characters, the field scrolls with the
+The same screen types a VOICE track's **lyric** (EDIT › MORE › TYPE LYRIC, KNOB 2 to the right): up to 63 characters, the field scrolls with the
 cursor, **KNOB 3** throws the dice, and OCT+ sets it even while playing (it is not a flash write).
 
 ### User presets (SAVE > USER)

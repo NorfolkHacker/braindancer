@@ -396,8 +396,8 @@ fi
 
 run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/install_test.py
 run "ABOUT page QR code (gen_about_qr.py)" python3 tests/about_qr_test.py
-run "ACID FM built on JIANT FM and Felucca: ABOUT and the web pages (built_on_test.py)" python3 tests/built_on_test.py
-run "navigation map (docs/navigation-map*.svg) matches the firmware's chains" python3 tools/gen_nav_map.py --check
+run "ACID FM built on JIANT FM and Felucca: ABOUT, the web pages, the English manual, its page names and links (built_on_test.py)" python3 tests/built_on_test.py
+run "navigation map (docs/navigation-map.svg) matches the firmware's chains" python3 tools/gen_nav_map.py --check
 
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, package builder, update protocol" node web/test_web.mjs

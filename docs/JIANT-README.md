@@ -127,7 +127,7 @@ the CRASH line (VEC / PC / SP / bus) until power-off. Report both, with the vers
 
 Ten buttons, ten sections, and the same six rules in every one of them (0.9.2). The map shows every section, its
 groups (the tabs on the screen) and its pages in the order SELECT walks them, with the held layers and the combos.
-Click it to open it full size ([SVG](docs/navigation-map.svg), zoomable · [en español](docs/navigation-map.es.svg)).
+Click it to open it full size ([SVG](docs/navigation-map.svg), zoomable · [en español](https://github.com/juanjiant-bit/JIANT/blob/main/docs/navigation-map.es.svg)).
 
 [![JIANT FM navigation map: every section, its groups and its pages in chain order, the six rules, the held layers and the combos](docs/navigation-map.png)](docs/navigation-map.svg)
 
@@ -145,7 +145,7 @@ Click it to open it full size ([SVG](docs/navigation-map.svg), zoomable · [en e
    **SECTION · GROUP · page** and **n/N**: **FX · DELAY · DLY 2  6/16**.
 
 The whole chapter: [the manual, § 3](docs/MANUAL.md#3-pages-and-layers) ·
-[el manual, § 3](docs/MANUAL.es.md#3-páginas-y-capas). The map is generated from the firmware's own chain tables
+[el manual, § 3](https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md#3-páginas-y-capas). The map is generated from the firmware's own chain tables
 (`firmware/src/ui_lens.c`) by `tools/gen_nav_map.py`.
 
 ## Manual
@@ -153,7 +153,7 @@ The whole chapter: [the manual, § 3](docs/MANUAL.md#3-pages-and-layers) ·
 What changed in each version: the **[Changelog](#changelog)**, at the end of this page.
 
 The full user manual, every page, layer and setting, with a careful chapter on saving: **[English](docs/MANUAL.md)** ·
-**[Español](docs/MANUAL.es.md)**.
+**[Español](https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md)**.
 
 **[The interactive manual](https://juanjiant-bit.github.io/JIANT/manual/)** (Spanish and English): the FM-1 drawn
 with every control (touch one: what it does alone, held and in combination, with the firmware's real screen), every
@@ -476,7 +476,7 @@ beginning.
 
 A practical guide to what's new, in the order you'll run into it. The [Controls](#controls) table has the details of
 each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en español:
-**[docs/MANUAL.es.md](docs/MANUAL.es.md)**).
+**[docs/MANUAL.es.md](https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md)**).
 
 ### 1. Getting around
 
@@ -661,7 +661,7 @@ Settings → Pages → Source: **GitHub Actions**, once).
 an older official firmware, Felucca / Skiff, where to get FM-1.fwsc, an install cut half way): the installer shows a
 *What to do* box for each error and a **COPY REPORT** button (browser, MIDI ports, firmware, step, error) to paste when
 you ask for help. The steps are in the manual: [English](docs/MANUAL.md#the-installer-does-not-install-what-to-do),
-[Español](docs/MANUAL.es.md#no-me-deja-instalar-qué-hacer). Use Chrome or Edge on a computer (not iPhone/iPad), a USB
+[Español](https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md#no-me-deja-instalar-qué-hacer). Use Chrome or Edge on a computer (not iPhone/iPad), a USB
 data cable straight into it, and close the M-VAVE app, DAWs and other editor tabs.
 
 If the FM-1 stays black after an interrupted update, check whether the computer sees it as **WL80UBOOT** (or a USB
@@ -681,7 +681,7 @@ These design notes are in Spanish.
 | [docs/TONIC-SONG-PLAN.md](docs/TONIC-SONG-PLAN.md) | Song mode plan |
 | [docs/TONIC-DRUMX.md](docs/TONIC-DRUMX.md) | DRUM-X: the voice, the per-section kit and the phases |
 | [docs/TONIC-UI.md](docs/TONIC-UI.md) | The JIANT FM interface: screen map, format, flash measurements |
-| [Navigation map](docs/navigation-map.svg) ([ES](docs/navigation-map.es.svg)) | Every section, group and page in chain order, the six rules, the layers and the combos (made by `tools/gen_nav_map.py` from `firmware/src/ui_lens.c`; `--check` says whether it is up to date) |
+| [Navigation map](docs/navigation-map.svg) ([ES](https://github.com/juanjiant-bit/JIANT/blob/main/docs/navigation-map.es.svg)) | Every section, group and page in chain order, the six rules, the layers and the combos (made by `tools/gen_nav_map.py` from `firmware/src/ui_lens.c`; `--check` says whether it is up to date) |
 | [Cheat sheets](#cheat-sheets) | Controls and sound reference (PNG and PDF; made by `tools/gen_cheatsheets.py` + `tools/render_cheatsheets.mjs`) |
 | [BUILDING.md](BUILDING.md) | Toolchain, build, emulator and tests |
 | [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) | The editor's SysEx protocol |
@@ -2909,7 +2909,7 @@ Feedback from users (YouTube, Reddit):
     **an octave lower** (65 → 55).
 
 ### v0.6.31
-- **The full manual, in English and Spanish**: [docs/MANUAL.md](docs/MANUAL.md) · [docs/MANUAL.es.md](docs/MANUAL.es.md).
+- **The full manual, in English and Spanish**: [docs/MANUAL.md](docs/MANUAL.md) · [docs/MANUAL.es.md](https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md).
   Every page and its four knobs, every layer's keys, the engines, DRUM-X, the sequencer, ARRANGE, the dice and UNDO,
   effects, modulation, performance, the MENU, MIDI, the web tools and troubleshooting, and a careful chapter on
   **saving**: what is saved where, how the autosave really works (10 s after the last change while stopped, never at
