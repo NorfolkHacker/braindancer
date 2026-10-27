@@ -1065,7 +1065,7 @@ static void layer_knobs(uint32_t l)                     /* the four as gauges in
         cv_text_in(cx - 26, 54 - AF_X_CAP_Y, 52, &AF_X, ly_card[c].v, T_TEXT, T_SURF);
     }
     b[0] = 0;
-    for (k = 0; k < 3u; k++)                            /* "PLAY RESTART . GLO DONE": the keycaps' words */
+    for (k = 0; k < 3u; k++)                            /* the keycaps' words (SAVE's) */
         if (ft[k].act) {
             if (b[0])
                 str_cpy(b + str_len(b), " \xB7 ", sizeof b - str_len(b));

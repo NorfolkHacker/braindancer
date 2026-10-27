@@ -17546,6 +17546,22 @@ static int test_c9_glo(void)
     if (!ok) printf("  GLO: status \"%s\"\n", uxl_status(LAYER_GLO, k, &sc));
     (void)ly_keyname(LAYER_GLO, 0, 7u, nm);              /* F4 TAP: breathes with the inside clock, in the ux fill */
     if (uxc9_white(7) != ux_mix(UX_BG, UX_MID, 55) || !str_eq(nm, "TAP")) { printf("  GLO: F4 %04x want %04x\n", uxc9_white(7), ux_mix(UX_BG, UX_MID, 55)); ok = 0; }
+    {   /* E4 UNMUTE ALL, G4 UNDO (dim: nothing to undo), A4 FREEZE, B4 REVERT ALL (dim: no anchor) */
+        undo_ok = 0; mut_freeze = 0;
+        ok &= ly_keyname(LAYER_GLO, 0, 6u, nm) == LS_OFF && str_eq(nm, "UNMUTE");
+        ok &= str_eq(uxl_word(nm), "UNMUTE ALL");
+        ok &= ly_keyname(LAYER_GLO, 0, 8u, nm) == LS_DIM && str_eq(nm, "UNDO");
+        ok &= ly_keyname(LAYER_GLO, 0, 9u, nm) == LS_OFF && str_eq(nm, "FREEZE");
+        mut_freeze = 1;
+        ok &= ly_keyname(LAYER_GLO, 0, 9u, nm) == LS_HELD;
+        mut_freeze = 0;
+        if (!mut_back_ok()) ok &= ly_keyname(LAYER_GLO, 0, 10u, nm) == LS_DIM && str_eq(nm, "REVERT ALL");
+        ui.force = 1; frame();
+        if (uxc9_white(8) != UX_LINE || uxc9_white(6) != ux_mix(UX_BG, UX_MID, 55)) { printf("  GLO: E4 %04x G4 %04x\n", uxc9_white(6), uxc9_white(8)); ok = 0; }
+        {   uint32_t la = leds_at(0), lb = leds_at(250);   /* F4 TAP active (inside clock): it breathes, its fill the active one */
+            ok &= ((la ^ lb) >> white(7)) & 1u;
+            if (uxc9_white(7) != ux_mix(UX_BG, UX_MID, 55)) ok = 0; }
+    }
     turn(EN_K1, 3); frame();                             /* a knob turned: its readout on the status line */
     ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "T1 LEVEL") != 0 && sc == UX_TEXT;
     if (!ok) printf("  GLO: turn status \"%s\"\n", uxl_status(LAYER_GLO, k, &sc));
@@ -17555,7 +17571,15 @@ static int test_c9_glo(void)
     key_up(white(2)); frames(4);
     song.g[G_CLOCK] = 1; ui.force = 1; ui.msg_t = 0; ux_hot_k = -1; frame();   /* an outside clock: TAP dim, the status line says so */
     if (uxc9_white(7) != UX_LINE) { printf("  GLO ext: F4 %04x\n", uxc9_white(7)); ok = 0; }
-    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: USB") != 0;
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: USB") != 0 && !strstr(uxl_status(LAYER_GLO, k, &sc), "NO RESTART") &&
+          strstr(uxl_status(LAYER_GLO, k, &sc), "BLACK MUTE") != 0;   /* stopped: PLAY still starts */
+    song.playing = 1;
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: USB") != 0 && strstr(uxl_status(LAYER_GLO, k, &sc), "NO RESTART") != 0;
+    song.g[G_CLOCK] = 2;
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: TRS") != 0 && strstr(uxl_status(LAYER_GLO, k, &sc), "NO RESTART") != 0;
+    song.playing = 0;
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: TRS") != 0 && strstr(uxl_status(LAYER_GLO, k, &sc), "SOLO") != 0;
+    song.g[G_CLOCK] = 1;
     if (!ok) printf("  GLO ext: status \"%s\"\n", uxl_status(LAYER_GLO, k, &sc));
     song.g[G_CLOCK] = 2;
     ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: TRS") != 0;

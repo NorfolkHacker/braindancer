@@ -38,7 +38,7 @@ static const char *const UXL_KEYP[17] = {"REPEAT 1/8", "REPEAT 1/16", "REPEAT 1/
                                          "ON DRUMS", "INIT + KIT", "RECALL + KIT", "UNMUTE ALL"};
 /* the status line's words when nothing else is said: the layer, what its keys and OCT do */
 enum { UXL_S_FX, UXL_S_LATCH, UXL_S_LOCK, UXL_S_EDIT, UXL_S_EDRM, UXL_S_SCL, UXL_S_MAC, UXL_S_MLAT, UXL_S_TOOLS, UXL_S_TDRM,
-       UXL_S_TBUSY, UXL_S_REC, UXL_S_GLO, UXL_S_GUSB, UXL_S_GTRS, UXL_S_N };
+       UXL_S_TBUSY, UXL_S_REC, UXL_S_GLO, UXL_S_GUSB, UXL_S_GTRS, UXL_S_GUSBP, UXL_S_GTRSP, UXL_S_N };
 static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK KEYS MUTE", "FX LATCH: KEYS ON / OFF \xB7 OCT- ALL OFF",
                                              "FX LOCKED: PRESS FX TO UNLOCK", "EDIT: F3 INIT \xB7 G3 RECALL \xB7 SELECT DICE",
                                              "EDIT: SELECT DICE \xB7 BLACK KEYS MUTE",
@@ -49,7 +49,9 @@ static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK K
                                              "STOP TO EDIT \xB7 REC CLEARS ALL",
                                              "REC: F3 CLEAR \xB7 G3 CLICK \xB7 KNOB 1 CLICK",
                                              "BLACK MUTE \xB7 WHITE SOLO \xB7 PLAY RESTART",   /* (3c-1 task 9) */
-                                             "CLOCK: USB \xB7 NO TAP \xB7 NO RESTART",
+                                             "CLOCK: USB \xB7 NO TAP \xB7 BLACK MUTE \xB7 SOLO",   /* stopped: PLAY still starts */
+                                             "CLOCK: TRS \xB7 NO TAP \xB7 BLACK MUTE \xB7 SOLO",
+                                             "CLOCK: USB \xB7 NO TAP \xB7 NO RESTART",              /* playing: PLAY cannot restart */
                                              "CLOCK: TRS \xB7 NO TAP \xB7 NO RESTART"};
 static const char *const UXL_GXSAY[4] = {"GLITCH HELD: ITS FOUR KNOBS", "TAPE STOP HELD: KNOB 1 SCRATCHES",
                                          "SHUFFLE HELD: ITS FOUR KNOBS", "FREEZE HELD: ITS FOUR KNOBS"};
@@ -171,7 +173,7 @@ static const char *uxl_status(uint32_t l, const ux_knob_t k[4], uint16_t *col)
     if (l == LAYER_REC)
         return UXL_SAY[UXL_S_REC];
     if (l == LAYER_GLO)                                 /* (an outside clock: TAP and RESTART refuse, tempo_ext / layer_play) */
-        return UXL_SAY[song.g[G_CLOCK] ? song.g[G_CLOCK] == 1 ? UXL_S_GUSB : UXL_S_GTRS : UXL_S_GLO];
+        return UXL_SAY[song.g[G_CLOCK] ? (song.g[G_CLOCK] == 1 ? UXL_S_GUSB : UXL_S_GTRS) + (song.playing ? 2 : 0) : UXL_S_GLO];
     if (l == LAYER_SEQ)
         return UXL_SAY[chain_busy() ? UXL_S_TBUSY : drum_track(TSEL) ? UXL_S_TDRM : UXL_S_TOOLS];
     return UXL_SAY[layer_open() ? UXL_S_MAC : UXL_S_MLAT];
