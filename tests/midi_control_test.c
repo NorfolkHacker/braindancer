@@ -624,9 +624,44 @@ static int route_store_test(void)
     trk_midi_defaults(); events_block(CTL);
     return bad;
 }
+/* (ACID FM 0.5, device) a hardware sequencer's clock over TRS at a steady 120 wavers a few ms a pulse: the tempo followed
+ * stays 120 (it read 117..123, a new tempo every quarter beat); a real change to 140 is followed within a few beats */
+static uint32_t jit_seed;
+static int32_t jitter_ms(void)
+{
+    jit_seed = jit_seed * 1103515245u + 12345u;
+    return (int32_t)((jit_seed >> 16) % 7u) - 3;       /* -3 .. +3 ms */
+}
+static int clock_jitter_test(uint32_t source)
+{
+    int bad = 0, steady = 1, followed = 0;
+    uint32_t i, changes = 0, beat = 0, t140 = 0, n140 = 0;
+    clock_setup(source); jit_seed = 7;
+    clock_packet(source, 0xFA, 1000);
+    for (i = 0; i < 24u * 16u; i++) {                  /* 16 beats at 120: 500 ms a beat, 125/6 ms a clock */
+        clock_packet(source, 0xF8, (uint32_t)(1000 + (int32_t)((i * 125u) / 6u) + jitter_ms()));
+        if (i >= 24u * 3u) {                           /* settled after three beats */
+            if (song.g[G_BPM] != 120) steady = 0;
+            if (midi_beat_samples != beat) changes++;
+        }
+        beat = midi_beat_samples;
+    }
+    bad += check(source == 1 ? "USB clock jittered +-3 ms at 120 reads a steady 120" :
+                               "TRS clock jittered +-3 ms at 120 reads a steady 120", steady);
+    bad += check("a jittered steady clock does not keep re-tempoing the sequencer", changes <= 2u);
+    t140 = 1000 + (24u * 16u * 125u) / 6u;
+    for (i = 0; i < 24u * 8u; i++) {                   /* then 140: 60000 / 140 / 24 ms a clock */
+        clock_packet(source, 0xF8, (uint32_t)((int32_t)(t140 + (i * 3000u) / 168u) + jitter_ms()));
+        if (song.g[G_BPM] == 140 && !followed) { followed = 1; n140 = i; }
+    }
+    bad += check("a real tempo change to 140 is followed within four beats", followed && n140 <= 24u * 4u);
+    bad += check("and holds 140", song.g[G_BPM] == 140);
+    return bad;
+}
 int main(void)
 {
     int bad = controls_test() + sustain_test() + ownership_test() + clock_test(1) + clock_test(2) + clock_arp_and_boundaries() +
-              arp_ext_stop_test() + usb_burst_test() + route_test() + cc_map_test() + route_track_test() + route_store_test();
+              arp_ext_stop_test() + usb_burst_test() + route_test() + cc_map_test() + route_track_test() + route_store_test() +
+              clock_jitter_test(1) + clock_jitter_test(2);
     printf("%s\n", bad ? "MIDI CONTROL/CLOCK TEST FAILED" : "MIDI control/clock integration tests passed"); return bad != 0;
 }
