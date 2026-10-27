@@ -366,7 +366,6 @@ static void rec_clear(void)
 #define RL_N 1u
 static const uint8_t RL_F[RL_N] = {RP_CLICK};
 static const char *const RL_LABEL[RL_N] = {"CLICK"};
-static const uint8_t RL_ICON[RL_N] = {ICON_TEMPO};
 static const char *rl_name(uint32_t r, uint32_t v) { (void)r; return CLICK_N[v % 3u]; }
 static void rec_set(uint32_t r, uint32_t v)
 {
@@ -812,7 +811,7 @@ static uint32_t layer_leds(uint32_t *br)
  * the accent, a muted track KEY, unavailable its name DIM, its note under it; KNOBS the four as gauges in their knobs'
  * colours over the layer's keys (the keycaps' words); STATE what is on, as chips. (Until 0.8.8: cells with note names,
  * the Felucca map.) The keys and knobs do what they did: only the drawing is new. (ACID FM 3b task 9: EDIT, MACRO, FX and SCL
- * are drawn by ux_layer.c in the ACID look from ly_keyname and layer_state; this overlay is GLO's, SEQ TOOLS', REC's, SAVE's) */
+ * are drawn by ux_layer.c in the ACID look from ly_keyname and layer_state; 3c-1 task 5: SEQ TOOLS and REC too; this overlay is GLO's and SAVE's) */
 static const char *const PF_NAME[PF_M1] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "GLITCH", "TAPE STOP",   /* the audio ones */
     "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+", "STUT 1/8", "STUT 1/16", "ATK+", "ARP", "RANDOM",   /* the MIDI ones (pfx.c) */
     "SHUFFLE", "CRUSH", "THROW", "FREEZE"};             /* (0.9.17) C#5 SHUFFLE, (0.9.14) the sweeps D#5 F#5, G#4 FREEZE */
@@ -1021,6 +1020,7 @@ static void ly_piano(uint32_t l)
             cv_text_up(x0 + HALF_UP(10 - AF_X_CAP_H) - AF_X_CAP_Y, y + bh - 4, &AF_X, nm, fill == T_BG ? T_DIM : ink, fill, bh - 8);
     }
 }
+/* (3c-1 task 5) GLO's and SAVE's cards: the rest are ux_layer.c's knob row */
 static void layer_cards(uint32_t l)
 {
     char val[12];
@@ -1043,25 +1043,6 @@ static void layer_cards(uint32_t l)
         draw_column(2, "PLAY", live.mode ? "SONG" : "LOOP", "", VAL(2u), -1, ICON_LOOP);
         draw_column(3, "REC", live.srec == 2u ? "ON" : live.srec ? "ARM" : "OFF", "", live.srec ? VAL(3u) : T_DIM, -1,
                     ICON_X_REC);
-    } else if (l == LAYER_REC) {                        /* CLICK, then empty cards */
-        for (c = 0; c < 4u; c++) {
-            uint32_t v = c < RL_N ? rp_get(RL_F[c]) : 0u;
-            if (c < RL_N)
-                draw_column(c, RL_LABEL[c], rl_name(c, v), "", !v ? T_DIM : VAL(c), (int32_t)v * 500, RL_ICON[c]);
-            else
-                draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
-        }
-    } else {                                            /* the page's four (SEQ TOOLS: LY_SEQ) */
-        uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
-        memcpy(nm, ui.nmem, sizeof nm);
-        ui.home = 0;
-        ui.page = (uint8_t)page_first(LAYERS[l].fam);
-        page_over = ly_page(l);
-        draw_columns();
-        page_over = 0;
-        ui.home = h;
-        ui.page = pg;
-        memcpy(ui.nmem, nm, sizeof nm);
     }
 }
 

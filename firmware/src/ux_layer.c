@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Copyright (C) 2026 NorfolkHacker */
-/* ACID FM's held layers (ux_layer.h; 3b spec 2.6): EDIT, LFO's MACRO, FX's performance layer and SCL in the 3a look. The keys,
+/* ACID FM's held layers (ux_layer.h; 3b spec 2.6; 3c-1 task 5 spec 2.6): EDIT, LFO's MACRO, FX's performance layer, SCL, SEQ TOOLS
+ * and REC in the 3a look. The keys,
  * the knobs, the LEDs, the gesture and the latches are ui_layer.c's (ly_keyname names each key and its state, layer_knob turns
  * the knobs, layer_state lists what is on): only the drawing is here. The screen as a section page's (ux_section.c): the header
  * (T3 . the sound, the transport), the knob row (the layer's four in KNOB 1..4's colours, plain names: FX's macros or the
@@ -10,7 +11,10 @@
  * them), the status line (a message; a knob's readout; else the layer and what its keys and OCT do), the footer (the layer and
  * how it is held; ALGORITHM's next view). Included after ux_section.c (uxs_knobs, uxs_val) and ui_layer.c (its tables). */
 
-static int ux_layer_owns(uint32_t l) { return l == LAYER_EDIT || l == LAYER_MACRO || l == LAYER_FX || l == LAYER_SCL; }
+static int ux_layer_owns(uint32_t l)
+{
+    return l == LAYER_EDIT || l == LAYER_MACRO || l == LAYER_FX || l == LAYER_SCL || l == LAYER_SEQ || l == LAYER_REC;
+}
 
 /* FX's KNOB 1..4, the performance macros (perform.c perf_m), by what they do (spec 0 rule 4; one name a meaning): STEP LOOP
  * (JIANT's STEPS: ui_live.c loops the steps the playhead is in, 1/2 1/4 1/8 of the pattern or one step; STEPS is LFO's
@@ -30,20 +34,25 @@ static const char *const UXL_KEYP[16] = {"REPEAT 1/8", "REPEAT 1/16", "REPEAT 1/
                                          "DECAY -", "DECAY +", "STUTTER 1/8", "STUTTER 1/16", "ATTACK +", "ON ALL", "ON SYNTHS",
                                          "ON DRUMS", "INIT + KIT", "RECALL + KIT"};
 /* the status line's words when nothing else is said: the layer, what its keys and OCT do */
-enum { UXL_S_FX, UXL_S_LATCH, UXL_S_LOCK, UXL_S_EDIT, UXL_S_EDRM, UXL_S_SCL, UXL_S_MAC, UXL_S_MLAT, UXL_S_N };
+enum { UXL_S_FX, UXL_S_LATCH, UXL_S_LOCK, UXL_S_EDIT, UXL_S_EDRM, UXL_S_SCL, UXL_S_MAC, UXL_S_MLAT, UXL_S_TOOLS, UXL_S_TDRM,
+       UXL_S_TBUSY, UXL_S_REC, UXL_S_N };
 static const char *const UXL_SAY[UXL_S_N] = {"FX: KEYS PLAY EFFECTS \xB7 BLACK KEYS MUTE", "FX LATCH: KEYS ON / OFF \xB7 OCT- ALL OFF",
                                              "FX LOCKED: PRESS FX TO UNLOCK", "EDIT: F3 INIT \xB7 G3 RECALL \xB7 SELECT DICE",
                                              "EDIT: SELECT DICE \xB7 BLACK KEYS MUTE",
                                              "SCL: A KEY SETS THE ROOT \xB7 NO OCTAVE", "LFO: F3 DICE \xB7 G3 CLEAR \xB7 SELECT DICE",
-                                             "MACROS LATCHED: PRESS LFO TO CLOSE"};
+                                             "MACROS LATCHED: PRESS LFO TO CLOSE",
+                                             "SEQ TOOLS: WHITE KEYS \xB7 REC CLEARS ALL",
+                                             "SEQ TOOLS: BLACK KEYS PICK THE LANE",
+                                             "SEQ TOOLS: STOP TO EDIT",
+                                             "REC: F3 CLEAR \xB7 G3 CLICK \xB7 KNOB 1 CLICK"};
 static const char *const UXL_GXSAY[4] = {"GLITCH HELD: ITS FOUR KNOBS", "TAPE STOP HELD: KNOB 1 SCRATCHES",
                                          "SHUFFLE HELD: ITS FOUR KNOBS", "FREEZE HELD: ITS FOUR KNOBS"};
 /* the footer: the layer and how it is open; ALGORITHM's next view (MAP, STATE) */
-enum { UXL_W_FX, UXL_W_LATCH, UXL_W_LOCK, UXL_W_EDIT, UXL_W_SCL, UXL_W_MAC, UXL_W_MLAT };
-static const char *const UXL_WHERE[7] = {"FX \xB7 HOLD", "FX \xB7 LATCH", "FX \xB7 LOCKED", "EDIT \xB7 HELD", "SCL \xB7 HELD",
-                                         "LFO \xB7 MACROS", "LFO \xB7 LATCHED"};
+enum { UXL_W_FX, UXL_W_LATCH, UXL_W_LOCK, UXL_W_EDIT, UXL_W_SCL, UXL_W_MAC, UXL_W_MLAT, UXL_W_TOOLS, UXL_W_REC, UXL_W_N };
+static const char *const UXL_WHERE[UXL_W_N] = {"FX \xB7 HOLD", "FX \xB7 LATCH", "FX \xB7 LOCKED", "EDIT \xB7 HELD", "SCL \xB7 HELD",
+                                               "LFO \xB7 MACROS", "LFO \xB7 LATCHED", "SEQ \xB7 TOOLS", "REC \xB7 HELD"};
 static const char *const UXL_ALGO[2] = {"1 / 2 \xB7 ALGORITHM: STATE", "2 / 2 \xB7 ALGORITHM: MAP"};
-/* (3b task 9 fix) layer l's view: 1 STATE, 0 MAP (its own: ui.uxlv; GLO SEQ TOOLS REC SAVE keep ui.lylv) */
+/* (3b task 9 fix) layer l's view: 1 STATE, 0 MAP (its own: ui.uxlv; GLO SAVE keep ui.lylv) */
 static uint32_t uxl_state(uint32_t l) { return (ui.uxlv >> l) & 1u; }
 static uint32_t uxl_panels;                             /* the panels drawn (tests/ui_test.c: one a change, none idle) */
 
@@ -96,8 +105,15 @@ static void uxl_knobs(uint32_t l, ux_knob_t k[4])
             str_cpy(k[c].value + str_len(k[c].value), "%", sizeof k[c].value - str_len(k[c].value));
             k[c].bar = (uint8_t)(macro_v[c] * 255u / 127u);
         }
-    } else if (l == LAYER_EDIT || l == LAYER_SCL) {     /* the page's four as its section names them (EDIT: EDIT 1, the
-                                                         * engine's first; SCL: LY_SCL), wherever the page is */
+    } else if (l == LAYER_REC) {                        /* K1 CLICK (OFF REC ON); K2..K4 are nobody's (ui_layer.c RL_N) */
+        uint32_t v = rp_get(RL_F[0]);
+        k[0].label = RL_LABEL[0];
+        str_cpy(k[0].value, rl_name(0, v), sizeof k[0].value);
+        k[0].bar = (uint8_t)(v * 127u);
+        k[0].off = (uint8_t)!v;
+    } else if (l == LAYER_EDIT || l == LAYER_SCL || l == LAYER_SEQ) {   /* the page's four as its section names them (EDIT:
+                                                         * EDIT 1, the engine's first; SCL: LY_SCL; SEQ TOOLS: LY_SEQ, the
+                                                         * PATTERN page's), wherever the page is */
         uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
         memcpy(nm, ui.nmem, sizeof nm);
         ui.home = 0;
@@ -135,12 +151,18 @@ static const char *uxl_status(uint32_t l, const ux_knob_t k[4], uint16_t *col)
         return UXL_SAY[drum_track(TSEL) ? UXL_S_EDRM : UXL_S_EDIT];
     if (l == LAYER_SCL)
         return UXL_SAY[UXL_S_SCL];
+    if (l == LAYER_REC)
+        return UXL_SAY[UXL_S_REC];
+    if (l == LAYER_SEQ)
+        return UXL_SAY[chain_busy() ? UXL_S_TBUSY : drum_track(TSEL) ? UXL_S_TDRM : UXL_S_TOOLS];
     return UXL_SAY[layer_open() ? UXL_S_MAC : UXL_S_MLAT];
 }
 static const char *uxl_where(uint32_t l)
 {
     if (l == LAYER_FX)
         return UXL_WHERE[fx_lock && !ui.ly ? UXL_W_LOCK : perf_latch_on ? UXL_W_LATCH : UXL_W_FX];
+    if (l == LAYER_SEQ || l == LAYER_REC)
+        return UXL_WHERE[l == LAYER_SEQ ? UXL_W_TOOLS : UXL_W_REC];
     return UXL_WHERE[l == LAYER_EDIT ? UXL_W_EDIT : l == LAYER_SCL ? UXL_W_SCL : layer_open() ? UXL_W_MAC : UXL_W_MLAT];
 }
 
@@ -158,7 +180,13 @@ static uint16_t uxl_ink(uint32_t st)                    /* a key's name in the l
 }
 static const char *uxl_word(const char *nm)             /* a key's name in plain words */
 {
+    static char b[16];
     uint32_t i;
+    if (nm[0] == 'C' && nm[1] == 'L' && nm[2] == 'R' && nm[3] == ' ') {   /* SEQ TOOLS: CLR AUTO, CLR STEP, CLR BD: CLEAR .. */
+        str_cpy(b, "CLEAR ", sizeof b);
+        str_cpy(b + 6, nm + 4, sizeof b - 6);
+        return b;
+    }
     for (i = 0; i < NELEM(UXL_KEYJ); i++)
         if (str_eq(nm, UXL_KEYJ[i]))
             return UXL_KEYP[i];
