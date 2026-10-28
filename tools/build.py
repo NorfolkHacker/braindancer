@@ -188,12 +188,8 @@ def build_loader():
 # ---- app
 
 # (JIANT 0.6.78) core 0's hottest audio code, run from RAM (app.ld .hot_text, src/core.h FELUCCA_HOTRAM): the mix, the
-# master, the FX layer, the SLICER, and core 0's own copies of a part's mix and the buses (core 1 runs the flash ones).
-# (ACID FM 0.5.2) And the delay's line at half / a quarter rate (fx.c dly_lo, its filters' hb_sum, the grains): its
-# heaviest block, run every block whatever the voices, mostly on core 1 (fx_run), which ran it from the flash through
-# the cache the cores share; one copy, in RAM, for both cores (as usb.c's uac_rs_run on core 1 since 0.8.9)
-HOT_FNS = ("mix_block", "mix_part_m0", "fx_run0", "perf_begin", "perf_pre", "perf_block", "perf_master", "slicer_bus",
-           "dly_lo", "hb_sum", "dly_grain", "dly_grain_adv")
+# master, the FX layer, the SLICER, and core 0's own copies of a part's mix and the buses (core 1 runs the flash ones)
+HOT_FNS = ("mix_block", "mix_part_m0", "fx_run0", "perf_begin", "perf_pre", "perf_block", "perf_master", "slicer_bus")
 
 
 def hot_sections(ir):

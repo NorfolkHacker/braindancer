@@ -31,7 +31,6 @@ FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_re
          "perf_begin", "perf_mute", "perf_pre", "perf_block", "perf_master",   # the FX layer (perform.c), when busy
          "rev_room", "rev_spring", "dist_amp", "dx_hands_step",                # the reverb bus (fx.c): REVERB TYPE ROOM / SPRING
          "dly_lo",                                          # (0.8.4) the delay at half / a quarter rate (fx.c)
-         "hb_sum",                                          # (ACID FM 0.5.2) its filters' sum, written out: no loop (0)
          "formant_word_render", "formant_block",           # (JIANT 0.8.5) VOICE singing words (eng_formant.c, sing.c)
          "djf_block"]                                      # (0.9.1) the master DJ FILTER (fx.c), while it is off the middle
 # built only with FELUCCA_FM4=1 (DIGITAL, src/eng_digital.c; not in the default build, so not in BUDGET): absent,
