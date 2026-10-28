@@ -1840,6 +1840,7 @@ static int project_restore_runtime(const project_t *input)
     transport_req = 2;
     panic_req = (1u << NTRK) - 1u;
     fm1_irq_off();                                      /* the audio ISR must not see half a project */
+    safe_clear();                                       /* (ACID FM 0.5.2) the safety net: no GEN part, its levers off */
     seq_stop();
     transport_req = 0;
     chain.ended = 0;                                    /* (a song stopped by this load: the load wins, song_poll keeps out) */
@@ -1944,6 +1945,8 @@ static void system_init(void)
     int16_t kept[5], mr[G_MRSEL + 1 - G_MRIN1];         /* (ACID FM 0.5) and the MIDI routing (G_MRIN1 .. G_MRSEL) */
     uint32_t i;
     demo_end();                                         /* (ACID FM 3b) NEW PROJECT is empty, no demo */
+    safe_clear();                                       /* (ACID FM 0.5.2) the safety net: no GEN part, its levers off
+                                                         * (byte stores: the ISR reads each once a half) */
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     memcpy(mr, &song.g[G_MRIN1], sizeof mr);
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;

@@ -8,7 +8,14 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/acid-fm/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/acid-fm/manual/)**
 
-## Status: 0.5.1
+## Status: 0.5.2
+
+0.5.2 fixes harsh glitches on some generated songs. A few EXPLORE pieces asked for more than the FM-1's processor can
+render (a 2-second delay over a busy six-track piece, for one), and the audio skipped. GEN now keeps EXPLORE pieces within
+a CPU budget measured on the device, and the long delay is only used where there is room for it; under a sudden overload
+the sound engine falls back step by step (the long delay to its short mode, then a generated piece's texture, then its
+arp) instead of skipping, and comes back once the load eases.
+
 
 0.5.1 retunes GEN's genres (names, tempo ranges and swing, from [research into the real styles](docs/acid-fm/genre-research.md):
 GLITCH HOP and AMB TECHNO replace BROKEN BEAT and DRIFT; DRILL'N'BASS 155–172, ELECTRO 124–138, RETROBOC 68–100) and makes

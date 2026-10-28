@@ -1994,9 +1994,12 @@ static void gx_mutate(void)
  * (one core and two; the error 0.06 of CPU TEST, its 95th percentile 0.10). The budget: 65 % of a half with two cores
  * (the load governor's line, audio.c TIGHT_ON), 55 % with one (TIGHT_ON_1C), less that error. Over it the piece gets
  * lighter, a step at a time, until it fits: the heaviest engine swapped for LOFI or ANALOG, CLOUD / SHIMMER as ROOM /
- * SPRING, the texture left out, then the arp, then the lead (gx_fit_sounds, before the parts); the delay's grain off,
- * a PLAYHEAD less, a note less in every chord (two at least), the long releases shorter, the texture cleared
- * (gx_fit_piece, after them). The genres and RANDOM are left as they were */
+ * SPRING, the texture left out, then the arp, then the lead (gx_fit_sounds, before the parts); the delay's grain off
+ * (ACID FM 0.5.2: and a long TIME shortened to the full rate), a PLAYHEAD less, a note less in every chord (two at
+ * least), the long releases shorter, the texture cleared
+ * (gx_fit_piece, after them). (ACID FM 0.5.2) Then, still over: the arp left out, then the lead (gen_fit_rest). With
+ * two cores the budget is the FM-1's measured 65 % (GC_GEN_X100, no margin off). RANDOM's and a genre's pieces left
+ * as they were but for a quarter-rate delay (gen_fit_delay) */
 static const uint8_t GC_ENG[NENGINES] = {27, 79, 45, 27, 27, 64, 27, 27, 27, 27, 70, 60, 79, 27, 27};   /* (ANALOG ..
                                                          * 14 by number; the retired ones as ANALOG, DIGITAL as FM6;
                                                          * ACID FM 0.2: WHEEL 7, ANIMAL 14 retired) */
@@ -2005,6 +2008,22 @@ static const uint8_t GC_REV[5] = {0, 25, 32, 10, 47};   /* ROOM SPRING SHIMMER R
 static const uint8_t GC_DIVQ[6] = {1, 2, 4, 8, 3, 6};   /* a DIV's steps a beat, x 4 / 4 (1/4 .. 1/32, 8T, 16T) */
 #define GC_GRAIN 25u
 #define GC_HEAD 6u
+/* (ACID FM 0.5.2) the delay's line past the full rate (fx.c dly_lo: TIME, PING-PONG's twice TIME, WIDE's right echo past
+ * ~0.74 s): its filters and its half / quarter rate step run every block whatever the voices, on the second core with the
+ * buses, and the load governor cannot shed them. cpu_vg's dly/half and dly/quarter against dly/full (+158 / +202 a
+ * sample, CPU TEST 3046): 52 / 66 on one core; with two the second core's critical path (CPU TEST's 63 % against 77 %:
+ * x 1.22), 63 / 81. EXPLORE 3423 at the defaults made a 2 s grain delay at a quarter rate the model did not count, and
+ * an FM-1 lost blocks on it. Over the budget the delay is shortened to the full rate (gen_fit_delay) */
+static const uint8_t GC_DLO[2][3] = {{0, 52, 66}, {0, 63, 81}};   /* [two cores][the line's rate: full, half, quarter] */
+static uint32_t gc_dly_stage(void)                       /* the piece's delay's rate (fx.c fx_buses, dly_rate): 0 full,
+                                                         * 1 half, 2 a quarter; the full rate only clear of dly_stage's
+                                                         * hysteresis (a line at a lower rate before stays there to 1/32
+                                                         * inside the limit) */
+{
+    int png = song.g[G_DPING] == 1 && !song.g[G_DPIT] && !song.g[G_DSPRY];   /* (PING-PONG, not with the grain) */
+    uint32_t wd = (uint32_t)song.g[G_WIDTH], dl = dtime_samples((uint32_t)song.g[G_DTIME]);
+    return dly_stage(png ? dl * 2u : dl + (wd && !png ? div_samples(3) * wd / 127u : 0u), 2u);
+}
 /* (0.9.14) the FM-1 against the model: the model is the host's instruction counts, and the device is heavier than they
  * say (its code runs from the flash through a small cache the two cores share: the more engines and effects a piece
  * plays, the more of it misses). Measured: SAVE > TOOLS 6 CPU TEST played (ui_menu.c cpt_res: its load, the host
@@ -2012,15 +2031,26 @@ static const uint8_t GC_DIVQ[6] = {1, 2, 4, 8, 3, 6};   /* a DIV's steps a beat,
  * at ~90 % where the model said ~62 %: x1.45; x1.6 to be safe. Never under x1.0 (0.9.13's budget), x3 at most. To
  * recalibrate from a PROFILE photo: GC_DEV_X100 = the device's WHOLE HALF (AVG, playing) over the host's for the song */
 #define GC_DEV_X100 160u
+/* (ACID FM 0.5.2) two cores, measured on an FM-1 (CPU TEST stored at ~74 %, TRACKS 6): GEN pieces run heavier against
+ * the CPU TEST song than the model says. EXPLORE 9641 (estimate 725) at 75-80 %, losing ~4.5 halves a second; EXPLORE
+ * 3423 at 62-69 % with its delay short (572), 68-87 % with its 2 s delay (653); the CPU TEST song 72-76 %. The device
+ * over the model: x1.70 .. x1.87 for the pieces, x1.17 for the CPU TEST song: a piece x1.45 .. x1.60 the CPU TEST's
+ * ratio, GC_GEN_X100. The budget, 65 % of a half on the device (the governor's line), with no margin taken off (the
+ * factor is the device's, measured on the pieces that lost halves): CPU TEST 74 % -> 588 (was 780: 9641 and 3423 both
+ * fitted under it and both glitched). Unset, GC_DEV2_X100: 542, 0.5.1's budget (543) */
+#define GC_GEN_X100 150u
+#define GC_DEV2_X100 190u
 static uint32_t gc_dev(void)
 {
     uint32_t d = cpt_res ? (uint32_t)cpt_res * 100u / (cpt_cores == 1u ? 77u : 63u) : GC_DEV_X100;
-    return d < 100u ? 100u : d > 300u ? 300u : d;
+    if (mc_two())
+        d = cpt_res ? d * GC_GEN_X100 / 100u : GC_DEV2_X100;
+    return d < 100u ? 100u : d > 400u ? 400u : d;
 }
-static uint32_t gc_budget(void)                          /* (65 / 63, 55 / 77, over the device; less 0.10; one core 0.12:
+static uint32_t gc_budget(void)                          /* (65 / 63, 55 / 77, over the device; one core less 0.12:
                                                          * its pieces sparse, a held chord more of them) */
 {
-    return mc_two() ? 1030u * 100u / gc_dev() - 100u : 714u * 100u / gc_dev() - 120u;
+    return mc_two() ? 1030u * 100u / gc_dev() : 714u * 100u / gc_dev() - 120u;
 }
 static uint32_t gc_cost(int steps)                      /* steps 0: before the parts (a chord track's triads) */
 {
@@ -2028,6 +2058,7 @@ static uint32_t gc_cost(int steps)                      /* steps 0: before the p
     uint32_t k, i, h, bpm = steps ? (uint32_t)song.g[G_BPM] : (g->bpm_lo + g->bpm_hi) / 2u;
     uint32_t c = (mc_two() ? 295u : 380u) + GC_REV[(uint32_t)(steps ? song.g[G_RTYPE] : g->rtype) % 5u];
     if (steps && (song.g[G_DPIT] || song.g[G_DSPRY])) c += GC_GRAIN;
+    if (steps) c += GC_DLO[mc_two() ? 1 : 0][gc_dly_stage()];   /* (0.5.2) the delay's line past the full rate */
     for (k = 0; k < NTRK && k < trk_live; k++) {
         const track_t *t = &trk[k];
         uint32_t r = gs.role[k], e = t->eng_req % NENGINES, len = dlen(t), on = 0, ns = 0, tie = 0, v, f, cap;
@@ -2083,15 +2114,54 @@ static void gx_fit_sounds(void)
     if (gc_cost(0) > gc_budget() && gs.act[RL_BASS] && gs.act[RL_PAD]) gs.act[RL_LEAD] = 0;   /* (one core: the drums,
                                                          * the bass and the chords) */
 }
-static void gx_fit_piece(void)
+/* (ACID FM 0.5.2) every piece (EXPLORE, RANDOM, the genres): a delay on the quarter-rate line (TIME past ~1.48 s) costs
+ * ~10 % of an FM-1's CPU whatever the voices (measured: EXPLORE 3423, 2.0 lost halves a second with its 2 s delay, none
+ * with it short), and the governor cannot shed it. It stays only on a piece that fits the budget with it, and, with no
+ * CPU TEST stored, not on a busy one (5 tracks or more playing); else TIME is shortened (1/1 -> 1/2 -> 1/4 .., a free
+ * time by half) until the line runs at the full rate. A delay at the full or the half rate is left as the genre made it
+ * (a slow genre's 1/4 echo: 0.5.2's first cut made it 1/8) */
+static const uint8_t DT_SHORTER[DT_FREE] = {1, 2, 3, 3, 5, 3, 0, 6, 7, 8};   /* (N_DTIME: 1/4 1/8 1/16 1/32 8T 16T 1/2 1/1 2BAR 4BAR) */
+static uint32_t gen_busy(void)                           /* the piece's parts playing: 5 or more */
+{
+    uint32_t r, n = 0;
+    for (r = 0; r < 6u; r++) n += gs.act[r] && gs.trk_of[r] < trk_live;
+    return n >= 5u;
+}
+static int gen_dly_long_ok(void)                         /* the piece may keep its quarter-rate delay */
+{
+    return gc_cost(1) <= gc_budget() && (cpt_res || !gen_busy());
+}
+static void gen_fit_delay(void)
+{
+    uint32_t n, g;
+    if (gc_dly_stage() < 2u || gen_dly_long_ok())
+        return;
+    for (n = 0; n < 12u && gc_dly_stage(); n++) {
+        g = (uint32_t)song.g[G_DTIME];
+        song.g[G_DTIME] = (int16_t)(g < DT_FREE ? DT_SHORTER[g] : g >= DT_FREE + 6u ? g - 6u : DT_FREE);   /* (DTIME_MS:
+                                                         * six steps about half the time) */
+    }
+}
+static void gen_leave_out(uint32_t r)                   /* a role's part left out of the piece: its steps cleared */
+{
+    uint32_t k = gs.trk_of[r], i;
+    gs.act[r] = 0;
+    if (k >= NTRK) return;
+    load_begin(&trk[k], LOAD_PAT);
+    for (i = 0; i < NSTEP; i++) gclear(&trk[k].step[i]);
+    load_end(&trk[k]);
+    pat_sig[k] = steps_sig(&trk[k]);
+}
+/* (ACID FM 0.5.2) still over the budget: a PLAYHEAD less, the long releases shorter, the texture cleared, CLOUD / SHIMMER
+ * as ROOM / SPRING (EXPLORE between the first two: a note less in every chord, two at least), the arp, the lead.
+ * EXPLORE's pieces only */
+static void gen_fit_rest(void)
 {
     uint32_t k, h, i;
-    if (gc_cost(1) <= gc_budget()) return;
-    song.g[G_DPIT] = song.g[G_DSPRY] = 0;
     for (h = FG_HEADS; h--;)
         for (k = 0; k < NTRK; k++)
             if (fg_set[k][h].rate && gc_cost(1) > gc_budget()) fg_set[k][h].rate = 0;
-    while (gc_cost(1) > gc_budget() && gx.nmax > 2u) {
+    while (gx.on && gc_cost(1) > gc_budget() && gx.nmax > 2u) {
         gx.nmax--;
         for (k = 0; k < NTRK; k++) {
             track_t *t = &trk[k];
@@ -2103,17 +2173,31 @@ static void gx_fit_piece(void)
     }
     for (k = 0; k < NTRK; k++)
         if (gc_cost(1) > gc_budget() && gs.role[k] != RL_DRUM && trk[k].p[P_REL] >= 90) trk[k].p[P_REL] = 84;
-    k = gs.trk_of[RL_TEX];
-    if (gc_cost(1) > gc_budget() && k < NTRK && gs.act[RL_TEX]) {
-        gs.act[RL_TEX] = 0;
-        load_begin(&trk[k], LOAD_PAT);
-        for (i = 0; i < NSTEP; i++) gclear(&trk[k].step[i]);
-        load_end(&trk[k]);
-        pat_sig[k] = steps_sig(&trk[k]);
-    }
+    if (gc_cost(1) > gc_budget() && gs.act[RL_TEX])
+        gen_leave_out(RL_TEX);
     if (gc_cost(1) > gc_budget() && (song.g[G_RTYPE] == 4 || song.g[G_RTYPE] == 2))   /* (ACID FM 0.2) still over: CLOUD /
                                                          * SHIMMER as ROOM / SPRING, as gx_fit_sounds does on its estimate */
         song.g[G_RTYPE] = song.g[G_RTYPE] == 4 ? 0 : 1;
+    /* (ACID FM 0.5.2) still over: the arp left out (two other melodic parts playing), then the lead (the bass and the
+     * chords playing), as gx_fit_sounds does on its estimate: the floor the drums, the bass and the chords */
+    if (gc_cost(1) > gc_budget() && gs.act[RL_ARP] && gs.act[RL_BASS] + gs.act[RL_PAD] + gs.act[RL_LEAD] >= 2u)
+        gen_leave_out(RL_ARP);
+    if (gc_cost(1) > gc_budget() && gs.act[RL_LEAD] && gs.act[RL_BASS] && gs.act[RL_PAD])
+        gen_leave_out(RL_LEAD);
+}
+static void gx_fit_piece(void)
+{
+    int16_t dt = song.g[G_DTIME];
+    gen_fit_delay();                                    /* (0.5.2) a quarter-rate delay at the full rate before the notes */
+    if (gc_cost(1) <= gc_budget()) return;
+    song.g[G_DPIT] = song.g[G_DSPRY] = 0;
+    gen_fit_delay();                                    /* (PING-PONG without the grain: twice TIME) */
+    gen_fit_rest();
+    if (song.g[G_DTIME] != dt) {                        /* (0.5.2) the rest made room for the delay's TIME after all: back */
+        int16_t cut = song.g[G_DTIME];
+        song.g[G_DTIME] = dt;
+        if (!gen_dly_long_ok()) song.g[G_DTIME] = cut;
+    }
 }
 
 /* --------------------------------------------------------------------------------------------- the piece --- */
@@ -2531,6 +2615,9 @@ static void gen_make(void)
                                                          * orbited the old piece's sounds) */
     if (gx.on) { gx_mutate(); gx_heads(); gx_fit_piece(); }   /* (0.8.6) EXPLORE: MUTATE, PLAYHEADS (before the sections:
                                                          * each holds them); 0.9.13: inside the CPU budget */
+    else gen_fit_delay();                               /* (ACID FM 0.5.2) RANDOM, a genre: a quarter-rate delay over the
+                                                         * budget at the full rate (the rest as the genre made it: the
+                                                         * device's x1.5 was measured on EXPLORE's pieces only) */
     mut_keep();
     gen_parts();
 }
@@ -2541,6 +2628,10 @@ static void gen_go(void)
     char b[8];
     undo_mark();
     gen_make();
+    safe_part[0] = gs.act[RL_TEX] && gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) */
+    safe_part[1] = gs.act[RL_ARP] && gs.trk_of[RL_ARP] < trk_live ? gs.trk_of[RL_ARP] : (uint8_t)NTRK;   /* the parts the
+                                                         * safety net hushes (audio.c): the piece's texture and arp, if
+                                                         * it plays them (after gen_make: its section_load cleared them) */
     k = gs.gi < NGENRE && gs.g->name == GENRE[gs.gi].name ? gen_shown_index(gs.gi + 1u) : 255u;   /* (3b) a shown genre by its screen name */
     str_cpy(gp.last, k != 255u ? GEN_SHOWN_NAME[k] : gs.g->name, sizeof gp.last);
     k = str_len(gp.last);
@@ -2639,6 +2730,8 @@ static const char *dice_seq(track_t *t)
     if (gmut.lead == LD_NONE) gmut.lead = LD_HOOK;      /* (asked for: a lead) */
     for (i = 0; i < GP_N; i++) if (!gs.amt[i]) gs.amt[i] = 60;
     gs.role[k] = (uint8_t)r; gs.act[r] = 1; gs.trk_of[r] = (uint8_t)k;
+    if (safe_part[0] == k || safe_part[1] == k)         /* (ACID FM 0.5.2) a part diced on it: the safety net's no more */
+        safe_part[safe_part[1] == k] = NTRK;
     len = (uint32_t)t->p[P_SLEN];
     if (len < 8u || len > NSTEP) len = gs.len < 16u ? 16u : gs.len;
     load_begin(t, LOAD_PAT);

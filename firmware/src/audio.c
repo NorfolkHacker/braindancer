@@ -161,6 +161,73 @@ static void gov_tick(int over, int hot, int under, int shed)
     if (gov_lite && (under ? ++gov_lcalm >= 1720u : (gov_lcalm = 0, 0))) gov_lite = 0;
     gov_cap = (uint8_t)c;
 }
+/* (ACID FM 0.5.2) the safety net past the governor. At its floor (4 voices, LOAD LITE or the MENU's LITE / ECO: no voice
+ * left to shed, the costly reverbs already ROOM / SPRING) and the audio still behind two halves in a row (a render past
+ * its half, or the DMA moved on while it ran: the lag that, carried on, loses a half), the next lever, one each 0.5 s
+ * while that lasts (fx_safe, voice.c):
+ *   1. the delay's line past the full rate: on its full-rate line (fx.c dly_rate: faded out over 2.9 ms, the line
+ *      cleared, started again; TIME at most ~0.74 s). On an FM-1 the quarter-rate line costs ~10 % of the CPU
+ *      whatever the voices (EXPLORE 3423, a 2 s delay: 2 halves lost a second; its TIME shortened: none);
+ *   2. a GEN piece's texture part hushed (gen.c safe_part: no new notes, its voices faded over ~6 ms), 3. its arp.
+ * The chorus and the SLICER are not levers: the chorus is ~1-2 % of a GEN piece's load on the host at the floor, and
+ * GEN never turns the SLICER on. The delay's lever only while its bus runs (not at rest, fx_rest: then its line costs
+ * nothing, its rate a stale one). Back a lever at a time in reverse order, each after 1 s of halves in a row under 80 %
+ * (DSF_CALM); a lever on again within 5 s of its own release takes 4 s of calm to go, then 8 s, each lever its own:
+ * a load at the edge settles on it, never flaps. dly_safety, safe_hush_n: the times each came on (the console's
+ * status); safe_kills: the voices the hush faded (not stolen ones) */
+#define DSF_HALF ((HALF_FRAMES * 1000000u / FS) * FM1_TICKS_PER_US)
+#define DSF_CALM ((HALF_FRAMES * 1000000u / FS) * 80u / 100u * FM1_TICKS_PER_US)
+#define DSF_STEP 172u                                  /* halves between two levers (0.5 s: the last one's effect seen) */
+#define DSF_REARM 1720u                                /* .. a lever on again within 5 s of its release: a longer calm */
+static uint8_t dsf_behind, dsf_rearm[3];               /* bit k: the half k halves ago behind; each lever's calm, 1 s << it */
+static uint16_t dsf_calm, dsf_wait, dsf_since[3] = {0xFFFFu, 0xFFFFu, 0xFFFFu};   /* halves in a row under 80 %; to the
+                                                         * next lever; since each lever's release */
+static uint32_t dly_safety, safe_hush_n[2], safe_kills;
+static uint32_t voices_stolen(void)                    /* (the console) taken for a new note, the budget of voices full */
+{
+    return voice_kills - voice_trims - shed_count - safe_kills;
+}
+static __attribute__((noinline)) void fx_safety_tick(uint32_t r, int late)
+{
+    uint32_t up = 0, k, i, l, on = fx_safe, tex = safe_part[0], arp = safe_part[1];
+    dsf_behind = (uint8_t)(dsf_behind << 1 | (late || r > DSF_HALF));
+    for (l = 0; l < 3u; l++)
+        if (dsf_since[l] < 0xFFFFu)
+            dsf_since[l]++;
+    if (dsf_wait)
+        dsf_wait--;
+    if ((dsf_behind & 3u) == 3u && !dsf_wait && gov_cap <= 4u && LOAD_EFF())
+        up = !(on & SAFE_DLY) && fx.dr_sh && !prf.rest_ph ? SAFE_DLY : !(on & SAFE_TEX) && tex < NTRK ? SAFE_TEX :
+             !(on & SAFE_ARP) && arp < NTRK ? SAFE_ARP : 0u;
+    if (up) {
+        l = up >> 1;                                   /* (the lever: 0 the delay, 1 the texture, 2 the arp) */
+        dsf_rearm[l] = dsf_since[l] < DSF_REARM ? (uint8_t)(dsf_rearm[l] ? 3u : 2u) : 0u;   /* (1 s, 4 s, 8 s) */
+        fx_safe = (uint8_t)(on | up);
+        dsf_calm = 0;
+        dsf_wait = DSF_STEP;
+        if (up == SAFE_DLY) {
+            dly_safety++;
+        } else {
+            k = up == SAFE_ARP ? arp : tex;
+            safe_hush_n[up == SAFE_ARP]++;
+            for (i = 0; i < NVOICE; i++)
+                if (trk[k].v[i].active && trk[k].v[i].stage != 4u) {
+                    voice_kill(&trk[k].v[i]);
+                    safe_kills++;
+                }
+        }
+    } else if (on) {
+        if (r < DSF_CALM && !late) {
+            l = on & SAFE_ARP ? 2u : on & SAFE_TEX ? 1u : 0u;   /* (the last one on goes first) */
+            if (++dsf_calm >= (344u << dsf_rearm[l])) {
+                fx_safe = (uint8_t)(on & ~(1u << l));
+                dsf_calm = 0;
+                dsf_since[l] = 0;
+            }
+        } else
+            dsf_calm = 0;
+    }
+}
 static __attribute__((noinline)) uint32_t shed_check(uint32_t all)
 {
     uint32_t r = all - t5_nested_ticks;                /* (0.6.19) the budget on the render alone: a key scan or
@@ -257,9 +324,11 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
             song.cpu_q8 = load / CPU_AVG;
             audio_cpu_rem = load % CPU_AVG;
         }
-        if (fm1_audio_free_half() != half)
+        b = fm1_audio_free_half() != half;
+        if (b)
             felucca_dbg.late++, prf_cur.late++;         /* the DMA moved on while we rendered (0.8.9: caught up at
                                                          * once, its half pending; a click only past ~1.7 halves) */
+        fx_safety_tick(us * FM1_TICKS_PER_US, (int)b);   /* (ACID FM 0.5.2) the safety net past the governor */
         {   /* (0.6.17) MENU > ABOUT's numbers (voice.c load_diag) */
             uint32_t pc = us * 100u / (HALF_FRAMES * 1000000u / FS);
             if (pc > load_diag.peak) load_diag.peak = pc;

@@ -605,6 +605,10 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.5.2", items: [
+    "0.5.2: no more harsh glitches on heavy generated songs.",
+    "EXPLORE pieces stay within a CPU budget measured on the FM-1, and the long delay (over about 0.74 s, its costly mode) is only used where there is room.",
+    "Under a sudden overload the sound engine falls back step by step instead of skipping: the long delay to its short mode, then a generated piece's texture, then its arp; each comes back after a moment of calm."]},
   {v: "0.5.1", items: [
     "0.5.1: GEN's genres retuned from research into the real styles. BROKEN BEAT is now GLITCH HOP (82–100, swung) and DRIFT is now AMB TECHNO (106–126).",
     "Each genre has its own tempo: DRILL'N'BASS 155–172, ELECTRO 124–138, ACID up to 140, IDM 96–132, MICRO 116–126 with more swing, RETROBOC 68–100.",

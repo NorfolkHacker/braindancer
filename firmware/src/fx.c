@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Effects: per-track DIST insert, then sends into three
  * shared buses (chorus, tempo delay, reverb). Mono buses, stereo dry mix. */
 /* (0.8.4) the delay's line: DLY_LEN samples of int16 (params.c, the one constant of its size; a power of two). It runs
@@ -691,12 +692,12 @@ static inline int32_t dly_rd(uint32_t d, int32_t m) { return dly_rd_of(dly_buf, 
 #define DLY_EDGE 8u
 #define DLY_SPAN(sh) ((DLY_LEN - DLY_EDGE) << (sh))      /* the longest read at FS >> sh, FS samples */
 #define DLY_MAX DLY_SPAN(2u)                             /* .. of all (a quarter rate) */
-static uint32_t delay_samples(void)
+static uint32_t dtime_samples(uint32_t g)                /* TIME g (N_DTIME) in samples (ACID FM 0.5.2: gen.c's too) */
 {
-    uint32_t g = (uint32_t)GFX(GF_DTIME);
     uint32_t s = g < DT_FREE ? div_samples(g) : (uint32_t)DTIME_MS[(g - DT_FREE) % NELEM(DTIME_MS)] * 441u / 10u;   /* (JIANT 0.4: free) */
     return s < 16u ? 16u : s > DLY_MAX ? DLY_MAX : s;
 }
+static uint32_t delay_samples(void) { return dtime_samples((uint32_t)GFX(GF_DTIME)); }
 
 /* (0.9.14) the reverbs' int16 lines (ROOM's combs and allpasses, CLOUD's line) written through a soft knee: linear to -2.5 dBFS (bit for bit as before there), then tanh up to
  * ~-0.1 dB: a hot send (DIST, CLIP, four parts at once) rounds off like tape, never a hard clamp in the loop */
@@ -1486,6 +1487,8 @@ static __attribute__((noinline)) int dly_rate(uint32_t *dl, uint32_t *dr, uint32
     uint32_t need = png ? *dl * 2u : *dl + dro, s, span;
     int fresh = 0;
     s = dly_stage(need, fx.primed ? fx.dr_sh : 0u);
+    if (fx_safe & SAFE_DLY)                             /* (ACID FM 0.5.2) the safety net (audio.c): the full rate, */
+        s = 0u;                                         /* .. TIME within what it holds; the change as any other's */
     if (!fx.primed) {
         fx.dr_sh = (uint8_t)s;
         fx.dsw = 0; fx.din_g = 0;
