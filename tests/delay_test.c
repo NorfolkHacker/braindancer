@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* (0.8.4) The delay bus's line (src/fx.c: dly_buf, dly_lo) on the host, through hostsim.c as regress.c.
  *   build/host/delay_test [DEMODIR]          (run_tests.sh: build/fx_demo)
  * 1. no leak at the far end: at the longest TIME with MOD up (1/1 at 120 BPM; the full rate's own end; the longest of
@@ -17,6 +18,8 @@
  *    line each beat; after a change nothing of the old line is heard.
  * 6. at half and a quarter rate: MOD, the GRAIN (PITCH +12: an octave up), DIGITAL's held repeat (FEEDBK 100: no gain
  *    error through the filters), ANALOG's FEEDBK 120 bounded, PING-PONG's sides, TONE; the gate open for a long echo.
+ * 7. (ACID FM 0.5.2) the safety net (fx_safe bit 0, set by audio.c under an overload the governor cannot shed): a long delay
+ *    to its full-rate line within a few blocks, without a click, and back after; a full-rate delay bit for bit untouched.
  * Demos (WAV) into DEMODIR: a pluck through 1/2 at 60 BPM (half rate) and 2BAR at 120 (a quarter). */
 #define main hostsim_main
 #include "hostsim.c"
@@ -698,6 +701,72 @@ static void demos(const char *dir)
 }
 #endif
 
+#ifdef DLY_SPAN
+/* ------------------------------------------------------------ 7. the safety net --- */
+static uint32_t run_until(uint32_t sh, uint32_t most)  /* blocks of a sine until the line runs at FS >> sh: samples taken */
+{
+    uint32_t t0 = g_now;
+    while (stage() != sh && g_now - t0 < most)
+        drun(sine_on, g_now, CTL);
+    return g_now - t0;
+}
+static uint32_t safe_bad;
+static void safe_hook(uint32_t t) { (void)t; safe_bad |= stage() != 0u || fx.dl_now > DLY_SPAN(0u); }
+static void test_safety(void)
+{
+    char what[220];
+    int32_t own, st1, st2;
+    uint32_t n1, n2, ok0 = 1, i;
+    double e;
+    dreset();
+    song.g[G_BPM] = 120; song.g[G_DTIME] = 8; song.g[G_DFDBK] = 40; song.g[G_DPIT] = 5;   /* 2BAR (4 s, a quarter rate), GRAIN */
+    s_f = 220; s_a = 30000;
+    fx_safe = 0;
+    drun(sine_on, 0, 5u * FS);
+    own = step_max(4u * FS, 5u * FS);
+    check("safety net: 2BAR at 120 BPM with the GRAIN runs at a quarter rate (the case it is for)", stage() == 2u);
+    fx_safe = SAFE_DLY;
+    n1 = run_until(0u, FS);
+    safe_bad = 0; blk_hook = safe_hook;
+    drun(sine_on, g_now, 2u * FS);
+    blk_hook = 0; ok0 = !safe_bad;
+    st1 = step_max(5u * FS, g_now);
+    e = rms(L, g_now - FS / 2u, g_now);
+    snprintf(what, sizeof what, "  on: the full-rate line after %u samples (fade + clear; 3 halves at most), TIME %u <= %u, step %d (own %d), echo rms %.0f",
+             n1, fx.dl_now, DLY_SPAN(0u), st1, own, e);
+    check(what, n1 <= 3u * HALF_FRAMES && ok0 && st1 <= own * 2 + 64 && e > 1000.0);
+    fx_safe = 0;
+    n2 = run_until(2u, FS);
+    i = g_now;
+    drun(sine_on, g_now, 3u * FS);
+    st2 = step_max(i - n2, g_now);
+    snprintf(what, sizeof what, "  off: back to a quarter rate after %u samples, step %d (own %d)", n2, st2, own);
+    check(what, n2 <= 3u * HALF_FRAMES && stage() == 2u && st2 <= own * 2 + 64);
+    {   /* a full-rate delay (1/8): the same, sample for sample, with the net on (both runs from the same state) */
+        static int32_t L0[2u * FS];
+        static __typeof__(fx) f0;
+        static __typeof__(prf) p0;
+        uint32_t r0, q0, h0, a0;
+        int32_t k0, g0;
+        uint8_t b0;
+        int same = 1, k;
+        for (k = 0; k < 2; k++) {
+            dreset();
+            song.g[G_BPM] = 120; song.g[G_DTIME] = 1; song.g[G_DFDBK] = 60; song.g[G_DMOD] = 30;
+            s_f = 330; s_a = 25000;
+            if (!k) { f0 = fx; p0 = prf; r0 = rng_state; q0 = fxg_quiet; h0 = fxg_hold; a0 = fxg_dact; k0 = fxg_dpk; g0 = fxg_g; b0 = fxg_fb; }
+            else { fx = f0; prf = p0; rng_state = r0; fxg_quiet = q0; fxg_hold = h0; fxg_dact = a0; fxg_dpk = k0; fxg_g = g0; fxg_fb = b0; }
+            fx_safe = (uint8_t)k;
+            drun(sine_on, 0, 2u * FS);
+            if (!k) memcpy(L0, L, sizeof L0);
+        }
+        fx_safe = 0;
+        for (i = 0; i < 2u * FS; i++) same &= L[i] == L0[i];
+        check("  a full-rate delay (1/8, MOD 30) with the net on: bit for bit as without it", same && stage() == 0u);
+    }
+}
+#endif
+
 int main(int argc, char **argv)
 {
     test_leak();
@@ -707,6 +776,7 @@ int main(int argc, char **argv)
     test_sound();
     test_clicks();
     test_features();
+    test_safety();
     if (argc > 1) demos(argv[1]);
 #endif
     (void)argc; (void)argv;

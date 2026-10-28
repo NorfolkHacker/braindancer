@@ -298,6 +298,19 @@ static volatile uint8_t sys_load;
  * governor's) */
 static volatile uint8_t gov_cap = 16u, gov_lite;
 #define LOAD_EFF() (sys_load ? sys_load : gov_lite)
+/* (ACID FM 0.5.2) the safety net past the governor's floor (audio.c fx_safety_tick), a lever at a time: bit 0 the delay
+ * kept on its full-rate line (fx.c dly_rate: TIME at most ~0.74 s; the quarter-rate line costs ~10 % of the FM-1's CPU),
+ * bit 1 a GEN piece's texture part hushed, bit 2 its arp (no new notes, its voices faded out: safe_part, set by gen.c).
+ * Set while the governor has nothing left to shed and the audio is still behind; off again in reverse order */
+#define SAFE_DLY 1u
+#define SAFE_TEX 2u
+#define SAFE_ARP 4u
+static volatile uint8_t fx_safe;
+static uint8_t safe_part[2] = {NTRK, NTRK};             /* the GEN piece's texture and arp tracks (NTRK: none) */
+static uint32_t safe_hushed(uint32_t k)                 /* track k hushed by the safety net */
+{
+    return ((fx_safe & SAFE_TEX) && k == safe_part[0]) || ((fx_safe & SAFE_ARP) && k == safe_part[1]);
+}
 #define LITE_FM6_POLY 2u
 #define ECO_POLY 4u
 #define ECO_VOICES 6u            /* (0.6.70) LOAD ECO: the voices all parts share (NVOICE else) */
@@ -692,7 +705,7 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
         asleep_hit = 1;                                 /* (0.6.28) a note for a track asleep: the UI says so */
         return;
     }
-    if (t->p[P_MUTE] || ((trk_hush >> ((uint32_t)(t - trk) % NTRK)) & 1u) ||
+    if (t->p[P_MUTE] || ((trk_hush >> ((uint32_t)(t - trk) % NTRK)) & 1u) || (fx_safe > SAFE_DLY && safe_hushed((uint32_t)(t - trk))) ||
         (t->engine == ENGI_DRUM && drum_muted(note)))   /* (DRUM: its group mutes) */
         return;
     if (pfx_note(t, note, vel))                         /* the punch-in effects (pfx.c): a repeat holds the track */

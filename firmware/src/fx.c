@@ -1487,6 +1487,8 @@ static __attribute__((noinline)) int dly_rate(uint32_t *dl, uint32_t *dr, uint32
     uint32_t need = png ? *dl * 2u : *dl + dro, s, span;
     int fresh = 0;
     s = dly_stage(need, fx.primed ? fx.dr_sh : 0u);
+    if (fx_safe & SAFE_DLY)                             /* (ACID FM 0.5.2) the safety net (audio.c): the full rate, */
+        s = 0u;                                         /* .. TIME within what it holds; the change as any other's */
     if (!fx.primed) {
         fx.dr_sh = (uint8_t)s;
         fx.dsw = 0; fx.din_g = 0;

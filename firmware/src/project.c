@@ -2291,6 +2291,7 @@ static void project_load(uint32_t slot)
 #endif
     if (!proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t))) { ui_message("EMPTY SLOT"); return; }
     proj_bound(&proj_scratch);                          /* a retained RAM slot of an older format: as from flash */
+    safe_part[0] = safe_part[1] = NTRK;                 /* (ACID FM 0.5.2) not a GEN piece: no part the safety net hushes */
     if (!project_restore_runtime(&proj_scratch)) {
         proj_cur = (uint8_t)(slot & 3u);
         live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing) */

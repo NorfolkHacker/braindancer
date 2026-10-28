@@ -2582,6 +2582,8 @@ static void gen_go(void)
     char b[8];
     undo_mark();
     gen_make();
+    safe_part[0] = gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) the parts the */
+    safe_part[1] = gs.trk_of[RL_ARP] < trk_live ? gs.trk_of[RL_ARP] : (uint8_t)NTRK;   /* .. safety net hushes (audio.c) */
     k = gs.gi < NGENRE && gs.g->name == GENRE[gs.gi].name ? gen_shown_index(gs.gi + 1u) : 255u;   /* (3b) a shown genre by its screen name */
     str_cpy(gp.last, k != 255u ? GEN_SHOWN_NAME[k] : gs.g->name, sizeof gp.last);
     k = str_len(gp.last);
