@@ -291,8 +291,9 @@ static void fm1_main(void)
         fm1_irq_on();
     }
 #endif
-    autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
-    session_dice(fm1_ticks() ^ (uint32_t)fm1_adc_read(FM1_ADC_BATT) << 16);   /* (JIANT 0.4) this session's macros */
+    music_boot(boot_clean, fm1_ticks() ^ (uint32_t)fm1_adc_read(FM1_ADC_BATT) << 16);   /* (1.2) the last session's
+                                               * music, under the splash; (JIANT 0.4) this session's macros; (ACID FM 3c-2 task 4)
+                                               * clean once both are done (project.c) */
     {                                         /* the splash, its wordmark drawn (ux_splash.c; JIANT 0.5: was 400 ms); the pot
                                                * followed (MIDI IN plays under it). (0.5.2) On the clock: drawing the
                                                * beings does not make it longer */

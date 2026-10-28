@@ -20967,6 +20967,7 @@ static int test_u4_unsaved(void)
     {   /* (fix round 1) the song's rows are no change a load loses: a row added on SONG, another project opened, then LOAD at once;
          * a sound turned: the dialog; power-on (autosave_boot): clean */
         int16_t a_b;
+        uint32_t k, m, sig;
         u4_proj();
         project_load(1); a_b = trk[0].p[P_ATK]; project_load(0);
         nav_put(SEC_SAVE, "SONG"); frame();
@@ -20997,14 +20998,19 @@ static int test_u4_unsaved(void)
         bad += check("  another project opened (KNOB 1): clean, LOAD at once; a sound turned: the dialog", ok);
         u4_touch(); u4_poll(300);
         ok = project_unsaved();
-        (void)autosave_boot(0);                         /* (power-on: the music as it is, restored or not) */
-        ok &= !project_unsaved();
+        for (k = 0; k < NTRK; k++)                      /* (no macro route yet: session_dice writes them, as on a fresh FM-1) */
+            for (m = 0; m < 4u; m++)
+                trk[k].p[P_M1SRC + m * 3u] = 0;
+        sig = proj_music_sig();
+        music_boot(0, 12345u);                          /* (main.c's power-on order: autosave_boot, then session_dice) */
+        ok &= proj_music_sig() != sig && !project_unsaved();   /* (the routes written: the signature moved; clean) */
         u4_poll(300);
         ok &= !project_unsaved();
         turn(EN_K2, 1); frame();
         press(B_OCTUP); frame();
         ok &= !ui.confirm && proj_cur == 0u;
-        bad += check("  power-on (autosave_boot): clean, the first LOAD at once", ok);
+        if (!ok) printf("  boot: sig moved %d, unsaved %d, confirm %u\n", proj_music_sig() != sig, project_unsaved(), (unsigned)ui.confirm);
+        bad += check("  power-on (music_boot: autosave_boot, session_dice's routes): clean, the first LOAD at once", ok);
         nav_put(SEC_SAVE, "PROJECT"); frame();
         turn(EN_K1, -1); frame();                       /* (project 1 again: ui_power_on keeps song_cur) */
     }

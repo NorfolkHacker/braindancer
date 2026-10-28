@@ -1506,7 +1506,7 @@ static int proj_unpack(project_t *q, const uint8_t *b, uint32_t st)
 #ifndef PROJ_HOST
 /* (ACID FM 3c-2 task 4) changes not stored: the music (proj_music_sig: what a section load replaces, the song's rows not) since it
  * was last loaded, stored or made new (proj_clean_mark: project_save_as, project_load, section_load, section_store, system_init,
- * autosave_boot: power-on is clean). A project switch keeps the music and changes no part of the signature. Refreshed on autosave_poll's
+ * autosave_boot and, once session_dice has run too, music_boot: power-on is clean). A project switch keeps the music and changes no part of the signature. Refreshed on autosave_poll's
  * 250 ms tick, main loop only. SAVE > PROJECT's dot; its LOAD asks first over it (CF_LOAD_PROJ). RAM only, never stored */
 static uint32_t proj_music_sig(void);                  /* (fix round 1: autosave_sig without the song's rows, which no load
                                                          * replaces) */
@@ -2464,9 +2464,10 @@ static uint32_t as_mix(uint32_t h, const void *p, uint32_t n)   /* FNV-1a, conti
     return h;
 }
 
-/* what an autosave would hold, hashed (no copy, no RAM): project_capture's values; (ACID FM 3c-2 task 4 fix) rows 0: without the
- * song's rows (chain_config), what a section load replaces (the rows are the song's, song_idx: a load keeps them) */
-static uint32_t music_sig(int rows)
+/* what an autosave would hold, hashed (no copy, no RAM): project_capture's values. (ACID FM 3c-2 task 4 fix) proj_music_sig: all but
+ * the song's rows (chain_config), what a section load replaces (the rows are the song's, song_idx: a load keeps them);
+ * autosave_sig: that and the rows (sig_rows, so the 250 ms tick hashes the music once) */
+static uint32_t proj_music_sig(void)
 {
     uint32_t h = 2166136261u, i, j;
     for (i = 0; i < NTRK; i++) {
@@ -2486,13 +2487,11 @@ static uint32_t music_sig(int rows)
             h = as_mix(h, &v, sizeof v);
         }
     h = as_mix(h, &motion, sizeof motion);
-    if (rows)
-        h = as_mix(h, &chain_config, sizeof chain_config);
     h = as_mix(h, lyr_txt, sizeof lyr_txt);             /* (0.8.5) VOICE's lyrics */
     return as_mix(h, proj_name, sizeof proj_name);
 }
-static uint32_t autosave_sig(void) { return music_sig(1); }
-static uint32_t proj_music_sig(void) { return music_sig(0); }
+static uint32_t sig_rows(uint32_t m) { return as_mix(m, &chain_config, sizeof chain_config); }
+static uint32_t autosave_sig(void) { return sig_rows(proj_music_sig()); }
 
 /* nothing going on that an erase (the audio stopped ~40 ms) would be heard in, or would race */
 static int autosave_quiet(void)
@@ -2538,10 +2537,10 @@ static void autosave_poll(void)
 {
     static uint32_t fill_poll;
     if (fm1_ms - fill_poll >= 250u) {                   /* (JIANT 0.6) how full the music is, flash or not; (ACID FM 3c-2 */
-        uint32_t s = autosave_sig();                    /* task 4) changes not stored */
+        uint32_t m = proj_music_sig();                  /* task 4) changes not stored: the music hashed once (fix round 2) */
         fill_poll = fm1_ms;
-        proj_unsaved = (uint8_t)(proj_music_sig() != proj_clean_sig);
-        proj_fill_poll(s);
+        proj_unsaved = (uint8_t)(m != proj_clean_sig);
+        proj_fill_poll(sig_rows(m));
     }
 #if FELUCCA_FLASH
     uint32_t sig;
@@ -2595,8 +2594,18 @@ static int autosave_boot(int allowed)
     as.saved = as.seen = autosave_sig();
     as.t = fm1_ms;
     proj_clean_mark();                                  /* (ACID FM 3c-2 task 4 fix, ruling 62) the music at power-on, restored or
-                                                         * not: clean, no question before the first LOAD */
+                                                         * not: clean (main.c marks it again once session_dice has run) */
     return rc;
+}
+
+/* (ACID FM 3c-2 task 4 fix round 2) the music at power-on (main.c): the autosave back (`allowed`, RESTORE LAST), this session's
+ * macro routes and GEN seed (ui_layer.c session_dice: routes on every track with none, which the signature reads), then clean: the
+ * first LOAD asks nothing */
+static void music_boot(int allowed, uint32_t seed)
+{
+    (void)autosave_boot(allowed);
+    session_dice(seed);
+    proj_clean_mark();
 }
 
 #if FELUCCA_FLASH
