@@ -100,3 +100,18 @@ Still pending:
 - Console: acid-fm v0.5.1, cpu_pct 25, idle and steady (audio_late carried over the update's restart, not rising).
 - User tried the retuned genres (GLITCH HOP, AMB TECHNO, DRILL'N'BASS 155-172, RETROBOC 68-100 ...): "this is about
   right". RETROBOC stays the name (card RETRO).
+
+## 2026-10-28 — ACID FM 0.5.2 (generated songs no longer glitch)
+
+- Reported by the user: harsh digital glitches on some random GEN songs (EXPLORE 3423, then EXPLORE 9641; kicks
+  distorting). Console on 0.5.1 while glitching: audio_lost ~2/s (3423, 2 s quarter-rate grain delay) and ~4.5/s (9641,
+  short delay), late ~60/s, CPU 68-87 %. 3423 with DLY TIME short: lost 0 — the quarter-rate long delay costs ~10 % of
+  the CPU and the governor, at its floor, could not shed it; 9641 was simply heavier than the device can render.
+- Tried and dropped: the delay's quarter-rate line in RAM (no change on the device, ~2.2 lost/s); grain off (~1.8/s).
+- Fix (branch fix-delay-cost): GEN keeps EXPLORE within a device-measured CPU budget (model x1.5) and keeps the
+  quarter-rate delay off busy pieces (RANDOM and the genres get the delay rule only); a safety net in the audio engine
+  falls back step by step under overload at the governor's floor (long delay -> short mode, then the GEN texture, then
+  the arp), per-lever back-off, cleared whenever the music is replaced. Console counters dly_safety / safety_tex /
+  safety_arp.
+- Test build on the device: EXPLORE 9641 -> lost 0, late 0, CPU 49-52 %, max 2.2 ms; EXPLORE 3423 with the delay forced
+  long -> lost 0, 4 late in 9.6 s, dly_safety 1. The user: "sounds clean".
