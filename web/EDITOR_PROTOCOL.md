@@ -852,7 +852,8 @@ is told: no list of settings is fixed in the editor. INFO advertises `4E 01 coun
   device shows the MENU page, it redraws with the new value. There is no push: an editor that wants to follow
   changes made on the device reads MENU_DESC again (for instance when its settings page opens).
 - CALIBRATION and ABOUT have no value and are not offered. COLOR (id 0) is the same setting as `UI_SET` id 0.
-- **tab** (1.0.5): the MENU shows its settings in tabs (ALGORITHM steps between them on the device). After the
+- **tab** (1.0.5): the MENU shows its settings in tabs (ALGORITHM steps between them on the device; ACID FM 0.6: its pages,
+  SELECT walks them, below). After the
   names (kind 0) or the unit (kind 1) the reply carries the item's tab: its index (0.., the device's tab order,
   left to right) and its name (≤ 12 characters). An editor that wants the device's grouping shows the items by tab,
   in tab-index order, each tab's items in index order; the tab names come from the device, as the item names do.
@@ -920,6 +921,14 @@ CLOCK OUT on: CLOCK; OFF: OFF; else KEYS). LEARN and LEARN CLEAR are GLO > MORE 
 GLO > MIDI.
 The device's SYSTEM tab also holds CALIBRATION and ABOUT (not offered); INIT SYSTEM left the MENU (SAVE > TOOLS > NEW
 PROJECT). An editor that groups by tab name follows by itself; remember settings by id.
+
+(ACID FM 0.6) The MENU is a section of the device: three pages of four knobs and MORE (a list). The tab is now the item's
+**page**, format unchanged (index, then name): **0 AUDIO, 1 CLICK, 2 CONTROLS, 3 MORE**. AUDIO SPEAKER EQ (9), TRACKS (18),
+LOAD (19), BPM LOCK (8); CLICK CLICK (12), CLICK LEVEL (13), COUNT-IN (14); CONTROLS HOLD TIME (5), KNOB SPEEDUP (6), FX
+LATCH (7) (and CALIBRATION, not offered); MORE LARGE (2), ANIMATION (3), SCREEN SLEEP (17), LED GLOW (4), SCALE LEDS (16),
+USB AUDIO (11), USB LEVEL (10), CPU CORES (23), CPU CLOCK (24), RESTORE LAST (15) (and MIDI IS ON GLO, ABOUT, not offered).
+The items on no page of the device are given tab 3 MORE: COLOR (0), STYLE (1), SKIN (21), SCOPE (22), MIDI OUT (20). No id,
+index, value, name or default changes.
 
 The device's AUDIO tab shows SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL, COUNT-IN (index 9, 10, 12, 13, 14).
 CLICK: the metronome while the transport runs: OFF, REC (while a track is armed), ON (always); CLICK LEVEL its

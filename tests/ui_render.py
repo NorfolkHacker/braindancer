@@ -29,7 +29,7 @@ for f in sorted((out / "ppm").glob("*.ppm")):
     shots.setdefault(pal, []).append((name, img))
     if styled:
         continue
-    if pal in ("ACID",) and (name.startswith("perform_") or name == "menu_hold"):   # the FX layer's screens
+    if pal in ("ACID",) and name.startswith("perform_"):   # the FX layer's screens
         (out.parent / "ui_fx").mkdir(parents=True, exist_ok=True)
         img.save(out.parent / "ui_fx" / f"{pal}_{name}.png")
     if pal in ("ACID",) and (name.startswith("layer_") or name.startswith("perform_")):   # the quick layers

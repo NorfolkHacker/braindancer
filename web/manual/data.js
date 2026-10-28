@@ -492,15 +492,15 @@ commands: [
   // MENU / USB / MIDI
   {s: "menu", k: "HOME", shot: 'menu', t: "The MENU: eight pages, five tabs",
    d: "Like any section: SELECT the pages, ALGORITHM the tabs, KNOB 1–4 the page's settings, OCT−/OCT+ the one turned last. SCREEN (LARGE, ANIMATION, SCREEN SLEEP · LEDS: LED GLOW, SCALE LEDS) · AUDIO (SPEAKER EQ, TRACKS, LOAD, BPM LOCK · CLICK, CLICK LEVEL, COUNT-IN) · MIDI (MIDI IS ON GLO: OCT+ opens GLO › MIDI) · USB (USB AUDIO, USB LEVEL) · SYSTEM (CONTROLS: HOLD TIME, KNOB SPEEDUP, FX LATCH, CALIBRATION · SYSTEM: RESTORE LAST, CPU CORES, CPU CLOCK, ABOUT). Actions: turn their knob, then OCT+."},
-  {s: "menu", k: "HOME", shot: 'menu_row', t: "One look: ACID",
+  {s: "menu", k: "HOME", shot: 'menu_more', t: "One look: ACID",
    d: "One ACID look; COLOR, SKIN and STYLE are gone (kept as inert ids for the editor). SCOPE is gone too (no more creatures)."},
-  {s: "menu", k: "HOME", shot: 'menu_system', t: "USB modes",
+  {s: "menu", k: "HOME", shot: 'menu_more', t: "USB modes",
    d: "MENU › USB › USB AUDIO: CONSOLE (serial console + stereo audio, the default), STEREO (audio + MIDI: helps macOS), STEMS (an 8-channel input: T1–T6 + FX L/R), IN+OUT (stereo audio both ways: what the computer plays comes into the last track), STEMS+IN (stems + input, 10 channels)."},
   {s: "menu", k: "HOME", t: "MIDI LEARN",
    d: "GLO › MORE › MIDI › LEARN ON. Turn a knob (LEARN T2 CUT: SEND A CC), move the controller's (CC21 > T2 CUT). Up to ten, over USB and TRS, kept with the settings; LEARN CLEAR forgets them."},
   {s: "menu", k: "HOME", t: "MIDI out, clock and PROGRAM CHANGE",
    d: "GLO › MORE › MIDI: NOTES OUT (OFF, KEYS, KEYS+SEQ) and CLOCK OUT (over USB; each track on its GLO › MIDI channel, T1 = channel 1 at first). GLO › MIDI › KNOB 4 CLOCK USB / TRS follows an external clock. PROGRAM CHANGE n loads PRESETS' sound n+1 on the tracks of that channel; channel 16 jumps sections (0–3) and projects (16–19). CC16–23: E1–E8."},
-  {s: "menu", k: "HOME", shot: 'menu_system', t: "1 CORE / 2 CORES and CPU CLOCK 320 MHZ",
+  {s: "menu", k: "HOME", shot: 'menu_more', t: "1 CORE / 2 CORES and CPU CLOCK 320 MHZ",
    d: "MENU › SYSTEM › CPU CORES: 2 CORES (default, 12 voices) or 1 CORE (8 voices), from the next start; after a crash with both cores it goes to 1 CORE by itself. MENU › SYSTEM › CPU CLOCK 320 MHZ: the chip's rated clock (~11 % less CPU). REC held at power-on: one core that session."},
   {s: "menu", k: "HOME", shot: 'about', t: "ABOUT: version, load, last crash",
    d: "MENU › SYSTEM › ABOUT (KNOB 4, OCT+): version, AUDIO LOAD (NOW, PEAK, LATE, SHED), CORES and CPU, LAST CRASH. With clicks, look at LATE and SHED and take a photo."},
@@ -580,7 +580,7 @@ recipes: [
     "Turn a knob of a track parameter: LEARN T2 CUT: SEND A CC.",
     "Move the controller's knob: CC21 > T2 CUT. Go on with the next (up to 10).",
     "LEARN OFF when done. Works over USB and TRS, any channel; LEARN CLEAR forgets all. Some CCs are reserved (CC7 RESERVED)."]},
-  {id: "usb", s: "menu", shots: ['menu_system'], t: "USB modes and the DAW", steps: [
+  {id: "usb", s: "menu", shots: ['menu_more'], t: "USB modes and the DAW", steps: [
     "MENU › USB › USB AUDIO. The device re-enumerates ~1 s after the menu closes.",
     "Record the mix: CONSOLE or STEREO (on macOS, if the input doesn't show, STEREO). DAW input: “ACID FM”, 44.1 kHz.",
     "Stems: STEMS = an 8-channel input (1–6 the tracks, 7–8 the FX return), before the master. Pick 8 channels in the DAW; USB LEVEL −6 dB gives headroom; record at LOAD FULL.",
@@ -591,7 +591,7 @@ recipes: [
     "Stop and wait a moment before switching off (SAVE-layer stores reach flash when you stop).",
     "Backup: web editor (Chrome/Edge, USB) › Projects › Save backup: all 4 projects, arrangements, user presets and settings. Not the FM6 bank: keep the .syx.",
     "Restore: the same place, Restore backup, USB connected. Back up before updating or returning to stock."]},
-  {id: "cpu", s: "menu", shots: ['menu_system', 'about'], t: "1 core, 320 MHz and the crash screen", steps: [
+  {id: "cpu", s: "menu", shots: ['menu_more', 'about'], t: "1 core, 320 MHz and the crash screen", steps: [
     "If it crashes now and then: MENU › SYSTEM › CPU CORES 1 CORE (it goes there by itself after a crash with both cores). A few hours like that.",
     "If it goes on: CPU CLOCK 320 MHZ (from the next power-on; ABOUT shows CPU 320 MHZ). ~11 % less CPU: LOAD LITE helps.",
     "The red ACID FM CRASH screen shows the version, CORE x OF y, CODE (IL, MA, DZ, ST, PC, WR, MM, BU, WD) and VEC PC EMU DBG RETS. It restarts by itself after 4 s.",

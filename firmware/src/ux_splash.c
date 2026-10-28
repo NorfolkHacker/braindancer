@@ -18,6 +18,14 @@ static const char SPL_MARK[] = "ACID FM";
 static uint8_t spl_anim;                            /* main.c: 1 = the splash to be animated (splash_write) */
 static uint32_t spl_last = ~0u;                     /* the last frame drawn (its state), so a held splash is not sent again */
 
+/* the wordmark, ACID FM in UF_MARK gradient text centred across, its line's top at canvas y (on UX_BG); its left x. (ACID FM 3c-2
+ * task 5) ABOUT's first screen draws it too (ui_menu.c about_top) */
+static int32_t spl_mark(int32_t y)
+{
+    int32_t wx = ink_in(&UF_MARK, SPL_MARK, 240);
+    ux_text_grad(wx, y, &UF_MARK, SPL_MARK, UX_BG);    /* (the gradient spans the whole word: the letters come out of it) */
+    return wx;
+}
 static void splash_frame(uint32_t ms)
 {
     char pre[sizeof SPL_MARK];
@@ -37,8 +45,7 @@ static void splash_frame(uint32_t ms)
     for (x = 0; x < sw; x++)
         cv_rect(x, 0, 1, 3, UX_BLEND[x * 255 / 239]);
     if (n) {
-        wx = ink_in(&UF_MARK, SPL_MARK, 240);
-        ux_text_grad(wx, 10, &UF_MARK, SPL_MARK, UX_BG);        /* (the gradient spans the whole word: the letters come out of it) */
+        wx = spl_mark(10);
         if (n < len) {
             for (k = 0; k < n; k++)
                 pre[k] = SPL_MARK[k];

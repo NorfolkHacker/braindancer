@@ -653,8 +653,8 @@
 <rect x="844.3" y="2198.0" width="625.7" height="458.0" rx="16" fill="#0A090E" stroke="#1E1C25" stroke-width="1.2"/>
 <rect x="48.0" y="2216.0" width="92.0" height="26.0" rx="9" fill="#1C1A22" stroke="#8A6CFF" stroke-width="1.6"/>
 <g transform="translate(68.70 2221.30) scale(2.2)" fill="#F4F1EA"><use href="#p48"/><use href="#p4F" x="6"/><use href="#p4D" x="12"/><use href="#p45" x="18"/></g>
-<text x="156.0" y="2234.0" font-size="15" fill="#A39D99" xml:space="preserve"><tspan font-weight="500">the MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (SELECT the pages, ALGORITHM the tabs,</tspan></text>
-<text x="156.0" y="2255.0" font-size="15" fill="#A39D99" xml:space="preserve"><tspan font-weight="500">KNOB 1–4 the settings)</tspan></text>
+<text x="156.0" y="2234.0" font-size="15" fill="#A39D99" xml:space="preserve"><tspan font-weight="500">the MENU: AUDIO · CLICK · CONTROLS · MORE (SELECT the pages and MORE, KNOB 1–4 the</tspan></text>
+<text x="156.0" y="2255.0" font-size="15" fill="#A39D99" xml:space="preserve"><tspan font-weight="500">settings)</tspan></text>
 <rect x="48.0" y="2271.0" width="92.0" height="26.0" rx="9" fill="#1C1A22" stroke="#FFD23C" stroke-width="1.6"/>
 <g transform="translate(68.70 2276.30) scale(2.2)" fill="#F4F1EA"><use href="#p45"/><use href="#p44" x="6"/><use href="#p49" x="12"/><use href="#p54" x="18"/></g>
 <text x="156.0" y="2289.0" font-size="15" fill="#A39D99" xml:space="preserve"><tspan font-weight="500">F3 INIT · G3 RECALL · DRUM: black keys 1–8 mute each sound</tspan></text>

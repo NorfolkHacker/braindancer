@@ -316,7 +316,10 @@ static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",  
                                        "MORE INTERVAL", "MORE RATCHET", "MORE EVERY",
                                        "LIVE DJ FILTER", "MORE CUT", "MORE DENSITY", "MORE TRACKS",
                                        "MORE NOTES OUT",
-                                       "MORE ENGINE"};   /* (3c-2 task 2: SAVE > MORE's ENGINE, the engine's name whole: ANALOG) */   /* (3c-1 task 8: KEYS+SEQ, the ruling's KEYS + SEQUENCE short;
+                                       "MORE ENGINE",
+                                       "MENU SPEAKER", "MENU LEVEL", "MENU USB", "MENU CORES", "MENU CLOCK"};   /* (3c-2 task 5:
+                                                         * MENU's words kept, LOWCUT, MASTER, CONSOLE, 2 CORES, 360 MHZ: the panel
+                                                         * and the list spell them in UF_HDR, the knob a smaller face) */   /* (3c-2 task 2: SAVE > MORE's ENGINE, the engine's name whole: ANALOG) */   /* (3c-1 task 8: KEYS+SEQ, the ruling's KEYS + SEQUENCE short;
                                                          * the list spells it in UF_HDR, the status line in full) */   /* (3c-1 task 6: the DJ FILTER's cutoff and
                                                          * its side, "5.4K HP"; the RAILS rows' steps, RATCHET X3, SYNTHS, spelled in
                                                          * UF_HDR on the list) */   /* (3c-1 task 4: SEQ > MORE's step options
@@ -874,6 +877,37 @@ static int uxc_widths(void)
         chain_config = keep;
         memcpy(song_idx.scene[song_cur], sk, sizeof sk);
         song.g[G_SLOT] = s0; ui.song_row = (uint8_t)r0;
+    }
+    {   /* (ACID FM 3c-2 task 5) MENU: every value of every row on its page's knob or MORE's KNOB 2, its label within its column, its
+         * hint (the panel's 196 px, the status line's 224 in UF_HDR) */
+        uint32_t r, v, k, keep;
+        ux_knob_t kn[4];
+        char w[32];
+        for (r = 0; r < MI_COUNT; r++) {
+            if (menu_hidden(r) || r == MI_MIDIOUT)
+                continue;
+            keep = menu_valued(r) ? menu_get(r) : 0u;
+            for (v = 0; v < (menu_valued(r) ? menu_n(r) : 1u); v++) {
+                menu_at(r);
+                if (menu_valued(r))
+                    menu_put(r, v);
+                uxn_knobs(kn);
+                for (k = 0; k < 4u; k++) {
+                    str_cpy(w, "MENU ", sizeof w);
+                    str_cpy(w + str_len(w), kn[k].label, sizeof w - str_len(w));
+                    uxc_wfit(w, kn[k].value);
+                    if (text_w(&UF_LBL, kn[k].label) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+                }
+                if (text_w(&UF_HDR, menu_help(r)) > 196 || text_w(&UF_HDR, MI_NAME[r]) + 40 > 140) {
+                    printf("  MENU %s: its hint or name too wide\n", MI_NAME[r]);
+                    uxc_wbad++;
+                }
+                uxc_wmore++;
+            }
+            if (menu_valued(r))
+                menu_put(r, keep);
+        }
+        ui.menu = 0; ui.msg_t = 0;
     }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);

@@ -8,8 +8,10 @@
 #ifndef UX_MORE_H
 #define UX_MORE_H
 
-enum { UXR_TRACK, UXR_GLOBAL, UXR_ACTION, UXR_HEAD };   /* a row: a track setting (P_*), a global (G_*), an action (an
-                                                         * index of ux_more.c UXM_ACT), a heading (an index of UXM_HEAD) */
+enum { UXR_TRACK, UXR_GLOBAL, UXR_ACTION, UXR_HEAD, UXR_MENU };   /* a row: a track setting (P_*), a global (G_*), an action
+                                                         * (an index of ux_more.c UXM_ACT), a heading (an index of UXM_HEAD);
+                                                         * (3c-2 task 5) a MENU setting or action (menu_items.c MI_*: menu_get /
+                                                         * menu_put, ux_menu.c uxn_set) */
 /* eng: shown only on that engine's tracks (its ENGINES index + 1; 0: any), where one stored slot means two things (P_LRTRG is
  * LOFI's RETRIG and VOICE's WORDS): each row says only one of them */
 typedef struct { uint16_t id; uint8_t kind, eng; } ux_row_t;
@@ -23,8 +25,9 @@ typedef struct ux_more_s { const ux_row_t *rows; uint8_t n; } ux_more_t;
 enum { UXM_H_ARP, UXM_H_VOICE, UXM_H_FILTER, UXM_H_TONE, UXM_H_MOD, UXM_H_MSEQ, UXM_H_DELAY, UXM_H_REVERB, UXM_H_CHORUS,
        UXM_H_SLICER, UXM_H_WORDS, UXM_H_KIT, UXM_H_OP, UXM_H_DRUM, UXM_H_MLFO, UXM_H_PATCH, UXM_H_LFO, UXM_H_DIST, UXM_H_APAN,
        UXM_H_SLPIT, UXM_H_LANE, UXM_H_TRACK, UXM_H_STEP, UXM_H_MUTATE, UXM_H_SHAPE, UXM_H_HEADS, UXM_H_AUTO, UXM_H_LIVE,
-       UXM_H_SYSTEM, UXM_H_TEMPO, UXM_H_UNDO, UXM_H_MIDI, UXM_H_SOUND, UXM_H_TOOLS, UXM_H_SONG, UXM_H_N };   /* (3c-2 task 2)
-                                                         * SAVE's SOUND, TOOLS; (task 3) its SONG */
+       UXM_H_SYSTEM, UXM_H_TEMPO, UXM_H_UNDO, UXM_H_MIDI, UXM_H_SOUND, UXM_H_TOOLS, UXM_H_SONG, UXM_H_SCREEN, UXM_H_LEDS,
+       UXM_H_USB, UXM_H_ABOUT, UXM_H_N };   /* (3c-2 task 2) SAVE's SOUND, TOOLS; (task 3) its SONG; (task 5) MENU's SCREEN, LEDS,
+                                                         * USB, ABOUT (with SYSTEM, MIDI) */
 /* the actions (UXR_ACTION rows' ids; ux_more.c UXM_ACT): (3b task 8) FX's CLEAR LANE, the punch-in lane emptied, asking first;
  * (3c-1 task 4) SEQ's CLEAR, the track's automation, asking; (task 7) GLO's UNDO, the GLO layer's G4; (task 8) GLO's LEARN CLEAR,
  * MENU's until 0.5 */

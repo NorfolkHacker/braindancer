@@ -21,7 +21,7 @@
  * and the level its pictures were drawn for (0.8.5's lenses: the panels, the cards and the knobs as they were, read
  * through lens_level / pd_level / home_level). Each section remembers the page last shown (ui.nmem, EDIT
  * one per kind of track); a page put by code brings its entry (nav_cur). Included by ui.c. */
-enum { LZ_SEQ, LZ_SAVE, LZ_FX, LZ_HOME, LZ_EDIT, LZ_ENV, LZ_MOD, LZ_KEY, LZ_GLO, LZ_MENU, LZ_LAYER, LZ_DLG, LZ_NONE };
+enum { LZ_SEQ, LZ_SAVE, LZ_FX, LZ_HOME, LZ_EDIT, LZ_ENV, LZ_MOD, LZ_KEY, LZ_GLO, LZ_LAYER, LZ_DLG, LZ_NONE };
 enum { PD_EDIT, PD_ENV, PD_MOD, PD_KEY, PD_GLO, PD_N };
 static uint32_t pd_of_fam(uint32_t f)
 {

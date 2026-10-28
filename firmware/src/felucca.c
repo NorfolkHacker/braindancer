@@ -105,6 +105,7 @@
 #include "ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
 #include "ux_layer.c"               /* (ACID FM 3b task 9) the held layers EDIT, MACRO, FX, SCL (ux_layer.h) */
 #include "ux_dialog.c"              /* (ACID FM 3c-2 task 1) the OCT- / OCT+ dialogs, full screen */
+#include "ux_menu.c"                /* (ACID FM 3c-2 task 5) MENU: AUDIO CLICK CONTROLS MORE, ABOUT / PROFILE */
 
 /* --------------------------------------------- storage, update, editor --- */
 #if FELUCCA_FLASH

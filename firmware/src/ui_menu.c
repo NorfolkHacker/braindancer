@@ -2,10 +2,10 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * Portions Copyright (C) 2026 NorfolkHacker */
-/* Felucca menu (HOME held): its rows in tabs (1.0.5: DISPLAY CONTROL AUDIO SYSTEM; JIANT 0.9.12: MIDI before SYSTEM;
- * ALGORITHM between them, PRESETS within one; no scrolling), the rows in menu_items.c (the settings, shared with the editor's MENU_DESC / MENU_SET).
- * No BACK row: HOME closes it (ui_input.c). The two-valued rows are bits of ui_prefs (MENU_FLAGS). PRESETS scrolls from
- * ABOUT through all credits (OCT- back to the tabs). ui.menu: 1 the tabs, 2 information. */
+/* Felucca menu (HOME held): the rows in menu_items.c (the settings, shared with the editor's MENU_DESC / MENU_SET), their
+ * hints (MI_HELP), ABOUT's and PROFILE's documents and the CPU TEST's result. (ACID FM 3c-2 task 5) Its pages, MORE and the
+ * documents' frame are drawn and run by ux_menu.c (until 0.5 here: tabs of cards, ALGORITHM between them). HOME closes it
+ * (ui_input.c). ui.menu: 1 the pages, 2 ABOUT, 3 PROFILE. */
 /* ------------------------------------------------------------ menu --- */
 /* (the rows, their values and names, usb_serial_apply: menu_items.c) */
 
@@ -31,8 +31,11 @@ static void draw_about_qr(int32_t x, int32_t y)
 
 /* All notices are in flash. Wrap at the font's actual width, without dropping URL
  * characters; the same layout computes the scroll limit and draws clipped bands.
- * Mixed case here (long text); S throughout, the title in L. */
-#define MENU_DOC_H 196                                /* the document: screen rows 24..220 */
+ * Mixed case here (long text, AF_S); (ACID FM 3c-2 task 5) in the ux colours, the headings VIOLET as MORE's, the first screen
+ * in the ux faces. MENU_DOC_H: the document's rows on the screen (ux_menu.c: under the header, over the footer). */
+#define MENU_DOC_H 210                                /* the document: screen rows 16..225 */
+#define MENU_DOC_X 8                                  /* .. its left margin, and the text's width */
+#define MENU_DOC_W 222
 enum { MC_TEXT, MC_TITLE, MC_URL };
 typedef struct { const char *text; uint8_t kind; } menu_credit_t;
 static const menu_credit_t MENU_CREDITS[] = {
@@ -99,7 +102,7 @@ static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)
             line[n + 1u] = 0;
             pen += (prev ? kern(&AF_S, prev, c) : 0) + AF_S.gh[glyph(&AF_S, c) >> AF_S.psh].adv;
             prev = c;
-            if ((pen + 8) >> 4 > 226)
+            if ((pen + 8) >> 4 > MENU_DOC_W)
                 break;
             if (s[n] == ' ')
                 space = n;
@@ -109,7 +112,7 @@ static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)
         if (!take) take = 1;                         /* progress even for an unusually wide glyph */
         line[take] = 0;
         if (draw && y + AF_S.h > 0 && y < MENU_DOC_H)
-            cv_text(6, y, &AF_S, line, col);
+            cv_text(MENU_DOC_X, y, &AF_S, line, col);
         y += 18;
         s += take;
         while (*s == ' ') s++;
@@ -117,7 +120,7 @@ static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)
     return y;
 }
 
-/* (0.9.14) SAVE > TOOLS 6 CPU TEST measured: its song played 10 s or more, its mean AUDIO LOAD from 2 s on kept in the
+/* (0.9.14) SAVE > TOOLS 6 (ACID FM 3c-2: SAVE > MORE) CPU TEST measured: its song played 10 s or more, its mean AUDIO LOAD from 2 s on kept in the
  * settings with the cores it ran on (cpt_res %, cpt_cores; 0 = not run): ABOUT, PROFILE, and GEN's EXPLORE budget
  * (gen.c gc_dev: the host's model holds the song at ~63 % of a half with two cores, ~77 % with one) */
 #define cpt_res (favorites.factory[15][16])              /* (bytes no engine uses: engine 15) */
@@ -143,9 +146,9 @@ static __attribute__((noinline)) void cpt_poll(void)    /* (ui_input: every pass
     cpt_arm = (uint8_t)!prf.cpt_ms;                      /* (played and stopped: done either way) */
     prf.cpt_ms = prf.cpt_sum = prf.cpt_n = 0;
 }
-static void cpt_line(char *b)                            /* "CPU TEST 98 % (2 CORES)", "CPU TEST: TOOLS 6" */
+static void cpt_line(char *b)                            /* "CPU TEST 98 % (2 CORES)", "CPU TEST: SAVE > MORE" */
 {
-    str_cpy(b, cpt_res ? "CPU TEST " : "CPU TEST: SAVE > TOOLS 6", 40);
+    str_cpy(b, cpt_res ? "CPU TEST " : "CPU TEST: SAVE > MORE", 40);
     if (cpt_res) {
         fmt_int(b + 9, cpt_res);
         str_cpy(b + str_len(b), cpt_cores == 1u ? " % (1 CORE)" : " % (2 CORES)", 14);
@@ -178,14 +181,14 @@ static int32_t prf_row(int32_t y, int draw, const char *name, uint32_t k)
 {
     uint32_t c;
     if (draw && y + AF_S.h > 0 && y < MENU_DOC_H) {
-        cv_text(6, y, &AF_S, name, T_TEXT);
+        cv_text(MENU_DOC_X, y, &AF_S, name, UX_TEXT);
         for (c = 0; c < 4u; c++) {
             char b[12];
             int32_t v = 0;
             int f = (prf_have >> (1u - c / 2u)) & 1u ? prf_val(&prf_win[1u - c / 2u], k, c & 1u, &v) : 0;
             b[0] = '0';                                  /* ("0.5", not ".5") */
             if (f) fmt_fix(b + (f == 1 && v < 10), v, f == 1); else str_cpy(b, "-", 2);
-            cv_text_r(136 + (int32_t)c * 31, y, &AF_S, b, c / 2u ? T_MID : T_TEXT, T_BG);
+            cv_text_r(136 + (int32_t)c * 31, y, &AF_S, b, c / 2u ? UX_MID : UX_TEXT, UX_BG);
         }
     }
     return y + 18;
@@ -200,7 +203,7 @@ static int32_t prof_document(int32_t y, int draw)
     const prf_win_t *w = &prf_win[prf_have >> 1];
     char b[40];
     uint32_t k, i;
-    y = menu_text("% OF A BLOCK: PLAY AVG MAX, STOP AVG MAX", y + 4, T_THEME, draw);
+    y = menu_text("% OF A BLOCK: PLAY AVG MAX, STOP AVG MAX", y + 4, UX_VIOLET, draw);
     for (i = 0; i < NELEM(KS); i++) {
         str_cpy(b, NM[i], sizeof b);
         if (KS[i] == PRF_REV)
@@ -219,62 +222,79 @@ static int32_t prof_document(int32_t y, int draw)
     str_cpy(b + str_len(b), " CAP ", 6);
     fmt_int(b + str_len(b), (int32_t)voice_cap());
     str_cpy(b + str_len(b), LOAD_EFF() == LOAD_ECO ? " ECO" : LOAD_EFF() ? " LITE" : " FULL", 6);
-    y = menu_text(b, y + 4, T_TEXT, draw);
-    y = menu_text(cpu_status(), y, T_TEXT, draw);
+    y = menu_text(b, y + 4, UX_TEXT, draw);
+    y = menu_text(cpu_status(), y, UX_TEXT, draw);
     cpt_line(b);
-    y = menu_text(b, y, T_TEXT, draw);
-    return menu_text(FELUCCA_VERSION, y, T_MID, draw) + 4;
+    y = menu_text(b, y, UX_TEXT, draw);
+    return menu_text(FELUCCA_VERSION, y, UX_MID, draw) + 4;
 }
 
+/* (ACID FM 3c-2 task 5, spec 3.1) ABOUT's first screen in the ux faces: the wordmark (ux_splash.c's), the version, built on, the
+ * audio's load since power-on (0.6.17, voice.c load_diag: to tell what happened when it clicked) and the CPU TEST's result beside
+ * the QR code to the manual; SELECT scrolls the rest (every credit and licence line) */
+#define ABOUT_Y_VER 62                                  /* the version's line (its caps' top), the built-on line, AUDIO LOAD's */
+#define ABOUT_Y_BUILT 80                                /* heading, its lines and the CPU TEST's, the QR, the address under it */
+#define ABOUT_Y_LOAD 104
+#define ABOUT_Y_QR 100
+#define ABOUT_Y_URL 186
+#define ABOUT_PITCH 16
+#define ABOUT_QR_X 158
+static void about_load(char *b, uint32_t line)          /* "NOW 23%  PEAK 41%", "LATE 0  SHED 0" */
+{
+    char n[12];
+    str_cpy(b, line ? "LATE " : "NOW ", 40);
+    fmt_int(n, (int32_t)(line ? load_diag.late : (song.cpu_q8 * 100u) >> 8));
+    str_cpy(b + str_len(b), n, 12);
+    str_cpy(b + str_len(b), line ? "  SHED " : "%  PEAK ", 10);
+    fmt_int(n, (int32_t)(line ? load_diag.shed : load_diag.peak));
+    str_cpy(b + str_len(b), n, 12);
+    if (!line)
+        str_cpy(b + str_len(b), "%", 2);
+}
+static void about_top(int32_t y)
+{
+    char b[40];
+    uint32_t k;
+    (void)spl_mark(y);                                  /* ACID FM, UF_MARK in the blend (as the splash draws it) */
+    cv_text_on(MENU_DOC_X, y + ABOUT_Y_VER, &UF_HDR, FELUCCA_VERSION, UX_TEXT, UX_BG);
+    cv_text_r(232, y + ABOUT_Y_VER, &UF_HDR, "BY NORFOLKHACKER", UX_MID, UX_BG);
+    cv_text_on(MENU_DOC_X, y + ABOUT_Y_BUILT, &UF_HDR, "Built on JIANT FM and Felucca", UX_TEXT, UX_BG);   /* (3c-1 task 10, spec 5) */
+    cv_text_on(MENU_DOC_X, y + ABOUT_Y_LOAD, &UF_LBL, "AUDIO LOAD", UX_VIOLET, UX_BG);
+    for (k = 0; k < 2u; k++) {
+        about_load(b, k);
+        cv_text_on(MENU_DOC_X, y + ABOUT_Y_LOAD + 14 + (int32_t)k * ABOUT_PITCH, &UF_HDR, b, UX_TEXT, UX_BG);
+    }
+    cpt_line(b);                                        /* (0.9.14) */
+    cv_text_on(MENU_DOC_X, y + ABOUT_Y_LOAD + 14 + 2 * ABOUT_PITCH, &UF_HDR, b, UX_MID, UX_BG);
+    draw_about_qr(ABOUT_QR_X, y + ABOUT_Y_QR);
+    cv_text_on(MENU_DOC_X, y + ABOUT_Y_URL, &UF_HDR, "github.com/NorfolkHacker/acid-fm", UX_MID, UX_BG);
+}
 static int32_t menu_document(int32_t y, int draw)
 {
     uint32_t i;
     if (ui.menu == 3)
         return prof_document(y, draw);
-    if (draw) {
-        cv_text(6, y + 2, &AF_L, "ACID FM", T_THEME);
-        cv_text(6, y + 38, &AF_S, "IDM firmware for the MVAVE FM-1", T_TEXT);
-        cv_text(6, y + 58, &AF_M, FELUCCA_VERSION, T_THEME);
-        cv_text_r(232, y + 61, &AF_S, __DATE__, T_MID, T_BG);
-        cv_text(6, y + 82, &AF_S, "by NorfolkHacker", T_TEXT);
-        cv_text(6, y + 100, &AF_S, "Free, GPL-3.0-only, no warranty", T_TEXT);
-        cv_text(6, y + 118, &AF_S, "Built on JIANT FM and Felucca", T_TEXT);   /* (3c-1 task 10, spec 5) */
-        cv_text(6, y + 138, &AF_S, "github.com", T_MID);
-        cv_text(6, y + 156, &AF_S, "/NorfolkHacker", T_MID);
-        cv_text(6, y + 174, &AF_S, "/acid-fm", T_MID);
-        draw_about_qr(158, y + 122);
-    }
-    y = menu_text("THE PROJECT", y + 216, T_THEME, draw);
-    y = menu_text("Copyright (C) 2026 NorfolkHacker", y, T_TEXT, draw);
+    if (draw && y + MENU_DOC_H > 0)
+        about_top(y);
+    y = menu_text("THE PROJECT", y + MENU_DOC_H, UX_VIOLET, draw);
+    y = menu_text("ACID FM, IDM firmware for the MVAVE FM-1, by NorfolkHacker. Built " __DATE__ ".", y, UX_TEXT, draw);
+    y = menu_text("Copyright (C) 2026 NorfolkHacker", y, UX_TEXT, draw);
+    y = menu_text("Free, GPL-3.0-only, no warranty.", y, UX_TEXT, draw);
     y = menu_text("ACID FM builds on open firmware for the FM-1: JIANT FM by Juan Jiant "
-                  "(Copyright (C) 2026 Juan Ignacio Antonucci) and Felucca by Hugelton Instruments.", y, T_TEXT, draw);
-    y = menu_text("Installer, emulator, manual:", y + 4, T_TEXT, draw);
-    y = menu_text("norfolkhacker.github.io/acid-fm", y, T_MID, draw);
-    y = menu_text("JIANT FM: juanjiant-bit.github.io/JIANT", y + 4, T_MID, draw);
-    y = menu_text("Free software, GPL-3.0-only: the full notices and the sources it builds on travel with the source.", y + 4, T_TEXT, draw);
-    y -= 216;
-    {   /* (0.6.17) the audio's load since power-on (voice.c load_diag): to tell what happened when it clicked */
-        char b[40], n[12];
-        y = menu_text("AUDIO LOAD", y + 216, T_THEME, draw);
-        str_cpy(b, "NOW ", sizeof b); fmt_int(n, (int32_t)((song.cpu_q8 * 100u) >> 8)); str_cpy(b + str_len(b), n, 8);
-        str_cpy(b + str_len(b), "%  PEAK ", 10); fmt_int(n, (int32_t)load_diag.peak); str_cpy(b + str_len(b), n, 8);
-        str_cpy(b + str_len(b), "%", 2);
-        y = menu_text(b, y, T_TEXT, draw);
-        str_cpy(b, "LATE ", sizeof b); fmt_int(n, (int32_t)load_diag.late); str_cpy(b + str_len(b), n, 12);
-        str_cpy(b + str_len(b), "  SHED ", 8); fmt_int(n, (int32_t)load_diag.shed); str_cpy(b + str_len(b), n, 12);
-        y = menu_text(b, y, T_TEXT, draw);
-        y = menu_text(cpu_status(), y, T_TEXT, draw);   /* (0.6.71) the second core (fx.c; 0.9.12: cpu_safe.c) */
-        y = menu_text(cpu_is_320() ? "CPU 320 MHZ" : "CPU 360 MHZ", y, T_TEXT, draw);   /* (0.9.12) the clock now */
-        cpt_line(b);                                    /* (0.9.14) */
-        y = menu_text(b, y, T_TEXT, draw);
-        y = menu_text("OCT+: PROFILE", y, T_MID, draw);
-    }
+                  "(Copyright (C) 2026 Juan Ignacio Antonucci) and Felucca by Hugelton Instruments.", y, UX_TEXT, draw);
+    y = menu_text("Installer, emulator, manual:", y + 4, UX_TEXT, draw);
+    y = menu_text("norfolkhacker.github.io/acid-fm", y, UX_MID, draw);
+    y = menu_text("JIANT FM: juanjiant-bit.github.io/JIANT", y + 4, UX_MID, draw);
+    y = menu_text("Free software, GPL-3.0-only: the full notices and the sources it builds on travel with the source.", y + 4, UX_TEXT, draw);
+    y = menu_text("CPU", y + 8, UX_VIOLET, draw);     /* (0.6.71) the second core (fx.c; 0.9.12: cpu_safe.c), the clock now */
+    y = menu_text(cpu_status(), y, UX_TEXT, draw);
+    y = menu_text(cpu_is_320() ? "CPU 320 MHZ" : "CPU 360 MHZ", y, UX_TEXT, draw);
     {   /* (0.9.12) the last crash kept (cpu_safe.c crash_log; MANUAL: Troubleshooting) */
         char b[CRASH_LOG_N + 1u];
-        y = menu_text("LAST CRASH", y + 4, T_THEME, draw);
-        y = menu_text(crash_log_get(b) ? b : "NONE", y, T_TEXT, draw) - 216 + 8;
+        y = menu_text("LAST CRASH", y + 8, UX_VIOLET, draw);
+        y = menu_text(crash_log_get(b) ? b : "NONE", y, UX_TEXT, draw);
     }
-    y = menu_text("CREDITS", y + 216, T_THEME, draw) + 8;
+    y = menu_text("CREDITS", y + 8, UX_VIOLET, draw) + 8;
     for (i = 0; i < NELEM(MENU_CREDITS); i++) {
         const menu_credit_t *c = &MENU_CREDITS[i];
         const char *text = c->text;
@@ -282,14 +302,14 @@ static int32_t menu_document(int32_t y, int draw)
         if (c->kind == MC_URL && str_len(text) >= 8u && !memcmp(text, "https://", 8))
             text += 8;
         if (!text[0]) y += 8;
-        else y = menu_text(text, y, c->kind == MC_TITLE ? T_THEME : c->kind == MC_URL ? T_MID : T_TEXT, draw);
+        else y = menu_text(text, y, c->kind == MC_TITLE ? UX_VIOLET : c->kind == MC_URL ? UX_MID : UX_TEXT, draw);
     }
-    y = menu_text("LICENSES + SOURCE", y + 12, T_THEME, draw);
-    y = menu_text("DRUM + own samples: GPL-3.0-only", y, T_TEXT, draw);
-    y = menu_text("Fonts and icons: their licences travel with the source and the release files.", y, T_TEXT, draw);
-    y = menu_text("NO WARRANTY", y, T_TEXT, draw);
-    y = menu_text("Full notices in source:", y + 8, T_TEXT, draw);
-    y = menu_text("github.com/NorfolkHacker/acid-fm", y, T_MID, draw);
+    y = menu_text("LICENSES + SOURCE", y + 12, UX_VIOLET, draw);
+    y = menu_text("DRUM + own samples: GPL-3.0-only", y, UX_TEXT, draw);
+    y = menu_text("Fonts and icons: their licences travel with the source and the release files.", y, UX_TEXT, draw);
+    y = menu_text("NO WARRANTY", y, UX_TEXT, draw);
+    y = menu_text("Full notices in source:", y + 8, UX_TEXT, draw);
+    y = menu_text("github.com/NorfolkHacker/acid-fm", y, UX_MID, draw);
     return y + 4;
 }
 static int32_t menu_scroll_max(void)
@@ -298,17 +318,8 @@ static int32_t menu_scroll_max(void)
     return h > MENU_DOC_H ? h - MENU_DOC_H : 0;
 }
 
-/* (0.9.18) The MENU's settings as the rest of the system's pages (until 0.9.17 a list of rows, any knob the row's value,
- * SELECT a row): the header "MENU . SCREEN", the tabs the groups (SCREEN AUDIO MIDI USB SYSTEM, a dot a page), the
- * page's four settings as the four cards (KNOB n the card n's value, each value in its heat as every card's), the panel
- * their rows (the knob's number, the full name, the value, one plain line on what it does: the value's own where the
- * values differ in kind), the footer MENU . TAB . page n/8 (ACID FM 0.3; 0.9.18: n/9) (MENU . page where the page is named as its tab). SELECT walks the pages (no wrap), ALGORITHM jumps to the next
- * / previous tab's first page, PRESETS does nothing (rule 3). The last setting turned (ui.menu_sel, a row) is framed in
- * the panel; OCT+ / OCT- step it too (the LEDs breathe where it can go). An action (LEARN CLEAR, CALIBRATION, ABOUT):
- * its knob arms it (its card TINT, OCT+ its value, as every action card), OCT+ does it. Messages: the toast pill. The
- * drawing redone whole on a change (menu_sig) */
-static uint32_t menu_page(void) { return menu_page_of(ui.menu_sel % MI_COUNT); }
-static uint32_t menu_tab(void) { return MPAGE[menu_page()].tab; }
+/* a row's place: its value's place in the menu's steps (ON / OFF rows: ON up), as a ratio 0..1000 (-1 none): MORE's and the
+ * knob row's bar (ux_menu.c, ux_more.c) */
 static uint32_t menu_pos(uint32_t row)                 /* a value's place in the menu's steps (ON / OFF rows: ON up) */
 {
     const menu_flag_t *f = menu_flag(row);
@@ -319,23 +330,6 @@ static int32_t menu_ratio(uint32_t row)               /* a card's gauge and heat
 {
     uint32_t n = menu_n(row);
     return menu_valued(row) && n > 1u ? (int32_t)(menu_pos(row) * 1000u / (n - 1u)) : -1;
-}
-static void menu_val(uint32_t row, char *b)          /* the row's value as it reads ("0.4 s"; LEARN CLEAR "3 CC") */
-{
-    str_cpy(b, menu_valued(row) ? menu_vname(row, menu_get(row)) : "", 16);
-}
-static const char *menu_short(uint32_t row)          /* a card's label: a whole word of the row's name (8 characters) */
-{
-    static const struct { uint8_t row; char s[9]; } SH[] = {
-        {MI_LOWCUT, "SPEAKER"}, {MI_CPU, "CORES"}, {MI_CLKLVL, "LEVEL"}, {MI_USB, "LEVEL"}, {MI_SERIAL, "USB AUD"},
-        {MI_ANIM, "ANIMATE"}, {MI_SCROFF, "SLEEP"}, {MI_HOLD, "HOLD"}, {MI_ACCEL, "SPEEDUP"}, {MI_SCLLED, "SCALE"},
-        {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU MHZ"}, {MI_PANEL, "CALIB"}, {MI_GLOMIDI, "GLO"}};   /* (no two alike on a
-                                                         * page: tests/ui_test.c) */
-    uint32_t k;
-    for (k = 0; k < NELEM(SH); k++)
-        if (SH[k].row == row)
-            return SH[k].s;
-    return MI_NAME[row];
 }
 /* the panel's line under a row: what it does, in plain words; a value's own (v) where the values differ in kind */
 static const struct { uint8_t row, v; const char *s; } MI_HELP[] = {
@@ -381,138 +375,6 @@ static const char *menu_help(uint32_t row)
             return MI_HELP[k].s;
     return "";
 }
-static uint16_t menu_vcol(uint32_t c, uint32_t row)   /* a value's colour, as its card's (knob_col, the heat) */
-{
-    int32_t r = menu_ratio(row);
-    uint16_t k = knob_col(c, r, 0);
-    return r < 0 ? T_MID : k;
-}
-static void menu_cards(void)
-{
-    uint32_t p = menu_page(), c, r;
-    char v[16];
-    for (c = 0; c < 4u; c++) {
-        r = MPAGE[p].row[c];
-        if (r == MI_NONE) {
-            draw_column(c, "", "", "", T_DIM, -1, ICON_NONE);
-            continue;
-        }
-        menu_val(r, v);
-        if (!menu_valued(r)) {                         /* an action: armed by its knob (TINT, OCT+ its value) */
-            int arm = r == ui.menu_sel;
-            card_arm_next = (uint8_t)arm;
-            draw_column(c, menu_short(r), arm ? "OCT+" : v, "", arm ? T_TEXT : T_MID,
-                        -1, ICON_NONE);
-            continue;
-        }
-        draw_column(c, menu_short(r), v, "", VAL(c), menu_ratio(r), ICON_NONE);
-    }
-}
-#define MROW_H 34                                      /* a row of the panel: 32 px and a gap; four in 136 */
-static void menu_panel(void)
-{
-    uint32_t p = menu_page(), c, r;
-    char v[16], kn[2] = {0, 0};
-    for (c = 0; c < 4u; c++) {
-        int32_t y = 2 + (int32_t)c * MROW_H;
-        int sel;
-        uint16_t bg;
-        r = MPAGE[p].row[c];
-        if (r == MI_NONE)
-            continue;
-        sel = r == ui.menu_sel;
-        bg = sel ? T_TINT : T_RAISE;
-        cv_rect(8, y, 224, MROW_H - 2, bg);
-        if (sel)
-            cv_rect(8, y, 3, MROW_H - 2, T_ACCENT);
-        kn[0] = (char)('1' + c);
-        GFX_HOOK_ALIGN(0, y + 3, 0, y + 16, AL_V, "menu row name centred up/down");
-        cv_text(16, y + 3 + CAP_IN(X, 13), &AF_X, kn, T_THEME);
-        GFX_HOOK_ALIGN(0, y + 3, 0, y + 16, AL_V, "menu row name centred up/down");
-        cv_text_on(26, y + 3 + CAP_IN(S, 13), &AF_S, MI_NAME[r], sel ? T_TEXT : T_MID, bg);
-        menu_val(r, v);
-        if (v[0]) {
-            GFX_HOOK_ALIGN(0, y + 3, 0, y + 16, AL_V, "menu row name centred up/down");
-            cv_text_r(226, y + 3 + CAP_IN(S, 13), &AF_S, v, menu_vcol(c, r), bg);
-        }
-        cv_free_text(26, y + 20 - AF_X_CAP_Y, &AF_X, menu_help(r), T_DIM, bg, 202);
-    }
-}
-static void draw_menu(void)
-{
-    uint32_t sig;
-    if (ui.menu == 1) {                                /* (the message's and the knob's timers: the page path's lz_frame_end) */
-        if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {
-            str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
-            ui.msg2[0] = 0;
-            ui.msg_t = 60;
-        }
-        if (ui.hot_t)
-            ui.hot_t--;
-    }
-    sig = ui.menu * 7u + ui.menu_sel * 131u + settings.palette * 1009u + settings.lowcut * 7919u + settings_hold * 3511u +
-          settings_leds * 6151u + ui_prefs * 4099u + ui_style * 257u + ui_skin * 1543u + song.rec * 65537u + song.sel * 13u +
-          ui_rec_prefs * 92821u + ui_scr * 131071u + (ui.hot_t ? ui.hot_col + 1u : 0u) * 0x9E3779B1u +
-          (ui.menu == 1 && ui.msg_t ? str_hash(0x70A57u, ui.msg) : 0u) + ml_count() * 977u + ml.on * 3u + usb_out * 61u +
-          midi_outs * 89u + cpu_cfg * 197u + ui_load * 433u + ui_scope * 71u +
-          (ui.menu >= 2 ? ui.menu_scroll * 48611u : 0u) + (ui.menu == 3 ? prf_seq * 2971u + 1u : 0u) +
-          (ui.menu == 2 ? (song.cpu_q8 >> 3) * 7741u + load_diag.peak * 3329u + load_diag.late * 1931u +
-                          load_diag.shed * 2671u : 0u);   /* (0.6.19) ABOUT's AUDIO LOAD: live (NOW in ~3 % steps) */
-    draw_head();                                      /* (0.8.5: the pages' header, "MENU . SCREEN") */
-    if (!ui.force && sig == ui.menu_sig)
-        return;
-    ui.menu_sig = sig;
-    if (ui.menu >= 2) {
-        uint32_t pass;
-        int32_t scroll = ui.menu_scroll, max = menu_scroll_max();
-        int32_t thumb = MENU_DOC_H * MENU_DOC_H / (max + MENU_DOC_H);
-        if (thumb < 12) thumb = 12;
-        for (pass = 0; pass < 2u; pass++) {
-            cv_begin(240, pass ? MENU_DOC_H - 124u : 124u, T_BG);
-            cv_oy = pass ? -124 : 0;
-            cv_scroll = 1;
-            menu_document(-scroll, 1);
-            cv_scroll = 0;
-            cv_rrect(235, 2, 3, MENU_DOC_H - 4, 1, T_LINE, T_BG);           /* the scroll bar */
-            cv_rrect(235, 2 + (max ? scroll * (MENU_DOC_H - 4 - thumb) / max : 0), 3, thumb, 1, T_MID, T_LINE);
-            cv_oy = 0;
-            cv_blit(0, H_HEAD + pass * 124u);
-        }
-        cv_begin(240, 240 - (H_HEAD + MENU_DOC_H), T_BG);
-        {
-            static const khint_t KH[2] = {{KC_SELECT, "SCROLL"}, {KC_OCTDN, "BACK"}};
-            cv_key_row(8, 232, 4, KH, 2, 3u, T_BG);
-        }
-        cv_blit(0, H_HEAD + MENU_DOC_H);
-        return;
-    }
-    if (ui.force) {                                    /* (0.9.0) round its tabs, cards, panel and footer, not under them */
-        int16_t R[7][4] = {{0, LT_Y, 240, (int16_t)(lz_low() ? LB_TAB_H : LT_H)}, {0, (int16_t)graph_y(), 240, (int16_t)graph_h()},
-                           {0, (int16_t)foot_y(), 240, (int16_t)foot_h()}};
-        uint32_t c;
-        for (c = 0; c < 4u; c++) {
-            R[3u + c][0] = (int16_t)CARD_X(c);
-            R[3u + c][1] = (int16_t)card_y();
-            R[3u + c][2] = CARD_W;
-            R[3u + c][3] = (int16_t)card_h();
-        }
-        fill_around((const int16_t (*)[4])R, 7);
-    }
-    draw_tabs();
-    menu_cards();
-    cv_begin(240, graph_h(), T_BG);                    /* (the panel as draw_graph's: COLORS its box, AIR / HUD none) */
-    if (!lz_low())
-        cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);
-    cv_bg = T_SURF;
-    menu_panel();
-    cv_oy = 0;
-    if (ui.msg_t && ui.msg[0])                         /* a message: the toast pill, as on every page */
-        toast_pill();
-    else
-        toast_at[0] = toast_at[2] = 0;
-    cv_blit(0, graph_y());
-    draw_foot();
-}
 static void enc_drop(void)                             /* knob turns nobody takes */
 {
     uint32_t k;
@@ -526,75 +388,4 @@ static void menu_close(void)
     ui.menu = 0;
     ui.force = 1;
     go_home();
-}
-
-/* (0.9.18) SELECT: the next / previous page (no wrap), its first setting; ALGORITHM: the next / previous tab's first
- * page; KNOB n: the page's setting n (menu_items.c menu_step; an action: armed right, back to the page's first setting
- * left); OCT+ / OCT-: the last setting turned a step (an action: OCT+ does it); PRESETS nothing (rule 3). In ABOUT SELECT
- * scrolls, OCT- goes back. HOME closes it, from ABOUT too (ui_input.c). (0.9.2 .. 0.9.17: SELECT every row, any knob the
- * row's value; until 0.9.1 SELECT zoomed MENU . TAB . ROW, PRESETS the row, ALGORITHM the tab round.) */
-static void menu_page_go(uint32_t p)
-{
-    if (p >= MP_COUNT || p == menu_page())
-        return;
-    ui.menu_sel = MPAGE[p].row[0];
-    ui.hot_t = 0;
-}
-static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_taps */
-{
-    int32_t s;
-    uint32_t k, up = (oct >> 1) & 1u, dn = oct & 1u;
-    if (ui.menu >= 2) {                                /* ABOUT: SELECT scrolls (bounded), OCT- back to the tabs; (0.9.14)
-                                                         * OCT+ PROFILE (its OCT- back to ABOUT) */
-        if (dn)
-            ui.menu = (uint8_t)(ui.menu - 1), ui.menu_scroll = 0, ui.force = 1;
-        else if (up && ui.menu == 2) {
-            if (!prf_on)
-                memset(&prf_cur, 0, sizeof prf_cur);
-            ui.menu = 3, ui.menu_scroll = 0, prf_on = 1, ui.force = 1;
-        }
-        else if ((s = panel_enc(EN_SELECT)) != 0)
-            ui.menu_scroll = (uint16_t)clamp((int32_t)ui.menu_scroll + clamp(s, -128, 128) * 18, 0, menu_scroll_max());
-        enc_drop();
-        return;
-    }
-    ui.mlv = 1;
-    if ((s = panel_enc(EN_SELECT)) != 0)                /* SELECT: the pages, one a detent */
-        menu_page_go((uint32_t)clamp((int32_t)menu_page() + s, 0, MP_COUNT - 1));
-    if ((s = panel_enc(EN_ALGO)) != 0)                 /* ALGORITHM: a tab a detent, its first page */
-        menu_page_go(mtab_page((uint32_t)clamp((int32_t)menu_tab() + s, 0, MTAB_COUNT - 1)));
-    for (k = 0; k < 4u; k++) {                         /* KNOB n: the page's setting n */
-        uint32_t r = MPAGE[menu_page()].row[k];
-        if ((s = panel_enc(EN_K1 + k)) == 0 || r == MI_NONE)
-            continue;
-        ui.hot_col = (uint8_t)k;
-        ui.hot_t = 40;
-        if (menu_valued(r)) {
-            ui.menu_sel = (uint8_t)r;
-            menu_put(r, menu_step(r, s));
-        } else
-            ui.menu_sel = (uint8_t)(s > 0 ? r : MPAGE[menu_page()].row[0]);   /* (an action: armed, or let go) */
-    }
-    if (menu_valued(ui.menu_sel)) {
-        /* OCT+ the next value, OCT- the previous, of the setting turned last; COLOR previews the palette, STYLE is drawn
-         * so from the next frame (FX LATCH: the latched effects are off while the menu is up) */
-        s = (int32_t)up - (int32_t)dn;
-        if (s)
-            menu_put(ui.menu_sel, menu_step(ui.menu_sel, s));
-    } else if (up) {
-        if (ui.menu_sel == MI_GLOMIDI) {                /* (ACID FM 3c-1 task 8) MIDI IS ON GLO: there (LEARN, LEARN CLEAR GLO >
-                                                         * MORE's, as MIDI OUT's two settings) */
-            menu_close();
-            nav_put(SEC_GLO, "MIDI");
-        } else if (ui.menu_sel == MI_PANEL) {
-            panel_setup();
-            scrn.idle = fm1_ms;                         /* (SCREEN OFF: its own loop had the input) */
-            ui.force = 1;
-        } else {                                       /* MI_ABOUT */
-            ui.menu = 2;
-            ui.menu_scroll = 0;
-            ui.force = 1;
-        }
-    }
-    enc_drop();                                        /* swallow the rest while the menu is up */
 }

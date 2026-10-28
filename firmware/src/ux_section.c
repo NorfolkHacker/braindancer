@@ -908,33 +908,9 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
     if (pg->fam == FAM_SEQ && pg->graph != GR_MORE && uxq_knobs(pg, k))   /* (3c-1 task 2) SEQ's: ux_seq.c (STEPS: STEP NOTE
                                                          * ACC/SLD GATE, the grid's; task 3: STEP EXTRAS'; PATTERN its settings', below) */
         return;
-    if (pg->graph == GR_MORE) {
-        uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, n;
-        uint64_t m;
-        char v[24];
-        if (!pg->more)
-            return;
-        m = uxm_mask(pg->more);
-        n = uxm_n(pg->more);
-        uxm_fix(pg->more, m, &s, &t);
-        k[0].label = UXS_PICK;
-        if (s < n) {
-            uint32_t a = 0, b = 0, i;
-            for (i = 0; i < n; i++)
-                if (uxm_pick_ok(pg->more, m, i)) {
-                    b++;
-                    if (i <= s)
-                        a = b;
-                }
-            fmt_int(k[0].value, (int32_t)a);
-            str_cpy(k[0].value + str_len(k[0].value), "/", sizeof k[0].value - str_len(k[0].value));
-            fmt_int(k[0].value + str_len(k[0].value), (int32_t)b);
-            k[0].bar = (uint8_t)(b > 1u ? (a - 1u) * 255u / (b - 1u) : 255u);
-            k[1].label = uxm_row_text(&pg->more->rows[s], v, sizeof v, &k[1].bar);
-            if (pg->more->rows[s].kind == UXR_ACTION)
-                str_cpy(v, "GO", sizeof v);
-            str_cpy(k[1].value, v, sizeof k[1].value);
-        }
+    if (pg->graph == GR_MORE) {                         /* (MORE: its pick, the row picked; ux_more.c) */
+        if (pg->more)
+            uxm_knobs(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top, k);
         return;
     }
     uxs_marks(mm);                                      /* (3c-1 task 10: what moves on its own, once a row) */

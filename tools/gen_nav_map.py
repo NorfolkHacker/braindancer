@@ -99,7 +99,7 @@ T = dict(
          'SCL': 'TRANSPOSE on MORE; ROTATE and SEQ PITCH on SEQ › MORE (and the layer). The picture: what each key plays.',
          'ENV': 'AMP: the envelope as it sounds; ENV TO: what that same envelope moves (FILTER, PITCH, SHAPE).', 'GLO': 'Opens on LIVE: the keys play the tricks (white) on the tracks held (black), KNOB 4 the DJ FILTER. MIX: level bars in dB. MIDI: IN, OUT, CHANNEL of each track; CLOCK. MORE: the RAILS, SYSTEM, TEMPO, MIDI, UNDO.',
          'LFO': 'The picture: the wave running. KNOB 1 picks the slot on MOD MATRIX (a track each). MORE: PHASE, the STEPS (was MSEQ).'},
-  layers=[('HOME', 'the MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (SELECT the pages, ALGORITHM the tabs, KNOB 1–4 the settings)'),
+  layers=[('HOME', 'the MENU: AUDIO · CLICK · CONTROLS · MORE (SELECT the pages and MORE, KNOB 1–4 the settings)'),
           ('EDIT', 'F3 INIT · G3 RECALL · DRUM: black keys 1–8 mute each sound'),
           ('SEQ', 'F3 CLEAR · G3 REVERSE · A3/B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO · D5 REVERT · **G5 CLR STEP** · REC: CLEAR ALL'),
           ('FX', 'punch-in: F3–A3 REPEAT · B3 GLITCH · C4 TAPE STOP · D4/E4 OCT · F4 ½ TEMPO · G4/A4 DEC · B4/C5 STUTTER · D5–F5 ATK+ ARP RANDOM · G#4 FREEZE · C#5 SHUFFLE · D#5 F#5 sweeps · knobs: macros (a glitcher held: its own)'),

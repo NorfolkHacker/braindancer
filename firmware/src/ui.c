@@ -300,14 +300,15 @@ static struct {
     uint64_t plk_rm, plk_acc;    /* .. the grid's step keys pressed on a hit (bit = step): it goes when the key is let
                                   * go, unless the key was held for a lock (its accent: plk_acc) */
     uint8_t hot_col, hot_t;      /* column whose knob was just turned (drawn white) */
-    uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
-    uint8_t menu_sel;            /* MENU: the setting turned last (menu_items.c MI_*; its page MPAGE), kept while it runs */
-    uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
+    uint8_t menu;                /* 0 off, 1 its pages (HOME held), 2 ABOUT + credits, 3 ABOUT > PROFILE (0.9.14) */
+    uint8_t menu_sel;            /* MENU: the setting turned or picked last (menu_items.c MI_*; MI_NONE none), what OCT steps or does */
+    uint8_t mn_page, mn_sel, mn_top;   /* (ACID FM 3c-2 task 5) MENU's page (menu_items.c MN_*), MORE's pick and scroll (rows of
+                                  * UXM_MENU; ux_menu.c) */
     /* (0.8.5) lylv, a held layer's lens (JIANT's overlay): (ACID FM 3c-2 task 4) gone, every layer keeps uxlv */
     uint16_t uxlv;               /* (3b task 9 fix) the ACID layers' (EDIT MACRO FX SCL GLO SEQ REC, ux_layer.c) own: a bit a layer
                                   * (1 << LAYER_*), STATE; clear MAP */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */
-    uint32_t menu_sig, home_t0;  /* HOME press time (btn_hold) */
+    uint32_t home_t0;            /* HOME press time (btn_hold) */
     uint8_t force;               /* full redraw pending */
     uint8_t msg_t;               /* transient message frames */
     uint8_t bpm_t;               /* frames the BPM stays highlighted after a SELECT turn */
@@ -654,11 +655,9 @@ static uint32_t lens_level(void)                        /* SEQ: the level the pa
     return g == GR_PATS ? LV_PAT : nav_lv();
 }
 static int home_lz(void) { return (ui.home && !ui.menu && !dlg_on()) || gen_on(); }   /* (GEN: HOME's) */
-static uint32_t lz_on(void) { return ((lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on()) || ui.menu == 1u || (ui.layer && !ui.menu); }
+static uint32_t lz_on(void) { return ((lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on()) || (ui.layer && !ui.menu); }
 static uint32_t lz_fam(void)                            /* which lens */
 {
-    if (ui.menu == 1u)                                  /* (0.8.5) the menu (ui_menu.c) */
-        return LZ_MENU;
     if (ui.layer)                                       /* .. a layer held: MAP . KNOBS . STATE (ui_layer.c) */
         return LZ_LAYER;
     if (gen_on() || ui.home)
@@ -668,9 +667,7 @@ static uint32_t lz_fam(void)                            /* which lens */
     return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ;
 }
 static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
-/* the tab lit: the section's group shown, the menu's tab, a layer's view */
-static uint32_t menu_tab(void);
-static uint32_t menu_page(void);                        /* (0.9.18) the MENU's page (ui_menu.c) */
+/* the tab lit: the section's group shown, a layer's view (ACID FM 3c-2 task 5: the menu's tabs gone, ux_menu.c) */
 static int ux_layer_owns(uint32_t l);                  /* (ux_layer.c) */
 /* the layer held's view: 0 MAP, 1 KNOBS, 2 STATE (the ACID layers: MAP or STATE, their own, uxlv) */
 static uint32_t layer_lv(void) { return ((ui.uxlv >> ui.layer) & 1u) * 2u; }   /* (3c-2 task 4: every layer, ui.lylv gone) */
@@ -678,8 +675,6 @@ static uint32_t lz_level(void)
 {
     uint8_t cnt[8], gi[8];
     uint32_t f = lz_fam(), g, p, i, m;
-    if (f == LZ_MENU)
-        return menu_tab();
     if (f == LZ_LAYER)
         return layer_lv();
     (void)nav_groups(cnt, gi, &g, &p, &i, &m);

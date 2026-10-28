@@ -818,9 +818,10 @@ static int menu_protocol(void)
         {"LOAD", "ECO,LITE,FULL"}};                                                                 /* (0.6.30) */
     static const int32_t DEF[20] = {0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2};   /* (ACID FM 0.3: COLOR, STYLE
                                                          * inert, one value, 0) */
-    static const uint8_t TAB[20] = {0, 0, 0, 0, 0, 4, 4, 4, 1, 1, 3, 3, 1, 1, 1, 4, 0, 0, 1, 1};      /* (0.9.18) SCREEN AUDIO MIDI
-                                                         * USB SYSTEM (until 0.9.17 DISPLAY CONTROL AUDIO MIDI SYSTEM) */
-    static const char *const TABN[5] = {"SCREEN", "AUDIO", "MIDI", "USB", "SYSTEM"};
+    static const uint8_t TAB[20] = {3, 3, 3, 3, 3, 2, 2, 2, 0, 0, 3, 3, 1, 1, 1, 3, 3, 3, 0, 0};      /* (ACID FM 3c-2 task 5) the
+                                                         * item's page: AUDIO CLICK CONTROLS MORE (0.9.18: SCREEN AUDIO MIDI USB
+                                                         * SYSTEM; until 0.9.17 DISPLAY CONTROL AUDIO MIDI SYSTEM) */
+    static const char *const TABN[4] = {"AUDIO", "CLICK", "CONTROLS", "MORE"};
     int bad = 0, ok = 1;
     uint32_t i, k, n;
     menu_item_t it;
@@ -849,33 +850,35 @@ static int menu_protocol(void)
     }
     if (jf) { fprintf(jf, "]\n"); fclose(jf); }
     bad += check("MENU_DESC: 18 items (1.0.4's 12 in the menu's order, then 1.1's CLICK, CLICK LEVEL, COUNT-IN, 1.2's RESTORE LAST, SCALE LEDS, SCREEN OFF), ids 0..17, names, defaults", ok);
-    bad += check("MENU_DESC (1.0.5): after the names each item's tab, index and name (0.9.18: SCREEN AUDIO MIDI USB SYSTEM)", ok);
+    bad += check("MENU_DESC (1.0.5): after the names each item's tab, index and name (ACID FM 0.6: its page, AUDIO CLICK CONTROLS MORE)", ok);
     {   /* an older editor reads the names and stops: the tab is past them, nothing it reads moved */
         uint32_t m = menu_desc(4, &it), p = 14, q;
         for (q = 0; q < 1u + it.nnames; q++) { while (host_wire[p]) p++; p++; }   /* name, the names */
-        ok = m > 10u && host_wire[p] == 0 && !strcmp((const char *)host_wire + p + 1, "SCREEN") &&
-             p + 1u + 7u == m + 6u - 1u;
+        ok = m > 10u && host_wire[p] == 3 && !strcmp((const char *)host_wire + p + 1, "MORE") &&
+             p + 1u + 5u == m + 6u - 1u;
         bad += check("MENU_DESC: the tab comes after every byte of the 1.0.4 reply (older editors ignore it)", ok);
     }
     ok = 1;
     for (i = 0; i < 25u; i++) {
         menu_desc(i, &it);
-        ok &= strcmp(it.name, "CALIBRATION") && strcmp(it.name, "ABOUT");
+        ok &= strcmp(it.name, "CALIBRATION") && strcmp(it.name, "ABOUT") && it.id == i && it.tab < 4u &&
+              !strcmp(it.tabname, TABN[it.tab]);   /* (ACID FM 3c-2 task 5: every id answered, its page's name) */
         if (i == 20u) ok &= !strcmp(it.name, "MIDI OUT") && it.id == 20;   /* (0.6.72) */
     }
     menu_desc(21, &it);
-    ok &= !strcmp(it.name, "SKIN") && it.id == 21 && it.tab == 0 && it.value == 0 && it.max == 0 &&   /* (0.8.9) DISPLAY; (ACID FM
+    ok &= !strcmp(it.name, "SKIN") && it.id == 21 && it.tab == 3 && it.value == 0 && it.max == 0 &&   /* (0.8.9) DISPLAY; (ACID FM
                                                          * 0.3) inert: one value, ACID */
           it.nnames == 1u && !strcmp(it.names[0], "ACID");
     menu_desc(22, &it);                                   /* (0.9.7) SCOPE, a row of DISPLAY: OFF (the default) ON; (ACID FM 3b)
                                                          * inert as SKIN: one value, OFF (the creatures it chose are gone) */
-    ok &= !strcmp(it.name, "SCOPE") && it.id == 22 && it.tab == 0 && it.value == 0 && it.max == 0 && it.nnames == 1u &&
+    ok &= !strcmp(it.name, "SCOPE") && it.id == 22 && it.tab == 3 && it.value == 0 && it.max == 0 && it.nnames == 1u &&
           !strcmp(it.names[0], "OFF");
-    menu_desc(23, &it);                                   /* (0.9.12) CPU, CPU CLOCK, rows of SYSTEM (tab 4 since MIDI) */
-    ok &= !strcmp(it.name, "CPU CORES") && it.id == 23 && it.tab == 4 && it.max == 1 && !strcmp(it.names[0], "1 CORE") &&
+    menu_desc(23, &it);                                   /* (0.9.12) CPU, CPU CLOCK, rows of SYSTEM (tab 4 since MIDI; ACID FM
+                                                         * 0.6: MORE's, tab 3) */
+    ok &= !strcmp(it.name, "CPU CORES") && it.id == 23 && it.tab == 3 && it.max == 1 && !strcmp(it.names[0], "1 CORE") &&
           !strcmp(it.names[1], "2 CORES");
     menu_desc(24, &it);
-    ok &= !strcmp(it.name, "CPU CLOCK") && it.id == 24 && it.tab == 4 && it.max == 1 && !strcmp(it.names[0], "360 MHZ") &&
+    ok &= !strcmp(it.name, "CPU CLOCK") && it.id == 24 && it.tab == 3 && it.max == 1 && !strcmp(it.names[0], "360 MHZ") &&
           !strcmp(it.names[1], "320 MHZ");
     n = menu_desc(25, &it);
     ok &= n == 2u && it.index == 25 && it.id == 127;

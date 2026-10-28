@@ -99,6 +99,21 @@ def main(out):
                 lbl.extend(LIT.findall(t.group(1)))
             for m in re.finditer(r'\bstr_cpy\s*\(\s*nm\s*,', s):
                 lbl.extend(LIT.findall(call_args(s, m.end()).rsplit(",", 1)[0]))
+        if Path(f).name == "menu_items.c":            # (3c-2 task 5: MENU's names, short names, values, page names: the panel,
+            for t in re.finditer(r'\b(MI_NAME|MN_NAME|SPK_EQ|USBLVL_N|USBOUT_N|HOLD_N|CLICK_N|CLKLVL_N|COUNTIN_N|SCROFF_N|'
+                                 r'MENU_FLAGS|SH)\s*\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S):   # MORE's list (UF_HDR) and
+                tables += 1                           # the knob row (names: UF_LBL labels, the footer; values: UF_VAL)
+                hdr.extend(LIT.findall(t.group(2)))
+                (lbl if t.group(1) in ("MI_NAME", "MN_NAME", "SH") else val).extend(LIT.findall(t.group(2)))
+        if Path(f).name == "ui_menu.c":               # (.. its hints, MI_HELP, the panel and the status line; ABOUT's first
+            t = re.search(r'MI_HELP\[\]\s*=\s*\{(.*?)\};', s, flags=re.S)   # screen, about_top / about_load, UF_HDR)
+            if t:
+                tables += 1
+                hdr.extend(LIT.findall(t.group(1)))
+            for fn in ("about_top", "about_load", "cpt_line"):
+                m = re.search(r'\b' + fn + r'\s*\([^)]*\)\s*(?:/\*.*?\*/\s*)?\{(.*?)\n\}', s, flags=re.S)
+                if m:
+                    hdr.extend(x for x in LIT.findall(m.group(1)) if x)
         if Path(f).name == "ui_lens.c":               # (3b task 4: the footer's SECTION . PAGE, the status line's hint
             for t in re.finditer(r'\b(SEC_NAME|C[EG]_[A-Z0-9_]+)\s*\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S):
                 chains += 1                           # "EDIT AGAIN: NEXT PAGE": the sections' and the chains' names)

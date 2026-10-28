@@ -10,7 +10,7 @@
  * M (15 px) values and the header, L (28 px) big numerals. (JIANT 0.6.56: S Chakra Petch, M IBM Plex Mono, L Michroma 18 px;
  * the JIANT palette's boxes square with HUD corners, gfx.c cv_rrect). A card value too wide for M is set in S;
  * free text (names, messages) is ellipsised at its size. */
-static void draw_menu(void);
+static void ux_menu_draw(void);                        /* (ACID FM 3c-2 task 5) MENU, ABOUT, PROFILE (ux_menu.c) */
 static int name_on(void);                              /* NAME (ui_name.c) */
 static uint64_t lock_held(void);                       /* parameter locks: the steps held on STEP (ui_input.c) */
 static void name_draw(void);
@@ -243,12 +243,6 @@ static uint16_t head_title(char *b)
 {
     const page_t *pg = cur_page();
     int glob = !ui.home && !ui.layer && (pg->fam == FAM_GLO || pg->fam == FAM_SAVE);
-    if (ui.menu) {                                      /* (0.8.5) the menu: "MENU . DISPLAY", "ABOUT / CREDITS" */
-        str_cpy(b, ui.menu == 2 ? "ABOUT / CREDITS" : ui.menu == 3 ? "ABOUT / PROFILE" : "MENU \xB7 ", 40);
-        if (ui.menu == 1)
-            str_cpy(b + str_len(b), MTAB_NAME[menu_tab()], 16);
-        return T_MID;
-    }
     b[0] = 'T';
     b[1] = (char)('1' + song.sel % NTRK);
     b[2] = 0;
@@ -888,16 +882,6 @@ static uint32_t tabs_now(const char **nm, const char **tab, uint8_t *cnt, uint32
 {
     uint32_t f = lz_fam(), n, k, i, m;
     uint8_t gi[8];
-    if (f == LZ_MENU) {                                 /* the menu: its five tabs, a dot a page (0.9.18; was a row) */
-        for (k = 0; k < MTAB_COUNT; k++) {
-            nm[k] = MTAB_NAME[k];
-            tab[k] = 0;
-            cnt[k] = (uint8_t)mtab_pages(k);
-        }
-        *lv = menu_tab();
-        *at = menu_page() - mtab_page(*lv);
-        return MTAB_COUNT;
-    }
     if (f == LZ_LAYER) {                                /* a layer: its views (ALGORITHM), no dots */
         static const char *const LLV[3] = {"MAP", "KNOBS", "STATE"};
         for (k = 0; k < 3u; k++) {
@@ -956,20 +940,6 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
         return;
     }
     f = lz_fam();
-    if (f == LZ_MENU) {                                 /* (0.9.18: the page, was the row; a page named as its tab,
-                                                         * "SCREEN" or "SCREEN 2", not after it again: MENU . SCREEN 2) */
-        const char *tn = MTAB_NAME[menu_tab()], *pn = MPAGE[menu_page()].name;
-        uint32_t i = 0;
-        str_cpy(b, "MENU \xB7 ", n);
-        while (tn[i] && tn[i] == pn[i])
-            i++;
-        if (tn[i] || (pn[i] && pn[i] != ' ')) {
-            str_cpy(b + str_len(b), tn, 12);
-            str_cpy(b + str_len(b), " \xB7 ", 4);
-        }
-        str_cpy(b + str_len(b), pn, 12);
-        return;
-    }
     if (f == LZ_LAYER) {
         static const char *const LN[LAYER_N] = {"", "FX", "GLO", "SCL", "EDIT", "SEQ", "REC", "SAVE", "LFO"};
         static const char *const LLV[3] = {"MAP", "KNOBS", "STATE"};
@@ -1001,10 +971,7 @@ static int32_t crumb_count(char *b)
     b[0] = 0;
     if (!lz_on())
         return 0;
-    if (lz_fam() == LZ_MENU) {
-        k = menu_page();                                /* (0.9.18: the page among the eight (ACID FM 0.3; nine), was the row) */
-        n = MP_COUNT;
-    } else if (lz_fam() == LZ_LAYER) {
+    if (lz_fam() == LZ_LAYER) {
         k = layer_lv();
         n = 3;
     } else if (gen_on() && lz_fam() == LZ_HOME) {      /* (ACID FM 3a) GEN: "GEN 2/3" */
@@ -1396,8 +1363,16 @@ static void ui_draw_body(uint32_t counting)
         draw_head();
         return;
     }
-    if (ui.menu) {
-        draw_menu();
+    if (ui.menu) {                                      /* (ACID FM 3c-2 task 5) MENU, ABOUT, PROFILE: ux_menu.c, its own strips */
+        ux_menu_draw();
+        pf_on = 0;
+        if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {   /* the second message (ui_notices) */
+            str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
+            ui.msg2[0] = 0;
+            ui.msg_t = 60;
+        }
+        if (ui.hot_t)
+            ui.hot_t--;
         ui.force = 0;
         return;
     }

@@ -86,6 +86,8 @@ static int layer_set_open(void);                       /* (ui_layer.c) */
  * hal/fm1_input.h fm1_led_breath, #119). In the dialogs and on action pages OCT- (back) is lit and OCT+ breathes
  * while it would do something; the menu: on a value row OCT- and OCT+ both breathe while that way has a value to go to,
  * on CALIBRATION / ABOUT OCT+ breathing alone (opens), in ABOUT OCT- lit (back); elsewhere the octave shift */
+static void uxn_go(uint32_t p);                         /* (ACID FM 3c-2 task 5) MENU's page shown, its input (ux_menu.c) */
+static void ux_menu_input(uint32_t oct);
 #define OCT_BREATH 4u
 #define OCT_BREATH_DN 8u                                /* OCT- breathing (the menu: the previous value) */
 static uint32_t oct_leds(void)
@@ -97,7 +99,8 @@ static uint32_t oct_leds(void)
     if (ui.menu && !ui.confirm)
         return ui.menu >= 2u ? (ui.menu == 2u ? 1u | OCT_BREATH : 1u) :   /* (ABOUT: OCT- back, lit; 0.9.14: OCT+
                                                  * PROFILE, breathing) */
-               !menu_valued(ui.menu_sel) ? OCT_BREATH :   /* CALIBRATION / ABOUT / (3c-1 task 8) MIDI IS ON GLO: OCT+ opens */
+               !menu_valued(ui.menu_sel) ? (ui.menu_sel < MI_COUNT ? OCT_BREATH : 0u) :   /* CALIBRATION / ABOUT / (3c-1
+                                                 * task 8) MIDI IS ON GLO: OCT+ opens; (3c-2 task 5) MORE, none armed: dark */
                (menu_step(ui.menu_sel, -1) != menu_get(ui.menu_sel) ? OCT_BREATH_DN : 0u) |   /* a value: each */
                (menu_step(ui.menu_sel, 1) != menu_get(ui.menu_sel) ? OCT_BREATH : 0u);         /* way it can go */
     if (ui.confirm || act_cols())
@@ -2329,12 +2332,15 @@ static void ui_input_frame(void)
             menu_close();
         } else {
             ui.menu = 1;                                /* (at the page and setting it was left at) */
-            ui.mlv = 1;
             ui.hot_t = 0;                               /* (0.9.18: no card lit from the page before) */
-            if (!menu_valued(ui.menu_sel) || menu_hidden(ui.menu_sel))   /* (an action armed before it closed is let go:
-                                                         * OCT+ on opening never clears the learned CCs or opens a screen;
-                                                         * ACID FM 0.3: COLOR, power-on's 0, is on no page: the first) */
-                ui.menu_sel = MPAGE[menu_page()].row[0];
+            if (!menu_valued(ui.menu_sel) || menu_hidden(ui.menu_sel)) {   /* (an action armed or picked before it closed is
+                                                         * let go: OCT+ on opening never opens a screen; ACID FM 0.3: COLOR,
+                                                         * power-on's 0, is on no page: the page's first; 3c-2 task 5: MORE's
+                                                         * pick kept, nothing armed) */
+                uxn_go(ui.mn_page);
+                if (!menu_valued(ui.menu_sel))
+                    ui.menu_sel = MI_NONE;
+            }
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();
             ui.force = 1;
@@ -2348,7 +2354,7 @@ static void ui_input_frame(void)
             ui.save_t0 |= 2u;
         ui.pg_down = 0;
         if (!ui.home_t0)
-            menu_input(oct);
+            ux_menu_input(oct);
         return;
     }
     if (name_on() && !ui.confirm) {                     /* NAME: the keys type, KNOB 1 / 2, OCT+ / OCT- (ui_name.c); */

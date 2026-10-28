@@ -2,17 +2,15 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * Portions Copyright (C) 2026 NorfolkHacker */
-/* MENU's rows and their settings: what ui_menu.c draws and steps, and what the editor reads and sets (editor_menu.c
+/* MENU's rows and their settings: what ux_menu.c draws and steps, and what the editor reads and sets (editor_menu.c
  * MENU_DESC / MENU_SET). One apply path for both: menu_put. A row is a setting (its MI_* is its place in the menu's
- * tables, not stored: the editor's ids are editor_menu.c ED_MENU's). (0.9.18) On pages of up to four knobs in five
- * tabs (MPAGE; ACID FM 0.3: eight): SCREEN (LARGE SCOPE ANIMATION SCREEN SLEEP; LEDS: LED GLOW SCALE LEDS), AUDIO
- * (SPEAKER EQ TRACKS LOAD BPM LOCK; CLICK CLICK LEVEL COUNT-IN), MIDI (MIDI OUT LEARN LEARN CLEAR; ACID FM 3c-1 task 8: MIDI IS ON
- * GLO, a pointer), USB (USB AUDIO USB
- * LEVEL), SYSTEM (CONTROLS: HOLD TIME KNOB SPEEDUP FX LATCH CALIBRATION; SYSTEM: RESTORE LAST CPU CORES CPU CLOCK, what
- * a power-on does, and ABOUT). Until 0.9.17 one list in the
- * tabs DISPLAY CONTROL AUDIO MIDI SYSTEM, SELECT a row, any knob its value; the stored values and their meanings are
- * the same. (ACID FM 3c-1 task 8) LEARN and LEARN CLEAR are GLO > MORE's rows (params.c ID_ML_LEARN, ux_more.c UXM_A_LCLEAR);
- * the map travels with the settings */
+ * tables, not stored: the editor's ids are editor_menu.c ED_MENU's). (ACID FM 3c-2 task 5) On three pages of four knobs and
+ * MORE (MN_ROW, UXM_MENU below): AUDIO (SPEAKER EQ TRACKS LOAD BPM LOCK), CLICK (CLICK CLICK LEVEL COUNT-IN), CONTROLS (HOLD
+ * TIME KNOB SPEEDUP FX LATCH CALIBRATION), MORE (SCREEN: LARGE ANIMATION SCREEN SLEEP; LEDS: LED GLOW SCALE LEDS; USB: USB AUDIO
+ * USB LEVEL; SYSTEM: CPU CORES CPU CLOCK RESTORE LAST, what a power-on does; MIDI: MIDI IS ON GLO, a pointer; ABOUT). 0.9.18
+ * .. 0.5: eight pages in five tabs (SCREEN AUDIO MIDI USB SYSTEM); until 0.9.17 one list in the tabs DISPLAY CONTROL AUDIO
+ * MIDI SYSTEM, SELECT a row, any knob its value; the stored values and their meanings are the same. (ACID FM 3c-1 task 8) LEARN
+ * and LEARN CLEAR are GLO > MORE's rows (params.c ID_ML_LEARN, ux_more.c UXM_A_LCLEAR); the map travels with the settings */
 #include "cpu_safe.c"        /* (0.9.12) MENU > SYSTEM > CPU CORES, CPU CLOCK; the last crash kept in the settings */
 enum { MI_COLOR, MI_SKIN, MI_SCOPE, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HOLD, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_SCLLED,
        MI_LOWCUT, MI_USB,
@@ -37,51 +35,51 @@ static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE",
                                               "MIDI OUT", "USB AUDIO",
                                               "RESTORE LAST", "CPU CORES", "CPU CLOCK", "CALIBRATION", "ABOUT",
                                               "MIDI IS ON GLO"};   /* (the pointer's: its one row, a sentence) */
-/* (0.9.18) the MENU as the rest of the system (rule 1..6): pages of four knobs, KNOB n the page's setting n, SELECT walks
- * the pages, ALGORITHM jumps to the next / previous tab; the tabs the groups (a dot a page), the footer MENU . TAB . page
- * n/N (a page named as its tab, or its tab and a number: MENU . page). Each row on one page (tests/ui_test.c checks it); the editor gets a row's tab after its MENU_DESC reply (tab
- * indexes are not ids: 0.9.18 regrouped them). An action (CALIBRATION, ABOUT, MIDI IS ON GLO) is a card armed by its knob,
- * OCT+ does it */
-enum { MTAB_SCREEN, MTAB_AUDIO, MTAB_MIDI, MTAB_USB, MTAB_SYSTEM, MTAB_COUNT };
-static const char *const MTAB_NAME[MTAB_COUNT] = {"SCREEN", "AUDIO", "MIDI", "USB", "SYSTEM"};
-#define MP_COUNT 8u
-typedef struct { char name[9]; uint8_t tab, row[4]; } menu_page_t;
-static const menu_page_t MPAGE[MP_COUNT] = {   /* (a page opens on its first setting: a value, never an action) */
-    {"SCREEN", MTAB_SCREEN, {MI_LARGE, MI_ANIM, MI_SCROFF, MI_NONE}},   /* (ACID FM 0.3: COLOR SKIN STYLE gone, SCREEN 2's
-                                                                          * three here; 3b: SCOPE gone) */
-    {"LEDS", MTAB_SCREEN, {MI_LEDS, MI_SCLLED, MI_NONE, MI_NONE}},
-    {"AUDIO", MTAB_AUDIO, {MI_LOWCUT, MI_TRACKS, MI_LOAD, MI_BPMLOCK}},
-    {"CLICK", MTAB_AUDIO, {MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_NONE}},
-    {"MIDI", MTAB_MIDI, {MI_GLOMIDI, MI_NONE, MI_NONE, MI_NONE}},   /* (ACID FM 3c-1 task 8: MIDI IS ON GLO, its settings GLO >
-                                                                      * MIDI's and GLO > MORE's) */
-    {"USB", MTAB_USB, {MI_SERIAL, MI_USB, MI_NONE, MI_NONE}},
-    {"CONTROLS", MTAB_SYSTEM, {MI_HOLD, MI_ACCEL, MI_LATCH, MI_PANEL}},
-    {"SYSTEM", MTAB_SYSTEM, {MI_RESTORE, MI_CPU, MI_CLOCK, MI_ABOUT}},   /* (RESTORE LAST, CPU CORES, CPU CLOCK: at power-on) */
+/* (ACID FM 3c-2 task 5, spec 3) MENU as a section: AUDIO, CLICK, CONTROLS (KNOB n a page's setting n), then MORE (a list, ux_more.c:
+ * KNOB 1 picks, KNOB 2 sets); SELECT walks them and scrolls MORE (ux_menu.c). Each setting in one place (tests/ui_test.c
+ * test_u5_cover); COLOR SKIN STYLE SCOPE (menu_hidden) and MIDI OUT (GLO > MORE's NOTES OUT, CLOCK OUT) on none. An action
+ * (CALIBRATION; MORE's MIDI IS ON GLO, ABOUT): armed by its knob, OCT+ does it. The editor gets a row's page as its MENU_DESC
+ * tab (mi_tab; 0.9.18 .. 0.5: SCREEN AUDIO MIDI USB SYSTEM, eight pages; page indexes are not ids). The inherited tabs, their
+ * pages and ALGORITHM between them gone */
+enum { MN_AUDIO, MN_CLICK, MN_CONTROLS, MN_MORE, MN_N };
+static const char *const MN_NAME[MN_N] = {"AUDIO", "CLICK", "CONTROLS", "MORE"};
+static const uint8_t MN_ROW[MN_MORE][4] = {{MI_LOWCUT, MI_TRACKS, MI_LOAD, MI_BPMLOCK},   /* (a page opens on its first: a value) */
+                                           {MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_NONE},
+                                           {MI_HOLD, MI_ACCEL, MI_LATCH, MI_PANEL}};
+#define MR(r) {(r), UXR_MENU, 0}
+#define MH(h) {(h), UXR_HEAD, 0}
+static const ux_row_t UXM_MENU_ROWS[] = {
+    MH(UXM_H_SCREEN), MR(MI_LARGE), MR(MI_ANIM), MR(MI_SCROFF),
+    MH(UXM_H_LEDS), MR(MI_LEDS), MR(MI_SCLLED),
+    MH(UXM_H_USB), MR(MI_SERIAL), MR(MI_USB),
+    MH(UXM_H_SYSTEM), MR(MI_CPU), MR(MI_CLOCK), MR(MI_RESTORE),   /* (what a power-on does: their hints say so) */
+    MH(UXM_H_MIDI), MR(MI_GLOMIDI),                    /* (a pointer: OCT+ opens GLO > MIDI) */
+    MH(UXM_H_ABOUT), MR(MI_ABOUT),                     /* (an action: OCT+ opens ABOUT) */
 };
-static uint32_t menu_page_of(uint32_t row)             /* the page a row is on */
+#undef MR
+#undef MH
+static const ux_more_t UXM_MENU = {UXM_MENU_ROWS, (uint8_t)NELEM(UXM_MENU_ROWS)};
+static uint32_t mi_tab(uint32_t row)                   /* the page a row is on (MN_*): MORE's rows, and those on none, MN_MORE */
 {
     uint32_t p, c;
-    for (p = 0; p < MP_COUNT; p++)
+    for (p = 0; p < MN_MORE; p++)
         for (c = 0; c < 4u; c++)
-            if (MPAGE[p].row[c] == row)
+            if (MN_ROW[p][c] == row)
                 return p;
-    return 0;
+    return MN_MORE;
 }
-static uint32_t mi_tab(uint32_t row) { return row == MI_MIDIOUT ? MTAB_MIDI : MPAGE[menu_page_of(row)].tab; }   /* (MIDI OUT: on no
-                                                         * page, the editor's MIDI's) */
-static uint32_t mtab_page(uint32_t t)                  /* a tab's first page */
+/* a row's knob label (its column's 48 px in UF_LBL; the list and the panel name it in full, MI_NAME): a whole word of its name */
+static const char *mi_short(uint32_t row)
 {
-    uint32_t p = 0;
-    while (p < MP_COUNT && MPAGE[p].tab != t)
-        p++;
-    return p;
-}
-static uint32_t mtab_pages(uint32_t t)                 /* .. and how many it has */
-{
-    uint32_t p, n = 0;
-    for (p = 0; p < MP_COUNT; p++)
-        n += MPAGE[p].tab == t;
-    return n;
+    static const struct { uint8_t row; char s[10]; } SH[] = {
+        {MI_LOWCUT, "SPEAKER"}, {MI_CPU, "CORES"}, {MI_CLKLVL, "LEVEL"}, {MI_USB, "LEVEL"}, {MI_SERIAL, "USB"},
+        {MI_ANIM, "ANIMATE"}, {MI_SCROFF, "SLEEP"}, {MI_HOLD, "HOLD"}, {MI_ACCEL, "SPEEDUP"}, {MI_SCLLED, "SCALE"},
+        {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CLOCK"}, {MI_PANEL, "CALIBRATE"}, {MI_GLOMIDI, "GLO"}, {MI_LEDS, "GLOW"}};
+    uint32_t k;
+    for (k = 0; k < NELEM(SH); k++)
+        if (SH[k].row == row)
+            return SH[k].s;
+    return row < MI_COUNT ? MI_NAME[row] : "";
 }
 static const char *const SCOPEOPT_N[2] = {"OFF", "ON"};   /* (SCOPE's one value, OFF) */
 /* the two-valued rows: a bit of ui_prefs (PREF_REC: of ui_rec_prefs, ui.c PREF_SCALE_LEDS) and its names (bit clear =

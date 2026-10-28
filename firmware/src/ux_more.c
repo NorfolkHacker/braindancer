@@ -16,7 +16,7 @@ static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", 
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
                                               "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
                                               "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO", "MIDI", "SOUND",
-                                              "TOOLS", "SONG"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "TOOLS", "SONG", "SCREEN", "LEDS", "USB", "ABOUT"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -118,7 +118,7 @@ static int uxm_row_ok(const ux_row_t *r)
     int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT;
     return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) || sqv_is(id) :
            r->kind == UXR_GLOBAL ? id < G_COUNT || view || lvv_is(id) || mov_is(id) || svv_is(id) :
-           r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
+           r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_MENU ? id < MI_COUNT : r->kind == UXR_HEAD && id < UXM_H_N;
 }
 /* (3b task 8) a global LOAD ECO takes out of the sound (fx.c fx_buses: no chorus; slicer.c slicer_on: no SLICER): its row not
  * shown under ECO, as JIANT hid the CHORUS and SLICER pages (ui.c page_jiant, 0.6.30) */
@@ -129,6 +129,8 @@ static int ux_row_shown(const ux_row_t *r)
     uint32_t i, k, held = 0, glo = r->kind == UXR_GLOBAL, seq = r >= UXM_SEQ.rows && r < UXM_SEQ.rows + UXM_SEQ.n;
     if (!uxm_row_ok(r))
         return 0;
+    if (r->kind == UXR_MENU)                            /* (3c-2 task 5) MENU's: always (COLOR SKIN STYLE SCOPE: on no list) */
+        return !menu_hidden(r->id);
     if (glo && sys_load == LOAD_ECO && uxm_eco_out(r->id))
         return 0;
     if (r->eng && trk_eng(TSEL) != r->eng - 1u)       /* (one engine's meaning of a shared slot) */
@@ -277,6 +279,7 @@ static void uxm_fix(const ux_more_t *m, uint64_t sh, uint32_t *sel, uint32_t *to
         *top = 0;
 }
 
+static void uxn_set(uint32_t row, int32_t steps);       /* (3c-2 task 5: ux_menu.c, a MENU row's KNOB 2) */
 static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32_t knob, int32_t steps)
 {
     uint64_t sh;
@@ -316,6 +319,8 @@ static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32
             param_knob(0, r->id, steps, 1u);
         else if (r->kind == UXR_ACTION && steps > 0)
             uxm_act_do(r->id);
+        else if (r->kind == UXR_MENU)                   /* (3c-2 task 5) MENU's: as its pages' knobs, an action on a turn up */
+            uxn_set(r->id, steps);
         return 1;
     }
     if (knob == UXM_SELECT) {                           /* SELECT: a row a detent; the pick dragged along to stay in sight */
@@ -361,9 +366,36 @@ static int ux_more_knob(uint32_t knob, int32_t steps)
     return r;
 }
 
+/* MORE's knob row (3b; 3c-2 task 5: MENU's too): KNOB 1 the pick, "3/12" (SETTING), KNOB 2 the row picked and its value (an action:
+ * GO); the rest blank */
+static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8_t *bar);   /* (below) */
+static void uxm_knobs(const ux_more_t *m, uint32_t s, uint32_t t, ux_knob_t k[4])
+{
+    uint64_t sh = uxm_mask(m);
+    uint32_t n = uxm_n(m), a = 0, b = 0, i;
+    char v[24];
+    uxm_fix(m, sh, &s, &t);
+    k[0].label = UXS_PICK;
+    if (s >= n)
+        return;
+    for (i = 0; i < n; i++)
+        if (uxm_pick_ok(m, sh, i)) {
+            b++;
+            if (i <= s)
+                a = b;
+        }
+    fmt_int(k[0].value, (int32_t)a);
+    str_cpy(k[0].value + str_len(k[0].value), "/", sizeof k[0].value - str_len(k[0].value));
+    fmt_int(k[0].value + str_len(k[0].value), (int32_t)b);
+    k[0].bar = (uint8_t)(b > 1u ? (a - 1u) * 255u / (b - 1u) : 255u);
+    k[1].label = uxm_row_text(&m->rows[s], v, sizeof v, &k[1].bar);
+    if (m->rows[s].kind == UXR_ACTION || (m->rows[s].kind == UXR_MENU && !menu_valued(m->rows[s].id)))
+        str_cpy(v, "GO", sizeof v);
+    str_cpy(k[1].value, v, sizeof k[1].value);
+}
+
 /* (3b task 9, the user: every row) a MORE page as the step locks' page (ux_section.h): its section's pick, KNOB 1 moving it, which
  * rows a lock holds (a track setting motion.c keeps per step), the cards a step held shows (ui_draw.c) */
-static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8_t *bar);   /* (below) */
 static uint32_t uxm_key_of(const page_t *pg) { return nav_key(sec_of_fam(pg->fam)) % NAV_KEYS; }
 static const ux_row_t *uxm_lock_row(const page_t *pg)
 {
@@ -465,6 +497,12 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
         str_cpy(val, UXM_GO, nv);
         return r->id < UXM_A_N ? UXM_ACT[r->id].name : "";
     }
+    if (r->kind == UXR_MENU) {                          /* (3c-2 task 5) MENU's: its value's name, its place; its knob label */
+        int32_t q = menu_ratio(r->id);
+        str_cpy(val, menu_valued(r->id) ? menu_vname(r->id, menu_get(r->id)) : UXM_GO, nv);
+        *bar = (uint8_t)(q < 0 ? 0 : q * 255 / 1000);
+        return mi_short(r->id);
+    }
     if (r->kind == UXR_TRACK && sqv_is(r->id))          /* (3c-1 task 4) SEQ's views: their words (ux_seq.c) */
         return uxq_vtext(r->id, val, nv, bar);
     if (r->kind == UXR_GLOBAL && lvv_is(r->id))         /* (3c-1 task 6) GLO's RAILS: their words (ux_glo.c) */
@@ -488,6 +526,8 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
  * ERASE, ERASE USER SLOT; (task 3) its DELETE, DELETE ROW; its CLEAR, CLEAR SONG; (task 4) CLEAR SEQ, INIT SOUND, NEW PROJECT */
 static const char *uxm_list_name(const ux_row_t *r, const char *name)
 {
+    if (r->kind == UXR_MENU)                            /* (3c-2 task 5) MENU's: its full name (the knob's: mi_short) */
+        return r->id < MI_COUNT ? MI_NAME[r->id] : name;
     if (r->kind == UXR_ACTION)
         return r->id == UXM_A_LCLEAR ? UXM_LCLEAR : r->id == UXM_A_ERASE ? UXM_ERASE_U : r->id == UXM_A_DELROW ? UXM_DELROW :
                r->id == UXM_A_CLRSONG ? UXM_CLRSONG : r->id == UXM_A_CLRSEQ ? UXM_CLRSEQ : r->id == UXM_A_INITSND ? UXM_INITSND :

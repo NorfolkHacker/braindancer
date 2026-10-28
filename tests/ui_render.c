@@ -584,11 +584,10 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_FM6_ALG22, S_FM6_ALG32, S_DRUMX, S_DRUMX_HIT, S_DX_SOUND, S_DX_SOUND2, S_DLG_CLEAR_SEQ, S_DLG_CLEAR_TRK,
        S_DLG_CLEAR_ALL, S_DLG_CLEAR_MOTION, S_DLG_CLEAR_PFX, S_DLG_CLEAR_SONG, S_DLG_DEL_ROW, S_DLG_INIT_SOUND,
        S_DLG_INIT_SOUND_DRUM, S_DLG_INIT_SYS, S_DLG_CPU_TEST, S_DLG_LIVE_COMMIT, S_DLG_LOAD_PAT, S_DLG_OVR_PROJ,
-       S_DLG_OVR_USER, S_DLG_ERASE_USER, S_DLG_RECALL_SOUND, S_GEN, S_GEN_PARTS, S_MENU, S_MENU_SPEAKER, S_ABOUT, S_ABOUT_REC,
+       S_DLG_OVR_USER, S_DLG_ERASE_USER, S_DLG_RECALL_SOUND, S_GEN, S_GEN_PARTS, S_MENU, S_MENU_CLICK, S_ABOUT, S_MENU_CONTROLS,
        S_ABOUT_CREDITS, S_ABOUT_END, S_ABOUT_PROFILE, S_ABOUT_PROFILE2, S_UBOOT, S_CALIBRATION, S_SPLASH, S_BATT0, S_BATT1,
        S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME, S_FX_PEEK, S_FX_HELD, S_FX_WAIT,
-       S_FX_HARM, S_FX_GLT, S_FX_SCR, S_FX_SHUF, S_FX_FRZ, S_MENU_HOLD, S_MENU_LEDS, S_MENU_END, S_MENU_SYSTEM, S_MENU_SLIDE,
-       S_REVERB, S_REVERB_RESO, S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE,
+       S_FX_HARM, S_FX_GLT, S_FX_SCR, S_FX_SHUF, S_FX_FRZ, S_MENU_MORE, S_MENU_MORE_END, S_REVERB, S_REVERB_RESO, S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE,
        S_EDIT_USER, S_EDIT_DRUM, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN, S_SEQ_TOOLS,
        S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG, S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM,
        S_LENTE_STEP, S_LENTE_STEP_COMP, S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM,
@@ -598,18 +597,17 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_ROLL_WIDE, S_ROLL_PLAYING, S_ROLL_LOCKS, S_ROLL_LOCK_HELD, S_DRUM_LOCKS, S_DRUM_LOCK_HELD, S_DRUM_LOCK_PAGE,
        S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_REC_LAYER, S_REC_LAYER_SET, S_REC_LAYER_SONG,
        S_MACRO_LAYER, S_MSEQ, S_DIST_PAGE, S_DLY2, S_REVERB2, S_CHORUS, S_MASTER, S_LFO_DEST, S_LFO2, S_LFO2_FREE, S_COUNTIN,
-       S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK, S_HEAD_BPM_LOCKED,
+       S_COUNTIN2, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK, S_HEAD_BPM_LOCKED,
        S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2, S_SAVE_PROJECT, S_SAVE_MORE_END, S_SAVE_SOUND,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_GEN_LEAD, S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_OPERATOR, S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE,
        S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_SCL_MORE, S_SCL_WHITE, S_ARP_CHORD,
-       S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND,
+       S_GLO_SENDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND,
        S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_DICE_KIT, S_DLG_DICE_LFO, S_DLG_MUT_BACK, S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP,
        S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP, S_GEN_EXPLORE, S_GLO_LIVE,
        S_GLO_LIVE_TRICKS, S_GLO_LIVE_LATCH, S_GLO_MORE, S_MIXER_T4, S_MOCK_HOME, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER,
-       S_MOCK_DIALOG, S_MOCK_MENU, S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS,
-       S_TOAST_PUNCH, S_TOAST_AUTO_LIST, S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_MENU_MIDI,
-       S_MENU_SCREEN2, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_GEN_BEAT, S_GEN_DNB, S_GEN_RETRO,
+       S_MOCK_DIALOG, S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS,
+       S_TOAST_PUNCH, S_TOAST_AUTO_LIST, S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_GEN_BEAT, S_GEN_DNB, S_GEN_RETRO,
        S_EDIT_ANALOG_1, S_EDIT_ANALOG_2, S_EDIT_ANALOG_3, S_EDIT_ANALOG_MORE, S_EDIT_PHASE_1, S_EDIT_PHASE_2, S_EDIT_PHASE_3,
        S_EDIT_PHASE_MORE, S_EDIT_LOFI_1, S_EDIT_LOFI_2, S_EDIT_LOFI_3, S_EDIT_LOFI_MORE, S_EDIT_NOISE_1, S_EDIT_NOISE_2,
        S_EDIT_NOISE_3, S_EDIT_NOISE_MORE, S_EDIT_VOICE_1, S_EDIT_VOICE_2, S_EDIT_VOICE_3, S_EDIT_VOICE_MORE,
@@ -630,11 +628,11 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "dlg_clear_seq", "dlg_clear_trk",
     "dlg_clear_all", "dlg_clear_motion", "dlg_clear_pfx", "dlg_clear_song", "dlg_del_row", "dlg_init_sound",
     "dlg_init_sound_drum", "dlg_init_sys", "dlg_cpu_test", "dlg_live_commit", "dlg_load_pat", "dlg_ovr_proj", "dlg_ovr_user",
-    "dlg_erase_user", "dlg_recall_sound", "gen", "gen_parts", "menu", "menu_speaker", "about", "about_rec", "about_credits",
+    "dlg_erase_user", "dlg_recall_sound", "gen", "gen_parts", "menu", "menu_click", "about", "menu_controls", "about_credits",
     "about_end", "about_profile", "about_profile2", "uboot", "calibration", "splash", "batt_0", "batt_1", "batt_2", "batt_3",
     "batt_usb", "motion_rec", "motion_off", "motion_card", "song_home", "perform_peek", "perform_held", "perform_wait",
-    "perform_harm", "perform_glitch", "perform_scratch", "perform_shuffle", "perform_freeze", "menu_hold", "menu_leds",
-    "menu_end", "menu_system", "menu_slide", "fx_2_lite", "fx_2_reso", "layer_glo_peek", "layer_glo_active", "layer_glo_ext",
+    "perform_harm", "perform_glitch", "perform_scratch", "perform_shuffle", "perform_freeze", "menu_more", "menu_more_end",
+    "fx_2_lite", "fx_2_reso", "layer_glo_peek", "layer_glo_active", "layer_glo_ext",
     "layer_scl_peek", "layer_scl_active", "layer_edit_peek", "layer_edit_active", "layer_edit_user", "layer_edit_drum",
     "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain", "layer_seq_tools", "layer_seq_tools_drum",
     "layer_seq_tools_song", "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum",
@@ -645,18 +643,17 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "roll_playing", "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "drum_lock_page", "motion_locks",
     "auto_list", "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "lfo_more",
     "fx_1_turn", "fx_2_hold", "fx_2_cloud", "fx_more_chorus", "fx_3_hot", "lfo_2", "lfo_sh", "lfo_free", "countin",
-    "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock", "head_bpm_locked",
+    "countin_2bars", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock", "head_bpm_locked",
     "head_glo_turn", "head_downbeat", "head_beat_2", "save_project", "save_more_end",
     "save_sound", "fx_1", "fx_more", "fx_more_lane", "fx_2", "fx_2_ping", "fx_more_delay", "fx_more_reso", "fx_more_slicer",
     "fx_3", "gen_lead", "ed_filter", "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop",
     "env_first", "lfo_more_end", "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends",
-    "menu_row", "menu_row_leds", "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx",
+    "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx",
     "dlg_dice_kit", "dlg_dice_lfo", "dlg_mut_back", "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam",
     "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum", "comp_jump", "gen_explore", "glo_live", "glo_live_tricks",
     "glo_live_latch", "glo_more", "mixer_tracks4", "mock_home", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog",
-    "mock_menu", "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch",
-    "toast_auto_list", "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "menu_midi", "menu_screen2",
-    "ux_theme", "ux_demo", "ux_demo_warn", "splash_mid", "gen_broken_beat", "gen_drill_n_bass", "gen_retroboc",
+    "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch",
+    "toast_auto_list", "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "ux_theme", "ux_demo", "ux_demo_warn", "splash_mid", "gen_broken_beat", "gen_drill_n_bass", "gen_retroboc",
     "edit_analog_1", "edit_analog_2", "edit_analog_3", "edit_analog_more", "edit_phase_1", "edit_phase_2", "edit_phase_3",
     "edit_phase_more", "edit_lofi_1", "edit_lofi_2", "edit_lofi_3", "edit_lofi_more", "edit_noise_1", "edit_noise_2",
     "edit_noise_3", "edit_noise_more", "edit_voice_1", "edit_voice_2", "edit_voice_3", "edit_voice_more", "edit_lofi_byte_1",
@@ -719,6 +716,20 @@ static void live_scene(int s)
 /* the scenes of the UI design screens: the state the UI-redesign
  * prototype drew them from (its setup(): two pattern tracks, the drum pattern on track 4, a synthetic scope),
  * plus the hot knob each mock shows; tests/ui_mockcmp.py compares these renders with the mock PNGs */
+/* (ACID FM 3c-2 task 5) the MENU open at a setting's place: its page, or MORE with it picked (ux_menu.c) */
+static void u5_menu(uint32_t row)
+{
+    uint32_t i;
+    ui.menu = 1;
+    ui.mn_page = (uint8_t)mi_tab(row);
+    for (i = 0; i < UXM_MENU.n; i++)
+        if (UXM_MENU.rows[i].kind == UXR_MENU && UXM_MENU.rows[i].id == row)
+            ui.mn_sel = (uint8_t)i;
+    ui.mn_top = 0;
+    ui.menu_sel = (uint8_t)row;
+    if (ui.mn_page == MN_MORE)
+        (void)uxn_pick();
+}
 static void mock_state(int s)
 {
     uint32_t i;
@@ -766,7 +777,6 @@ static void mock_state(int s)
         ui.hot_col = 1; ui.hot_t = 30;
         break;
     case S_MOCK_DIALOG: ui.confirm = CF_OVR_PROJ; ui.confirm_trk = 0; go_page(GR_PATS); break;
-    case S_MOCK_MENU: ui.menu = 1; ui.menu_sel = 0; break;
     default: break;
     }
 }
@@ -1015,7 +1025,7 @@ static void setup(int s)
             ui_message("SAVED A LONG MESSAGE");
         return;
     }
-    if (s >= S_MOCK_HOME && s <= S_MOCK_MENU) {   /* (0.9.18: the scenes appended after the toasts are their own: until
+    if (s >= S_MOCK_HOME && s <= S_MOCK_DIALOG) {   /* (0.9.18: the scenes appended after the toasts are their own: until
                                                    * then PRESETS TYPE and MENU > MIDI drew a toast over a stray page) */
         mock_state(s);
         return;
@@ -1124,10 +1134,6 @@ static void setup(int s)
     case S_MESSAGE_NOFILE: ui_message(MSG_NOFILE "NO FILE"); break;   /* a message led by the no-file icon */
     /* (ACID FM 3c-2 task 2) PRESETS (presets, presets_nofav, presets_pluck) and USER (user, user_foot) gone: SAVE > SOUND and MORE
      * (save_sound, save_sound_empty, save_more) */
-    case S_MENU_MIDI:                                   /* (0.9.12) MENU > MIDI; (ACID FM 3c-1 task 8) its pointer, MIDI IS ON GLO */
-        ui.menu = 1; ui.menu_sel = MI_GLOMIDI; break;
-    case S_MENU_SCREEN2:                                /* (0.9.18) MENU > SCREEN 2: SCREEN SLEEP 15 MIN just turned */
-        scr_put(2u); ui.menu = 1; ui.menu_sel = MI_SCROFF; ui.hot_col = 2u; ui.hot_t = 30; break;
     case S_PHRASES: go_page(GR_PATS); break;
     case S_SONG_EMPTY: song.playing = 0; go_page(GR_SVSONG); break;
     case S_SONG:
@@ -1234,7 +1240,6 @@ static void setup(int s)
      * first beat (STEP under it); the MENU's AUDIO tab with CLICK REC selected, COUNT-IN 1 BAR */
     case S_COUNTIN: song.playing = 0; song.rec = 1; cin_total = 4; cin_left = 3; go_home(); break;
     case S_COUNTIN2: song.playing = 0; song.rec = 1; cin_total = 8; cin_left = 8; go_page(GR_ROLL); break;
-    case S_MENU_AUDIO: ui.menu = 1; ui.menu_sel = MI_CLICK; rp_put(RP_CLICK, 1u); rp_put(RP_COUNTIN, 1u); break;
     /* (3c-1 task 7: on SAVE's TOOLS, a JIANT page and its header; GLO > GLOBAL gone; 3c-2 task 4: TOOLS gone, on SAVE > MORE) 1.2: the header's three slots (ui_draw.c draw_head): playing with the selected track armed; another track armed;
      * the BPM being turned (the accent's); BPM LOCK ON (the lock right of the BPM), and its message after a turn;
      * GLO with the tempo turned and BPM LOCK ON (the label right of the lock); the metronome on the bar's 1st beat
@@ -1306,10 +1311,6 @@ static void setup(int s)
         perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[0] = 1u << 23;   /* (0.9.14: the macros) */
         break;
     case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.uxlv = 1u << LAYER_GLO; break;   /* (3c-1 task 9: its own bit) */
-    case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.9.18) the knob just turned: COLOR's card lit (SCREEN), LED GLOW's
-                                                         * (LEDS, KNOB 1) */
-        ui.menu = 1; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; ui.hot_col = 0u; ui.hot_t = 30;
-        break;
     case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS; (3c-1 task 7) FX > SENDS, the sends' one
                                                          * place */
         trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
@@ -1497,10 +1498,15 @@ static void setup(int s)
     case S_DLG_RECALL_SOUND: song.sel = 0; go_title("EDIT 1"); ui.confirm = CF_RECALL_SOUND; ui.confirm_trk = 0; break;
     case S_GEN: ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = (uint8_t)(1u + GEN_SHOWN[4]); gp.seed = 421; str_cpy(gp.last, "ACID 0421", sizeof gp.last); break;   /* (0.6.91) GEN (3b: a shown genre, ACID) */
     case S_GEN_PARTS: ui.confirm = CF_DICE_ALL; gp.page = 1; gp.hot = 2; gp.amt[GP_CHORDS] = 70; gp.amt[GP_ARP] = 0; break;
-    case S_MENU: ui.menu = 1; ui.menu_sel = 0; song.rec = 1; break;
-    case S_MENU_SPEAKER: ui.menu = 1; ui.menu_sel = MI_LOWCUT; settings.lowcut = 2; break;
+    /* (ACID FM 3c-2 task 5) MENU on the section engine (ux_menu.c): AUDIO (SPEAKER EQ just turned to BASS+, recording armed: the
+     * header's mark), CLICK (CLICK REC, COUNT-IN 1 BAR), CONTROLS (CALIBRATION armed), MORE (SCREEN SLEEP 15 MIN picked), MORE
+     * scrolled to its end (ABOUT picked) */
+    case S_MENU: u5_menu(MI_LOWCUT); settings.lowcut = 2; song.rec = 1; ux_knob_touch(0); break;
+    case S_MENU_CLICK: u5_menu(MI_CLICK); rp_put(RP_CLICK, 1u); rp_put(RP_COUNTIN, 1u); break;
+    case S_MENU_CONTROLS: u5_menu(MI_HOLD); settings_hold = 2; ui.menu_sel = MI_PANEL; break;
+    case S_MENU_MORE: scr_put(2u); u5_menu(MI_SCROFF); ux_knob_touch(1); break;
+    case S_MENU_MORE_END: u5_menu(MI_ABOUT); settings_leds = LEDS_INV; break;
     case S_ABOUT: ui.menu = 2; ui.menu_scroll = 0; break;
-    case S_ABOUT_REC: ui.menu = 2; ui.menu_scroll = 0; song.rec = 1; break;          /* the REC mark beside OCT- BACK */
     case S_ABOUT_CREDITS: ui.menu = 2; ui.menu_scroll = 360; break;
     case S_ABOUT_END: ui.menu = 2; ui.menu_scroll = (uint16_t)menu_scroll_max(); break;
     case S_ABOUT_PROFILE: case S_ABOUT_PROFILE2: {   /* (0.9.14) MENU > ABOUT > PROFILE: a second playing and one stopped,
@@ -1598,14 +1604,6 @@ static void setup(int s)
         fx_scene(); fx_load(LOAD_LITE); song.g[G_RTYPE] = 2; nav_scene(SEC_FX, "SPACE"); ux_knob_touch(2); break;
     case S_REVERB_RESO:                                 /* .. SPACE: RESO (PITCH 4, FOLLOW T2) */
         fx_scene(); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; nav_scene(SEC_FX, "SPACE"); break;
-    case S_MENU_HOLD: ui.menu = 1; ui.menu_sel = MI_HOLD; settings_hold = 2; break;
-    case S_MENU_LEDS: ui.menu = 1; ui.menu_sel = MI_LEDS; settings_leds = LEDS_INV; break;
-    case S_MENU_END: ui.menu = 1; ui.menu_sel = MI_COUNT - 1u; ui_prefs = 0xFF; ui_rec_prefs = 0x2A; break;   /* the last row,
-                                                     * every flag set (CLICK ON, LEVEL HIGH, COUNT-IN 2 BARS) */
-    /* the MENU's tabs (1.0.5): menu DISPLAY (COLOR), menu_hold CONTROL, menu_speaker AUDIO, menu_system SYSTEM (USB
-     * SERIAL); menu_slide: from DISPLAY to CONTROL with ANIM ON, the frame half way (draw) */
-    case S_MENU_SYSTEM: ui.menu = 1; ui.menu_sel = MI_SERIAL; break;
-    case S_MENU_SLIDE: ui.menu = 1; ui.menu_sel = MI_ACCEL; ui_prefs |= PREF_LATCH; break;
     /* the GLO SCL EDIT layers (ui_layer.c): just opened (a peek), and in use: GLO with T2 muted, T3 soloed (its key
      * held) and KNOB 1 turned; with CLK EXT (TAP dimmed); SCL at D# minor, KNOB 2 turned; EDIT on DIGITAL preset 3,
      * a favourite; a user preset; the hint after a tap */
@@ -2279,7 +2277,6 @@ static void draw(int s)
         return;
     }
     ui.force = 1;
-    if (ui.menu == 1 && !ui.mlv && s != S_MENU_SLIDE) ui.mlv = 1;   /* (0.8.5: the lens at TAB, as it opens; S_MENU_SLIDE: MENU) */
     ui_draw();
 }
 
@@ -2542,22 +2539,28 @@ static void align_sweeps(void)
                 ux_dialog_draw();
             }
         ui.confirm = 0;
-        cur_name = st ? "sweep LINE: menu rows" : "sweep FLAT: menu rows";
-        ui.menu = 1;
-        for (i = 0; i < MI_COUNT; i++)
-            for (k = 0; k < 4u; k++) {
-                ui.menu_sel = (uint8_t)i; ui_prefs = k & 1u ? 0xFFu : 0u; settings_hold = (uint8_t)k; settings.lowcut = (uint8_t)(k % 3u);
-                ui_rec_prefs = (uint8_t)((k % 3u) | (k % 3u) << 2 | ((k + 1u) % 3u) << 4);   /* (CLICK, LEVEL, COUNT-IN: each value) */
-                settings_leds = (uint8_t)(k % LEDS_COUNT); ui.force = 1;   /* (every LEDS name) */
-                draw_menu();
-            }
-        cur_name = st ? "sweep LINE: menu levels" : "sweep FLAT: menu levels";
-        for (i = 0; i < MI_COUNT; i++)                  /* (0.8.5) every row on each level of the lens, S and LARGE */
-            for (k = 0; k < 6u; k++) {
-                ui.menu_sel = (uint8_t)i; ui_prefs = k & 1u ? PREF_LARGE : 0u; ui.mlv = (uint8_t)(k / 2u); ui.force = 1;
-                draw_menu();
-            }
-        ui.mlv = 1;
+        cur_name = st ? "sweep LINE: menu rows" : "sweep FLAT: menu rows";   /* (3c-2 task 5: every row at its place, ux_menu.c;
+                                                         * each value of each, the one turned and not, LARGE on and off) */
+        {
+        uint8_t c0 = cpu_cfg, u0 = usb_out, l0 = usb_lvl;
+        uint32_t s0 = scr_get(), d0 = load_get();
+        for (i = 0; i < MI_COUNT; i++) {
+            uint32_t v;
+            if (menu_hidden(i) || i == MI_MIDIOUT)
+                continue;
+            for (v = 0; v < menu_n(i); v++)
+                for (k = 0; k < 4u; k++) {
+                    u5_menu(i);
+                    if (menu_valued(i))
+                        menu_put(i, v);
+                    if (k & 1u)
+                        ui.menu_sel = MI_NONE;
+                    ui_prefs = (uint8_t)((ui_prefs & ~PREF_LARGE) | (k & 2u ? PREF_LARGE : 0u)); ui.force = 1;
+                    ux_menu_draw();
+                }
+        }
+        cpu_cfg = c0; usb_out = u0; usb_lvl = l0; scr_put(s0); load_put(d0); ui.msg_t = 0;
+        }
         ui.menu = 0; ui_prefs = 0; ui_rec_prefs = 0; settings_hold = 0; settings.lowcut = 0; settings_leds = 0;
         cur_name = st ? "sweep LINE: REC layer values" : "sweep FLAT: REC layer values";
         ui.home = 1; ui.layer = LAYER_REC;              /* (the map and the cards: every value of the three, each track) */
@@ -2808,7 +2811,7 @@ int main(int argc, char **argv)
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
                                    S_SAVE_PROJECT, S_SAVE_SONG, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
                                    S_HOME_VISUAL, S_EDIT_ANALOG, S_ED_FILTER, S_EDIT_ANALOG_MORE, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
-                                   S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_EDIT_VOICE_1,
+                                   S_SYSTEM, S_MENU_MORE, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_EDIT_VOICE_1,
                                    S_EDIT_DRUM_1, S_EDIT_DRUM_2,
                                    S_EDIT_ANALOG_1, S_EDIT_FM6_1, S_EDIT_FM6_2, S_EDIT_FM6_3, S_EDIT_FM6_MORE, S_EDIT_NOISE_1,
                                    S_EDIT_PHASE_1, S_EDIT_LOFI_1, S_EDIT_LOFI_BYTE_1, S_EDIT_PHASE_3, S_EDIT_DRUM_MORE,

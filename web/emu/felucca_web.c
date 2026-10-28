@@ -170,6 +170,7 @@ static void lcd_init(void) {}
 #include "../../firmware/src/ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
 #include "../../firmware/src/ux_layer.c"               /* (ACID FM 3b task 9) the held layers (ux_layer.h) */
 #include "../../firmware/src/ux_dialog.c"              /* (ACID FM 3c-2 task 1) the dialogs, full screen */
+#include "../../firmware/src/ux_menu.c"                /* (ACID FM 3c-2 task 5) MENU, ABOUT / PROFILE */
 
 /* ------------------------------------------------------------ the flash --- */
 static uint32_t web_flash_writes;
