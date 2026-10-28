@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Effects: per-track DIST insert, then sends into three
  * shared buses (chorus, tempo delay, reverb). Mono buses, stereo dry mix. */
 /* (0.8.4) the delay's line: DLY_LEN samples of int16 (params.c, the one constant of its size; a power of two). It runs
@@ -566,17 +567,20 @@ static void seq_note_off(track_t *t, uint32_t note);
 #define DXF_LOG2 10u
 #define DXF_LEN (1u << DXF_LOG2)                         /* (0.6.81) a read point's crossfade: ~21 ms */
 static const uint32_t GR_RATIO[25] = {32768, 34716, 36781, 38968, 41285, 43740, 46341, 49097, 52016, 55109, 58386, 61858, 65536, 69433, 73562, 77936, 82570, 87480, 92682, 98193, 104032, 110218, 116772, 123715, 131072};   /* 2^(st/12), Q16 */
-/* (0.6.81) the grains' clock, a sample: a grain starting again takes its spray and the PITCH now (turned in the middle
- * of a grain, its read point jumped: a click at every step of the knob) */
-static void dly_grain_adv(void)
+/* (0.6.81) the grains' clock, n samples (ACID FM 0.5.2: n, dly_lo's step of r samples in one call): a grain starting
+ * again takes its spray and the PITCH now (turned in the middle of a grain, its read point jumped: a click at every
+ * step of the knob) */
+static __attribute__((noinline)) void dly_grain_adv(uint32_t n)
 {
     uint32_t j;
-    fx.gr_ph = (fx.gr_ph + 65536u / GR_LEN) & 0xFFFFu;
-    for (j = 0; j < 2u; j++)
-        if (((fx.gr_ph + j * 32768u) & 0xFFFFu) < 65536u / GR_LEN) {
-            fx.gr_sp[j] = song.g[G_DSPRY] ? rng() % ((uint32_t)song.g[G_DSPRY] * 64u + 1u) : 0u;
-            fx.gr_s[j] = (int32_t)GR_RATIO[clamp(song.g[G_DPIT], -12, 12) + 12] - 65536;
-        }
+    for (; n; n--) {
+        fx.gr_ph = (fx.gr_ph + 65536u / GR_LEN) & 0xFFFFu;
+        for (j = 0; j < 2u; j++)
+            if (((fx.gr_ph + j * 32768u) & 0xFFFFu) < 65536u / GR_LEN) {
+                fx.gr_sp[j] = song.g[G_DSPRY] ? rng() % ((uint32_t)song.g[G_DSPRY] * 64u + 1u) : 0u;
+                fx.gr_s[j] = (int32_t)GR_RATIO[clamp(song.g[G_DPIT], -12, 12) + 12] - 65536;
+            }
+    }
 }
 static __attribute__((noinline)) int32_t dly_grain(uint32_t dl, uint32_t sh)   /* (0.8.4) sh: the line at FS >> sh */
 {
@@ -1302,14 +1306,18 @@ static int32_t dlo_xr[CTL] __attribute__((section(".pool")));   /* .. the right 
 #define DSW_LOG2 7u
 #define DSW_FADE (1u << DSW_LOG2)                        /* a rate change's fade out (and the input's in): 2.9 ms */
 #define DLY_CLR 16384u                                   /* .. the line cleared 32 KB a block */
-static inline int32_t hb_sum(const int32_t *h)           /* h[0] the newest: the pairs about the middle (lag 13.5) */
+/* h[0] the newest: the pairs about the middle (lag 13.5). (ACID FM 0.5.2) One copy, called (it was a loop inlined at
+ * each of dly_lo's 11 filter steps), its 14 taps written out (HB_Q's values in the multiplies, no loop counter or table
+ * loads: 77 instructions a sum on the pi32v2, were ~118); in RAM with dly_lo (tools/build.py HOT_FNS). The same sum,
+ * bit for bit */
+#define HB_TAP(k) (HB_Q[k] * (h[HB_N - 1u - (k)] + h[HB_N + (k)]))
+static __attribute__((noinline)) int32_t hb_sum(const int32_t *h)
 {
-    int32_t a = 0;
-    uint32_t k;
-    for (k = 0; k < HB_N; k++)
-        a += HB_Q[k] * (h[HB_N - 1u - k] + h[HB_N + k]);
-    return a;
+    _Static_assert(HB_N == 14u, "hb_sum: the 14 taps written out");
+    return HB_TAP(0) + HB_TAP(1) + HB_TAP(2) + HB_TAP(3) + HB_TAP(4) + HB_TAP(5) + HB_TAP(6) + HB_TAP(7) + HB_TAP(8) +
+           HB_TAP(9) + HB_TAP(10) + HB_TAP(11) + HB_TAP(12) + HB_TAP(13);
 }
+#undef HB_TAP
 static inline int hb_dec(hbd_t *s, int32_t x, int32_t *y)   /* an FS sample in; every other one a sample out */
 {
     if (s->ph) {                                         /* (odd: the middle tap's line) */
@@ -1394,8 +1402,7 @@ static __attribute__((noinline)) void dly_lo(const int32_t *dly_in, int32_t *dx,
         if (ok) {                                        /* a step of the loop, at the line's rate */
             int32_t lf, w;
             if (fx.gr_on || (fx.dl_xf && fx.gr_old))
-                for (j = 0; j < r; j++)
-                    dly_grain_adv();
+                dly_grain_adv(r);
             x = fx.gr_on ? dly_grain(fx.dl_now, sh) : dly_rd_sh(fx.dl_now, wm, sh);
             if (fx.dl_xf) {
                 int32_t xo = fx.gr_old ? dly_grain(fx.dl_old, sh) : dly_rd_sh(fx.dl_old, wm, sh);
@@ -1675,7 +1682,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         } else {
             /* delay with a low-passed (COLR) and low-cut (HPF) feedback */
             if (fx.gr_on || (fx.dl_xf && fx.gr_old))
-                dly_grain_adv();
+                dly_grain_adv(1u);
             wm += dwm;
             x = fx.gr_on ? dly_grain(fx.dl_now, 0u) : dly_rd(fx.dl_now, wm);
             if (fx.dl_xf) {                                 /* (0.6.81) the old read point fading out */

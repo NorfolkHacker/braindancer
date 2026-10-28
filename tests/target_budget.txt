@@ -36,7 +36,8 @@ rev_room 147
 rev_spring 130
 dist_amp 84
 dx_hands_step 36
-dly_lo 2949
+dly_lo 1051
+hb_sum 0
 formant_word_render 338
 formant_block 122
 djf_block 180
