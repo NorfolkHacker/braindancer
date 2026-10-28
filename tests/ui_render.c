@@ -620,8 +620,10 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_MIXER, S_MIXER_PAN, S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT,
        S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM, S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_SAMPLE, S_EDIT_GRAIN,
        S_ALG1, S_ALG2, S_ALG3, S_ALG4, S_ALG5, S_ALG6, S_ALG7, S_ALG8, S_OP_LEVEL, S_FM6_ALG1, S_FM6_ALG5, S_FM6_ALG22,
-       S_FM6_ALG32, S_DRUMX, S_DRUMX_HIT, S_DX_SOUND, S_DX_SOUND2, S_CONFIRM_SEQ, S_CONFIRM_PROJ, S_CONFIRM_USER,
-       S_CONFIRM_PAT, S_CONFIRM_MOTION, S_CONFIRM_ERASE, S_GEN, S_GEN_PARTS, S_MENU, S_MENU_SPEAKER, S_ABOUT,
+       S_FM6_ALG32, S_DRUMX, S_DRUMX_HIT, S_DX_SOUND, S_DX_SOUND2, S_DLG_CLEAR_SEQ, S_DLG_CLEAR_TRK,
+       S_DLG_CLEAR_ALL, S_DLG_CLEAR_MOTION, S_DLG_CLEAR_PFX, S_DLG_CLEAR_SONG, S_DLG_DEL_ROW, S_DLG_INIT_SOUND,
+       S_DLG_INIT_SOUND_DRUM, S_DLG_INIT_SYS, S_DLG_CPU_TEST, S_DLG_LIVE_COMMIT, S_DLG_LOAD_PAT, S_DLG_OVR_PROJ, S_DLG_OVR_USER,
+       S_DLG_ERASE_USER, S_DLG_RECALL_SOUND, S_GEN, S_GEN_PARTS, S_MENU, S_MENU_SPEAKER, S_ABOUT,
        S_ABOUT_REC, S_ABOUT_CREDITS, S_ABOUT_END, S_ABOUT_PROFILE, S_ABOUT_PROFILE2, S_UBOOT, S_CALIBRATION, S_SPLASH,
        S_BATT0, S_BATT1, S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME,
        S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_FX_GLT, S_FX_SCR, S_FX_SHUF, S_FX_FRZ, S_MENU_HOLD, S_MENU_LEDS,
@@ -667,7 +669,9 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "arp_off", "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env",
     "edit_voice", "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level",
     "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2",
-    "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern", "confirm_motion", "confirm_erase", "gen",
+    "dlg_clear_seq", "dlg_clear_trk", "dlg_clear_all", "dlg_clear_motion", "dlg_clear_pfx", "dlg_clear_song", "dlg_del_row",
+    "dlg_init_sound", "dlg_init_sound_drum", "dlg_init_sys", "dlg_cpu_test", "dlg_live_commit", "dlg_load_pat", "dlg_ovr_proj",
+    "dlg_ovr_user", "dlg_erase_user", "dlg_recall_sound", "gen",
     "gen_parts", "menu", "menu_speaker", "about", "about_rec", "about_credits", "about_end", "about_profile",
     "about_profile2", "uboot", "calibration", "splash", "batt_0", "batt_1", "batt_2", "batt_3", "batt_usb",
     "motion_rec", "motion_off", "motion_card", "song_home", "perform_peek", "perform_held", "perform_wait",
@@ -1491,12 +1495,47 @@ static void setup(int s)
         eng(ENGI_FM6); TSEL->p[P_E0] = 32; fm6_patch[song.sel][FP_OL] = 0; fm6_pgen[song.sel]++;   /* (op 6: the patch's first) */
         go_title("EDIT 1"); ui.hot_col = 2; ui.hot_t = 30;
         break;
-    case S_CONFIRM_SEQ: ui.confirm = CF_CLEAR_SEQ; ui.confirm_trk = 2; break;
-    case S_CONFIRM_PROJ: ui.confirm = CF_OVR_PROJ; ui.confirm_trk = 0; break;
-    case S_CONFIRM_USER: song.playing = 0; up_store(6, "A VERY LONG SOUND NAME"); ui.confirm = CF_OVR_USER; ui.confirm_trk = 6; break;
-    case S_CONFIRM_PAT: ui.confirm = CF_LOAD_PAT; ui.confirm_trk = 0; ui.ppick = 4; break;
-    case S_CONFIRM_MOTION: ui.confirm = CF_CLEAR_MOTION; ui.confirm_trk = 3; break;
-    case S_CONFIRM_ERASE: song.playing = 0; up_store(6, "A VERY LONG SOUND NAME"); ui.confirm = CF_ERASE_USER; ui.confirm_trk = 6; break;
+    /* (ACID FM 3c-2 task 1) the dialogs full screen (ux_dialog.c), over the page each opens from; the longest names */
+    case S_DLG_CLEAR_SEQ: case S_DLG_CLEAR_TRK:
+        song.sel = 2; go_title("TOOLS");
+        for (uint32_t i = 0; i < 14u; i++) { trk[2].step[i].time = ST_NOTE; trk[2].step[i].n = 1; trk[2].step[i].note[0] = (uint8_t)(48 + i); }
+        (void)motion_set_lock(&trk[2], 1, P_FCUT, 40); (void)motion_set_lock(&trk[2], 5, P_FCUT, 90);
+        (void)motion_set_lock(&trk[2], 9, P_FCUT, 70);
+        ui.confirm = s == S_DLG_CLEAR_SEQ ? CF_CLEAR_SEQ : CF_CLEAR_TRK; ui.confirm_trk = 2;
+        break;
+    case S_DLG_CLEAR_ALL: song.sel = 2; nav_scene(SEC_SEQ, "STEPS"); ui.confirm = CF_CLEAR_ALL; ui.confirm_trk = 2; break;
+    case S_DLG_CLEAR_MOTION:
+        song.sel = 3; seq_more_at(UXR_ACTION, 0);
+        (void)motion_set_lock(&trk[3], 2, P_FCUT, 40);
+        ui.confirm = CF_CLEAR_MOTION; ui.confirm_trk = 3;
+        break;
+    case S_DLG_CLEAR_PFX: fx_more_at(0, UXR_ACTION); ui.confirm = CF_CLEAR_PFX; ui.confirm_trk = song.sel; break;
+    case S_DLG_CLEAR_SONG: case S_DLG_DEL_ROW: {
+        uint32_t i;
+        song.playing = 0; go_title(s == S_DLG_DEL_ROW ? "ARRANGE" : "TOOLS");
+        chain_config.count = 6;
+        for (i = 0; i < 6u; i++) chain_config.row[i] = (chain_row_t){(uint8_t)(i % 3u), (uint8_t)(16u + 4u * (i & 1u))};
+        ui.confirm = s == S_DLG_DEL_ROW ? CF_DEL_ROW : CF_CLEAR_SONG; ui.confirm_trk = s == S_DLG_DEL_ROW ? 2 : song.sel;
+        break;
+    }
+    case S_DLG_INIT_SOUND: case S_DLG_INIT_SOUND_DRUM:
+        song.sel = s == S_DLG_INIT_SOUND ? 2 : 0; go_title("TOOLS");
+        if (s == S_DLG_INIT_SOUND_DRUM) eng(ENGI_DRUM);
+        ui.confirm = CF_INIT_SOUND; ui.confirm_trk = song.sel;
+        break;
+    case S_DLG_INIT_SYS: go_title("TOOLS"); ui.confirm = CF_INIT_SYS; ui.confirm_trk = song.sel; break;
+    case S_DLG_CPU_TEST: go_title("TOOLS"); ui.confirm = CF_CPU_TEST; ui.confirm_trk = song.sel; break;
+    case S_DLG_LIVE_COMMIT: go_title("LIVE"); ui.confirm = CF_LIVE_COMMIT; ui.confirm_trk = 0x3C; break;
+    case S_DLG_LOAD_PAT: song.sel = 0; go_title("PATTERN"); ui.confirm = CF_LOAD_PAT; ui.confirm_trk = 0; ui.ppick = 4; break;
+    case S_DLG_OVR_PROJ:
+        song.playing = 0; project_save_as(1, "MWMWMWMWMWMW"); go_title("PROJECT");
+        ui.confirm = CF_OVR_PROJ; ui.confirm_trk = 1;
+        break;
+    case S_DLG_OVR_USER: case S_DLG_ERASE_USER:
+        song.playing = 0; up_store(6, "A VERY LONG SOUND NAME"); go_title("USER");
+        ui.confirm = s == S_DLG_OVR_USER ? CF_OVR_USER : CF_ERASE_USER; ui.confirm_trk = 6;
+        break;
+    case S_DLG_RECALL_SOUND: song.sel = 0; go_title("EDIT 1"); ui.confirm = CF_RECALL_SOUND; ui.confirm_trk = 0; break;
     case S_GEN: ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = (uint8_t)(1u + GEN_SHOWN[4]); gp.seed = 421; str_cpy(gp.last, "ACID 0421", sizeof gp.last); break;   /* (0.6.91) GEN (3b: a shown genre, ACID) */
     case S_GEN_PARTS: ui.confirm = CF_DICE_ALL; gp.page = 1; gp.hot = 2; gp.amt[GP_CHORDS] = 70; gp.amt[GP_ARP] = 0; break;
     case S_MENU: ui.menu = 1; ui.menu_sel = 0; song.rec = 1; break;
@@ -2517,6 +2556,12 @@ static void align_sweeps(void)
                 ui.confirm = (uint8_t)i; ui.confirm_trk = (uint8_t)k;
                 draw_confirm();
             }
+        cur_name = st ? "sweep LINE: full-screen dialogs" : "sweep FLAT: full-screen dialogs";   /* (3c-2 task 1: ux_dialog.c) */
+        for (i = CF_CLEAR_SEQ; i <= CF_LIVE_COMMIT; i++)
+            for (k = 0; k < 8u && ux_dialog_owns(i); k++) {
+                ui.confirm = (uint8_t)i; ui.confirm_trk = (uint8_t)k; ui.force = 1;
+                ux_dialog_draw();
+            }
         ui.confirm = 0;
         cur_name = st ? "sweep LINE: menu rows" : "sweep FLAT: menu rows";
         ui.menu = 1;
@@ -2780,7 +2825,7 @@ int main(int argc, char **argv)
     al_off = 1;                                     /* (the alignment check is not timed) */
     /* draw cost: a full redraw of a screen (all strips), and HOME frame by frame (the scope, every other frame) */
     {
-        static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_CONFIRM_PROJ,
+        static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_DLG_OVR_PROJ,
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
                                    S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
                                    S_HOME_VISUAL, S_EDIT_ANALOG, S_ED_FILTER, S_EDIT_ANALOG_MORE, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,

@@ -53,6 +53,7 @@ int main(void)
 #ifdef UX_MSG_LITS
     has_all(&UF_HDR, "HDR (status-line texts)", UX_MSG_HDR);
     has_all(&UF_LBL, "LBL (footer texts)", UX_MSG_LBL);
+    has_all(&UF_VAL, "VAL (the dialogs' questions and words, ux_dialog.c)", UX_MSG_VAL);
 #endif
     has(&UF_VAL, "VAL", all);
     has(&UF_TTL, "TTL", " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");

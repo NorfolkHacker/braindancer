@@ -339,7 +339,7 @@ commands: [
    d: "A step held + EDIT: clears that step's locks, the notes stay (LOCKS CLEARED / NO LOCKS)."},
   {s: "seq", k: "REC+F3", shot: 'layer_rec', t: "Clear the track",
    d: "REC held + F3: clears the selected track's steps and automation, no dialog (UNDO brings it back). Also SEQ + F3 or SAVE › TOOLS › CLEAR SEQ."},
-  {s: "seq", k: "SEQ+REC", shot: 'confirm_seq', t: "Clear every sequence",
+  {s: "seq", k: "SEQ+REC", shot: 'dlg_clear_all', t: "Clear every sequence",
    d: "SEQ held + REC: CLEAR ALL SEQUENCES?, OCT+ confirms: the six tracks' steps and automation and the punch-in lane."},
   {s: "seq", k: "SEQ+C4", shot: 'layer_seq_tools_drum', t: "SEQ TOOLS: reverse, shift, random, cook",
    d: "SEQ held: F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT, C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO, D5 REVERT. On DRUM: G4 CLR, A4 REV, B4 FILL, C5 RND on the lane picked with black keys 1–8. No undo."},
@@ -538,7 +538,7 @@ recipes: [
     "SEQ › STEPS: hold a step (a grid key, or the note being entered).",
     "Still holding, turn KNOB 1–4: that step keeps its value. SELECT while holding walks the track's EDIT pages (LOCK · SOUND 2).",
     "A step held + EDIT clears its locks; SEQ › MORE › AUTOMATION shows and edits them one by one."]},
-  {id: "clear", s: "seq", shots: ['layer_seq_tools', 'confirm_seq'], t: "Clear a step, a track or everything", steps: [
+  {id: "clear", s: "seq", shots: ['layer_seq_tools', 'dlg_clear_all'], t: "Clear a step, a track or everything", steps: [
     "A step: SEQ held + G5 (CLR STEP) clears the cursor's and its locks. Or KNOB 4 GATE down to REST.",
     "A track: REC + F3 (or SEQ + F3, or SAVE › TOOLS › CLEAR SEQ).",
     "Every sequence: SEQ held + REC, OCT+.",

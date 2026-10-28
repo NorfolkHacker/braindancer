@@ -2936,6 +2936,21 @@ static void uxs_picture(const page_t *pg)
     }
 }
 
+/* the header: T3 . the sound, the transport ((3c-1 task 2) SEQ: which 16 shown, "2/4 . ", then the transport); what it shows
+ * (draw: drawn too). (3c-2 task 1: a dialog keeps the page's, ux_dialog.c) */
+static uint32_t uxs_head(int draw)
+{
+    char nm[24], tr[24];
+    ux_trk_name(song.sel % NTRK, nm, sizeof nm, 1);
+    if (cur_page()->fam == FAM_SEQ)
+        uxq_head(tr, sizeof tr);
+    else
+        ux_transport(tr, sizeof tr);
+    if (draw)
+        ux_header(song.sel % NTRK + 1u, nm + 3, tr);   /* (ux_trk_name's "T3 " left out: the header adds it) */
+    return str_hash(str_hash(song.sel + 1u, nm), tr);
+}
+
 static void ux_section_draw(void)
 {
     static uint32_t head_sig, panel_sig, foot_sig;
@@ -2959,18 +2974,10 @@ static void ux_section_draw(void)
         uxs_hint_sec = 0xFF;
     dc_frame(ui.force);
     all = dc_all;
-    {   /* the header: T3 . the sound, the transport */
-        char nm[24], tr[24];
-        ux_trk_name(song.sel % NTRK, nm, sizeof nm, 1);
-        if (pg->fam == FAM_SEQ)                         /* (3c-1 task 2) SEQ: which 16 shown, "2/4 . ", then the transport */
-            uxq_head(tr, sizeof tr);
-        else
-            ux_transport(tr, sizeof tr);
-        sig = str_hash(str_hash(song.sel + 1u, nm), tr);
-        if (all || sig != head_sig) {
-            head_sig = sig;
-            ux_header(song.sel % NTRK + 1u, nm + 3, tr);   /* (ux_trk_name's "T3 " left out: the header adds it) */
-        }
+    sig = uxs_head(0);                                  /* the header: T3 . the sound, the transport */
+    if (all || sig != head_sig) {
+        head_sig = sig;
+        (void)uxs_head(1);
     }
     uxs_knobs(pg, k);
     ux_knobs(k, -1);

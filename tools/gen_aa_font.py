@@ -69,8 +69,8 @@ UI_PRESET = "jiant-lab"            # the firmware's faces (tools/build.py; tests
 PFX = "AF"                         # the faces' C prefix: AF_<N> (jiant-lab), UF_<N> (acid)
 UF_LBL = " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00b7\u2192\u25cf\u25cb\u25c6"   # (ACID FM) upper-case labels; arrow = code 0x86;
                                    # (3c-1 task 8) GLO > MIDI's dots and diamond (0x89 0x8A 0x8B)
-UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7\u00b0"   # (3b task 7 fix: the degree sign, LFO's PHASE, +44 B) VAL (HDR: more below): ASCII less ! " ( ) , >  $ & ' * ; < = ? @ [ \\ ] ^ _ ` { | } ~
-UF_HDR = UF_TEXT + "\u25b6\u25a0\u25cf\u25cb\u25c6" + "'(),=>[]\u2192\u2026"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop
+UF_TEXT = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b7\u00b0?'"   # (3b task 7 fix: the degree sign, LFO's PHASE, +44 B; 3c-2 task 1: ? ' the dialogs' questions, "CLEAR T3'S SEQUENCE?") VAL (HDR: more below): ASCII less ! " ( ) , >  $ & * ; < = @ [ \\ ] ^ _ ` { | } ~
+UF_HDR = UF_TEXT + "\u25b6\u25a0\u25cf\u25cb\u25c6" + "(),=>[]\u2192\u2026?;"   # (ACID FM 3a) HDR: the transport too, play (code 0x87) and stop
                                    # (code 0x88), (3c-1 task 8) the dots and the outside clock's diamond (0x89 0x8A 0x8B: ux_widgets.h); the status line's messages: ' ( ) , = > [ ], the arrow (0x86), the ellipsis
                                    # (0x85, ui_say's cut) (tests/ux_msg_scan.py: every message literal drawn there has its glyphs)
 UF_TTL = " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"

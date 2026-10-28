@@ -1483,6 +1483,8 @@ static void confirm_text(char *a, char *b)
     }
 }
 static void gen_cards(void);                            /* (0.8.5) gen.c: GEN in HOME's lens, its cards */
+static int ux_dialog_owns(uint32_t kind);               /* (ACID FM 3c-2 task 1) ux_dialog.c: the dialogs drawn there */
+static void ux_dialog_draw(void);
 /* (0.8.5) the dialogs as the approved mock-up (NOTICE . DICE . NAME): their tabs under the header, the breadcrumb at the
  * foot. NOTICE (the OCT- / OCT+ questions): a RAISE card under a THEME rule, "?" in the accent, the question, the detail,
  * two buttons (OCT- NO, OCT+ YES in the accent, underlined). DICE (KEEP DICED ...?): the part's cards, BEFORE and NOW
@@ -1642,32 +1644,11 @@ static void ui_draw(void)
     ui_draw_page(counting);
     scr_shown();
 }
-static uint8_t dlg_behind;                              /* (0.9.5) the page being drawn round a NOTICE */
-/* (0.9.5) a NOTICE (the OCT- / OCT+ questions) over the page: its tabs, its card, its breadcrumb the screen's holes (gfx.c
- * scr_holes), the page drawn round them as ever (DICE's BEFORE / NOW are the whole screen; over the menu, NAME, UPDATE MODE:
- * as before) */
-static int dlg_notice(void)
-{
-    return dlg_on() && !(ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX) && !ui.uboot && !ui.menu && !name_on();
-}
 static void ui_draw_body(uint32_t counting);
 static void ui_draw_page(uint32_t counting)
 {
-    if (dlg_notice()) {
-        const int16_t R[3][4] = {{0, LT_Y, 240, (int16_t)DLG_TAB_H}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
-        uint8_t f = ui.force;
-        scr_holes(R, 3);
-        dlg_behind = 1;
-        ui_draw_body(counting);
-        dlg_behind = 0;
-        scr_holes(R, 0);
-        if (f) {                                        /* (the page first: the box drawn over it, the lint's order too) */
-            draw_confirm();
-            ui.head_sig = ~0u;
-        }
-        return;
-    }
-    ui_draw_body(counting);
+    ui_draw_body(counting);                             /* (3c-2 task 1: the NOTICE over the page, its holes, gone: the dialogs
+                                                         * are full screen, ux_dialog.c) */
 }
 static void ui_draw_body(uint32_t counting)
 {
@@ -1686,7 +1667,13 @@ static void ui_draw_body(uint32_t counting)
         draw_head();
         return;
     }
-    if (dlg_on() && !dlg_behind) {                      /* the OCT- / OCT+ dialog (NOTICE: over the page, ui_draw_page) */
+    if (dlg_on() && ux_dialog_owns(ui.confirm)) {       /* (ACID FM 3c-2 task 1) the OCT- / OCT+ dialog full screen (ux_dialog.c) */
+        ux_dialog_draw();
+        pf_on = 0;
+        ui.force = 0;
+        return;
+    }
+    if (dlg_on()) {                                     /* the dice's BEFORE / NOW (until 3c-2 task 1b) */
         if (ui.force) {
             draw_confirm();
             ui.force = 0;
