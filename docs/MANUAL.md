@@ -17,7 +17,7 @@ If you only read one chapter, read [12. Saving and loading](#12-saving-and-loadi
 4. [Engines](#4-engines)
 5. [DRUM-X](#5-drum-x)
 6. [The sequencer](#6-the-sequencer)
-7. [ARRANGE: songs, sections and scenes](#7-arrange-songs-sections-and-scenes)
+7. [SONG: songs, sections and scenes](#7-song-songs-sections-and-scenes)
 8. [Dice and UNDO](#8-dice-and-undo)
 9. [Effects and master](#9-effects-and-master)
 10. [Modulation and macros](#10-modulation-and-macros)
@@ -65,16 +65,16 @@ files.
    or PRESETS first. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
 2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** one detent right for GEN 2 and lower
    **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **OCT−** goes back to TRACKS. To go back to what was there before: hold **GLO** and press **G4** (UNDO).
-3. Like it? **Stop** (PLAY), then press **SAVE** (it opens USER, the user sounds) and press **SAVE** again: the
-   **PROJECT** group's **SECTIONS**, the project's four sections. Turn **KNOB 4** to the right so its card says **OCT+**, then press
-   **OCT+**. Type a name with the keys (or keep the one offered) and press **OCT+** again. The screen says **SAVED**.
-4. Make a variation (change some steps, mute a track) and save it into section **B**: on SECTIONS turn **KNOB 1** to
+3. Like it? **Stop** (PLAY), then press **SAVE** (it opens SOUND, the user sounds) and press **SAVE** twice more: the
+   **LIBRARY** group's **PROJECTS**. Turn **KNOB 2** to the section **A**, then **KNOB 4** to the right so its card says **OCT+**,
+   then press **OCT+**. Type a name with the keys (or keep the one offered) and press **OCT+** again. The screen says **SAVED**.
+4. Make a variation (change some steps, mute a track) and save it into section **B**: on PROJECTS turn **KNOB 2** to
    **B**, then KNOB 4 and OCT+ as before.
-5. Turn **SELECT** one detent right: **ARRANGE** (the song's rows). Press **OCT+** to add a row, set its section with
-   **KNOB 2** and its length with **KNOB 3** (bars). Add a row for A, one for B. Press **PLAY**: the song plays the
-   rows in order.
+5. Turn **SELECT** one detent left: **SONG** (the four sections on top, the song's rows under them). Turn **KNOB 1** to the
+   section and press **OCT+** to add a row after the one picked; **KNOB 3** sets its length (bars). Add a row for A, one for B.
+   Press **PLAY**: the song plays the rows in order.
 
-That's the whole loop: **make music → save it into a section → chain sections in ARRANGE**.
+That's the whole loop: **make music → save it into a section → chain sections on SAVE › SONG**.
 
 ---
 
@@ -103,7 +103,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **SCL** | The SCL section: **KEY → CHORD → MORE**, round. | **SCL** layer: keys set the root. |
 | **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next page: **SOUND → TONE → VOICE or FILTER → MORE** (FM6: SOUND → OPERATOR → OP ENV → MORE; DRUM: KIT → SOUND → SOUND 2 → MORE). Always EDIT. A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
 | **GLO** | The GLO section: from elsewhere the page last shown (at power-on LIVE); inside the next page: **LIVE → MIX → MIDI → MORE**, round. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
-| **SAVE** | The SAVE section: from elsewhere the page last shown, and USER or SECTIONS come with their **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SOUND → PROJECT → LIBRARY**, round. | **SAVE** layer: play/store sections live; C5 NAME. |
+| **SAVE** | The SAVE section: from elsewhere the page last shown, and SOUND comes with its **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SOUND → SONG → LIBRARY → MORE**, round. | **SAVE** layer: play/store sections live; C5 NAME. |
 | **ARP** | The ARP section (ARP · ARP 2, one group): from elsewhere the page last shown; inside, back to ARP. A chord held + ARP during step recording still arpeggiates it. | (no layer) |
 | **SEQ** | The SEQ section: from elsewhere the page last shown (at power-on STEPS, the roll); inside the next page: **STEPS → STEP EXTRAS → PATTERN → MORE**, round. | **SEQ TOOLS** layer (on every SEQ page); G5 CLR STEP. |
 | **PLAY** | Start / stop. | — |
@@ -129,7 +129,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | **EDIT / SEQ / LFO / FX** held + **SELECT** | The dice: the sound / the sequence / the LFO / the effects (see [8](#8-dice-and-undo)). |
 | **ENV / SCL / ARP / SAVE** held + **SELECT** | Into that section and along its chain, as SELECT inside it. |
 | **SEQ** held + **G5** | **CLR STEP**: clears the picked step and its locks (with a note in FOCUS: that note; on the AUTOMATION list: deletes the record). |
-| **SAVE** held + **C5** | **NAME**: renames the slot on SAVE > SOUND, the section or project on SECTIONS / PROJECTS. |
+| **SAVE** held + **C5** | **NAME**: renames the slot on SAVE > SOUND, the section on SAVE > SONG, the project's section on PROJECTS. |
 | A step held (SEQ › STEPS) + **KNOB 1–4** | A lock on that step (**LOCK · SETTING · VALUE**). |
 | A step held (SEQ › STEPS) + **SELECT** | The page those knobs lock: walks the track's EDIT pages (SOUND → TONE → … → MORE) without leaving STEPS. |
 | **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
@@ -203,8 +203,8 @@ Every section is driven the same way: learn it once and every section is known.
 - **SCL and ARP are two sections**: SCL is KEY · CHORD · MORE, ARP is ARP · ARP 2.
 - **GEN is three HOME pages** (GEN 1–3): the section buttons work there, OCT+ makes the piece, OCT− goes back to
   TRACKS. HOME + SELECT opens it from anywhere.
-- **SAVE from outside** comes back to the SAVE page you left; **USER** and **SECTIONS** come with their SAVE already
-  picked, so SAVE, OCT+, OCT+ still stores the sound (or the section).
+- **SAVE from outside** comes back to the SAVE page you left; **SOUND** comes with its SAVE already picked, so SAVE,
+  OCT+, OCT+ still stores the sound.
 - **EDIT is always EDIT**: clearing a step is the SEQ layer's (**SEQ + G5**, CLR STEP; on the AUTOMATION list it
   deletes the record; GATE turned to REST clears a note too) and renaming the SAVE layer's (**SAVE + C5**, NAME).
 - **The MENU** (hold HOME): the same rules: SELECT walks its eight pages (SCREEN → AUDIO → MIDI → USB →
@@ -229,7 +229,7 @@ SELECT goes down each row from left to right; the button goes to the next page.
 | **LFO** | **LFO**: LFO — **DEST**: DEST — **MOD MATRIX**: MOD MATRIX — **MORE**: MORE | 4 |
 | **SCL** | **KEY**: KEY — **CHORD**: CHORD — **MORE**: MORE | 3 |
 | **ARP** | **ARP**: ARP · ARP 2 | 2 |
-| **SAVE** | **SOUND**: USER · PRESETS — **PROJECT**: SECTIONS · ARRANGE — **LIBRARY**: PROJECTS · TOOLS | 6 |
+| **SAVE** | **SOUND**: SOUND — **SONG**: SONG — **LIBRARY**: PROJECTS · TOOLS — **MORE**: MORE | 5 |
 
 - **HOME › TRACKS**: six ridgelines, T1 at the top to T6 at the bottom, each its track's level over the last ~2 s; the
   three tracks the knobs control in their knobs' colours, the name at the left and the level at the right; under them the
@@ -321,10 +321,10 @@ the rest is the song's)
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | SOUND | SLOT (U01–U32) | PRESET (the track's sound) | NAME (renames the slot) | SAVE (action) |
-| PROJECTS / SECTIONS (the PROJECT page) | PROJECT (1–8; on SECTIONS: SECT A–D) | SECT (A–D; on SECTIONS: the section's NAME) | LOAD (action) | SAVE (action) |
-| ARRANGE | ROW ("2/6") | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
+| SONG | SECTION (A–D; the row picked takes it) | ROW ("3/6") | BARS | SCENE |
+| PROJECTS (the PROJECT page) | PROJECT (1–4) | SECT (A–D) | LOAD (action) | SAVE (action) |
 | TOOLS | any knob picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT, CPU TEST | | | |
-| MORE | the row (TOOLS: ERASE USER SLOT · SOUND: LOAD SLOT, ENGINE, FAVORITE, LIST) | its value | — | — |
+| MORE | the row (SONG: END, DELETE ROW, CLEAR SONG · TOOLS: ERASE USER SLOT · SOUND: LOAD SLOT, ENGINE, FAVORITE, LIST) | its value | — | — |
 
 **ARP** (per track)
 
@@ -407,7 +407,7 @@ Knobs: LENGTH, DIVISION, SWING, GATE (PATTERN's). These tools have no undo.
 **REC** — F3 **CLEAR** the selected track's steps and automation (no dialog; UNDO can bring it back), G3 **CLICK**
 (OFF / REC / ON). KNOB 1: CLICK.
 
-**SAVE — song layer** (details in [7](#7-arrange-songs-sections-and-scenes))
+**SAVE — song layer** (details in [7](#7-song-songs-sections-and-scenes))
 
 | Keys | Action |
 | --- | --- |
@@ -415,8 +415,8 @@ Knobs: LENGTH, DIVISION, SWING, GATE (PATTERN's). These tools have no undo.
 | C4 D4 E4 F4 | STORE the music into A / B / C / D |
 | D5 | LOOP / SONG: what PLAY plays |
 | E5 | SONG REC |
-| G5 | go to the ARRANGE page |
-| C5 | **NAME**: rename the slot on USER, the section on SECTIONS, the project on PROJECTS (elsewhere dim) |
+| G5 | go to SAVE › SONG (ARRANGE) |
+| C5 | **NAME**: rename the slot on SOUND, the section on SONG or PROJECTS (elsewhere dim) |
 | OCT+ / OCT− | store into / recall the section playing |
 | **KNOB 1** | the project (1–8); applied when you let go of SAVE, stopped only |
 
@@ -925,7 +925,7 @@ A track clear says **T3 CLEARED** with **SEQ+REC: ALL TRACKS** under it as a rem
 
 ---
 
-## 7. ARRANGE: songs, sections and scenes
+## 7. SONG: songs, sections and scenes
 
 ### The pieces
 
@@ -937,28 +937,29 @@ A track clear says **T3 CLEARED** with **SEQ+REC: ALL TRACKS** under it as a rem
 
 That's 32 sections in total (8 × 4).
 
-### The ARRANGE page (SAVE > ARRANGE)
+### The SONG page (SAVE > SONG)
 
-ARRANGE is the second page of SAVE's PROJECT group: on top the project's four sections large (stored: in their
-colour, the one playing says **NOW**), then **ARRANGE**: the song's rows as chips (**A16**: the section and its bars, in
-the section's colour; a scene: a white dot; the row you are on lit and framed), and under them the whole song as one
-strip (its rows by their length, a white line where it plays) with its length and its END (**120 BARS · LOOP**).
+SONG is SAVE's second page (it was ARRANGE): on top the project's four sections as blocks (the letter, the name, **EMPTY**
+dim; the one playing says **NOW**; the one KNOB 1 picks lit), then **ARRANGE**: the song's rows as chips (**A16**: the
+section and its bars, in the section's colour; a scene: a white dot; the row you are on lit and framed; the row playing
+underlined), and under them the song's length and its END (**120 BARS · LOOP**). The status line says what OCT+ does
+(**ROW 3 · B · 16 BARS · OCT+ ADDS A ROW**).
 
-| Knob | On a row | On + ADD | On END |
-| --- | --- | --- | --- |
-| KNOB 1 | choose the row | | |
-| KNOB 2 | its section A–D; turned left past A: **DELETE SONG ROW?** | adds a row (same section as the row above, 1 bar) | **STOP**, **x2 … x8**, **LOOP** |
-| OCT+ | adds a row after the last (its section and bars), and selects it | | |
-| KNOB 3 | its bars (1–64) | adds a row | |
-| KNOB 4 | right: store a **scene** (SCENE STORED); left: clear it | | |
+| Knob | |
+| --- | --- |
+| KNOB 1 | **SECTION** A–D; the row picked takes it too |
+| KNOB 2 | **ROW**: choose the row ("3/6") |
+| KNOB 3 | **BARS**: the row's length (1–64) |
+| KNOB 4 | **SCENE**: right stores a scene (SCENE STORED); left clears it |
+| OCT+ | adds a row after the one picked (KNOB 1's section, the picked row's bars), and selects it |
 
-- **PLAY** on ARRANGE plays the song from the top; again: stop.
+- **PLAY** on SONG plays the song from the top; again: stop.
 - When the song ends (or you stop it), the music you had before pressing PLAY comes back (SONG END).
-- END: **STOP** plays the song once, **x2–x8** that many times, **LOOP** forever.
+- END (SAVE > MORE > END): **STOP** plays the song once, **X2–X8** that many times, **LOOP** forever.
 - If a row points to an empty section the song won't start: the screen says **PATTERN A EMPTY** (or B, C, D).
 - While a song plays, step editing is blocked (**STOP TO EDIT**).
-- To delete a row you can also use SAVE > TOOLS > DELETE ROW (the row ARRANGE has selected). To delete the whole
-  arrangement: TOOLS > CLEAR SONG (**CLEAR SONG ORDER?**). Neither can be undone.
+- To delete a row: SAVE > MORE > DELETE ROW (the row SONG has selected; it asks first). To delete the whole
+  arrangement: SAVE > MORE > CLEAR SONG (**CLEAR THE SONG?**). Neither can be undone.
 - The arrangement is saved automatically (about 2 seconds after a change, while stopped). See [12](#12-saving-and-loading).
 
 ### Scenes
@@ -980,7 +981,7 @@ Hold **SAVE**:
 - **D5**: **LOOP / SONG** — in SONG mode, PLAY from any page plays the arrangement.
 - **E5**: **SONG REC** — the sections you play live (and their bars) are written into the arrangement's rows, with a
   scene each. It replaces the current rows.
-- **G5**: jump to ARRANGE.
+- **G5**: jump to SAVE > SONG.
 - **KNOB 1**: pick another project; it switches when you let go of SAVE (stopped only) and **loads its section A**.
 
 ---
@@ -1146,13 +1147,13 @@ What a piece is made of:
   reverb's type the genre's.
 - With **TRACKS 6** the sixth track is a **texture** (a drone, noise, a choir, an organ, strings) in long notes.
 - **FORM**: **LOOP** writes one loop (2 or 4 bars). **PARTS** also stores sections **A** (the piece), **B** (a break:
-  no drums, no bass) and **C** (a drop: the drums denser) and fills ARRANGE with A B A C (PLAY plays the song). The sections are one piece in one key: B starts the loop on its predominant (the
+  no drums, no bass) and **C** (a drop: the drums denser) and fills the song (SAVE › SONG) with A B A C (PLAY plays the song). The sections are one piece in one key: B starts the loop on its predominant (the
   same chords turned: IV–I–V–vi for I–V–vi–IV; a one-chord loop goes to its subdominant and back), the motif and the
   figures the same, moved onto those chords; in the pop genres (ITALO, SYNTH POP, INDIE, DISCO) **C is a whole step
   up**, a real key change stored in the section with its SCALE page (pop's last chorus). The modal loops (techno, house
   minimal, dub ..) keep their loop in every section. **SONG** writes a club form: **A** the drop, **B** the intro (drums and bass), **C** the build
   (the chords in, their filter opening over the loop, a roll at its end, the delay thrown on the last step) and **D**
-  the break (no drums, no bass, the chords wetter; on its predominant, but in the modal loops), in ARRANGE as
+  the break (no drums, no bass, the chords wetter; on its predominant, but in the modal loops), in the song as
   B C A D C A with 16-bar rows (the drop 32). Ambient and post-rock genres get an arc instead (thin, in, apex: on its
   predominant). Sections of yours (stored by you, not by GEN) are never
   overwritten: then the piece stays one loop.
@@ -1195,7 +1196,7 @@ G4 breathes on the GLO map when there is something to undo; with nothing, it say
 
 **UNDO covers**: DICE ALL, a sound diced, a track cleared (REC F3, TOOLS CLEAR SEQ), CLEAR ALL SEQUENCES (SEQ + REC),
 NEW PROJECT, INIT and RECALL (EDIT layer or TOOLS), clearing the automation (SEQ › MORE › AUTOMATION),
-and a section loaded with **SAVE > SECTIONS > LOAD**. It restores the music as it was: sounds, steps, automation, the
+and a section loaded with **SAVE > PROJECTS > LOAD**. It restores the music as it was: sounds, steps, automation, the
 kit, the punch-in lane, the macros, the tempo and global effects.
 
 **UNDO does not cover**: section jumps, quick chains and RECALL from the SAVE layer, switching project with the SAVE
@@ -1496,7 +1497,7 @@ with FX toggles its effect on and off, **FX + OCT−** turns everything off, the
 ### Live layers and the song
 
 The SAVE layer (section jumps on the bar, quick chains, store, recall, SONG REC) is described in
-[7](#7-arrange-songs-sections-and-scenes). GLO + PLAY restarts from the top without stopping.
+[7](#7-song-songs-sections-and-scenes). GLO + PLAY restarts from the top without stopping.
 
 ---
 
@@ -1519,7 +1520,7 @@ This is the chapter to read carefully. ACID FM keeps several kinds of data in di
 | What | Where it lives | How it gets saved | Survives power-off? |
 | --- | --- | --- | --- |
 | The music now (sounds, steps, automation, tempo, effects, kit, macros, punch-in lane, SLICER) | RAM | Not saved by itself — store it into a section. The **autosave** keeps a copy. | Only via the autosave |
-| A **section** (A–D of a project) | Flash | **SAVE > SECTIONS > SAVE** (stopped), or **SAVE layer C4–F4 / OCT+** | Yes (layer stores: once you stop) |
+| A **section** (A–D of a project) | Flash | **SAVE > PROJECTS > SAVE** (stopped), or **SAVE layer C4–F4 / OCT+** | Yes (layer stores: once you stop) |
 | The **arrangement** (rows, bars, END, scenes) of each project | Flash (song index) | Automatically, ~2 s after a change while stopped | Yes |
 | **User presets** U01–U32 (one sound + a 16-step pattern) | Flash | **SAVE > SOUND > SAVE** (stopped) | Yes |
 | **Settings** (MENU, TRACKS, LOAD, favourites) | Flash | Automatically (MENU: when it closes; while playing: after you stop) | Yes |
@@ -1542,36 +1543,34 @@ This is the chapter to read carefully. ACID FM keeps several kinds of data in di
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
   crashed).
 
-### SAVE's chain: SOUND · PROJECT · LIBRARY
+### SAVE's chain: SOUND · SONG · LIBRARY · MORE
 
-SAVE is a chain of six pages in three groups, as every section: **SELECT** walks USER → PRESETS → SECTIONS →
-ARRANGE → PROJECTS → TOOLS, a **SAVE** tap jumps to the next group (round).
+SAVE is a chain of five pages in four groups, as every section: **SELECT** walks SOUND → SONG → PROJECTS → TOOLS →
+MORE, a **SAVE** tap jumps to the next group (round).
 
 | Group | Pages | What the screen shows | Knobs |
 | --- | --- | --- | --- |
-| **SOUND** | USER · PRESETS | The track and its sound; at the right the 32 user slots (a stored one: its engine and its name) or the factory sounds. | SLOT, LOAD, ERASE, SAVE / No., ENG, FAV, LIST |
-| **PROJECT** | SECTIONS · ARRANGE | The project's four sections large, ARRANGE's rows as chips, the song as a strip (see [7](#7-arrange-songs-sections-and-scenes)). | SECT, NAME (shown; SAVE + C5 renames), LOAD, SAVE / ROW, SECT, BARS, SCENE (OCT+ adds a row) |
+| **SOUND** | SOUND | The track's sound on top; under it the 32 user slots as a list (a stored one: its engine's colour and its name). | SLOT, PRESET, NAME, SAVE |
+| **SONG** | SONG | The project's four sections as blocks, the song's rows as chips, its length and END (see [7](#7-song-songs-sections-and-scenes)). | SECTION, ROW, BARS, SCENE (OCT+ adds a row) |
 | **LIBRARY** | PROJECTS · TOOLS | The four projects as tiles: the number, the name (its section A's), the four sections A–D as chips (stored: in the section's colour; empty: dark). The project open tinted and framed violet, its section picked framed white. / The six tools as a list. | PROJECT, SECT, LOAD, SAVE / the tool |
+| **MORE** | MORE | The rest as a list: SONG (END, DELETE ROW, CLEAR SONG), TOOLS (ERASE USER SLOT), SOUND (LOAD SLOT, ENGINE, FAVORITE, LIST). | the row, its value |
 
-- **SAVE from another page** comes back to the SAVE page you left; **USER** and **SECTIONS** come with their SAVE
-  already picked: SAVE, OCT+, OCT+ stores the sound (or the section), as before. Left on another SAVE page, go back
-  to USER with SELECT (or a SAVE tap from the LIBRARY, round); reached from inside, SAVE is not picked for you
-  (KNOB 4 to the right).
+- **SAVE from another page** comes back to the SAVE page you left; **SOUND** comes with its SAVE already picked:
+  SAVE, OCT+, OCT+ stores the sound, as before. Reached from inside, SAVE is not picked for you (KNOB 4 to the right).
 - The other projects' tiles are read from the flash a project a frame (the headers only: no loading, nothing the
   audio notices) and kept until a project is saved, loaded or renamed.
-- The footer says **SAVE · LIBRARY · PROJECTS  5/6**. The OCT+ / OCT− hints are not drawn on these pages: the armed
+- The footer says **SAVE · LIBRARY · PROJECTS  3/5**. The OCT+ / OCT− hints are not drawn on these pages: the armed
   card says OCT+.
 
 ### To save a project section
 
 1. **Stop** the transport (saving needs it stopped: otherwise **STOP TO SAVE**).
-2. Press **SAVE**, then **SAVE** again to the next group (or turn **SELECT**): **SECTIONS** (the PROJECT group) or
-   **PROJECTS** (the LIBRARY group).
+2. Press **SAVE**, then **SAVE** again to the next group (or turn **SELECT**): **PROJECTS** (the LIBRARY group).
 3. On **PROJECTS**, **KNOB 1**: the project (1–8), its tile framed; **KNOB 2** its section. Turning KNOB 1
    does **not** change the music you're playing — it only chooses where to save. (It switches projects, so do this
    stopped.)
-4. On **SECTIONS**, **KNOB 1**: the section A–D, drawn large with its name (or USED / EMPTY) and **NOW** on
-   the one the music came from; KNOB 2's card shows its name.
+4. (SAVE > SONG's **KNOB 1** picks the section too, its block lit with its name (or USED / EMPTY) and **NOW** on
+   the one the music came from.)
 5. **KNOB 4** to the right: SAVE is picked ([OCT+]). Press **OCT+**.
 6. If the section already holds something: **OVERWRITE PROJECT A?** (with its name). OCT+ YES.
 7. The **NAME** screen opens with a name ready. Edit it or not, then **OCT+** writes. **OCT−** cancels and writes
@@ -1582,7 +1581,7 @@ A section stores the music **including the tempo and global effects**. The **pro
 
 ### To load a section
 
-1. SAVE's PROJECTS: **KNOB 1** the project, **KNOB 2** the section (or SECTIONS: **KNOB 1** the section).
+1. SAVE's PROJECTS: **KNOB 1** the project, **KNOB 2** the section (or SONG: **KNOB 1** the section).
 2. **KNOB 3** to the right (LOAD), press **OCT+**. The screen says **LOADED**.
 
 LOAD **stops playback** and replaces the music: sounds, steps, automation, the kit, the punch-in lane, the macros,
@@ -1613,7 +1612,7 @@ when you stop**. If you power off before stopping, it's lost — so stop before 
 ### Naming (the NAME screen)
 
 Opens when you save a section or a user preset, and with **SAVE held + C5** (NAME)
-on SAVE > SOUND, SECTIONS or PROJECTS (renames the selected slot, section or project; only the name is written). Up to 12 characters, upper case.
+on SAVE > SOUND, SONG or PROJECTS (renames the selected slot or section; only the name is written). Up to 12 characters, upper case.
 
 | Control | Does |
 | --- | --- |
@@ -1813,7 +1812,7 @@ MENU › MIDI keeps one row, **MIDI IS ON GLO**: OCT+ opens GLO › MIDI.
   presets) are picked on the device or from the editor.
 - **Sections and projects**: **channel 16**'s PROGRAM CHANGE never loads a sound. Programs **0–3** jump to section
   **A–D** of the project (playing: on the next bar, as the song layer's keys; stopped: at once; an empty one is said
-  so); programs **16–19** load project **1–4** with its section A (stopped only, as SAVE › SECTIONS). A foot
+  so); programs **16–19** load project **1–4** with its section A (stopped only, as SAVE › PROJECTS). A foot
   controller or a DAW can run a set.
 - **Not possible**: MIDI OUT on the **TRS** jack (the FM-1's jack is an input only: no output line goes to it) and
   **Bluetooth MIDI** (the chip has a radio, but its Bluetooth software is JieLi's closed SDK, which ACID FM does not

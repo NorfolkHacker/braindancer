@@ -531,11 +531,12 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP };   /* (ACID FM 3c-1 task 7: SC_TRK, JIANT's MIXER's, gone with it) */
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_SLOTS,
-       GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MORPH, GR_DXIMG,
+       GR_MOD, GR_PATS, GR_TOOLS, GR_CHANCE, GR_MORPH, GR_DXIMG,
        GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP, GR_MIX, GR_MIDI, GR_SVSND, GR_SVSONG, GR_SVPROJ };   /* (ACID FM
                                                          * 3c-2 task 2) GR_SVSND: SAVE > SOUND (ux_save.c), the inherited USER
                                                          * (GR_USER) and PRESETS (GR_BROWSE) gone; GR_SVSONG, GR_SVPROJ: SAVE's SONG
-                                                         * and PROJECT (tasks 3, 4) */   /* (ACID FM 3c-1 task 8) GR_MIDI: GLO > MIDI (ux_glo.c);
+                                                         * and PROJECT (tasks 3, 4); (task 3) GR_SONG, the inherited ARRANGE and
+                                                         * SEQ > SONG, gone with them */   /* (ACID FM 3c-1 task 8) GR_MIDI: GLO > MIDI (ux_glo.c);
                                                          * (task 7) GR_MIX: GLO > MIX (ux_glo.c); GR_TRK,
                                                          * JIANT's MIXER and SENDS, gone with them */   /* (ACID FM 3c-1 task 4 fix 1: GR_MOTION GR_EVENTS GR_COMP GR_MUTATE
                                                          * GR_FUGUE GR_SHAPE gone with SEQ's pages; no value is stored, PAGES' own) */   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
@@ -637,12 +638,13 @@ typedef char mov_ids_ok[(uint32_t)G_COUNT <= (uint32_t)ID_MO_NOTES && (uint32_t)
 static int mov_is(uint32_t id) { return id >= ID_MO_NOTES && id < ID_MO_END; }
 /* (ACID FM 3c-2 task 2) SAVE > MORE's SOUND rows that are no setting of their own: the inherited PRESETS page's KNOB 2 (ENGINE: the
  * track's, ui.c select_engine a detent a turn), KNOB 3 (FAVORITE: the sound's mark, preset_mark) and KNOB 4 (LIST: ALL, FAV or a sound
- * type, list_put). Views as GLO's NOTES OUT: param_ref reads one into sv_ui (sv_get), ui_input.c sv_view_turn writes it with the
- * inherited knob's handler. Ids past every global (ID_DX_END is 0xE7), below GLO's MIDI views */
+ * type, list_put); (task 3) its SONG's END (the inherited ARRANGE's END row: STOP, X2 .. X8, LOOP; song_chain.c song_end_step). Views
+ * as GLO's NOTES OUT: param_ref reads one into sv_ui (sv_get), ui_input.c sv_view_turn writes it with the inherited knob's handler.
+ * Ids past every global (ID_DX_END is 0xE7), below GLO's MIDI views */
 enum { ID_SV_ENGINE = 0xE7, ID_SV_FAV, ID_SV_LIST, ID_SV_END, ID_SV_N };   /* (ID_DX_END is 0xE7) */
 typedef char svv_ids_ok[(uint32_t)ID_SV_N <= (uint32_t)ID_MO_NOTES ? 1 : -1];
 typedef char svv_past_ok[(uint32_t)G_COUNT <= (uint32_t)ID_SV_ENGINE && (uint32_t)ID_DX_END <= (uint32_t)ID_SV_ENGINE ? 1 : -1];
-static int svv_is(uint32_t id) { return id >= ID_SV_ENGINE && id < ID_SV_END; }
+static int svv_is(uint32_t id) { return id >= ID_SV_ENGINE && id < ID_SV_N; }
 /* ENGINE's words: the engines' names in the order they are shown (engines.c ENGINE_ORDER; tests/ui_test.c test_u2_more) */
 static const char *const N_SV_ENG[] = {"DRUM", "VOICE", "PHASE", "LOFI", "ANALOG", "FM6", "NOISE",
 #if FELUCCA_FM4
@@ -653,7 +655,10 @@ typedef char sv_eng_ok[sizeof N_SV_ENG / sizeof N_SV_ENG[0] == NENG_SHOWN ? 1 : 
 /* (JIANT 0.9.12) PRESETS' LIST: ALL, FAV, then the sound types (ui.c list_get; here for SAVE > MORE's LIST, 3c-2 task 2) */
 static const char *const N_LIST[PT_N + 1] = {"ALL", "FAV", "BASS", "LEAD", "PAD", "KEYS", "PLUCK", "BELL", "VOX", "DRUM",
                                               "FX"};
-static const param_desc_t SV_DESC[3] = {PE("ENGINE", N_SV_ENG, 0), PE("FAVORITE", N_ONOFF, 0), PE("LIST", N_LIST, 0)};
+/* (3c-2 task 3) END's words: the song stops after once, plays 2 .. 8 times, round and round (sv_get: song_end_step's places) */
+static const char *const N_SV_END[9] = {"STOP", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "LOOP"};
+static const param_desc_t SV_DESC[ID_SV_N - ID_SV_ENGINE] = {PE("ENGINE", N_SV_ENG, 0), PE("FAVORITE", N_ONOFF, 0),
+                                                             PE("LIST", N_LIST, 0), PE("END", N_SV_END, 0)};
 static int16_t sv_ui;
 static uint32_t sv_get(uint32_t id);                    /* (ui.c: the value now) */
 static const char *const N_MONOTES[] = {"OFF", "KEYS", "KEYS+SEQ"};   /* (the one short form; the status line KEYS + SEQUENCE:
@@ -838,10 +843,12 @@ static const ux_row_t UXM_GLO_ROWS[] = {
     {UXM_H_UNDO, UXR_HEAD, 0}, {UXM_A_UNDO, UXR_ACTION, 0},
 };
 static const ux_more_t UXM_GLO = {UXM_GLO_ROWS, (uint8_t)(sizeof UXM_GLO_ROWS / sizeof UXM_GLO_ROWS[0])};
-/* (ACID FM 3c-2 task 2) SAVE's MORE (spec 2.4): TOOLS (ERASE USER SLOT, the inherited USER page's ERASE: the dialog on the slot SOUND
- * picks; task 4 adds the other tools above it), SOUND (what the inherited USER and PRESETS pages reached that SOUND's knobs do not:
+/* (ACID FM 3c-2 task 2) SAVE's MORE (spec 2.4): (task 3) SONG (END, the inherited ARRANGE's END row; DELETE ROW, the dialog on the
+ * row SONG picks; CLEAR SONG, the inherited TOOLS'), TOOLS (ERASE USER SLOT, the inherited USER page's ERASE: the dialog on the slot
+ * SOUND picks; task 4 adds the other tools), SOUND (what the inherited USER and PRESETS pages reached that SOUND's knobs do not:
  * USER's LOAD, PRESETS' ENGINE, FAVORITE, LIST) */
 static const ux_row_t UXM_SAVE_ROWS[] = {
+    {UXM_H_SONG, UXR_HEAD, 0}, {ID_SV_END, UXR_GLOBAL, 0}, {UXM_A_DELROW, UXR_ACTION, 0}, {UXM_A_CLRSONG, UXR_ACTION, 0},
     {UXM_H_TOOLS, UXR_HEAD, 0}, {UXM_A_ERASE, UXR_ACTION, 0},
     {UXM_H_SOUND, UXR_HEAD, 0}, {UXM_A_ULOAD, UXR_ACTION, 0}, {ID_SV_ENGINE, UXR_GLOBAL, 0}, {ID_SV_FAV, UXR_GLOBAL, 0},
     {ID_SV_LIST, UXR_GLOBAL, 0},
@@ -893,8 +900,10 @@ static const page_t PAGES[] = {
     /* (ACID FM 3c-2 task 2) SAVE > SOUND (spec 2.1, ux_save.c): SLOT PRESET NAME SAVE (no ids: ui_input.c save_knob); the inherited
      * PRESETS (the browser: No. ENG FAV LIST) and USER (SLOT LOAD ERASE SAVE) pages gone, the rest SAVE > MORE's rows (UXM_SAVE) */
     {"SAVE SOUND", FAM_SAVE, SC_GLOBAL, GR_SVSND, {0xFF, 0xFF, 0xFF, 0xFF}},
+    /* (ACID FM 3c-2 task 3) SAVE > SONG (spec 2.2, ux_save.c): SECTION ROW BARS SCENE (no ids: ui_input.c save_knob); the inherited
+     * SECTIONS (PROJECT's KNOB 1 the section) and ARRANGE (the song's rows) pages gone, END SAVE > MORE's row */
+    {"SAVE SONG", FAM_SAVE, SC_GLOBAL, GR_SVSONG, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */
-    {"ARRANGE", FAM_SAVE, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.12) the project's song (SEQ > SONG) */
     {"TOOLS", FAM_SAVE, SC_GLOBAL, GR_TOOLS, {G_CLRSEQ, G_INITSND, 0xFF, 0xFF}},
     {"ARP", FAM_ARP, SC_TRACK, GR_ARP, {P_AMODE, P_ARATE, P_AOCT, P_AGATE}},
     {"ARP 2", FAM_ARP, SC_TRACK, GR_NONE, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},
@@ -916,7 +925,7 @@ static const page_t PAGES[] = {
     {"PHRASES", FAM_SEQ, SC_GLOBAL, GR_PATS, {0xFF, 0xFF, 0xFF, 0xFF}},    /* pattern loader (ui.c pat_load); 0.6.37: hidden */
     /* (ACID FM 3c-1 task 7) JIANT's MIXER (LEVEL PAN REV, the DJ FILTER) gone: GLO > MIX (below), REV FX > SENDS', the DJ FILTER
      * GLO > LIVE's KNOB 4 */
-    {"SONG", FAM_SEQ, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},
+    /* (ACID FM 3c-2 task 3) SEQ > SONG (never shown since 0.6.24: the song in one place) gone with ARRANGE: SAVE > SONG */
     {"STEP EXTRAS", FAM_SEQ, SC_STEP, GR_CHANCE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (ACID FM 3c-1 task 3: was CHANCE, hidden since
                                                          * 0.6.37) the picked step's RATCHET CHANCE CONDITION MICRO (ux_seq.c) */
     /* (0.8.5) LENTE everywhere (ui_lens.c): pages the mock-up added, appended (the table's order is no one's index) */

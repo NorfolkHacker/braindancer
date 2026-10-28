@@ -242,7 +242,7 @@ static void sound_name(const track_t *t, char *b);
 static uint16_t head_title(char *b)
 {
     const page_t *pg = cur_page();
-    int glob = !ui.home && !ui.layer && (pg->graph == GR_SLOTS || pg->graph == GR_SONG || pg->graph == GR_TOOLS ||
+    int glob = !ui.home && !ui.layer && (pg->graph == GR_SLOTS || pg->graph == GR_TOOLS ||
                                          pg->fam == FAM_GLO || pg->fam == FAM_SAVE);
     if (ui.menu) {                                      /* (0.8.5) the menu: "MENU . DISPLAY", "ABOUT / CREDITS" */
         str_cpy(b, ui.menu == 2 ? "ABOUT / CREDITS" : ui.menu == 3 ? "ABOUT / PROFILE" : "MENU \xB7 ", 40);
@@ -465,7 +465,6 @@ static uint16_t value_col(uint16_t vc, int32_t ratio)
     (void)ratio;
     return vc != T_THEME ? vc : T_TEXT;
 }
-static uint8_t card_free_next;                          /* (0.8.5) the next draw_column's value is a name: free text */
 static uint8_t card_arm_next;                           /* (0.8.5) the next draw_column is an action armed (OCT+ does it):
                                                          * the card TINT, its label THEME, as the mock-up's */
 static void draw_column_tall(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc, int32_t ratio,
@@ -634,7 +633,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     }
     char key[56];
     int hot = c == ui.hot_col && ui.hot_t, named = fmt_named, mot = card_mot_next && label[0], strip, snap;
-    int arm = card_arm_next, free = card_free_next;
+    int arm = card_arm_next;
     int32_t curve = card_curve_next ? card_curve_next - 256 : DJF_NOCURVE;
     card_curve_next = 0;
     uint32_t kind = large_kind();                       /* MENU > LARGE: tall (draw_column_tall), or the label in M */
@@ -659,7 +658,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         vc = value_col(vc, ratio);
     fmt_named = 0;                                      /* (params.c: a name, for this card only) */
     card_mot_next = 0;                                  /* (the same: MOTION, this card only) */
-    card_arm_next = card_free_next = 0;
+    card_arm_next = 0;                                  /* (3c-2 task 3: card_free_next, SECTIONS' NAME, gone) */
     card_mot = (uint8_t)((card_mot & ~(1u << c)) | (uint32_t)mot << c);
     if (str_eq(unit, label))
         unit = "";                                      /* "BPM 124 BPM", "USB OFF USB": the label says it */
@@ -768,9 +767,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             if (!ui.roll[c].from[0] && val[0])
                 GFX_HOOK_ALIGN(0, ry, COL_W, ry + ROLL_H, AL_V, "card value in its roll window");
             x = roll_text(c, 5, ry - 1, val, vc);
-        } else if (free)                                /* (a name: ellipsised where it must be) */
-            x = cv_free_text(5, ry + 2, vf, val, vc, cb, room - uw);
-        else
+        } else
             x = cv_text_fit(5, ry + 2, vf, val, vc, cb, room - uw);
         if (unit[0]) {
             GFX_HOOK_ALIGN(0, 0, 0, vf == &AF_M ? ry - 1 + AF_M.asc : ry + 2 + AF_S.asc, AL_B, "card unit on its value's baseline");
@@ -1170,37 +1167,7 @@ static void draw_columns(void)
     const char *unit;
     (void)motion_mask(song.sel, card_mot_mask);       /* (PLAY OFF: no scan) */
     /* (ACID FM 3a: HOME's cards, the sound's four and MACROS' M1..M4, are ux_home.c's knob row) */
-    if (cur_page()->graph == GR_SONG) {
-        uint32_t row = ui.song_row < CHAIN_ROWS ? ui.song_row : CHAIN_ROWS - 1u;
-        int used = row < chain_config.count;
-        if (ui.song_row >= song_end_row()) {            /* (0.6.22) the song's END: STOP / x2 .. x8 / LOOP */
-            uint32_t e = SONG_END(&chain_config);
-            draw_column(0, "ROW", "END", "", VAL(0u), -1, ICON_X_SONG);
-            if (e == SONG_FOREVER) str_cpy(val, "LOOP", sizeof val);
-            else if (e >= 2u) { val[0] = 'x'; fmt_int(val + 1, (int32_t)e); }
-            else str_cpy(val, "STOP", sizeof val);
-            draw_column(1, "END", val, "", VAL(1u), -1, ICON_LOOP);
-            draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
-            return;
-        }
-        if (row == chain_config.count) str_cpy(val, "ADD", sizeof val);
-        else {                                          /* (0.8.5, the mock-up: "2/6") */
-            fmt_int(val, (int32_t)row + 1);
-            str_cpy(val + str_len(val), "/", 2);
-            fmt_int(val + str_len(val), (int32_t)chain_config.count);
-        }
-        draw_column(0, "ROW", val, "", VAL(0u), -1, ICON_X_SONG);
-        if (used) { val[0] = (char)('A' + chain_config.row[row].slot); val[1] = 0; }
-        else str_cpy(val, "--", sizeof val);
-        draw_column(1, "SECT", val, "", used ? VAL(1u) : T_DIM, -1, ICON_X_PATTERN);
-        if (used) fmt_int(val, chain_config.row[row].bars);
-        else str_cpy(val, "--", sizeof val);
-        draw_column(2, "BARS", val, "", used ? VAL(2u) : T_DIM, -1, ICON_AUTO);
-        draw_column(3, "SCENE", used && song_idx.scene[song_cur][row].on ? "ON" : "--", "",
-                    used && song_idx.scene[song_cur][row].on ? VAL(3u) : T_DIM, -1, ICON_MIX);   /* (JIANT) */
-        return;
-    }
+    /* (ACID FM 3c-2 task 3) ARRANGE's columns (ROW SECT BARS SCENE, END) gone: SAVE > SONG is ux_save.c's */
     /* (ACID FM 3c-1 task 4) STRETCH's, PLAYHEADS', COMP's and AUTO LIST's columns gone: SEQ > MORE's rows (ux_seq.c) */
     /* (0.6.99 .. ACID FM 3b task 8) FX > PUNCH's cards (LEN RES, its state, CLEAR): FX > MORE's PUNCH LANE rows */
     if (cur_page()->graph == GR_TOOLS) {
@@ -1223,19 +1190,11 @@ static void draw_columns(void)
     if (cur_page()->graph == GR_SLOTS) {                 /* (0.6.12) PROJECT, SECT A-D, then LOAD and SAVE */
         uint32_t k = (uint32_t)song.g[G_SLOT] - 1u;
         int used = graph_project_used(k);
-        if (save_level() == SV_PROJ) {                   /* (0.8.5) SAVE > PROJECT's SECTIONS: SECT, its NAME */
-            const char *nm;
-            val[0] = (char)('A' + (k & 3u)); val[1] = 0;
-            draw_column(0, "SECT", val, "", VAL(0u), (int32_t)(k & 3u) * 1000 / 3, ICON_AUTO);
-            nm = used ? graph_project_name(k) : "";
-            card_free_next = 1;
-            draw_column(1, "NAME", !used ? "--" : nm[0] ? nm : "USED", "", used ? T_THEME : T_DIM, -1, ICON_NONE);
-        } else {
-            fmt_int(val, (int32_t)song_cur + 1);
-            draw_column(0, "PROJECT", val, "", VAL(0u), (int32_t)song_cur * 1000 / (int32_t)(NSONG - 1u), ICON_X_SONG);
-            val[0] = (char)('A' + (k & 3u)); val[1] = 0;
-            draw_column(1, "SECT", val, "", VAL(1u), (int32_t)(k & 3u) * 1000 / 3, ICON_AUTO);
-        }
+        /* (ACID FM 3c-2 task 3) SECTIONS' columns (SECT, its NAME) gone with it: SAVE > SONG's SECTION */
+        fmt_int(val, (int32_t)song_cur + 1);
+        draw_column(0, "PROJECT", val, "", VAL(0u), (int32_t)song_cur * 1000 / (int32_t)(NSONG - 1u), ICON_X_SONG);
+        val[0] = (char)('A' + (k & 3u)); val[1] = 0;
+        draw_column(1, "SECT", val, "", VAL(1u), (int32_t)(k & 3u) * 1000 / 3, ICON_AUTO);
         draw_act_column(2, "LOAD", used ? T_THEME : T_DIM, ICON_AUTO);
         draw_act_column(3, "SAVE", T_THEME, ICON_AUTO);
         return;

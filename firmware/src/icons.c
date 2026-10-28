@@ -244,7 +244,7 @@ static uint32_t page_icon(const page_t *pg)
 {
     switch (pg->graph) {
     case GR_PATS: return ICON_X_PATTERN;      /* SEQ > PHRASES: the pattern loader */
-    case GR_SONG: return ICON_X_SONG;         /* SONG: the disc (ACID FM 3c-1 task 4: COMP, MUTATE, PLAYHEADS, STRETCH,
+    case GR_SVSONG: return ICON_X_SONG;       /* SONG: the disc (3c-2 task 3: SAVE > SONG, was ARRANGE) (ACID FM 3c-1 task 4: COMP, MUTATE, PLAYHEADS, STRETCH,
                                                  * AUTOMATION, AUTO LIST gone: SEQ > MORE's rows) */
     case GR_MORPH: return ICON_LFO_WAVE;
     case GR_DXIMG: return ICON_MIX;      /* (0.6.45) MORPH */

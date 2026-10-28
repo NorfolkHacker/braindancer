@@ -599,7 +599,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_REC_LAYER, S_REC_LAYER_SET, S_REC_LAYER_SONG,
        S_MACRO_LAYER, S_MSEQ, S_DIST_PAGE, S_DLY2, S_REVERB2, S_CHORUS, S_MASTER, S_LFO_DEST, S_LFO2, S_LFO2_FREE, S_COUNTIN,
        S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK, S_HEAD_BPM_LOCKED,
-       S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2, S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND,
+       S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2, S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_SOUND,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_GEN_LEAD, S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_OPERATOR, S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE,
        S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_SCL_MORE, S_SCL_WHITE, S_ARP_CHORD,
@@ -619,7 +619,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL, S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS,
        S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM, S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_SEQ_MORE,
        S_SEQ_MORE_END, S_SEQ_MORE_DRUM, S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_GLO_MIX, S_GLO_MORE_END, S_GLO_MIDI, S_GLO_MORE_MIDI,
-       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_COUNT };
+       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_SAVE_SONG, S_SAVE_SONG_EMPTY, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo",
     "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "phrases", "project",
     "tools", "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image",
@@ -646,7 +646,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "auto_list", "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "lfo_more",
     "fx_1_turn", "fx_2_hold", "fx_2_cloud", "fx_more_chorus", "fx_3_hot", "lfo_2", "lfo_sh", "lfo_free", "countin",
     "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock", "head_bpm_locked",
-    "head_glo_turn", "head_downbeat", "head_beat_2", "save_library", "save_tools", "save_project", "save_arrange",
+    "head_glo_turn", "head_downbeat", "head_beat_2", "save_library", "save_tools",
     "save_sound", "fx_1", "fx_more", "fx_more_lane", "fx_2", "fx_2_ping", "fx_more_delay", "fx_more_reso", "fx_more_slicer",
     "fx_3", "gen_lead", "ed_filter", "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop",
     "env_first", "lfo_more_end", "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends",
@@ -666,7 +666,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state", "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64",
     "seq_steps_drum", "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end",
     "seq_more_drum", "seq_lock", "seq_extras_echo", "glo_mix", "glo_more_end", "glo_midi", "glo_more_midi", "save_sound_empty",
-    "save_more"};
+    "save_more", "save_song", "save_song_empty"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's); (ACID FM 3c-1 task 6)
  * the ux pages: LIVE idle (stopped, nothing live); with tricks (T2 THIN 70 %, T3 x2 RATCH x3, T4 LOOP 8, T5 2/3; black key 3 held:
@@ -1131,12 +1131,12 @@ static void setup(int s)
     case S_PHRASES: go_page(GR_PATS); break;
     case S_PROJECT: song.playing = 0; project_save(1); song.g[G_SLOT] = 2; go_page(GR_SLOTS); ui.act = 4; break;
     case S_TOOLS: go_page(GR_TOOLS); ui.act = 1; break;
-    case S_SONG_EMPTY: song.playing = 0; go_page(GR_SONG); break;
+    case S_SONG_EMPTY: song.playing = 0; go_page(GR_SVSONG); break;
     case S_SONG:
         song.playing = 0; project_save(0); project_save(1);
         chain_config.count = 3;
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4}; chain_config.row[2] = (chain_row_t){2, 1};
-        ui.song_row = 1; go_page(GR_SONG); chain_prepare(); events_block(32);
+        ui.song_row = 1; go_page(GR_SVSONG); chain_prepare(); events_block(32);
         break;
     case S_STEP: song.rec = 1; go_page(GR_ROLL); ui.cursor = 6; break;
     case S_PATTERN: go_title("PATTERN"); ui.cursor = 3; break;
@@ -1230,7 +1230,7 @@ static void setup(int s)
         break;
     case S_REC_LAYER_SET: song.rec = 1; go_page(GR_ROLL); ui.cursor = 6; rp_put(RP_CLICK, 1u); rp_put(RP_COUNTIN, 2u);
         rp_put(RP_LEVEL, 2u); ui.layer = LAYER_REC; ui.hot_col = 1; ui.hot_t = 30; break;
-    case S_REC_LAYER_SONG: drum(1); track_defaults_steps(TSEL); go_page(GR_SONG); chain.running = 1; ui.layer = LAYER_REC;
+    case S_REC_LAYER_SONG: drum(1); track_defaults_steps(TSEL); go_page(GR_SVSONG); chain.running = 1; ui.layer = LAYER_REC;
         break;
     /* 1.1 (Discussion #131): the count-in over the page: 1 BAR on its second beat (3 to go); 2 BARS, the first bar's
      * first beat (STEP under it); the MENU's AUDIO tab with CLICK REC selected, COUNT-IN 1 BAR */
@@ -1469,7 +1469,7 @@ static void setup(int s)
     case S_DLG_CLEAR_PFX: fx_more_at(0, UXR_ACTION); ui.confirm = CF_CLEAR_PFX; ui.confirm_trk = song.sel; break;
     case S_DLG_CLEAR_SONG: case S_DLG_DEL_ROW: {
         uint32_t i;
-        song.playing = 0; go_title(s == S_DLG_DEL_ROW ? "ARRANGE" : "TOOLS");
+        song.playing = 0; go_title(s == S_DLG_DEL_ROW ? "SAVE SONG" : "TOOLS");
         chain_config.count = 6;
         for (i = 0; i < 6u; i++) chain_config.row[i] = (chain_row_t){(uint8_t)(i % 3u), (uint8_t)(16u + 4u * (i & 1u))};
         ui.confirm = s == S_DLG_DEL_ROW ? CF_DEL_ROW : CF_CLEAR_SONG; ui.confirm_trk = s == S_DLG_DEL_ROW ? 2 : song.sel;
@@ -1551,7 +1551,7 @@ static void setup(int s)
         song.playing = 0; project_save(0); project_save(1);
         chain_config.count = 2;
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4};
-        go_page(GR_SONG); chain_prepare(); events_block(32); go_title("TOOLS"); ui.msg_t = 0;   /* (3a: a lens page's header) */
+        go_page(GR_SVSONG); chain_prepare(); events_block(32); go_title("TOOLS"); ui.msg_t = 0;   /* (3a: a lens page's header) */
         break;
     /* the FX layer's map: held alone; REPEAT 1/16 + GLITCH + the CRUSH sweep + a mute playing with the macros turned;
      * at 72 BPM: a REPEAT 1/16 waiting for its 1/16 (shown THEME) beside the FILTER sweep playing, and REPEAT 1/8
@@ -1724,7 +1724,7 @@ static void setup(int s)
         song.playing = 0; project_save_as(0, "LOFI JAM"); project_save_as(1, "MWMWMWMWMWMW");
         chain_config.count = 3;
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4}; chain_config.row[2] = (chain_row_t){2, 1};
-        ui.song_row = 0; go_page(GR_SONG); ui.msg_t = 0;
+        ui.song_row = 0; go_page(GR_SVSONG); ui.msg_t = 0;
         break;
     case S_ROLL_EMPTY: case S_ROLL_ACID: case S_ROLL_CHORDS: case S_ROLL_TIES: case S_ROLL_LEN32: case S_ROLL_HIGH:
     case S_ROLL_LOW: case S_ROLL_WIDE: case S_ROLL_PLAYING: roll_scene(s); break;
@@ -1811,9 +1811,10 @@ static void setup(int s)
     case S_FXL_SLICER: fx_more_at(G_SLPAT, UXR_GLOBAL); break;
     /* (0.8.5) SAVE's lens as the mock-up's data: projects NOCHE LARGA (A B C), ACID 03, DUB KIT, BOSQUE, TRANCE A; the
      * song B16 C16 A32 D8 C16 A32 (scenes on 2 and 4, END LOOP); seven user sounds. (ACID FM 3c-2 task 2) SOUND on U05 (WOBBLE,
-     * used) and on U08 (empty), SAVE armed; MORE with ENGINE picked */
-    case S_SAVE_LIB: case S_SAVE_TOOLS: case S_SAVE_PROJ: case S_SAVE_ARR: case S_SAVE_SOUND: case S_SAVE_SOUND_EMPTY:
-    case S_SAVE_MORE: {
+     * used) and on U08 (empty), SAVE armed; MORE with ENGINE picked; (task 3) SONG: the song, section B picked, A playing, ROW 3
+     * picked; and with no rows */
+    case S_SAVE_LIB: case S_SAVE_TOOLS: case S_SAVE_SOUND: case S_SAVE_SOUND_EMPTY:
+    case S_SAVE_MORE: case S_SAVE_SONG: case S_SAVE_SONG_EMPTY: {
         static const char *const PN[NSONG] = {"", "ACID 03", "DUB KIT", ""};   /* (ACID FM 0.2: four projects) */
         static const uint8_t PM[NSONG] = {0, 3, 1, 0};
         static const chain_row_t AR[6] = {{1, 16}, {2, 16}, {0, 32}, {3, 8}, {2, 16}, {0, 32}};
@@ -1833,8 +1834,11 @@ static void setup(int s)
         ui.uslot = 0; ui.song_row = 0; ui.msg_t = 0; ui.frame += 7u;   /* (the sections' cache read again) */
         if (s == S_SAVE_LIB) { nav_scene(SEC_SAVE, "PROJECTS"); ui.act = 4; }
         else if (s == S_SAVE_TOOLS) { nav_scene(SEC_SAVE, "TOOLS"); ui.act = 1; }
-        else if (s == S_SAVE_PROJ) { nav_scene(SEC_SAVE, "SECTIONS"); ui.act = 4; }
-        else if (s == S_SAVE_ARR) nav_scene(SEC_SAVE, "ARRANGE");
+        else if (s == S_SAVE_SONG || s == S_SAVE_SONG_EMPTY) {
+            if (s == S_SAVE_SONG_EMPTY) chain_config.count = 0;
+            ui.song_row = s == S_SAVE_SONG ? 2u : 0u;
+            nav_scene(SEC_SAVE, "SONG");
+        }
         else if (s == S_SAVE_MORE) {
             uint32_t r;
             for (r = 0; r < UXM_SAVE.n && !(UXM_SAVE.rows[r].kind == UXR_GLOBAL && UXM_SAVE.rows[r].id == ID_SV_ENGINE); r++)
@@ -2791,7 +2795,7 @@ int main(int argc, char **argv)
     {
         static const int COST[] = {S_HOME, S_SAVE_MORE, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_DLG_OVR_PROJ,
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
-                                   S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
+                                   S_SAVE_LIB, S_SAVE_SONG, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
                                    S_HOME_VISUAL, S_EDIT_ANALOG, S_ED_FILTER, S_EDIT_ANALOG_MORE, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
                                    S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_EDIT_VOICE_1,
                                    S_EDIT_DRUM_1, S_EDIT_DRUM_2,

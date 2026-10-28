@@ -516,7 +516,7 @@ static uint32_t large_kind(void)
     if (ui.home)
         return LK_TALL;
     g = cur_page()->graph;
-    return g == GR_SLOTS || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
+    return g == GR_SLOTS || g == GR_PATS || g == GR_ROLL ||
            g == GR_LIVE ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
@@ -578,9 +578,7 @@ static int page_jiant(uint32_t i)
         return trk_eng(TSEL) == ENGI_FM6;
     if (PAGES[i].graph == GR_DXP)                       /* .. DRUM-X's SOUND, SOUND 2 */
         return trk_eng(TSEL) == ENGI_DRUM;
-    if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
-        return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
-                                                         * was the same page twice; kept in the table: its index) */
+    /* (0.6.24) SEQ > SONG, never shown (the song in one place): gone with ARRANGE (ACID FM 3c-2 task 3: SAVE > SONG) */
     /* (0.6.30 .. ACID FM 3b task 8) LOAD ECO: no SLICER, no chorus: their pages were hidden here; FX's MORE rows now (ux_more.c
      * ux_row_shown, uxm_eco_out) */
     if (PAGES[i].graph == GR_MORPH) {                   /* (0.6.45) MORPH: ANALOG's plain waves, PHASE, LOFI's (not BYTE FLOAT) */
@@ -634,7 +632,7 @@ static uint32_t page_first(uint32_t fam)
  * for the level it was on (lens_level, save_level, pd_level, home_level):
  *   SEQ   PATTERN's bars (PATTERN STRETCH TRACK, the new BAR), the roll (STEP NOTE AUTOMATION AUTO LIST), the step
  *         large (COMP COMP 2); PHRASES (PRESETS' pattern loader) and SONG read as PATTERN, CHANCE as STEP
- *   SAVE  LIBRARY (PROJECTS TOOLS), PROJECT (SECTIONS ARRANGE: the PROJECT page's KNOB 1 the section), SOUND (USER PRESETS)
+ *   SAVE  LIBRARY (PROJECTS TOOLS); (ACID FM 3c-2 tasks 2, 3) SOUND and SONG ux_save.c's (were USER PRESETS, SECTIONS ARRANGE)
  * (ACID FM 3b task 8: FX's, TRACK BUSES and the effects, gone with its lens: FX is ux_section.c's) */
 static int lens_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SEQ; }
 static int save_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SAVE; }
@@ -652,7 +650,7 @@ static int name_on(void);                               /* (ui_name.c: NAME keep
 static uint32_t lens_level(void)                        /* SEQ: the level the page is drawn as */
 {
     uint32_t g = PAGES[ui.page].graph;
-    return g == GR_PATS || g == GR_SONG ? LV_PAT : nav_lv();
+    return g == GR_PATS ? LV_PAT : nav_lv();
 }
 static int home_lz(void) { return (ui.home && !ui.menu && !dlg_on()) || gen_on(); }   /* (GEN: HOME's) */
 static uint32_t lz_on(void) { return ((lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on()) || ui.menu == 1u || (ui.layer && !ui.menu); }
@@ -711,10 +709,14 @@ static uint32_t mov_get(uint32_t id)
     return id == ID_MO_NOTES ? mout_notes() : id == ID_MO_CLOCK ? mout_clock() : ml.on;
 }
 /* (ACID FM 3c-2 task 2) SAVE > MORE's ENGINE, FAVORITE, LIST (params.c ID_SV_*, views): the value now (ENGINE: the track's
- * engine's place in the shown order; FAVORITE: the sound marked; LIST: ALL, FAV, a type). ui_input.c sv_view_turn sets them */
+ * engine's place in the shown order; FAVORITE: the sound marked; LIST: ALL, FAV, a type); (task 3) END: the song's end's place in
+ * song_end_step's (0 STOP, 1..7 X2..X8, 8 LOOP). ui_input.c sv_view_turn sets them */
 static int preset_favorite(void);
 static uint32_t sv_get(uint32_t id)
 {
+    uint32_t e = SONG_END(&chain_config);
+    if (id == ID_SV_END)
+        return e == SONG_FOREVER ? 8u : e >= 2u && e <= 8u ? e - 1u : 0u;
     return id == ID_SV_ENGINE ? eng_rank(TSEL->eng_req) : id == ID_SV_FAV ? (uint32_t)(preset_favorite() != 0) : list_get();
 }
 static void mov_put(uint32_t id, int32_t v)
@@ -728,8 +730,8 @@ static void mov_put(uint32_t id, int32_t v)
 }
 
 static int chain_busy(void) { return chain.running || chain.armed; }
-/* (0.6.22) ARRANGE: the rows 0..count-1, + ADD (while there is room), then the song's END row */
-static uint32_t song_end_row(void) { return chain_config.count < CHAIN_ROWS ? chain_config.count + 1u : CHAIN_ROWS; }
+/* (0.6.22) ARRANGE's song_end_row (the rows, + ADD, END) gone with it (ACID FM 3c-2 task 3: SAVE > SONG's ROW the rows, END SAVE >
+ * MORE's) */
 /* Main loop only, with interrupts enabled. PLAY may be consumed between reads;
  * take one coherent snapshot before a flash operation or song preparation. */
 static int transport_busy(void)
@@ -1834,8 +1836,8 @@ static uint32_t act_cols(void)                   /* the columns that are actions
                                                          * CLEAR: MORE's action row) */
     if (pg->graph == GR_TOOLS) return 15u;
     /* (0.8.5 .. ACID FM 3b task 4) WORDS' OCT+ TYPE: its page MORE's rows now, TYPE LYRIC an action there (ux_more.c) */
-    if (pg->graph == GR_SONG)
-        return 1u;                               /* (0.8.5) ADD a row (PLAY: the song) */
+    if (pg->graph == GR_SVSONG)
+        return 1u;                               /* (0.8.5) ADD a row (PLAY: the song); (3c-2 task 3) SAVE > SONG, was ARRANGE */
     if (pg->graph == GR_PATS)
         return 2u;                               /* LOAD */
     if (pg->graph == GR_SVSND)
@@ -1856,7 +1858,7 @@ static uint32_t shp_rep(void) { return shp_r == 0u ? 1u : shp_r < 8u ? shp_r + 1
 
 static uint32_t act_col(void)
 {
-    if (!ui.home && cur_page()->graph == GR_SONG) return 1u;
+    if (!ui.home && cur_page()->graph == GR_SVSONG) return 1u;
     if (!ui.home && uxq_more_kind() == UXQ_MK_LIST) return 5u;
     return !ui.home && cur_page()->graph == GR_PATS ? 2u : ui.act;
 }
@@ -1869,7 +1871,7 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
         return actions[c < 5u ? c : 4u];
     }
-    if (cur_page()->graph == GR_SONG)                   /* (0.8.5) SAVE's lens: OCT+ adds a row (PLAY plays) */
+    if (cur_page()->graph == GR_SVSONG)                 /* (0.8.5) OCT+ adds a row (PLAY plays); 3c-2 task 3: SAVE > SONG */
         return "ADD";
     if (cur_page()->graph == GR_PATS)
         return "LOAD";
@@ -1889,7 +1891,7 @@ static int act_ready(void)
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);
-    if (cur_page()->graph == GR_SONG)
+    if (cur_page()->graph == GR_SVSONG)
         return !chain_busy() && chain_config.count < CHAIN_ROWS;
     if (cur_page()->graph == GR_PATS)
         return pat_last[s] != pat_pick() + 1u || steps_sig(TSEL) != pat_sig[s];

@@ -1587,11 +1587,11 @@ static int test_save(void)
                      !name_on() && up_used(0) && up_value(up_rec(0), P_E0) == 5 && ui.act == 0u && str_eq(nmb, au));
     }
     press(B_SAVE);                                        /* (0.9.2) a SAVE tap on SAVE: the next group (was the other set) */
-    bad += check("0.9.2 SAVE again: the next group, PROJECT's SECTIONS (was SOUND's other set, PRESETS)",
-                 cur_page()->graph == GR_SLOTS && save_level() == SV_PROJ && ui.act == 0u);
+    bad += check("0.9.2 SAVE again: the next group, SONG (3c-2 task 3; was PROJECT's SECTIONS, SOUND's other set PRESETS)",
+                 cur_page()->graph == GR_SVSONG && ui.act == 0u);
     go_home();
     press(B_SAVE);
-    bad += check("0.9.2 SAVE from HOME: the page left, SECTIONS (rule 2; was always USER)", cur_page()->graph == GR_SLOTS);
+    bad += check("0.9.2 SAVE from HOME: the page left, SONG (rule 2; was always USER, then SECTIONS)", cur_page()->graph == GR_SVSONG);
     turn(EN_SELECT, -1);
     bad += check("0.9.2 SELECT onto SOUND from inside: SAVE not armed (3c-2 task 2: SOUND, was USER)",
                  cur_page()->graph == GR_SVSND && ui.act == 0u);
@@ -3226,7 +3226,7 @@ static void chain_screens(const char *dir)
 {
     uint32_t k;
     ui_power_on();
-    go_page(GR_SONG);
+    go_page(GR_SVSONG);
     screen_save(dir, "song-empty");
     for (k = 0; k < 2u; k++) { my_steps(&trk[0]); project_save(k); }
     chain_config.count = 3;
@@ -3352,14 +3352,16 @@ static int test_chain(void)
         trk[0].p[P_SLEN] == 2 && trk[0].step[0].note[0] == 60 && chain_config.count == 2);   /* (the rows: the song's) */
     ui_power_on();
     open_family(FAM_SEQ);
-    go_page(GR_SONG); frame();                          /* (0.6.24: SAVE > ARRANGE, the song in one place) */
+    go_page(GR_SVSONG); frame();                        /* (0.6.24: SAVE > ARRANGE, the song in one place; 3c-2 task 3: SAVE > SONG) */
     press(B_PLAY);
     bad += check("SONG page empty PLAY explains how to start", msg_is("ADD A SONG ROW") && !transport_req);
-    turn(EN_K2, 1);
-    bad += check("SONG SLOT knob adds the first row with one repeat", chain_config.count == 1 && !chain_config.row[0].slot && chain_config.row[0].bars == 1);
-    turn(EN_K1, 1); turn(EN_K2, 1); turn(EN_K2, 1); turn(EN_K3, 2);
-    bad += check("SONG row, slot and repeat knobs build a chain", chain_config.count == 2 && ui.song_row == 1 &&
-        chain_config.row[1].slot == 1 && chain_config.row[1].bars == 3);
+    song.g[G_SLOT] = 1;
+    press(B_OCTUP);                                     /* (3c-2 task 3: OCT+ adds the first row, was KNOB 2 on + ADD) */
+    bad += check("SONG OCT+ adds the first row (SECTION's, 4 bars)", chain_config.count == 1 && !chain_config.row[0].slot &&
+                 chain_config.row[0].bars == 4);
+    turn(EN_K1, 1); press(B_OCTUP); turn(EN_K3, -1);
+    bad += check("SONG SECTION, OCT+ and BARS build a chain", chain_config.count == 2 && ui.song_row == 1 &&
+        chain_config.row[1].slot == 1 && chain_config.row[1].bars == 3 && chain_config.row[0].slot == 1);
     turn(EN_K4, 30);
     project_save(0);
     chain_config.count = 1;
@@ -3377,30 +3379,34 @@ static int test_chain(void)
     uint32_t old_count = chain_config.count;
     turn(EN_K4, 30);
     bad += check("SONG unused K4 cannot accidentally add or clear rows", chain_config.count == old_count);
-    {   /* (0.8.5) SAVE > PROJECT's ARRANGE: OCT+ adds a row after the last (its section and bars), selected */
+    {   /* (0.8.5) SAVE > PROJECT's ARRANGE: OCT+ adds a row after the last (its section and bars), selected; (3c-2 task 3) SAVE >
+         * SONG: after the row picked, its section SECTION's */
         chain_config.row[old_count - 1u] = (chain_row_t){2, 5};
-        ui.song_row = 0;
+        ui.song_row = (uint8_t)(old_count - 1u); song.g[G_SLOT] = 3;
         press(B_OCTUP);
         ok = chain_config.count == old_count + 1u && ui.song_row == old_count && chain_config.row[old_count].slot == 2u &&
              chain_config.row[old_count].bars == 5u && !song_idx.scene[song_cur][old_count].on && !transport_req;
-        bad += check("SONG (ARRANGE) OCT+ adds a row after the last, its section and bars, selected; nothing plays", ok);
+        bad += check("SONG OCT+ adds a row after the last picked, SECTION's section, its bars, selected; nothing plays", ok);
         chain_config.count = old_count;
     }
-    ui.song_row = (uint8_t)chain_config.count;          /* (0.6.22: + ADD; past it the END row) */
-    for (k = chain_config.count; k < CHAIN_ROWS; k++) { turn(EN_K2, 1); turn(EN_K1, 1); }
-    bad += check("SONG: + ADD, then END the last row (full: END right after row 16)", ui.song_row == CHAIN_ROWS);
+    for (k = chain_config.count; k < CHAIN_ROWS; k++) press(B_OCTUP);
+    ui.msg_t = 0; press(B_OCTUP);
+    bad += check("SONG: OCT+ to 16 rows, then 16 ROWS", chain_config.count == CHAIN_ROWS && msg_is("16 ROWS"));
     bad += check("SONG append row stays bounded at 16", chain_config.count == CHAIN_ROWS && chain_valid(&chain_config));
     go_title("TOOLS"); tools_pick(4); press(B_OCTUP);
     bad += check("CLEAR SONG requires explicit confirmation", ui.confirm == CF_CLEAR_SONG && chain_config.count == CHAIN_ROWS);
     press(B_OCTDN);
     bad += check("cancel preserves the full song", chain_config.count == CHAIN_ROWS);
-    { uint32_t n0 = chain_config.count, pg0 = ui.page;
-    go_title("ARRANGE"); frame();
-    ui.song_row = 0; chain_config.row[0].slot = 0;
-    turn(EN_K2, -1);
+    { uint32_t n0 = chain_config.count, pg0 = ui.page, r;   /* (3c-2 task 3: SAVE > MORE's DELETE ROW, was SECT left of A) */
+    nav_put(SEC_SAVE, "MORE"); frame();
+    for (r = 0; r < UXM_SAVE.n && !(UXM_SAVE.rows[r].kind == UXR_ACTION && UXM_SAVE.rows[r].id == UXM_A_DELROW); r++)
+        ;
+    uxm_at[uxm_key()].sel = (uint8_t)r; uxm_at[uxm_key()].top = 0;
+    ui.song_row = 0;
+    turn(EN_K2, 1);
     ok = ui.confirm == CF_DEL_ROW && ui.confirm_trk == 0u;
     press(B_OCTUP);
-    bad += check("SONG: SECT left of A asks DELETE ROW?, OCT+ deletes it", ok && chain_config.count == n0 - 1u);
+    bad += check("SONG: MORE's DELETE ROW asks DELETE ROW?, OCT+ deletes it", ok && chain_config.count == n0 - 1u);
     ui.page = (uint8_t)pg0; ui.force = 1; frame();
     }
     tools_pick(4); press(B_OCTUP); press(B_OCTUP);
@@ -3495,7 +3501,7 @@ static int test_product_ux(void)
         if (!page_visible(i))
             continue;
         press(B_REC);
-        if (PAGES[i].graph == GR_SONG)
+        if (PAGES[i].graph == GR_SVSONG)                /* (3c-2 task 3: SAVE > SONG, was ARRANGE) */
             ok &= song.rec == 0 && !transport_req && msg_is("[SEQ] TO RECORD");
         else if (PAGES[i].graph == GR_ROLL)            /* #133: STEP's roll arms step recording, stopped */
             ok &= song.rec == 1 && !transport_req && ui.page == i && !ui.home;
@@ -3523,8 +3529,8 @@ static int test_product_ux(void)
     press(B_GLO); ok &= cur_page()->graph == GR_MIX && str_eq(cur_page()->title, "MIX");
     bad += check("0.9.2 GLO: SELECT LIVE > MIX, a GLO tap the next group: MIDI > MORE > LIVE > MIX (3c-1 task 8)", ok);
     go_home(); hold(B_SEQ);
-    bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SONG);
-    go_page(GR_SONG);
+    bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SVSONG);
+    go_page(GR_SVSONG);
     song.rec = 1; chain.armed = 1; press(B_REC);
     bad += check("REC cannot write borrowed patterns while SONG is armed", song.rec == 1 && msg_is("STOP TO RECORD"));
     ui_power_on(); open_family(FAM_EDIT);
@@ -5005,7 +5011,7 @@ static int test_macro_layer(void)
     ui_power_on();                                     /* SONG KNOB 4: SCENE, the state now into the row */
     chain_config.count = 2; chain_config.row[0] = (chain_row_t){0, 1}; chain_config.row[1] = (chain_row_t){1, 1};
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
-    go_title("ARRANGE"); ui.song_row = 1; frame();
+    go_title("SAVE SONG"); ui.song_row = 1; frame();      /* (3c-2 task 3: SAVE > SONG, was ARRANGE) */
     trk[3].p[P_MUTE] = 1; macro_v[1] = 77;
     turn(EN_K4, 1); frame();
     ok = song_idx.scene[song_cur][1].on && ((song_idx.scene[song_cur][1].mute >> 3) & 1u) &&
@@ -6870,33 +6876,32 @@ static void tl_drum(void)
  * mock-up's layout (tabs, cards, panel, breadcrumb) on each, the level's tab THEME; LIBRARY's KNOB 1 / PRESETS the
  * project; a layer's map or NAME over it: the usual layout */
 /* (0.9.2) SAVE: SOUND . PROJECT (SECTIONS ARRANGE) . LIBRARY (PROJECTS TOOLS) . MORE one chain (3c-2 task 2: SOUND the ux page, was
- * USER PRESETS; MORE); SAVE from elsewhere the page left, SOUND and SECTIONS with their SAVE armed (SAVE . OCT+ . OCT+); a SAVE tap
+ * USER PRESETS; MORE; task 3: SONG, was SECTIONS ARRANGE); SAVE from elsewhere the page left, SOUND with its SAVE armed (SAVE . OCT+
+ * . OCT+; SECTIONS too, gone); a SAVE tap
  * the next group; KNOB 1 the slot / section / project; PRESETS a sound. (Was 0.8.5's lens: SELECT LIBRARY <-> PROJECT <-> SOUND, a
  * tap the level's other set, SAVE from elsewhere always USER, PRESETS the slot / project) */
 static int test_save_lens(void)
 {
-    static const char *const CH[6] = {"SOUND", "SECTIONS", "ARRANGE", "PROJECTS", "TOOLS", "MORE"};
-    static const char *const TP[3] = {"SECTIONS", "PROJECTS", "MORE"};
+    static const char *const CH[5] = {"SOUND", "SONG", "PROJECTS", "TOOLS", "MORE"};
+    static const char *const TP[3] = {"SONG", "PROJECTS", "MORE"};
     int bad = 0, ok;
     uint32_t pr;
     ui_power_on();
     go_home(); frame();
     press(B_SAVE); frame();
-    ok = save_on() && cur_page()->graph == GR_SVSND && ui.act == 4u && ux_page_owns() && !strcmp(uxs_count(), "1 / 6");
-    bad += check("0.9.2 SAVE from HOME at power-on: SOUND (3c-2 task 2: the ux page, was USER), SAVE armed, 1 / 6", ok);
-    bad += check("0.9.2 SAVE: one chain SOUND SECTIONS ARRANGE PROJECTS TOOLS MORE; a SAVE tap the next group, round",
-                 chain_walk(B_SAVE, CH, 6, TP, 3));
+    ok = save_on() && cur_page()->graph == GR_SVSND && ui.act == 4u && ux_page_owns() && !strcmp(uxs_count(), "1 / 5");
+    bad += check("0.9.2 SAVE from HOME at power-on: SOUND (3c-2 task 2: the ux page, was USER), SAVE armed, 1 / 5 (task 3)", ok);
+    bad += check("0.9.2 SAVE: one chain SOUND SONG PROJECTS TOOLS MORE (3c-2 task 3); a SAVE tap the next group, round",
+                 chain_walk(B_SAVE, CH, 5, TP, 3));
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame();
-    turn(EN_SELECT, 2); frame();                                             /* ARRANGE, left there */
+    turn(EN_SELECT, 1); frame();                                             /* SONG, left there */
     go_home(); frame(); press(B_SAVE); frame();
-    ok = cur_page()->graph == GR_SONG && save_level() == SV_PROJ;            /* (the page left; was always USER) */
-    turn(EN_SELECT, -1); frame();
-    ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_PROJ && ui.act == 0u && lz_crumb_is("SAVE \xB7 PROJECT \xB7 SECTIONS");
-    go_home(); frame(); press(B_SAVE); frame();
-    ok &= cur_page()->graph == GR_SLOTS && ui.act == 4u;                     /* (SECTIONS from elsewhere: SAVE armed) */
-    turn(EN_SELECT, 2); frame();
+    ok = cur_page()->graph == GR_SVSONG && ux_page_owns() && ui.act == 0u;   /* (the page left; was always USER) */
+    turn(EN_SELECT, 1); frame();
     ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u && lz_crumb_is("SAVE \xB7 LIBRARY \xB7 PROJECTS");
-    bad += check("0.9.2 SAVE from elsewhere the page left (ARRANGE); SOUND and SECTIONS from elsewhere armed, inside not", ok);
+    go_home(); frame(); press(B_SAVE); frame();
+    ok &= cur_page()->graph == GR_SLOTS && ui.act == 0u;                     /* (PROJECTS from elsewhere: not armed) */
+    bad += check("0.9.2 SAVE from elsewhere the page left (SONG; PROJECTS not armed); SOUND from elsewhere armed, inside not", ok);
     turn(EN_K1, 1); frame();                                                 /* LIBRARY: KNOB 1 the project */
     ok = song_cur == 1u;
     turn(EN_K1, -1); frame();
@@ -7034,7 +7039,7 @@ static int test_lente(void)
 static int test_seq_tools(void)
 {
     static const char *const PG[4] = {"STEP", "STEP EXTRAS", "PATTERN", "SEQ MORE"};   /* (3c-1 task 4: SEQ's four) */
-    static const uint8_t NOT[4] = {GR_PATS, GR_SONG, GR_MIX, 0};   /* (3c-1 task 7: MIX, was the MIXER) */
+    static const uint8_t NOT[4] = {GR_PATS, GR_SVSONG, GR_MIX, 0};   /* (3c-1 task 7: MIX, was the MIXER; 3c-2 task 3: SAVE > SONG) */
     int bad = 0, ok, okc, flash;
     uint32_t i, k, a, b2, pg, seed;
     step_t ref[NSTEP], mid[NSTEP];
@@ -7063,7 +7068,7 @@ static int test_seq_tools(void)
     }
     ui_power_on();
     go_title("ENV"); frame(); hold(B_SEQ);
-    ok &= cur_page()->graph != GR_SONG && !ui.layer;
+    ok &= cur_page()->graph != GR_SVSONG && !ui.layer;
     bad += check("  elsewhere (PHRASES, SONG, MIXER, HOME, ENV) SEQ held is a tap: no SONG, no map", ok);
     ui_power_on();
     go_page(GR_ROLL); frame();
@@ -7890,7 +7895,7 @@ static int test_load_budget(void)
 }
 
 /* (0.6.12) SAVE > PROJECT: KNOB 1 the project (its sections and song in, the music kept), KNOB 2 / PRESETS the
- * section, LOAD and SAVE on it; ARRANGE (the project's song) right after it */
+ * section, LOAD and SAVE on it; ARRANGE (the project's song) right after it (3c-2 task 3: SAVE > SONG before it) */
 static int test_project_page(void)
 {
     int bad = 0, ok;
@@ -7903,30 +7908,30 @@ static int test_project_page(void)
     sl_steps(80);                                       /* the music now: 80.. */
     go_home(); frame(); press(B_SAVE); frame();
     nav_put(SEC_SAVE, "PROJECTS"); frame();             /* (0.9.2: LIBRARY's PROJECTS, the chain's 5th) */
-    ok = cur_page()->graph == GR_SLOTS && PAGES[ui.page + 1u].graph == GR_SONG && str_eq(PAGES[ui.page + 1u].title, "ARRANGE");
-    bad += check("PROJECT: SAVE > PROJECT, then ARRANGE (the project's song)", ok);
+    ok = cur_page()->graph == GR_SLOTS && PAGES[ui.page - 1u].graph == GR_SVSONG && str_eq(PAGES[ui.page - 1u].title, "SAVE SONG");
+    bad += check("PROJECT: SAVE > SONG (the project's song: 3c-2 task 3, was ARRANGE after it), then PROJECT", ok);
     turn(EN_K1, 1); frame();
     ok = song_cur == 1 && trk[0].step[0].note[0] == 80 && live.cur < 0 && !chain_config.count && msg_is("PROJECT 2");
     bad += check("  KNOB 1: project 2 in (its sections, its song), the music kept", ok);
     song.g[G_SLOT] = 1;
     turn(EN_K2, 1); frame();                            /* LIBRARY: KNOB 2 the section */
     ok = song.g[G_SLOT] == 2 && save_level() == SV_LIB;
-    turn(EN_SELECT, -2); frame();                       /* (0.9.2) PROJECT's SECTIONS (two back): KNOB 1 the section */
-    ok &= save_level() == SV_PROJ && cur_page()->graph == GR_SLOTS;
+    turn(EN_SELECT, -1); frame();                       /* (3c-2 task 3) SAVE > SONG (one back): KNOB 1 the section (was SECTIONS') */
+    ok &= cur_page()->graph == GR_SVSONG;
     turn(EN_K1, 1); frame();
     ok &= song.g[G_SLOT] == 3;
     turn(EN_K1, 1); frame();
     ok &= song.g[G_SLOT] == 4 && song_cur == 1;
-    turn(EN_K2, 1); frame();                            /* (KNOB 2: the section's name, shown) */
+    turn(EN_K2, 1); frame();                            /* (KNOB 2: the row; no rows here) */
     ok &= song.g[G_SLOT] == 4 && song_cur == 1;
     turn(EN_K1, -1); frame();
     ok &= song.g[G_SLOT] == 3;
-    bad += check("  LIBRARY's KNOB 2, SECTIONS' KNOB 1: the section (C); SECTIONS' KNOB 2 nothing (0.9.2: PRESETS a sound)", ok);
+    bad += check("  LIBRARY's KNOB 2, SONG's KNOB 1: the section (C); SONG's KNOB 2 the row (0.9.2: PRESETS a sound)", ok);
+    turn(EN_SELECT, 1); frame();                        /* (back to LIBRARY's PROJECTS) */
     turn(EN_K4, 1); press(B_OCTUP); frame();            /* SAVE into project 2's C: the NAME screen, then OK */
     for (k = 0; k < 8u && name_on(); k++) { press(B_OCTUP); frame(); }
     ok = project_used(2) && live.cur == 2;
     bad += check("  SAVE: the music into project 2's section C (the music's section: NOW)", ok);
-    turn(EN_SELECT, 2); frame();                        /* (back to LIBRARY's PROJECTS: KNOB 1 the project) */
     turn(EN_K1, -1); frame();
     ok = song_cur == 0 && (!FELUCCA_FLASH || project_used(0)) && !project_used(2) && chain_config.count == 2 &&
          trk[0].step[0].note[0] == 80;                  /* (no flash here: the sections were RAM only) */
@@ -7954,7 +7959,7 @@ static void rec_up(void) { btn_up(B_REC); frame(); }
 static uint32_t menu_rec(uint32_t r) { return menu_get(r == 0u ? MI_CLICK : r == 1u ? MI_COUNTIN : MI_CLKLVL); }
 static int test_rec_layer(void)
 {
-    static const uint8_t G[8] = {GR_ROLL, GR_STEPS, GR_CHANCE, GR_PATS, GR_SONG, GR_MORE, GR_ADSR, GR_MIX};   /* (3c-1 task 4:
+    static const uint8_t G[8] = {GR_ROLL, GR_STEPS, GR_CHANCE, GR_PATS, GR_SVSONG, GR_MORE, GR_ADSR, GR_MIX};   /* (3c-1 task 4:
                                                          * a MORE, AUTOMATION's page gone) */
     int bad = 0, ok = 1;
     uint32_t k, i, n;
@@ -10673,7 +10678,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/2/FM6 OP ENV|EDIT/2/FM6 OP ENV|HOME/0/*",   /* (3b task 5) */
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10682,7 +10687,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10691,7 +10696,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/2/DRUM SOUND 2|EDIT/2/DRUM SOUND 2|HOME/0/*",   /* (3b task 5) */
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10700,7 +10705,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10709,7 +10714,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10718,7 +10723,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
 };
 static int test_ux_nav_sections(void)
 {
@@ -11729,7 +11734,7 @@ static int test_toasts(void)
         SONG_END(&chain_config) = SONG_FOREVER;
         moved &= chain_prepare() == 0;
         events_block(32);
-        go_title("ARRANGE"); frames(800);
+        go_title("SAVE SONG"); frames(800);              /* (3c-2 task 3: SAVE > SONG, was ARRANGE) */
         ui_message("SAVED A LONG MESSAGE"); frame();
         toast_box(ui.msg, b);
         memcpy(toast_snap, host_screen, sizeof toast_snap);
@@ -11738,12 +11743,13 @@ static int test_toasts(void)
             for (x = 0; x < 240u; x++)
                 if (!((int32_t)x >= b[0] && (int32_t)x < b[2] && (int32_t)y >= b[1] && (int32_t)y < b[3]))
                     n += host_screen[y * 240u + x] != toast_snap[y * 240u + x];
-        moved &= chain.running && ui.msg_t && n > 0u && b[2] > b[0];
-        if (!moved) printf("  ARRANGE behind the toast: running %d, msg %u, %u px moved, pill %d..%d\n", chain.running,
+        moved &= chain.running && ui.msg_t && n > 0u && (b[2] > b[0] || ux_page_owns());   /* (3c-2 task 3: SAVE > SONG, a ux
+                                                         * page: the message on its status line, no pill) */
+        if (!moved) printf("  SONG behind the toast: running %d, msg %u, %u px moved, pill %d..%d\n", chain.running,
                            (unsigned)ui.msg_t, (unsigned)n, (int)b[0], (int)b[2]);
         transport_req = 2; events_block(32); song_poll();
     }
-    bad += check("  playing: the page (ARRANGE, a song chain running) goes on moving behind the toast", moved);
+    bad += check("  playing: the page (SAVE > SONG, was ARRANGE; a song chain running) goes on moving behind the message", moved);
 
     for (ok = 1, sk = 0; sk < 1u; sk++) {               /* (3c-2 task 1) a dialog full screen; OCT-: the page back whole */
         ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
@@ -11881,8 +11887,9 @@ static const old_lv_t OLD_LV[] = {
     {FAM_SCL, 0, 9, {"SCL", "CHORD", "SCL MORE"}}, {FAM_ARP, 0, 9, {"ARP", "ARP 2"}},
     {FAM_GLO, 0, 9, {"LIVE", "MIX", "GLO MORE"}},   /* (3c-1 task 7: GLO its own; JIANT's MIXER SENDS GLOBAL SYSTEM MIX's knobs,
                                                          * MORE's rows; SENDS FX's) */
-    {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}}, {FAM_SAVE, SV_PROJ, 9, {"PROJECT", "ARRANGE"}},
-    {FAM_SAVE, 0, 9, {"SAVE SOUND", "SAVE MORE"}},   /* (3c-2 task 2: SOUND the inherited USER and PRESETS) */
+    {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}},
+    {FAM_SAVE, 0, 9, {"SAVE SOUND", "SAVE SONG", "SAVE MORE"}},   /* (3c-2 task 2: SOUND the inherited USER and PRESETS; task 3: SONG
+                                                         * the inherited SECTIONS and ARRANGE, SV_PROJ's) */
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "SEQ MORE"}},   /* (3c-1 task 4: JIANT's STRETCH PLAYHEADS TRACK MUTATE NOTE AUTOMATION
                                                          * AUTO LIST COMP COMP 2 pages SEQ > MORE's rows) */
     {FAM_SEQ, LV_BAR, 9, {"STEP"}},
@@ -11917,9 +11924,7 @@ static int test_lz_reach(void)
             for (i = 0; i < NPAGES; i++) {              /* every page this track shows, in a section */
                 if (!page_visible(i) && PAGES[i].graph != GR_PATS)
                     continue;
-                if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
-                    continue;                           /* (hidden in 0.9.1 too: code puts it; 3c-1 task 3: CHANCE's row STEP
-                                                         * EXTRAS, reached) */
+                /* (SEQ > SONG, hidden in 0.9.1 too, gone: 3c-2 task 3; 3c-1 task 3: CHANCE's row STEP EXTRAS, reached) */
                 for (k = 0; k < rv_n && rv_pg[k] != i; k++) {}
                 if (k == rv_n) { printf("  %s%s: %s not reached\n", ENGINES[e]->name, v ? (v == 1u ? " BYTE" : " ECO") : "", PAGES[i].title); ok = 0; }
                 for (k = 0; k < 4u; k++)
@@ -12013,7 +12018,8 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
     go_home(); frames(64);
     if (from == 1u) { press(B_SEQ); frames(320); }
     if (from == 2u) { press(B_FX); frames(320); press(B_FX); frames(320); }   /* (3b task 8: FX > SPACE, the delay's; was DLY) */
-    if (from == 3u) { press(B_SAVE); frames(320); press(B_SAVE); frames(320); turn(EN_SELECT, 1); frames(32); press(B_HOME); frames(320); }
+    if (from == 3u) { press(B_SAVE); frames(320); press(B_SAVE); frames(320); press(B_HOME); frames(320); }   /* (3c-2 task 3: SAVE >
+                                                         * SONG, the inherited ARRANGE's place; was SECTIONS + SELECT) */
     fm1_ms += 1200u;
     tk_n = 0;
 }
@@ -12073,7 +12079,8 @@ static int test_nav_tasks(void)
             ok = ui.uslot == 4u && up_used(4) && !name_on();
             break;
         case 6:                                         /* the sound into U05, SAVE left on ARRANGE (3c-2 task 2: 11, was 10:
-                                                         * SAVE's MORE between PROJECTS and SOUND) */
+                                                         * SAVE's MORE between PROJECTS and SOUND; task 3: left on SONG, the
+                                                         * same 11) */
             tk_start(3); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_go(EN_K1, 4); tk_val(EN_K4, 1);
             tk_btn(B_OCTUP); tk_btn(B_OCTUP);
             ok = ui.uslot == 4u && up_used(4) && !name_on();
@@ -12207,7 +12214,7 @@ static int test_nav_rules(void)
     ok &= str_eq(cur_page()->title, "CHORD") && !ui.layer;   /* SCL + SELECT: its chain (from its page left, KEY) */
     fm1_ms += 1200u;
     held_turn(B_SAVE, 1); frame();                      /* (3c-2 task 2: 1, was 2: SOUND one page, was USER PRESETS) */
-    ok &= str_eq(cur_page()->title, "SECTIONS") || cur_page()->graph == GR_SLOTS;   /* SAVE + SELECT: its chain */
+    ok &= str_eq(cur_page()->title, "SAVE SONG");       /* SAVE + SELECT: its chain (3c-2 task 3: SONG, was SECTIONS) */
     fm1_ms += 1200u;
     held_turn(B_LFO, 1); frame();
     ok &= ui.confirm == CF_DICE_LFO;                     /* LFO + SELECT: its dice */
@@ -20266,21 +20273,23 @@ static int test_u2_nav(void)
     uxs_knobs(cur_page(), kn);
     uxs_foot(uxs_where(), kn, uxs_count(), uxs_next(), b, sizeof b);
     ok = str_eq(cur_page()->title, "SAVE SOUND") && cur_page()->graph == GR_SVSND && uxv_owns() && ux_page_owns() &&
-         ux_section_owns(SEC_SAVE) && uxq_t_is("SOUND's footer", b, "1 / 6 \xB7 NEXT SECTIONS") &&
+         ux_section_owns(SEC_SAVE) && uxq_t_is("SOUND's footer", b, "1 / 5 \xB7 NEXT SONG") &&
          uxq_t_is("SOUND's place", uxs_where(), "SAVE \xB7 SOUND") && str_eq(kn[0].label, "SLOT") && str_eq(kn[1].label, "PRESET") &&
          str_eq(kn[2].label, "NAME") && str_eq(kn[3].label, "SAVE") && ui.act == 4u;
     press(B_SAVE); frames(320);
-    ok &= str_eq(nav_page_name(), "SECTIONS") && !uxv_owns() && !ux_page_owns();
+    ok &= str_eq(nav_page_name(), "SONG") && uxv_owns() && ux_page_owns();   /* (3c-2 task 3: SONG, was SECTIONS) */
+    press(B_SAVE); frames(320);
+    ok &= str_eq(nav_page_name(), "PROJECTS") && !uxv_owns() && !ux_page_owns();
     nav_put(SEC_SAVE, "MORE"); frames(320);
     ok &= str_eq(cur_page()->title, "SAVE MORE") && cur_page()->more == &UXM_SAVE && uxv_owns() && ux_page_owns() &&
-          !strcmp(uxs_count(), "6 / 6") && !lock_page_ok(ui.page);
+          !strcmp(uxs_count(), "5 / 5") && !lock_page_ok(ui.page);
     press(B_SAVE); frames(320);
     ok &= str_eq(cur_page()->title, "SAVE SOUND");
     turn(EN_SELECT, 1); frames(64);
-    ok &= str_eq(nav_page_name(), "SECTIONS");
+    ok &= str_eq(nav_page_name(), "SONG");
     for (i = 0; i < NPAGES; i++)
         ok &= !str_eq(PAGES[i].title, "USER") && !str_eq(PAGES[i].title, "PRESETS");
-    bad += check("ACID FM 3c-2 task 2: SAVE opens on SOUND (1 / 6 . NEXT SECTIONS), SOUND and MORE on the ux pages, USER and PRESETS "
+    bad += check("ACID FM 3c-2 task 2: SAVE opens on SOUND (1 / 5 . NEXT SONG: task 3), SOUND SONG MORE on the ux pages, USER and PRESETS "
                  "gone", ok);
     ui_power_on();
     return bad;
@@ -20387,6 +20396,23 @@ static int test_u2_pace(void)
     frames(800);
     ok &= uxs_panels == n0;
     bad += check("ACID FM 3c-2 task 2: SOUND's picture drawn on a change (a slot picked, stored), none idle", ok);
+    n0 = uxs_panels;                                    /* (task 2 review M2: the track's preset, its engine, the track) */
+    preset_step(1); frames(64);
+    ok = uxs_panels == n0 + 1u;
+    n0 = uxs_panels;
+    frames(800);
+    ok &= uxs_panels == n0;
+    select_engine(eng_step(TSEL->eng_req, 1)); frames(64);
+    ok &= uxs_panels == n0 + 1u;
+    n0 = uxs_panels;
+    frames(800);
+    ok &= uxs_panels == n0;
+    song.sel = (uint8_t)((song.sel + 1u) % NTRK); frames(64);
+    ok &= uxs_panels == n0 + 1u;
+    n0 = uxs_panels;
+    frames(800);
+    ok &= uxs_panels == n0;
+    bad += check("  .. and one on a preset, an engine or a track change, none idle after", ok);
     ui_power_on();
     return bad;
 }
@@ -20395,6 +20421,8 @@ static int test_u2_pace(void)
 static int test_u2_more(void)
 {
     static const struct { uint8_t kind, id; const char *nm; } ROWS[] = {
+        {UXR_HEAD, UXM_H_SONG, "SONG"}, {UXR_GLOBAL, ID_SV_END, "END"}, {UXR_ACTION, UXM_A_DELROW, "DELETE ROW"},
+        {UXR_ACTION, UXM_A_CLRSONG, "CLEAR SONG"},   /* (3c-2 task 3) */
         {UXR_HEAD, UXM_H_TOOLS, "TOOLS"}, {UXR_ACTION, UXM_A_ERASE, "ERASE USER SLOT"}, {UXR_HEAD, UXM_H_SOUND, "SOUND"},
         {UXR_ACTION, UXM_A_ULOAD, "LOAD SLOT"}, {UXR_GLOBAL, ID_SV_ENGINE, "ENGINE"}, {UXR_GLOBAL, ID_SV_FAV, "FAVORITE"},
         {UXR_GLOBAL, ID_SV_LIST, "LIST"}};
@@ -20467,9 +20495,218 @@ static int test_u2_more(void)
         list_put(0);
         bad += check("  ENGINE, FAVORITE, LIST write what the inherited PRESETS KNOB 2, 3, 4 wrote (a detent a turn)", ok);
     }
-    for (i = 0; i < NENG_SHOWN; i++)                    /* (ENGINE's names: the engines' own, in ENGINE_ORDER) */
-        ok &= str_eq(N_SV_ENG[i], ENGINES[eng_vis(i)]->name);
-    bad += check("  ENGINE's words are the engines' names in their shown order", ok && NELEM(N_SV_ENG) == NENG_SHOWN);
+    {   /* (task 2 review M4: its own result, not the block's above) */
+        int words = NELEM(N_SV_ENG) == NENG_SHOWN;
+        for (i = 0; i < NENG_SHOWN; i++)                /* (ENGINE's names: the engines' own, in ENGINE_ORDER) */
+            words &= str_eq(N_SV_ENG[i], ENGINES[eng_vis(i)]->name);
+        bad += check("  ENGINE's words are the engines' names in their shown order", words);
+    }
+    ui_power_on();
+    return bad;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3c-2 task 3: SAVE SONG (spec 2.2, layout A; ux_save.c): the four sections on top, the song's rows as chips under them.
+ * KNOB 1 SECTION (G_SLOT; the row picked's too), 2 ROW (the song's rows, real ones only), 3 BARS (1..CHAIN_BARS), 4 SCENE (the
+ * inherited ARRANGE KNOB 4: right stores, left clears). OCT+ a row after the one picked (song_row_insert). SAVE > MORE's SONG: END,
+ * DELETE ROW, CLEAR SONG. SAVE + G5 opens it. The inherited SECTIONS and ARRANGE pages gone
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static void u3_song(uint32_t n)                         /* SAVE > SONG, stopped, n rows (A1 B2 C3 D4 A5 ..), no scenes, END STOP */
+{
+    uint32_t r;
+    u2_open();
+    chain_config.count = (uint8_t)n;
+    for (r = 0; r < CHAIN_ROWS; r++)
+        chain_config.row[r] = (chain_row_t){(uint8_t)(r % 4u), (uint8_t)(r + 1u)};
+    memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
+    SONG_END(&chain_config) = 0;
+    ui.song_row = 0;
+    song.g[G_SLOT] = 1;
+    nav_put(SEC_SAVE, "SONG"); frames(320);
+}
+/* SONG's knobs: SECTION writes G_SLOT and the row picked's section; ROW the real rows; BARS 1..CHAIN_BARS; SCENE as the inherited
+ * ARRANGE KNOB 4 (the stored bytes compared); the status line the row and what OCT+ does */
+static int test_u3_knobs(void)
+{
+    int bad = 0, ok;
+    ux_knob_t kn[4];
+    char b[48];
+    scene_t want;
+    u3_song(3);
+    uxs_knobs(cur_page(), kn);
+    uxs_foot(uxs_where(), kn, uxs_count(), uxs_next(), b, sizeof b);
+    ok = str_eq(cur_page()->title, "SAVE SONG") && cur_page()->graph == GR_SVSONG && uxv_owns() && ux_page_owns() &&
+         str_eq(kn[0].label, "SECTION") && str_eq(kn[1].label, "ROW") && str_eq(kn[2].label, "BARS") && str_eq(kn[3].label, "SCENE") &&
+         uxq_t_is("SONG's place", uxs_where(), "SAVE \xB7 SONG") && uxq_t_is("SONG's footer", b, "2 / 5 \xB7 NEXT PROJECTS") &&
+         uxq_t_is("SECTION", kn[0].value, "A") && uxq_t_is("ROW", kn[1].value, "1/3") && uxq_t_is("BARS", kn[2].value, "1") &&
+         uxq_t_is("SCENE", kn[3].value, "--");
+    bad += check("ACID FM 3c-2 task 3: SAVE > SONG: SECTION ROW BARS SCENE, SAVE . SONG, 2 / 5 . NEXT PROJECTS", ok);
+    ui.song_row = 1;
+    turn(EN_K1, 1); frame();
+    ok = song.g[G_SLOT] == 2 && chain_config.row[1].slot == 1u && chain_config.row[0].slot == 0u && chain_config.row[2].slot == 2u;
+    turn(EN_K1, 9); frame();
+    ok &= song.g[G_SLOT] == 4 && chain_config.row[1].slot == 3u;
+    turn(EN_K1, -9); frame();
+    ok &= song.g[G_SLOT] == 1 && chain_config.row[1].slot == 0u && chain_config.count == 3u;
+    chain_config.count = 0; ui.song_row = 0;
+    turn(EN_K1, 1); frame();
+    ok &= song.g[G_SLOT] == 2 && chain_config.count == 0u && chain_config.row[0].slot == 0u;
+    chain_config.count = 3;
+    bad += check("  KNOB 1 SECTION: G_SLOT (A..D) and the row picked's section; no row: G_SLOT alone", ok);
+    turn(EN_K2, 9); frame();
+    ok = ui.song_row == 2u;
+    turn(EN_K2, -9); frame();
+    ok &= ui.song_row == 0u;
+    turn(EN_K2, 1); frame();
+    ok &= ui.song_row == 1u;
+    uxs_knobs(cur_page(), kn);
+    ok &= uxq_t_is("ROW 2", kn[1].value, "2/3");
+    bad += check("  KNOB 2 ROW: the real rows only (0..count-1), n/N", ok);
+    ui.song_row = 0;
+    turn(EN_K3, 100); frame();
+    ok = chain_config.row[0].bars == CHAIN_BARS;
+    turn(EN_K3, -100); frame();
+    ok &= chain_config.row[0].bars == 1u;
+    turn(EN_K3, 3); frame();
+    ok &= chain_config.row[0].bars == 4u && chain_config.row[1].bars == 2u;
+    chain.running = 1; ui.msg_t = 0;
+    turn(EN_K3, 1); frame();
+    ok &= chain_config.row[0].bars == 4u && msg_is("STOP TO EDIT");
+    chain.running = 0;
+    ui.song_row = 3;                                    /* (past the last row, as a delete of the last leaves it: the last, */
+    uxs_knobs(cur_page(), kn);                          /* shown and edited) */
+    ok &= uxq_t_is("ROW past the last", kn[1].value, "3/3");
+    turn(EN_K3, 1); frame();
+    ok &= ui.song_row == 2u && chain_config.row[2].bars == 4u;
+    chain_config.row[2].bars = 3;
+    bad += check("  KNOB 3 BARS: 1..CHAIN_BARS; not while the song plays (STOP TO EDIT); a row past the last: the last", ok);
+    ui.song_row = 1; ui.msg_t = 0;
+    turn(EN_K4, 1); frame();
+    scene_capture(&want);
+    ok = !memcmp(&song_idx.scene[song_cur][1], &want, sizeof want) && song_idx.scene[song_cur][1].on && msg_is("SCENE STORED") &&
+         !song_idx.scene[song_cur][0].on && !song_idx.scene[song_cur][2].on;
+    uxs_knobs(cur_page(), kn);
+    ok &= uxq_t_is("SCENE stored", kn[3].value, "ON");
+    ui.msg_t = 0;
+    turn(EN_K4, -1); frame();
+    memset(&want, 0, sizeof want);
+    ok &= !memcmp(&song_idx.scene[song_cur][1], &want, sizeof want) && msg_is("SCENE CLEARED");
+    bad += check("  KNOB 4 SCENE: right stores (scene_capture), left clears: as the inherited ARRANGE KNOB 4", ok);
+    ui.song_row = 2; chain_config.row[2].bars = 16; song.g[G_SLOT] = 2;
+    frames(UX_HOT_MS + 100u);
+    ok = uxq_t_is("SONG's line", uxq_t_say(), "ROW 3 \xB7 C \xB7 16 BARS \xB7 OCT+ ADDS A ROW");
+    chain_config.count = 0; ui.song_row = 0; frames(32);
+    ok &= uxq_t_is("no rows", uxq_t_say(), "NO ROWS \xB7 OCT+ ADDS A ROW");
+    bad += check("  the status line: the row picked and what OCT+ does", ok);
+    ui_power_on();
+    return bad;
+}
+/* OCT+: a row after the one picked (its section G_SLOT's, its bars the picked one's), the scenes after it moved with their rows;
+ * on the last row exactly the inherited ARRANGE's append; 16 ROWS full, STOP TO EDIT while the song plays */
+static int test_u3_add(void)
+{
+    int bad = 0, ok;
+    chain_config_t c0;
+    scene_t s0[CHAIN_ROWS];
+    uint32_t r;
+    u3_song(3);
+    for (r = 0; r < 3u; r++) {
+        song_idx.scene[song_cur][r].on = 1;
+        song_idx.scene[song_cur][r].mute = (uint8_t)(r + 1u);
+    }
+    memcpy(s0, song_idx.scene[song_cur], sizeof s0);
+    c0 = chain_config;
+    ui.song_row = 1; song.g[G_SLOT] = 4; ui.msg_t = 0;
+    press(B_OCTUP); frame();
+    ok = chain_config.count == 4u && chain_config.row[0].slot == c0.row[0].slot && chain_config.row[1].slot == c0.row[1].slot &&
+         chain_config.row[2].slot == 3u && chain_config.row[2].bars == c0.row[1].bars &&
+         chain_config.row[3].slot == c0.row[2].slot && chain_config.row[3].bars == c0.row[2].bars && ui.song_row == 2u &&
+         !memcmp(&song_idx.scene[song_cur][0], &s0[0], sizeof s0[0]) && !memcmp(&song_idx.scene[song_cur][1], &s0[1], sizeof s0[0]) &&
+         !song_idx.scene[song_cur][2].on && !memcmp(&song_idx.scene[song_cur][3], &s0[2], sizeof s0[0]) && msg_is("ROW ADDED");
+    bad += check("ACID FM 3c-2 task 3: SONG's OCT+: a row after ROW 2 (D, ROW 2's bars), the scenes after it moved", ok);
+    {   /* the last row picked: the inherited ARRANGE's append (its section the last row's: G_SLOT so) */
+        chain_config_t w;
+        scene_t ws[CHAIN_ROWS];
+        uint32_t n;
+        u3_song(5);
+        song_idx.scene[song_cur][4].on = 1;
+        ui.song_row = 4; song.g[G_SLOT] = (int16_t)(chain_config.row[4].slot + 1u);
+        w = chain_config;
+        memcpy(ws, song_idx.scene[song_cur], sizeof ws);
+        n = w.count;
+        w.row[n].slot = w.row[n - 1u].slot;             /* (the inherited act_do's GR_SONG append) */
+        w.row[n].bars = w.row[n - 1u].bars;
+        memset(&ws[n], 0, sizeof ws[0]);
+        w.count++;
+        press(B_OCTUP); frame();
+        ok = !memcmp(&chain_config, &w, sizeof w) && !memcmp(song_idx.scene[song_cur], ws, sizeof ws) && ui.song_row == n;
+        bad += check("  the last row picked: exactly the inherited append", ok);
+    }
+    u3_song(0); song.g[G_SLOT] = 3;
+    press(B_OCTUP); frame();
+    ok = chain_config.count == 1u && chain_config.row[0].slot == 2u && chain_config.row[0].bars == 4u && ui.song_row == 0u;
+    u3_song(CHAIN_ROWS); ui.msg_t = 0;
+    press(B_OCTUP); frame();
+    ok &= chain_config.count == CHAIN_ROWS && msg_is("16 ROWS");
+    u3_song(3); chain.running = 1; ui.msg_t = 0;
+    press(B_OCTUP); frame();
+    ok &= chain_config.count == 3u && msg_is("STOP TO EDIT");
+    chain.running = 0;
+    bad += check("  no rows: the first (G_SLOT's, 4 bars); full: 16 ROWS; the song playing: STOP TO EDIT", ok);
+    ui_power_on();
+    return bad;
+}
+/* SAVE > MORE's SONG rows: END (STOP X2 .. X8 LOOP), DELETE ROW (the dialog on the row picked; none: NO ROW), CLEAR SONG */
+static int test_u3_more(void)
+{
+    static const char *const END[9] = {"STOP", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "LOOP"};
+    static const uint8_t EV[9] = {0, 2, 3, 4, 5, 6, 7, 8, SONG_FOREVER};
+    int bad = 0, ok = 1;
+    uint32_t i;
+    u3_song(3);
+    u2_more_at(UXR_GLOBAL, ID_SV_END);
+    ok &= uxq_t_is("END", u2_row_val(UXR_GLOBAL, ID_SV_END), "STOP");
+    for (i = 1; i < 10u; i++) {
+        turn(EN_K2, 1); frame();
+        ok &= SONG_END(&chain_config) == EV[i < 9u ? i : 8u] && uxq_t_is("END up", u2_row_val(UXR_GLOBAL, ID_SV_END), END[i < 9u ? i : 8u]);
+    }
+    for (i = 9; i-- > 0u;) {
+        turn(EN_K2, -1); frame();
+        ok &= SONG_END(&chain_config) == EV[i > 0u ? i - 1u : 0u];
+    }
+    ok &= uxq_t_is("END back", u2_row_val(UXR_GLOBAL, ID_SV_END), "STOP");
+    bad += check("ACID FM 3c-2 task 3: SAVE > MORE's END: STOP X2 .. X8 LOOP (song_end_step)", ok);
+    ui.song_row = 1;
+    u2_more_at(UXR_ACTION, UXM_A_DELROW);
+    turn(EN_K2, 1); frame();
+    ok = ui.confirm == CF_DEL_ROW && ui.confirm_trk == ui.song_row && ui.confirm_trk == 1u;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && chain_config.count == 2u && chain_config.row[1].slot == 2u;
+    chain_config.count = 0; ui.song_row = 0; ui.msg_t = 0;
+    turn(EN_K2, 1); frame();
+    ok &= !ui.confirm && msg_is("NO ROW");
+    bad += check("  DELETE ROW: the dialog on the row picked (confirm_trk = ROW), OCT+ deletes it; no rows: NO ROW", ok);
+    chain_config.count = 3;
+    u2_more_at(UXR_ACTION, UXM_A_CLRSONG);
+    turn(EN_K2, 1); frame();
+    ok = ui.confirm == CF_CLEAR_SONG;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && chain_config.count == 0u;
+    bad += check("  CLEAR SONG: the dialog, OCT+ clears the song", ok);
+    ui_power_on();
+    return bad;
+}
+/* SAVE + G5 opens SAVE > SONG (the inherited first GR_SONG page); the SAVE layer's other keys as before (their own tests) */
+static int test_u3_layer(void)
+{
+    int bad = 0, ok, i;
+    ui_power_on(); frame();
+    go_home(); frame();
+    ly_white(B_SAVE, 15u);
+    ok = !ui.home && str_eq(cur_page()->title, "SAVE SONG") && str_eq(nav_page_name(), "SONG");
+    for (i = 0; i < (int)NPAGES; i++)
+        ok &= !str_eq(PAGES[i].title, "ARRANGE") && !(PAGES[i].fam == FAM_SEQ && str_eq(PAGES[i].title, "SONG"));
+    bad += check("ACID FM 3c-2 task 3: SAVE + G5 opens SAVE > SONG; no ARRANGE page, no SEQ > SONG", ok);
     ui_power_on();
     return bad;
 }
@@ -20698,6 +20935,10 @@ int main(void)
     bad += test_u2_knobs();
     bad += test_u2_pace();
     bad += test_u2_more();
+    bad += test_u3_knobs();                             /* (ACID FM 3c-2 task 3) */
+    bad += test_u3_add();
+    bad += test_u3_more();
+    bad += test_u3_layer();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

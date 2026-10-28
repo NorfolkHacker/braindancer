@@ -8,10 +8,11 @@
 #include "ux_widgets.h"                                    /* (ux_knob_t: ux_widgets.c comes later) */
 
 static int uxv_owns(void);                               /* the SAVE page shown is drawn by ux_section.c (SOUND, SONG, PROJECT, MORE) */
-static int uxv_knobs(const page_t *pg, ux_knob_t k[4]);  /* SOUND: SLOT PRESET NAME SAVE (1: filled) */
+static int uxv_knobs(const page_t *pg, ux_knob_t k[4]);  /* SOUND: SLOT PRESET NAME SAVE; SONG: SECTION ROW BARS SCENE (1: filled) */
 static void uxv_picture(const page_t *pg);
 static uint32_t uxv_sig(const page_t *pg);               /* what the picture is drawn from */
-static int uxv_say(const page_t *pg, char *b, uint32_t nb);   /* the status line ("U07 . DEEP SUB . OCT+ SAVES OVER IT") */
+static int uxv_say(const page_t *pg, char *b, uint32_t nb);   /* the status line ("U07 . DEEP SUB . OCT+ SAVES OVER IT", "ROW 3 . B . 16
+                                                                * BARS . OCT+ ADDS A ROW") */
 static uint16_t uxv_eng_col(uint32_t e);                 /* an engine's colour: ux_knob_col(engine's place in ENGINE_ORDER % 4) */
 
 #endif

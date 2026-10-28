@@ -16,7 +16,7 @@ static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", 
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
                                               "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
                                               "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO", "MIDI", "SOUND",
-                                              "TOOLS"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "TOOLS", "SONG"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -51,6 +51,11 @@ static const uxm_act_t UXM_ACT[UXM_A_N] = {
                                                          * LOAD: upreset.c up_ui; an empty slot said) */
     {"ERASE", CF_ERASE_USER, UXA_USLOT},                /* .. that slot erased, asking first (the inherited USER's ERASE; ERASE USER
                                                          * SLOT in the list: uxm_list_name) */
+    {"DELETE", CF_DEL_ROW, UXA_ROW},                    /* (3c-2 task 3) SAVE: the row SONG picks deleted, asking first (the inherited
+                                                         * TOOLS' DELETE ROW and ARRANGE's SECT left of A; DELETE ROW in the list:
+                                                         * uxm_list_name); no row: NO ROW */
+    {"CLEAR", CF_CLEAR_SONG, UXA_SEL},                  /* .. every row gone, asking first (the inherited TOOLS' CLEAR SONG; CLEAR
+                                                         * SONG in the list) */
 };
 /* (3c-2 task 2) action a's target (its dialog's: ui.confirm_trk) */
 static uint32_t uxm_act_arg(uint32_t a)
@@ -68,6 +73,14 @@ static void uxm_act_do(uint32_t a)
     if (a == UXM_A_ERASE && (!up_used(ui.uslot) || transport_busy())) {   /* (3c-2 task 2: as the inherited USER's ERASE, the */
         up_ui(1u, ui.uslot);                            /* dialog only over a used slot, stopped; else up_ui says why: EMPTY SLOT, */
         return;                                         /* STOP TO SAVE) */
+    }
+    if (a == UXM_A_DELROW) {                            /* (3c-2 task 3) the row SONG shows picked (past the last: the last); */
+        if (!chain_config.count) {                      /* no row: said */
+            ui_message("NO ROW");
+            return;
+        }
+        if (ui.song_row >= chain_config.count)
+            ui.song_row = (uint8_t)(chain_config.count - 1u);
     }
     if (UXM_ACT[a].ask) {                               /* (as JIANT's pages: not while a song plays, ui_input.c act_do; then */
         if (chain_busy()) {                             /* the dialog, OCT+ yes / OCT- no) */
@@ -463,11 +476,13 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
 
 /* (3c-1 task 8) row r's name in the list and the status line, where the knob row's (name, what uxm_row_text gave: it fits a
  * knob's column) is short for it: GLO's KEYBOARD, KEYBOARD PLAYS SELECTED in full; its CLEAR, LEARN CLEAR; (3c-2 task 2) SAVE's
- * ERASE, ERASE USER SLOT */
+ * ERASE, ERASE USER SLOT; (task 3) its DELETE, DELETE ROW; its CLEAR, CLEAR SONG */
 static const char *uxm_list_name(const ux_row_t *r, const char *name)
 {
-    return r->kind == UXR_GLOBAL && r->id == G_MRSEL ? UXM_KBD_SEL : r->kind == UXR_ACTION && r->id == UXM_A_LCLEAR ? UXM_LCLEAR :
-           r->kind == UXR_ACTION && r->id == UXM_A_ERASE ? UXM_ERASE_U : name;
+    if (r->kind == UXR_ACTION)
+        return r->id == UXM_A_LCLEAR ? UXM_LCLEAR : r->id == UXM_A_ERASE ? UXM_ERASE_U : r->id == UXM_A_DELROW ? UXM_DELROW :
+               r->id == UXM_A_CLRSONG ? UXM_CLRSONG : name;
+    return r->kind == UXR_GLOBAL && r->id == G_MRSEL ? UXM_KBD_SEL : name;
 }
 
 /* row r's place in its range: a short meter (UXM_BAR_W x 3) in a column of its own left of the values (ending UXM_BAR_X1),

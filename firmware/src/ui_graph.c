@@ -448,7 +448,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !(ui_prefs & PREF_ANIM_OFF) && strip_kind() == SK_NONE && !roll_view(cur_page()) && !lens_on() &&
            g != GR_ROLL && g < GR_LIVE &&               /* (0.8.3: LENTE's step; 0.9.11: LIVE's rails, the enum's last) */
            g != GR_STEPS && g != GR_SLOTS &&
-           g != GR_SONG && g != GR_TOOLS && g != GR_PATS;
+           g != GR_TOOLS && g != GR_PATS;
 }
 static void graph_drift(void)
 {
@@ -548,29 +548,18 @@ static uint32_t graph_signature(void)
         h = (h ^ (uint32_t)t->p[i]) * 16777619u;
     h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u +
          ui.ppick * 1299709u;
-    if (pg->graph == GR_SONG) {
-        for (uint32_t r = 0; r < CHAIN_ROWS; r++)
-            h = (h ^ (song_idx.scene[song_cur][r].on * (r + 1u))) * 16777619u;
-        h ^= ui.song_row * 40503u + chain_config.count * 7919u;
-        for (i = 0; i < CHAIN_ROWS; i++)
-            h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
-        h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u + chain.pass * 15485863u : 0u;
-        h ^= SONG_END(&chain_config) * 2246822519u;      /* (0.6.22: the END) */
-        for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (24u + i);
-        h += graph_pname_sig;
-    }
+    /* (ACID FM 3c-2 task 3) ARRANGE's (the rows, the scenes, the END, where the song is): SAVE > SONG is ux_save.c's (uxv_sig) */
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
         h ^= (pd_level() + 1u) * 668265263u;
     }
     /* (3b task 8: the SLICER's pages, their step and globals, gone: FX > MORE's rows) */
     if (pg->graph == GR_TOOLS)                       /* (0.6.12) the action picked, the song's row */
         h ^= ui.act * 7919u + ui.song_row * 104729u;
-    if (pg->graph == GR_SLOTS) {                     /* (a checksum over each slot; the project, the music's section, the song) */
+    if (pg->graph == GR_SLOTS) {                     /* (a checksum over each slot; the project; 3c-2 task 3: the music's
+                                                      * section and the song gone with SECTIONS' picture) */
         for (i = 0; i < 4u; i++)
             h ^= (uint32_t)graph_project_used(i) << (20u + i);
-        h += graph_pname_sig + song_cur * 2654435761u + (uint32_t)(live.cur + 1) * 40503u + chain_config.count * 7919u;
-        for (i = 0; i < CHAIN_ROWS; i++)
-            h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
+        h += graph_pname_sig + song_cur * 2654435761u;
     }
     /* (ACID FM 3c-1 task 4) AUTOMATION's, AUTO LIST's, PLAYHEADS', MUTATE's and COMP's: SEQ > MORE's (ux_section.c) */
     if (FELUCCA_FM4 && pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DIGITAL)   /* (ACID FM 3b task 5: FM6's and DRUM-X's EDIT
@@ -579,15 +568,6 @@ static uint32_t graph_signature(void)
     if (save_on()) {                                 /* (0.8.5) SAVE's lens: the level, the library's scan, the sound */
         lib_poll();
         h = (h ^ (save_level() + 1u) * 2654435761u ^ lib.next * 40503u ^ lib.gen) * 16777619u;
-        if (pg->graph == GR_SONG) {                  /* (ARRANGE: as SLOTS', the rows and where the song is) */
-            for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (20u + i);
-            h += graph_pname_sig + (uint32_t)(live.cur + 1) * 40503u;
-        }
-        if (pg->graph == GR_SLOTS) {
-            h ^= SONG_END(&chain_config) * 2246822519u + ui.song_row * 7919u;
-            h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u : 0u;
-            for (i = 0; i < CHAIN_ROWS; i++) h = (h ^ (uint32_t)song_idx.scene[song_cur][i].on * (i + 1u)) * 16777619u;
-        }
     }
     if (lens_on()) {                                 /* (0.8.3) LENTE: the level; its STEP, the cursor step's every byte */
         h = (h ^ (lens_level() + 1u) * 2654435761u) * 16777619u;
@@ -682,13 +662,9 @@ static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c)
     }
 }
 
-/* SONG: the rows, each a section (the saved project A..D, sounds and steps) and its bars (song_chain.c) */
 /* (ACID FM 3b task 7) graph_mseq (JIANT's MSEQ: the 16 levels as bars) gone: the STEPS are LFO's MORE rows */
-/* (0.6.22) ARRANGE / SEQ > SONG, after SLOOP's arranger in JIANT's colours: the song as a column of rows, each a section
- * chip (A..D, each its own heat), its bars as blocks (one a bar, up to 16; past 16 each a 16th of it) filling as they
- * play, the bars' count, a dot for its scene; under them + ADD (the rows used of CHAIN_ROWS) and the song's END (STOP,
- * x2..x8, LOOP). On the right the whole song as a strip, each row's height its share of the bars, the play head on it,
- * the bars in all. KNOB 1 the row, 2 its section (on END: STOP / x2 .. / LOOP), 3 its bars, 4 its scene */
+/* (0.6.22) ARRANGE / SEQ > SONG's picture gone (ACID FM 3c-2 task 3: SAVE > SONG, ux_save.c). A section's colour (A..D, each its own
+ * heat): the library's chips, SAVE > SONG's sections and rows */
 static uint16_t sec_col(uint32_t s)
 {
     static const uint8_t HO[4] = {120, 160, 200, 240};   /* (ACID FM 0.3: JIANT's palette's 0 85 171 213 gone) */

@@ -8,10 +8,7 @@
  *   LIBRARY  PROJECT: the four projects as tiles (4 x 1, 56 x 66): the number, the name (its section A's), its four
  *            sections as chips A..D (stored: the section's colour; empty: dark), the project shown TINT with a THEME
  *            frame, its section picked framed TEXT. TOOLS: the six tools as rows (the one picked TINT).
- *   PROJECT  the project's four sections large (stored: their colour, the one picked full with a TEXT frame, the
- *            others half; the music's: NOW), ARRANGE and the song's rows as chips ("A16"; a scene: a dot; ARRANGE's
- *            row picked full and framed), the song as a strip (its rows by their bars, the one picked full; playing:
- *            a TEXT line where it is) and its length and END under it.
+ *   PROJECT  (ACID FM 3c-2 task 3) gone: SAVE > SONG is ux_save.c's (the inherited SECTIONS and ARRANGE pages).
  *   SOUND    (ACID FM 3c-2 task 2) gone: SAVE > SOUND is ux_save.c's (the inherited USER and PRESETS pages).
  * The other projects' sections and names come from their flash headers (project.c lib_scan), one project a frame,
  * cached here until a project is written, loaded or renamed (lib_gen). */
@@ -77,79 +74,13 @@ static void graph_lz_tools(void)
         cv_text_r(230, y + CAP_IN(X, 21), &AF_X, c == 2u ? b : ON[c], sel ? T_MID : T_DIM, bg);
     }
 }
-/* PROJECT: the sections, the arrangement's chips, the song's strip (ar: ARRANGE, its rows picked) */
-static void graph_proj(int ar)
-{
-    uint32_t i, total = 0, played = 0, sel = (uint32_t)song.g[G_SLOT] - 1u, n = chain_config.count, end;
-    char b[24];
-    for (i = 0; i < 4u; i++) {
-        int32_t x = LZ_TX(i);
-        int used = graph_project_used(i), pick = !ar && i == (sel & 3u);
-        uint16_t c = lz_sec(i, used, used ? !pick : -1), ink = used ? T_INK : T_DIM;
-        const char *nm = graph_project_name(i);
-        b[0] = (char)('A' + i); b[1] = 0;
-        cv_rect(x, 2, 56, 49, c);
-        GFX_HOOK_ALIGN(0, 8, 0, 19, AL_V | AL_PASS, "project section letter");
-        cv_text_on(x + 6, 4, &AF_M, b, ink, c);
-        cv_free_text(x + 6, 25, &AF_X, !used ? "EMPTY" : nm[0] ? nm : "USED", ink, c, 47);
-        if (live.cur == (int8_t)i && used)
-            cv_text_r(x + 52, 38, &AF_X, "NOW", ink, c);
-        if (pick) {                                      /* (2 px, round it) */
-            cv_frame(x - 2, 0, 60, 53, T_TEXT);
-            cv_frame(x - 1, 1, 58, 51, T_TEXT);
-        }
-    }
-    GFX_HOOK_ALIGN(0, 58, 0, 67, AL_V | AL_PASS, "project arrange title");
-    cv_text(6, 58, &AF_X, "ARRANGE", ar ? T_THEME : T_DIM);
-    for (i = 0; i < n && i < CHAIN_ROWS; i++) {
-        const chain_row_t *r = &chain_config.row[i];
-        int32_t x = 4 + (int32_t)(i % 8u) * 293 / 10, y = 72 + (int32_t)(i / 8u) * 22;
-        int pick = ar && i == ui.song_row, used = graph_project_used(r->slot);
-        uint16_t c = lz_sec(r->slot, 1, !pick);
-        b[0] = (char)('A' + (r->slot & 3u));
-        fmt_int(b + 1, r->bars);
-        cv_rect(x, y, 27, 20, c);
-        GFX_HOOK_ALIGN(x, y, x + 27, y + 20, AL_HV, "arrange chip centred");
-        cv_text_in(x, y + CAP_IN(X, 20), 27, &AF_X, b, used ? T_INK : T_DIM, c);
-        if (pick)
-            cv_frame(x - 1, y - 1, 29, 22, T_TEXT);
-        if (song_idx.scene[song_cur][i].on)              /* a scene: a dot */
-            cv_rect(x + 22, y + 3, 2, 2, T_TEXT);
-        total += r->bars;
-        if (chain.running && i < chain.row) played += r->bars;
-    }
-    if (chain.running && chain.row < n)
-        played += chain_config.row[chain.row].bars - chain.remaining;
-    if (total) {                                         /* the song: its rows by their bars */
-        int32_t acc = 0;
-        for (i = 0; i < n; i++) {
-            int32_t x0 = 4 + acc * 232 / (int32_t)total, x1;
-            acc += chain_config.row[i].bars;
-            x1 = 4 + acc * 232 / (int32_t)total;
-            cv_rect(x0, 118, x1 - x0 > 1 ? x1 - x0 - 1 : 1, 6, lz_sec(chain_config.row[i].slot, 1, !(ar && i == ui.song_row)));
-            if (song_idx.scene[song_cur][i].on)
-                cv_rect(x0 + 2, 120, 2, 2, T_TEXT);
-        }
-        if (chain.running)
-            cv_rect(4 + (int32_t)(played * 232u / total), 116, 1, 10, T_TEXT);
-    }
-    end = SONG_END(&chain_config);
-    fmt_int(b, (int32_t)total);
-    str_cpy(b + str_len(b), " BARS \xB7 ", 9);
-    if (end == SONG_FOREVER) str_cpy(b + str_len(b), "LOOP", 6);
-    else if (end >= 2u) { uint32_t k = str_len(b); b[k] = 'x'; fmt_int(b + k + 1u, (int32_t)end); }
-    else str_cpy(b + str_len(b), "STOP", 6);
-    GFX_HOOK_ALIGN(0, 128, 0, 137, AL_V | AL_PASS, "project song length");
-    cv_text_r(236, 128, &AF_X, n ? b : "NO ROWS: OCT+ ADDS ONE", ar && ui.song_row >= song_end_row() ? T_THEME : T_DIM,
-              T_SURF);
-}
+/* (ACID FM 3c-2 task 3) PROJECT's panel (graph_proj: SECTIONS' sections, ARRANGE's chips and strip) gone: SAVE > SONG is
+ * ux_save.c's */
 /* (ACID FM 3c-2 task 2) SOUND's panels (lz_track_card, graph_sound: USER's 32 slots; graph_lz_presets: PRESETS' list) gone: SAVE >
  * SOUND is ux_save.c's */
 /* the lens's panel for the SAVE page shown */
 static void graph_save_lz(const page_t *pg)
 {
-    uint32_t lv = save_level();
     if (pg->graph == GR_TOOLS) graph_lz_tools();
-    else if (pg->graph == GR_SONG) graph_proj(1);
-    else if (pg->graph == GR_SLOTS) { if (lv == SV_PROJ) graph_proj(0); else graph_lib(); }
+    else if (pg->graph == GR_SLOTS) graph_lib();
 }

@@ -131,7 +131,7 @@ controls: {
     held: "About 0.7 s: opens the MENU.",
     combos: [{k: "HOME+SELECT", t: "GEN, the song generator"}]},
   "SAVE": {kind: "button", sec: "save", shot: 'save_sound', layer: "SAVE",
-    alone: "The SAVE section: SOUND → PROJECT → LIBRARY → MORE. From outside, SOUND and SECTIONS come with SAVE armed: SAVE, OCT+, OCT+ stores.",
+    alone: "The SAVE section: SOUND → SONG → LIBRARY → MORE. From outside, SOUND comes with SAVE armed: SAVE, OCT+, OCT+ stores.",
     held: "SAVE layer (song): play and store sections live, LOOP/SONG, SONG REC, NAME; KNOB 1 the project.",
     combos: [
       {k: "SAVE+C5", t: "NAME: rename the slot, section or project"},
@@ -230,8 +230,8 @@ pages: {
   "SCL/KEY": ["ROOT", "SCALE", "SNAP", "ALL TRACKS"], "SCL/CHORD": ["CHORD", "VOICING", "STRUM", "—"],
   "SCL/MORE": ["SETTING", "(its value)", "—", "—"],
   "ARP/ARP": ["ARP", "RATE", "OCTAVES", "GATE"], "ARP/ARP 2": ["SWING", "CHANCE", "HOLD", "ORDER"],
-  "SAVE/SOUND": ["SLOT", "PRESET", "NAME", "SAVE"], "SAVE/SECTIONS": ["SECT", "NAME", "LOAD", "SAVE"],
-  "SAVE/ARRANGE": ["ROW", "SECT", "BARS", "SCENE"], "SAVE/PROJECTS": ["PROJECT", "SECT", "LOAD", "SAVE"], "SAVE/TOOLS": ["(the list)", "", "", ""],
+  "SAVE/SOUND": ["SLOT", "PRESET", "NAME", "SAVE"], "SAVE/SONG": ["SECTION", "ROW", "BARS", "SCENE"],
+  "SAVE/PROJECTS": ["PROJECT", "SECT", "LOAD", "SAVE"], "SAVE/TOOLS": ["(the list)", "", "", ""],
   "SAVE/MORE": ["SETTING", "(its value)", "—", "—"]
 },
 
@@ -275,7 +275,7 @@ commands: [
   {s: "gen", k: "SELECT", shot: 'gen_parts', t: "Weigh the parts (GEN 2 / GEN 3)",
    d: "GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % or AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Lower DRUMS and OCT+: the same piece, fewer drums."},
   {s: "gen", k: "OCT-", t: "Leave GEN / go back to before",
-   d: "OCT− goes back to TRACKS (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and ARRANGE, but never overwrites sections you stored."},
+   d: "OCT− goes back to TRACKS (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and the song, but never overwrites sections you stored."},
 
   // EDIT
   {s: "edit", k: "EDIT", shot: 'edit_analog_1', t: "Edit the engine (SOUND / TONE)",
@@ -462,12 +462,12 @@ commands: [
   // SAVE
   {s: "save", k: "SAVE", shot: 'save_sound', t: "Save a sound (SOUND)",
    d: "SAVE › SOUND: KNOB 1 the slot (U01–U32, a list with each slot's engine colour and name), KNOB 2 the preset, KNOB 3 NAME (renames the slot), KNOB 4 SAVE; turn right and OCT+ (over a used slot it asks first). Shortcut: SAVE, OCT+, OCT+. Stores engine, sound and a 16-step pattern (not the DRUM-X kit). LOAD SLOT and ERASE USER SLOT are SAVE › MORE rows."},
-  {s: "save", k: "SAVE", shot: 'save_project', t: "Save a section (SECTIONS)",
-   d: "Stop the transport. SAVE, SAVE → SECTIONS. KNOB 1 the section A–D, KNOB 4 right, OCT+; if used: OVERWRITE? OCT+; NAME, OCT+. It says SAVED. Stores all the music, with tempo and effects."},
+  {s: "save", k: "SAVE", shot: 'save_library', t: "Save a section",
+   d: "Stop the transport. SAVE › PROJECTS: KNOB 2 the section A–D (SAVE › SONG's KNOB 1 picks it too), KNOB 4 right, OCT+; if used: OVERWRITE? OCT+; NAME, OCT+. It says SAVED. Stores all the music, with tempo and effects."},
   {s: "save", k: "SAVE", shot: 'save_library', t: "Load a section or project",
-   d: "SAVE › PROJECTS: KNOB 1 the project (1–4), KNOB 2 the section, KNOB 3 LOAD, OCT+ (or SECTIONS: KNOB 1 and LOAD). Stops playback and replaces the music; GLO + G4 brings it back."},
+   d: "SAVE › PROJECTS: KNOB 1 the project (1–4), KNOB 2 the section, KNOB 3 LOAD, OCT+. Stops playback and replaces the music; GLO + G4 brings it back."},
   {s: "save", k: "SAVE+C5", shot: 'name_typing', t: "Name it (NAME)",
-   d: "SAVE + C5 on SOUND, SECTIONS or PROJECTS. White keys: phone-style letters (AB, CD, …); F# cursor ◀, G# space, A# cursor ▶, C# delete, D# ABC/123; KNOB 1 cursor, KNOB 2 character; OCT+ writes, OCT− cancels."},
+   d: "SAVE + C5 on SOUND (the slot), SONG (the section) or PROJECTS. White keys: phone-style letters (AB, CD, …); F# cursor ◀, G# space, A# cursor ▶, C# delete, D# ABC/123; KNOB 1 cursor, KNOB 2 character; OCT+ writes, OCT− cancels."},
   {s: "save", k: "SAVE+C4", shot: 'layer_song', t: "Quick store while playing",
    d: "SAVE + C4–F4: store into A–D; SAVE + OCT+: into the section playing; SAVE + OCT−: recall it. In RAM at once, to flash when you stop: stop before switching off."},
   {s: "save", k: "SAVE+KNOB 1", t: "Switch project",
@@ -475,19 +475,19 @@ commands: [
   {s: "save", k: "SAVE", shot: 'save_tools', t: "SAVE › TOOLS",
    d: "CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT (everything to zero; UNDO brings it back), CPU TEST (a heavy song to measure). Any knob picks, OCT+ does it."},
   {s: "save", k: "SAVE", shot: 'save_more', t: "Presets by type and favourites",
-   d: "SAVE › MORE › SOUND: LOAD SLOT (the slot SOUND picks), ENGINE, FAVORITE (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine. TOOLS: ERASE USER SLOT (asks first)."},
+   d: "SAVE › MORE › SONG: END (STOP, X2–X8, LOOP), DELETE ROW (the row SONG picks), CLEAR SONG (both ask first). SOUND: LOAD SLOT (the slot SOUND picks), ENGINE, FAVORITE (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine. TOOLS: ERASE USER SLOT (asks first)."},
   {s: "save", k: "HOME", t: "Autosave and RESTORE LAST",
    d: "The autosave copies the music 10 s after the last change, stopped, at most once a minute; never at power-off. With nothing to restore, power-on loads the demo (beat, acid line, pad at 124 BPM; NEW PROJECT starts empty), unless MENU › SYSTEM › RESTORE LAST ON. Save into a section."},
 
   // SONG
-  {s: "song", k: "SAVE", shot: 'save_arrange', t: "Build the song (ARRANGE)",
-   d: "SAVE › ARRANGE: KNOB 1 the row, KNOB 2 its section (on END: STOP, x2–x8, LOOP), KNOB 3 bars (1–64), KNOB 4 scene. OCT+ adds a row; PLAY plays the song. It saves itself."},
+  {s: "song", k: "SAVE", shot: 'save_song', t: "Build the song (SONG)",
+   d: "SAVE › SONG: the four sections on top (the one playing: NOW), the song's rows as chips under them (A16: section A, 16 bars; a dot: a scene). KNOB 1 the section A–D (the row picked takes it), KNOB 2 the row, KNOB 3 its bars (1–64), KNOB 4 its scene. OCT+ adds a row after the one picked; PLAY plays the song. END (STOP, X2–X8, LOOP), DELETE ROW and CLEAR SONG are SAVE › MORE rows. It saves itself."},
   {s: "song", k: "SAVE+F3", shot: 'layer_song_chain', t: "Play sections live and quick chain",
    d: "SAVE + F3–B3: plays A–D on the next bar (stopped: at once). Two or more in one hold: a quick chain, round and round."},
   {s: "song", k: "SAVE+E5", t: "Record the song live (SONG REC)",
-   d: "SAVE + E5: the sections you play with SAVE + F3–B3 are written into ARRANGE's rows, a scene each (it replaces the rows). SAVE + D5: LOOP / SONG (what PLAY plays). SAVE + G5: go to ARRANGE."},
+   d: "SAVE + E5: the sections you play with SAVE + F3–B3 are written into the song's rows, a scene each (it replaces the rows). SAVE + D5: LOOP / SONG (what PLAY plays). SAVE + G5: go to SAVE › SONG."},
   {s: "song", k: "KNOB 4", t: "Scenes",
-   d: "On ARRANGE, KNOB 4 right stores a scene in the row (mutes, DRUM-X group mutes, macros, punch-ins), left clears it. It holds until the next row with one."},
+   d: "On SAVE › SONG, KNOB 4 right stores a scene in the row (mutes, DRUM-X group mutes, macros, punch-ins), left clears it. It holds until the next row with one."},
 
   // MENU / USB / MIDI
   {s: "menu", k: "HOME", shot: 'menu', t: "The MENU: eight pages, five tabs",
@@ -549,15 +549,15 @@ recipes: [
     "SEQ › MORE › AUTOMATION: PLAY turns it on/off; EVENTS and LOCKS count; CLEAR (KNOB 2, OCT+ in the dialog) erases.",
     "SEQ › MORE › AUTOMATION: rows ROW, STEP, SETTING, VALUE; OCT+ LOCK ↔ AUTO; SEQ + G5 deletes the row.",
     "Clear only one part: REC + FX / EDIT / ENV / LFO / SCL / ARP / GLO."]},
-  {id: "song", s: "song", shots: ['save_project', 'save_arrange'], t: "Make a song", steps: [
-    "Make music and stop. SAVE, SAVE → SECTIONS; KNOB 4 right, OCT+, a name, OCT+: section A.",
-    "Make a variation; KNOB 1 to B and save it the same way. (While playing: SAVE + C4–F4 stores quickly.)",
-    "SELECT to ARRANGE: OCT+ adds a row, KNOB 2 the section, KNOB 3 the bars; KNOB 4 a scene.",
-    "On the END row, KNOB 2: STOP, x2–x8 or LOOP. PLAY plays the song. Or record it live: SAVE + E5 and SAVE + F3–B3."]},
+  {id: "song", s: "song", shots: ['save_library', 'save_song'], t: "Make a song", steps: [
+    "Make music and stop. SAVE › PROJECTS; KNOB 2 to A, KNOB 4 right, OCT+, a name, OCT+: section A.",
+    "Make a variation; KNOB 2 to B and save it the same way. (While playing: SAVE + C4–F4 stores quickly.)",
+    "SAVE › SONG: KNOB 1 the section, OCT+ adds a row after the one picked, KNOB 2 the row, KNOB 3 its bars; KNOB 4 a scene.",
+    "SAVE › MORE › END: STOP, X2–X8 or LOOP. PLAY plays the song. Or record it live: SAVE + E5 and SAVE + F3–B3."]},
   {id: "gen", s: "gen", shots: ['gen_explore', 'gen_parts'], t: "Use GEN / EXPLORE", steps: [
     "HOME held + SELECT: GEN opens on EXPLORE (no genre, breaks the rules).",
     "OCT+: a whole piece. PLAY. OCT+ again: another seed.",
-    "Or pick a genre (ten) or RANDOM with PRESETS; FORM PARTS / SONG builds sections and ARRANGE.",
+    "Or pick a genre (ten) or RANDOM with PRESETS; FORM PARTS / SONG builds sections and the song.",
     "SELECT to GEN 2 / GEN 3, lower or raise a part and OCT+: the same piece changed. OCT− leaves; GLO + G4 goes back."]},
   {id: "mutate", s: "mutate", shots: ['mutate', 'dlg_mut_back'], t: "MUTATE and REVERT", steps: [
     "SEQ › MORE, the MUTATE rows (KNOB 1 picks, KNOB 2 sets): SOUND and/or PATTERN every N bars, AMOUNT, MODE ORBIT or DRIFT.",
@@ -587,7 +587,7 @@ recipes: [
     "IN+OUT: the FM-1 is also the computer's output and that audio comes into the last track (T4 with TRACKS 4, else T6). STEMS+IN: stems + input (10 channels), made for the phone app (a separate product, coming soon).",
     "MIDI: the port is “ACID FM”. NOTES OUT and CLOCK OUT in GLO › MORE › MIDI; to follow the DAW, GLO › MIDI › KNOB 4 CLOCK USB."]},
   {id: "backup", s: "save", shots: ['save_library'], t: "Save, back up and restore", steps: [
-    "Save into sections (SAVE › SECTIONS), stopped: the autosave is not a save and never happens at power-off.",
+    "Save into sections (SAVE › PROJECTS), stopped: the autosave is not a save and never happens at power-off.",
     "Stop and wait a moment before switching off (SAVE-layer stores reach flash when you stop).",
     "Backup: web editor (Chrome/Edge, USB) › Projects › Save backup: all 4 projects, arrangements, user presets and settings. Not the FM6 bank: keep the .syx.",
     "Restore: the same place, Restore backup, USB connected. Back up before updating or returning to stock."]},

@@ -516,7 +516,7 @@ static int rec_tap(void)                                /* 1: the arming changed
         ui_message("STOP TO RECORD");
         return 0;
     }
-    if (!ui.home && cur_page()->graph == GR_SONG && !(song.rec & bit)) {
+    if (!ui.home && cur_page()->graph == GR_SVSONG && !(song.rec & bit)) {   /* (3c-2 task 3: SAVE > SONG, was ARRANGE) */
         ui_message("[SEQ] TO RECORD");
         return 0;
     }
@@ -1124,13 +1124,21 @@ static int tempo_ext(void)
     return 1;
 }
 /* (ACID FM 3c-2 task 2) SAVE > MORE's ENGINE, FAVORITE, LIST (params.c ID_SV_*) turned steps: a detent each, as the inherited
- * PRESETS page's KNOB 2 (the next / previous engine), 3 (the sound's favourite mark) and 4 (ALL, FAV, then the types BASS .. FX) */
+ * PRESETS page's KNOB 2 (the next / previous engine), 3 (the sound's favourite mark) and 4 (ALL, FAV, then the types BASS .. FX);
+ * (task 3) END, the inherited ARRANGE's END */
 static void sv_view_turn(uint32_t id, int32_t steps)
 {
     if (id == ID_SV_ENGINE) {
         select_engine(eng_step(TSEL->eng_req, steps));
     } else if (id == ID_SV_FAV) {
         preset_mark(steps > 0);
+    } else if (id == ID_SV_END) {                       /* (3c-2 task 3) the inherited ARRANGE's END row: STOP / X2 .. X8 / LOOP, */
+        if (chain_busy()) {                             /* not while the song plays */
+            ui_message("STOP TO EDIT");
+            return;
+        }
+        SONG_END(&chain_config) = (uint8_t)song_end_step(SONG_END(&chain_config), steps > 0 ? 1 : -1);
+        song_idx_touch();
     } else {
         uint32_t v = (uint32_t)clamp((int32_t)list_get() + (steps > 0 ? 1 : -1), 0, PT_N);
         if (v != list_get()) {
@@ -1140,28 +1148,94 @@ static void sv_view_turn(uint32_t id, int32_t steps)
         }
     }
 }
-/* (ACID FM 3c-2 task 2) SAVE's pages' knobs. SOUND (3c-2 spec 2.1): KNOB 1 the slot (0..31), 2 the track's preset (the inherited
- * PRESETS KNOB 1: preset_step), 3 NAME (right: the slot's rename, ui_name.c name_rename; an empty slot says so), 4 SAVE (right arms
- * it, left drops it: OCT+ saves, save_oct) */
+/* (ACID FM 3c-2 task 3) SAVE > SONG's OCT+: a row after row `after` (none yet: the first), its section the one SECTION picks
+ * (G_SLOT), its bars `after`'s (the first: 4), no scene; the rows after it and their scenes one on; the new row picked. On the last
+ * row the inherited ARRANGE's append. (save_oct: room checked, stopped) */
+static void song_row_insert(uint32_t after)
+{
+    uint32_t n = chain_config.count, at = n ? (after < n ? after + 1u : n) : 0u, r;
+    if (n >= CHAIN_ROWS)
+        return;
+    for (r = n; r > at; r--) {
+        chain_config.row[r] = chain_config.row[r - 1u];
+        song_idx.scene[song_cur][r] = song_idx.scene[song_cur][r - 1u];   /* (its scene with it) */
+    }
+    chain_config.row[at].slot = (uint8_t)((uint32_t)(song.g[G_SLOT] - 1) & 3u);
+    chain_config.row[at].bars = at ? chain_config.row[at - 1u].bars : 4u;
+    memset(&song_idx.scene[song_cur][at], 0, sizeof song_idx.scene[0][0]);   /* (no scene yet) */
+    chain_config.count = (uint8_t)(n + 1u);
+    ui.song_row = (uint8_t)at;
+    song_idx_touch();
+}
+/* (ACID FM 3c-2 tasks 2, 3) SAVE's pages' knobs (edit_param: SOUND, SONG).
+ * SOUND (3c-2 spec 2.1): KNOB 1 the slot (0..31), 2 the track's preset (the inherited PRESETS KNOB 1: preset_step), 3 NAME (right:
+ * the slot's rename, ui_name.c name_rename; an empty slot says so), 4 SAVE (right arms it, left drops it: OCT+ saves, save_oct).
+ * SONG (spec 2.2): KNOB 1 SECTION (G_SLOT A..D, the inherited SECTIONS' KNOB 1; a row picked: its section too), 2 ROW (the song's
+ * rows), 3 BARS (the row's, 1..CHAIN_BARS), 4 SCENE (the inherited ARRANGE KNOB 4: right stores the state now, left clears it); the
+ * row's edits not while the song plays (STOP TO EDIT), as ARRANGE's */
 static void save_knob(const page_t *pg, uint32_t slot, int32_t steps)
 {
-    if (pg->graph != GR_SVSND)
+    chain_row_t *r;
+    int row;
+    if (pg->graph == GR_SVSND) {
+        if (slot == 0u)
+            ui.uslot = (uint8_t)clamp((int32_t)ui.uslot + steps, 0, UP_SLOTS - 1);
+        else if (slot == 1u)
+            preset_step(steps);
+        else if (slot == 2u) {
+            if (steps > 0)
+                name_rename();
+        } else
+            ui.act = steps > 0 ? 4u : 0u;
         return;
+    }
+    if (chain_config.count && ui.song_row >= chain_config.count)   /* (past the last, a row deleted: the last, as shown) */
+        ui.song_row = (uint8_t)(chain_config.count - 1u);
+    r = &chain_config.row[ui.song_row % CHAIN_ROWS];
+    row = ui.song_row < chain_config.count;
+    if (slot == 1u) {                                   /* SONG's ROW: the real rows */
+        ui.song_row = (uint8_t)(chain_config.count ? clamp((int32_t)ui.song_row + steps, 0, (int32_t)chain_config.count - 1) : 0);
+        return;
+    }
     if (slot == 0u)
-        ui.uslot = (uint8_t)clamp((int32_t)ui.uslot + steps, 0, UP_SLOTS - 1);
-    else if (slot == 1u)
-        preset_step(steps);
-    else if (slot == 2u) {
-        if (steps > 0)
-            name_rename();
-    } else
-        ui.act = steps > 0 ? 4u : 0u;
+        song.g[G_SLOT] = (int16_t)clamp(song.g[G_SLOT] + steps, 1, 4);
+    if (!row) {                                         /* (no row: SECTION G_SLOT alone; BARS and SCENE say so) */
+        if (slot)
+            ui_message("NO ROW");
+        return;
+    }
+    if (chain_busy()) {
+        ui_message("STOP TO EDIT");
+        return;
+    }
+    if (slot == 0u)
+        r->slot = (uint8_t)(song.g[G_SLOT] - 1);
+    else if (slot == 2u)
+        r->bars = (uint8_t)clamp((int32_t)r->bars + steps, 1, (int32_t)CHAIN_BARS);
+    else {                                              /* (JIANT) SCENE: right stores the state now (mutes, macros, punch-in), */
+        scene_t *sc = &song_idx.scene[song_cur][ui.song_row % CHAIN_ROWS];   /* left takes it away */
+        if (steps > 0) { scene_capture(sc); ui_message("SCENE STORED"); }
+        else if (sc->on) { memset(sc, 0, sizeof *sc); ui_message("SCENE CLEARED"); }
+        song_idx_touch();
+    }
 }
-/* (ACID FM 3c-2 task 2) OCT+ on SAVE's pages (act_do). SOUND, SAVE armed: as the inherited USER's SAVE: playing STOP TO SAVE, a used
- * slot the overwrite dialog first, else NAME (it writes the slot) */
+/* (ACID FM 3c-2 tasks 2, 3) OCT+ on SAVE's pages (act_do). SOUND, SAVE armed: as the inherited USER's SAVE: playing STOP TO SAVE, a
+ * used slot the overwrite dialog first, else NAME (it writes the slot). SONG: a row after the one picked (song_row_insert; the
+ * inherited ARRANGE's ADD): not while the song plays, 16 at most */
 static void save_oct(const page_t *pg)
 {
-    if (pg->graph != GR_SVSND || ui.act != 4u)
+    if (pg->graph == GR_SVSONG) {
+        if (chain_busy())
+            ui_message("STOP TO EDIT");
+        else if (chain_config.count >= CHAIN_ROWS)
+            ui_message("16 ROWS");
+        else {
+            song_row_insert(ui.song_row);
+            ui_message("ROW ADDED");
+        }
+        return;
+    }
+    if (ui.act != 4u)
         return;
     ui.act = 0;
     if (transport_busy())
@@ -1270,46 +1344,7 @@ static void edit_param(uint32_t slot, int32_t steps)
             micro_edit(steps);
         return;
     }
-    if (pg->graph == GR_SONG) {
-        uint32_t end = song_end_row();                  /* (0.6.22) the rows, + ADD, then the song's END */
-        if (slot == 0u) {
-            ui.song_row = (uint8_t)clamp((int32_t)ui.song_row + steps, 0, (int32_t)end);
-            return;
-        }
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        if (ui.song_row >= end) {                       /* END: KNOB 2 STOP / x2 .. x8 / LOOP (the song's times) */
-            if (slot == 1u) {
-                SONG_END(&chain_config) = (uint8_t)song_end_step(SONG_END(&chain_config), steps > 0 ? 1 : -1);
-                song_idx_touch();
-            }
-            return;
-        }
-        if (slot == 3u) {                     /* (JIANT) SCENE: right stores the state now (mutes, macros, punch-in), */
-            scene_t *sc = &song_idx.scene[song_cur][ui.song_row % CHAIN_ROWS];   /* left takes it away */
-            if (ui.song_row >= chain_config.count) { ui_message("NO ROW"); return; }
-            if (steps > 0) { scene_capture(sc); ui_message("SCENE STORED"); }
-            else if (sc->on) { memset(sc, 0, sizeof *sc); ui_message("SCENE CLEARED"); }
-            song_idx_touch();
-            return;
-        }
-        if (ui.song_row >= chain_config.count) {
-            chain_row_t *r = &chain_config.row[ui.song_row];
-            r->slot = ui.song_row ? chain_config.row[ui.song_row - 1u].slot : 0u;
-            r->bars = 1;
-            chain_config.count = ui.song_row + 1u;
-            if (slot == 1u) return;
-        }
-        if (slot == 1u && steps < 0 && chain_config.row[ui.song_row].slot == 0u) {
-            confirm_open(CF_DEL_ROW, ui.song_row);      /* (0.6.22) SECT left of A: DELETE ROW? (the dialog) */
-            return;
-        }
-        if (slot == 1u)
-            chain_config.row[ui.song_row].slot = (uint8_t)clamp((int32_t)chain_config.row[ui.song_row].slot + steps, 0, 3);
-        if (slot == 2u)
-            chain_config.row[ui.song_row].bars = (uint8_t)clamp((int32_t)chain_config.row[ui.song_row].bars + steps, 1,
-                                                                (int32_t)CHAIN_BARS);
-        return;
-    }
+    /* (ACID FM 3c-2 task 3) ARRANGE's knobs (ROW, SECT, BARS, SCENE; END) gone: SAVE > SONG's (save_knob), END SAVE > MORE's */
     if (chain_busy() && (pg->scope == SC_STEP || pg->graph == GR_STEPS ||
         0)) {
         ui_message("STOP TO EDIT"); return;
@@ -1323,8 +1358,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         tracks_edit(slot, steps);
         return;
     }
-    if (pg->fam == FAM_SAVE && pg->graph == GR_SVSND) {   /* (ACID FM 3c-2 task 2) SAVE > SOUND (the inherited PRESETS page's
-                                                         * knobs: SAVE > SOUND's PRESET and MORE's rows, sv_view_turn) */
+    if (pg->graph == GR_SVSND || pg->graph == GR_SVSONG) {   /* (ACID FM 3c-2 tasks 2, 3) SAVE > SOUND, SONG (save_knob) */
         save_knob(pg, slot, steps);
         return;
     }
@@ -1334,13 +1368,7 @@ static void edit_param(uint32_t slot, int32_t steps)
                                                          * past the first: none picked) */
         return;
     }
-    if (pg->graph == GR_SLOTS && save_on() && save_level() == SV_PROJ) {   /* (0.8.5) SAVE > PROJECT's SECTIONS: KNOB 1
-                                                         * the section, KNOB 2 its name (shown; EDIT renames it) */
-        if (slot == 1u)
-            return;
-        if (slot == 0u)
-            slot = 1u;
-    }
+    /* (0.8.5) SAVE > PROJECT's SECTIONS (KNOB 1 the section, KNOB 2 its name) gone (ACID FM 3c-2 task 3: SAVE > SONG's SECTION) */
     if ((act_cols() >> slot) & 1u) {                      /* an action's knob picks it (right) or drops it (left); */
         if (pg->graph != GR_PATS)                         /* OCT+ does it (act_do) */
             ui.act = steps > 0 ? (uint8_t)(slot + 1u) : ui.act == slot + 1u ? 0u : ui.act;
@@ -1390,20 +1418,6 @@ static void act_do(void)
                      c == 5u ? CF_CPU_TEST : CF_CLEAR_SONG, c == 2u ? ui.song_row : song.sel);
         return;
     }
-    if (cur_page()->graph == GR_SONG) {                 /* (0.8.5) SAVE > PROJECT's ARRANGE: OCT+ adds a row after the
-                                                         * last (its section and bars), the new one selected; PLAY plays */
-        chain_row_t *r;
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        if (chain_config.count >= CHAIN_ROWS) { ui_message("16 ROWS"); return; }
-        r = &chain_config.row[chain_config.count];
-        r->slot = chain_config.count ? chain_config.row[chain_config.count - 1u].slot : 0u;
-        r->bars = chain_config.count ? chain_config.row[chain_config.count - 1u].bars : 4u;
-        memset(&song_idx.scene[song_cur][chain_config.count], 0, sizeof song_idx.scene[0][0]);   /* (no scene yet) */
-        ui.song_row = chain_config.count++;
-        song_idx_touch();
-        ui_message("ROW ADDED");
-        return;
-    }
     if (cur_page()->graph == GR_PATS) {
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         if (pat_needs_confirm(TSEL))                      /* the user's steps: the dialog */
@@ -1414,8 +1428,8 @@ static void act_do(void)
         }
         return;
     }
-    if (cur_page()->fam == FAM_SAVE && cur_page()->graph == GR_SVSND) {   /* (ACID FM 3c-2 task 2) SAVE > SOUND's SAVE (the
-                                                         * inherited USER's; its LOAD and ERASE SAVE > MORE's rows, ux_more.c) */
+    if (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SVSONG) {   /* (ACID FM 3c-2 tasks 2, 3) SAVE > SOUND's SAVE,
+                                                         * SONG's ADD (save_oct) */
         save_oct(cur_page());
         return;
     }
@@ -2499,7 +2513,8 @@ static void ui_input_frame(void)
                 break;
             if (song.playing || chain_busy() || seq_counting())   /* (a count-in: PLAY stops it) */
                 transport_req = 2;
-            else if ((!ui.home && cur_page()->graph == GR_SONG) || live.mode)   /* (the song layer's SONG mode) */
+            else if ((!ui.home && cur_page()->graph == GR_SVSONG) || live.mode)   /* (the song layer's SONG mode; 3c-2 task 3:
+                                                         * SAVE > SONG, was ARRANGE) */
                 chain_play_ui();
             else
                 transport_req = 1;
@@ -2659,7 +2674,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->graph == GR_MIX || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_MOD || pg->graph == GR_PATS) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_SVSND ||
+            || pg->graph == GR_SVSONG || pg->graph == GR_SVSND ||
             pg->graph == GR_LIVE || pg->graph == GR_MORE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;

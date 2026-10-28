@@ -101,7 +101,7 @@ static uint32_t ly_bit(uint32_t l) { return 1u << panel.btn[LAYERS[l].btn]; }
 static int tools_page(void)
 {
     const page_t *pg = &PAGES[ui.page];
-    return !ui.home && pg->fam == FAM_SEQ && pg->graph != GR_PATS && pg->graph != GR_SONG;   /* (0.8.3: every level
+    return !ui.home && pg->fam == FAM_SEQ && pg->graph != GR_PATS;   /* (0.8.3: every level
                                                          * of LENTE's, STRETCH PLAYHEADS MUTATE AUTO LIST too) */
 }
 static int ly_avail(uint32_t l) { return l != LAYER_SEQ || tools_page(); }   /* (REC: on every page) */
@@ -432,18 +432,13 @@ static void song_key(uint32_t p)
         song_rec_toggle();
     } else if (p == SK_NAME) {                          /* (0.9.2) SAVE + C5: SOUND's slot (3c-2 task 2: was USER's), PROJECT's
                                                          * project or section */
-        if (!ui.home && (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SLOTS))
-            name_rename();
+        if (!ui.home && (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SVSONG || cur_page()->graph == GR_SLOTS))
+            name_rename();                              /* (3c-2 task 3: SONG renames the section, as SECTIONS did) */
         else
             ui_message("NAME: ON SOUND OR PROJECT");
     } else if (p == SK_PAGE) {
-        for (k = 0; k < NPAGES && PAGES[k].graph != GR_SONG; k++)
-            ;
-        if (k < NPAGES) {
-            ui.home = 0;
-            ui.page = (uint8_t)k;
-            page_entered();
-        }
+        (void)nav_put(SEC_SAVE, "SONG");                /* (ACID FM 3c-2 task 3) SAVE > SONG (was the first GR_SONG page,
+                                                         * ARRANGE) */
     }
 }
 
@@ -983,7 +978,8 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         str_cpy(nm, p == SK_MODE ? (live.mode ? "SONG" : "LOOP") : p == SK_REC ? "SONG REC" : p == SK_PAGE ? "ARRANGE" :
                     p == SK_NAME ? "NAME" : "", 12);
         if (p == SK_NAME)
-            return !ui.home && (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SLOTS) ? LS_OFF : LS_DIM;
+            return !ui.home && (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SVSONG || cur_page()->graph == GR_SLOTS) ?
+                   LS_OFF : LS_DIM;
         return p == SK_MODE && live.mode ? LS_SEL : p == SK_REC ? (live.srec == 2u ? LS_HELD : live.srec ? LS_WAIT : LS_OFF) : LS_OFF;
     }
     if (l == LAYER_MACRO && !blk && p < 2u && layer_open()) {   /* F3 DICE, G3 CLEAR (held; latched the keys play: 3b task 9 fix) */
