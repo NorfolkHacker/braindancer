@@ -1114,11 +1114,11 @@ int main(void)
          * the CPU TEST song than the model says (gen.c GC_GEN_X100). Now: the budget 65 % of the device's half, 588 at 74 %
          * (542 unset, as 0.5.1's 543); a quarter-rate delay only on a piece under it with it, and not on a busy one
          * (5 parts or more) with the CPU TEST unset; delays at the full or half rate never shortened (a slow genre's 1/4
-         * echo stays); EXPLORE and RANDOM fitted under the budget. Then ~1000 pieces (EXPLORE, RANDOM, every genre; the
-         * CPU TEST unset and 74 %) */
+         * echo stays); EXPLORE fitted under the budget. Then ~1000 pieces (EXPLORE, RANDOM, every genre; the CPU TEST
+         * unset and 74 %). (review I2) RANDOM and the genres keep their parts: only a quarter-rate delay is budgeted */
         static const uint8_t CPT[2] = {0, 74};
         uint32_t c, g, sd, k, n = 0, over_q = 0, busy_q = 0, cut_bad = 0, cut = 0, kept_q = 0, st3423[2], ov[2][2], bud[2];
-        uint32_t xr_n = 0, xr_over = 0, slow_kept = 0, x_over = 0, r_over = 0, r_notfloor = 0;
+        uint32_t xr_n = 0, xr_over = 0, slow_kept = 0, x_over = 0, r_over = 0, r_diff = 0, r_n = 0, r_dly = 0;
         mc_host_v12 = 1;
         for (c = 0; c < 2u; c++) {
             static const uint16_t SEED[2] = {3423, 9641};
@@ -1147,11 +1147,6 @@ int main(void)
                 over_q += over && st == 2u;
                 busy_q += busy && !gt_cpt && st == 2u;
                 kept_q += st == 2u;
-                if (!g && over) {                       /* (RANDOM over the budget: at the fit's floor) */
-                    uint32_t hd = 0, q, hh;
-                    for (q = 0; q < NTRK; q++) for (hh = 0; hh < FG_HEADS; hh++) hd += fg_set[q][hh].rate != 0;
-                    r_notfloor += hd || gs.act[RL_TEX] || gs.act[RL_ARP] || (gs.act[RL_LEAD] && gs.act[RL_BASS] && gs.act[RL_PAD]);
-                }
                 if (g == 0u || g == GEN_EXPLORE) { xr_n++; xr_over += over; x_over += over && g; r_over += over && !g;
                     if (over && xr_over < 8u) printf("  %s (%s) seed %u: %u over the budget %u, CPU TEST %u\n", g ? "EXPLORE" : "RANDOM", gs.g->name, gp.seed, gc_cost(1), gc_budget(), gt_cpt); }
                 dt = (uint32_t)song.g[G_DTIME];
@@ -1173,8 +1168,29 @@ int main(void)
         bad += gcheck("  ~1000 pieces: none over the budget, nor busy with the CPU TEST unset, with a quarter-rate delay", !over_q && !busy_q);
         bad += gcheck("  .. a delay shortened only from the quarter rate, over the budget or busy; half / full rate ones kept",
                       !cut_bad && slow_kept >= 10u);
-        bad += gcheck("  .. EXPLORE under the budget (4 % over at most: at the floor, the fit's steps run out); RANDOM over it only "
-                      "at the floor (no PLAYHEAD, texture or arp; the lead out with the bass and chords)", x_over * 25u <= 400u && !r_notfloor);
+        for (g = 0; g < GEN_EXPLORE; g++)              /* (review I2) RANDOM, a genre: the same piece whatever the budget */
+            for (sd = 0; sd < (g ? 4u : 100u); sd++) {
+                uint32_t sig[2], act[2], rt[2], dt2[2], j, q, hh;
+                for (j = 0; j < 2u; j++) {
+                    gt_cpt = CPT[j]; gen_reset();
+                    gen_with(1, 7, 50, 0);              /* (the press before the same for both: GEN keeps away from it) */
+                    gen_with(g, sd * 61u + g * 13u + 3u, 30u + (sd * 23u) % 60u, sd % 3u);
+                    sig[j] = all_sig(); dt2[j] = (uint32_t)song.g[G_DTIME]; rt[j] = (uint32_t)song.g[G_RTYPE] << 8 | (uint32_t)(song.g[G_DPIT] != 0);
+                    for (act[j] = 0, q = 0; q < 6u; q++) act[j] |= (uint32_t)(gs.act[q] != 0) << q;
+                    for (q = 0; q < NTRK; q++) for (hh = 0; hh < FG_HEADS; hh++) act[j] += (fg_set[q][hh].rate != 0) << 8;
+                }
+                if (dt2[0] != dt2[1]) { r_dly++; continue; }   /* (the delay rule: its TIME, then the rest drawn after it) */
+                r_n++;
+                if (sig[0] != sig[1] || act[0] != act[1] || rt[0] != rt[1]) {
+                    r_diff++;
+                    if (r_diff < 4u) printf("  %s seed %u: another piece at CPU TEST 74 %% than unset\n", gs.g->name, gp.seed);
+                }
+            }
+        printf("gen: (0.5.2) RANDOM and the genres at CPU TEST unset and 74 %%: %u pieces with the same TIME, %u of them differ; "
+               "%u with a quarter-rate delay shortened at one of them\n", r_n, r_diff, r_dly);
+        bad += gcheck("  .. EXPLORE under the budget (4 % over at most: at the floor, the fit's steps run out)", x_over * 25u <= 400u);
+        bad += gcheck("  .. (review I2) RANDOM and the genres keep their parts, sounds, reverb, grain and PLAYHEADS whatever the "
+                      "budget: only a quarter-rate delay changes", !r_diff);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* (ACID FM 0.5.2 review I1, M1) the parts the safety net may hush (audio.c fx_safety_tick: safe_part) are the GEN

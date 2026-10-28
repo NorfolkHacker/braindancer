@@ -1998,8 +1998,8 @@ static void gx_mutate(void)
  * (ACID FM 0.5.2: and a long TIME shortened to the full rate), a PLAYHEAD less, a note less in every chord (two at
  * least), the long releases shorter, the texture cleared
  * (gx_fit_piece, after them). (ACID FM 0.5.2) Then, still over: the arp left out, then the lead (gen_fit_rest). With
- * two cores the budget is the FM-1's measured 65 % (GC_GEN_X100, no margin off). RANDOM's pieces fitted as EXPLORE's
- * after the parts (gen_fit_rest); a genre's left as it was but for a quarter-rate delay (gen_fit_delay) */
+ * two cores the budget is the FM-1's measured 65 % (GC_GEN_X100, no margin off). RANDOM's and a genre's pieces left
+ * as they were but for a quarter-rate delay (gen_fit_delay) */
 static const uint8_t GC_ENG[NENGINES] = {27, 79, 45, 27, 27, 64, 27, 27, 27, 27, 70, 60, 79, 27, 27};   /* (ANALOG ..
                                                          * 14 by number; the retired ones as ANALOG, DIGITAL as FM6;
                                                          * ACID FM 0.2: WHEEL 7, ANIMAL 14 retired) */
@@ -2154,7 +2154,7 @@ static void gen_leave_out(uint32_t r)                   /* a role's part left ou
 }
 /* (ACID FM 0.5.2) still over the budget: a PLAYHEAD less, the long releases shorter, the texture cleared, CLOUD / SHIMMER
  * as ROOM / SPRING (EXPLORE between the first two: a note less in every chord, two at least), the arp, the lead.
- * RANDOM's pieces too: the model's estimate holds for them as for EXPLORE's (not measured on an FM-1) */
+ * EXPLORE's pieces only */
 static void gen_fit_rest(void)
 {
     uint32_t k, h, i;
@@ -2615,11 +2615,9 @@ static void gen_make(void)
                                                          * orbited the old piece's sounds) */
     if (gx.on) { gx_mutate(); gx_heads(); gx_fit_piece(); }   /* (0.8.6) EXPLORE: MUTATE, PLAYHEADS (before the sections:
                                                          * each holds them); 0.9.13: inside the CPU budget */
-    else {                                              /* (ACID FM 0.5.2) a genre: a quarter-rate delay over the budget
-                                                         * at the full rate (the rest as the genre made it); RANDOM: */
-        gen_fit_delay();                                /* .. and inside the budget as EXPLORE */
-        if (!gp.genre && gc_cost(1) > gc_budget()) gen_fit_rest();
-    }
+    else gen_fit_delay();                               /* (ACID FM 0.5.2) RANDOM, a genre: a quarter-rate delay over the
+                                                         * budget at the full rate (the rest as the genre made it: the
+                                                         * device's x1.5 was measured on EXPLORE's pieces only) */
     mut_keep();
     gen_parts();
 }
