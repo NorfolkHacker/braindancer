@@ -447,7 +447,7 @@ static int drift_on(void)
         return 0;
     return !ui.home && !sys_load && !(ui_prefs & PREF_ANIM_OFF) && strip_kind() == SK_NONE && !roll_view(cur_page()) && !lens_on() &&
            g != GR_ROLL && g < GR_LIVE &&               /* (0.8.3: LENTE's step; 0.9.11: LIVE's rails, the enum's last) */
-           g != GR_STEPS && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS &&
+           g != GR_STEPS && g != GR_SLOTS &&
            g != GR_SONG && g != GR_TOOLS && g != GR_PATS;
 }
 static void graph_drift(void)
@@ -579,9 +579,6 @@ static uint32_t graph_signature(void)
     if (save_on()) {                                 /* (0.8.5) SAVE's lens: the level, the library's scan, the sound */
         lib_poll();
         h = (h ^ (save_level() + 1u) * 2654435761u ^ lib.next * 40503u ^ lib.gen) * 16777619u;
-        if (pg->graph == GR_USER || pg->graph == GR_BROWSE)   /* (the sound's four knobs: 3b task 5, the being gone) */
-            for (i = 0; i < 4u; i++)
-                h = (h ^ (uint16_t)t->p[trk_engp(t)->knob[i] % P_COUNT]) * 16777619u;
         if (pg->graph == GR_SONG) {                  /* (ARRANGE: as SLOTS', the rows and where the song is) */
             for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (20u + i);
             h += graph_pname_sig + (uint32_t)(live.cur + 1) * 40503u;
@@ -591,8 +588,6 @@ static uint32_t graph_signature(void)
             h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u : 0u;
             for (i = 0; i < CHAIN_ROWS; i++) h = (h ^ (uint32_t)song_idx.scene[song_cur][i].on * (i + 1u)) * 16777619u;
         }
-        if (pg->graph == GR_BROWSE)
-            h ^= list_get() * 977u + preset_favorite() * 31u;
     }
     if (lens_on()) {                                 /* (0.8.3) LENTE: the level; its STEP, the cursor step's every byte */
         h = (h ^ (lens_level() + 1u) * 2654435761u) * 16777619u;

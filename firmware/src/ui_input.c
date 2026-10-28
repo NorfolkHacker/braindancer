@@ -1123,6 +1123,54 @@ static int tempo_ext(void)
     ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
     return 1;
 }
+/* (ACID FM 3c-2 task 2) SAVE > MORE's ENGINE, FAVORITE, LIST (params.c ID_SV_*) turned steps: a detent each, as the inherited
+ * PRESETS page's KNOB 2 (the next / previous engine), 3 (the sound's favourite mark) and 4 (ALL, FAV, then the types BASS .. FX) */
+static void sv_view_turn(uint32_t id, int32_t steps)
+{
+    if (id == ID_SV_ENGINE) {
+        select_engine(eng_step(TSEL->eng_req, steps));
+    } else if (id == ID_SV_FAV) {
+        preset_mark(steps > 0);
+    } else {
+        uint32_t v = (uint32_t)clamp((int32_t)list_get() + (steps > 0 ? 1 : -1), 0, PT_N);
+        if (v != list_get()) {
+            list_put(v);
+            ui.force = 1;
+            settings_save();
+        }
+    }
+}
+/* (ACID FM 3c-2 task 2) SAVE's pages' knobs. SOUND (3c-2 spec 2.1): KNOB 1 the slot (0..31), 2 the track's preset (the inherited
+ * PRESETS KNOB 1: preset_step), 3 NAME (right: the slot's rename, ui_name.c name_rename; an empty slot says so), 4 SAVE (right arms
+ * it, left drops it: OCT+ saves, save_oct) */
+static void save_knob(const page_t *pg, uint32_t slot, int32_t steps)
+{
+    if (pg->graph != GR_SVSND)
+        return;
+    if (slot == 0u)
+        ui.uslot = (uint8_t)clamp((int32_t)ui.uslot + steps, 0, UP_SLOTS - 1);
+    else if (slot == 1u)
+        preset_step(steps);
+    else if (slot == 2u) {
+        if (steps > 0)
+            name_rename();
+    } else
+        ui.act = steps > 0 ? 4u : 0u;
+}
+/* (ACID FM 3c-2 task 2) OCT+ on SAVE's pages (act_do). SOUND, SAVE armed: as the inherited USER's SAVE: playing STOP TO SAVE, a used
+ * slot the overwrite dialog first, else NAME (it writes the slot) */
+static void save_oct(const page_t *pg)
+{
+    if (pg->graph != GR_SVSND || ui.act != 4u)
+        return;
+    ui.act = 0;
+    if (transport_busy())
+        ui_message("STOP TO SAVE");
+    else if (up_used(ui.uslot))
+        confirm_open(CF_OVR_USER, ui.uslot);
+    else
+        name_open(NK_USER_SAVE, ui.uslot);
+}
 static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
 {
     int16_t *vp;
@@ -1141,6 +1189,11 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
     if (!t && lvv_is(id)) {                             /* (3c-1 task 6) GLO > MORE's RAILS: the inherited second LIVE page's
                                                          * knobs (ui_live.c) */
         live_rail(id, steps);
+        return;
+    }
+    if (!t && svv_is(id)) {                             /* (3c-2 task 2) SAVE > MORE's ENGINE, FAVORITE, LIST: the inherited
+                                                         * PRESETS page's KNOB 2, 3, 4 */
+        sv_view_turn(id, steps);
         return;
     }
     d = param_ref(t, id, &vp);
@@ -1270,21 +1323,9 @@ static void edit_param(uint32_t slot, int32_t steps)
         tracks_edit(slot, steps);
         return;
     }
-    if (pg->graph == GR_BROWSE) {                         /* KNOB 1: one preset, KNOB 2: the next / previous engine */
-        if (slot == 0u) {
-            preset_step(steps);
-        } else if (slot == 1u) {
-            select_engine(eng_step(TSEL->eng_req, steps));
-        } else if (slot == 2u) {
-            preset_mark(steps > 0);
-        } else if (slot == 3u) {                         /* (0.9.12) LIST: ALL FAV, then the types (BASS LEAD .. FX) */
-            uint32_t v = (uint32_t)clamp((int32_t)list_get() + (steps > 0 ? 1 : -1), 0, PT_N);
-            if (v != list_get()) {
-                list_put(v);
-                ui.force = 1;
-                settings_save();
-            }
-        }
+    if (pg->fam == FAM_SAVE && pg->graph == GR_SVSND) {   /* (ACID FM 3c-2 task 2) SAVE > SOUND (the inherited PRESETS page's
+                                                         * knobs: SAVE > SOUND's PRESET and MORE's rows, sv_view_turn) */
+        save_knob(pg, slot, steps);
         return;
     }
     if (pg->graph == GR_TOOLS) {                          /* (0.6.25) TOOLS: a list, any knob (and PRESETS) moves the
@@ -1308,11 +1349,6 @@ static void edit_param(uint32_t slot, int32_t steps)
     if (pg->graph == GR_SLOTS && slot == 0u) {            /* (0.6.12) KNOB 1 the project: its sections, the music kept */
         int32_t n = clamp((int32_t)song_cur + (steps > 0 ? 1 : -1), 0, (int32_t)NSONG - 1);
         if ((uint32_t)n != song_cur) (void)song_open((uint32_t)n);
-        return;
-    }
-    if (pg->graph == GR_USER) {                           /* KNOB 1 the slot */
-        if (slot == 0u)
-            ui.uslot = (uint8_t)clamp((int32_t)ui.uslot + steps, 0, UP_SLOTS - 1);
         return;
     }
     if (pg->graph == GR_PATS) {                          /* KNOB 1 the pattern */
@@ -1378,19 +1414,9 @@ static void act_do(void)
         }
         return;
     }
-    if (cur_page()->graph == GR_USER) {                   /* 1 LOAD, 2 ERASE, 3 SAVE (the NAME screen first) */
-        if (c > 1u)
-            ui.act = 0;
-        if (c == 2u && up_used(ui.uslot) && !transport_busy())
-            confirm_open(CF_ERASE_USER, ui.uslot);        /* ERASE: the dialog first */
-        else if (c != 3u)
-            up_ui(c - 1u, ui.uslot);
-        else if (transport_busy())
-            ui_message("STOP TO SAVE");
-        else if (up_used(ui.uslot))
-            confirm_open(CF_OVR_USER, ui.uslot);
-        else
-            name_open(NK_USER_SAVE, ui.uslot);
+    if (cur_page()->fam == FAM_SAVE && cur_page()->graph == GR_SVSND) {   /* (ACID FM 3c-2 task 2) SAVE > SOUND's SAVE (the
+                                                         * inherited USER's; its LOAD and ERASE SAVE > MORE's rows, ux_more.c) */
+        save_oct(cur_page());
         return;
     }
     id = cur_page()->id[c & 3u];
@@ -2631,9 +2657,9 @@ static void ui_input_frame(void)
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->graph == GR_MIX || page_desc(pg, k, &hv) ||
-            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_PATS) &&
+            ((pg->graph == GR_MOD || pg->graph == GR_PATS) &&
              k == 0u)
-            || pg->graph == GR_SONG ||
+            || pg->graph == GR_SONG || pg->graph == GR_SVSND ||
             pg->graph == GR_LIVE || pg->graph == GR_MORE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;

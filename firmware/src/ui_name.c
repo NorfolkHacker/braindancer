@@ -117,10 +117,10 @@ static void name_open(uint32_t kind, uint32_t slot)
     ui.force = 1;
 }
 
-/* SAVE > USER / PROJECT, EDIT: rename the selected slot */
+/* SAVE > SOUND (3c-2 task 2: was USER) / PROJECT, EDIT: rename the selected slot */
 static void name_rename(void)
 {
-    int user = cur_page()->graph == GR_USER;
+    int user = cur_page()->graph == GR_SVSND;
     uint32_t k = user ? ui.uslot : (uint32_t)song.g[G_SLOT] - 1u;
     if (!(user ? up_used(k) : project_used(k)))
         ui_message("EMPTY SLOT");

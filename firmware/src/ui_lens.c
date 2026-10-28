@@ -107,9 +107,12 @@ static const ng_t CG_SCL[] = {{"KEY", 0}, {"CHORD", 0}, {"MORE", 0}};
 static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 0), NV("ARP 2", 0, 1, 0)};
 static const ng_t CG_ARP[] = {{"ARP", 0}, {"ARP 2", 0}};
 enum { SV_LIB, SV_PROJ, SV_SOUND };
-static const nv_t CE_SAVE[] = {NV("USER", 0, 0, SV_SOUND), NV("PRESETS", 0, 0, SV_SOUND), NV("PROJECT", "SECTIONS", 1, SV_PROJ),
-                               NV("ARRANGE", 0, 1, SV_PROJ), NV("PROJECT", "PROJECTS", 2, SV_LIB), NV("TOOLS", 0, 2, SV_LIB)};
-static const ng_t CG_SAVE[] = {{"SOUND", 0}, {"PROJECT", 0}, {"LIBRARY", 0}};
+/* (ACID FM 3c-2 task 2) SAVE = SOUND -> SONG -> PROJECT -> MORE (spec 2): SOUND on the ux pages (ux_save.c: the inherited USER and
+ * PRESETS pages), MORE (params.c UXM_SAVE); the inherited SECTIONS, ARRANGE (PROJECT) and PROJECTS, TOOLS (LIBRARY) between them
+ * until tasks 3 and 4 */
+static const nv_t CE_SAVE[] = {NV("SAVE SOUND", "SOUND", 0, 0), NV("PROJECT", "SECTIONS", 1, SV_PROJ), NV("ARRANGE", 0, 1, SV_PROJ),
+                               NV("PROJECT", "PROJECTS", 2, SV_LIB), NV("TOOLS", 0, 2, SV_LIB), NV("SAVE MORE", "MORE", 3, 0)};
+static const ng_t CG_SAVE[] = {{"SOUND", 0}, {"PROJECT", 0}, {"LIBRARY", 0}, {"MORE", 0}};
 #define CH(e, g) {e, g, (uint8_t)NELEM(e), (uint8_t)NELEM(g)}
 #define NAV_KEYS (SEC_N + 3u)                           /* the sections' memories: EDIT's synth one, then FM6 DRUM DIGITAL */
 static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, CG_HOME), CH(CE_SYN, CG_SYN), CH(CE_SEQ, CG_SEQ), CH(CE_FX, CG_FX),
@@ -230,7 +233,7 @@ static void gen_page_put(uint32_t p);
 static int chain_busy(void);
 static void ui_message(const char *s);
 /* entry e of section sec shown (one that is not here: the nearest after it, else before); outside: from another
- * section (SAVE: USER and SECTIONS come with their SAVE armed, SAVE . OCT+ . OCT+ as before) */
+ * section (SAVE: SOUND (3c-2 task 2: was USER) and SECTIONS come with their SAVE armed, SAVE . OCT+ . OCT+ as before) */
 static void nav_go(uint32_t sec, uint32_t e, int outside)
 {
     const ch_t *c = nav_ch(sec);
@@ -271,8 +274,8 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
     ui.page = (uint8_t)i;
     ui.home = 0;
     page_entered();
-    if (PAGES[i].graph == GR_USER || PAGES[i].graph == GR_SLOTS)
-        ui.act = outside && (PAGES[i].graph == GR_USER || c->e[e].lv == SV_PROJ) ? 4u : 0u;
+    if (PAGES[i].graph == GR_SVSND || PAGES[i].graph == GR_SLOTS)
+        ui.act = outside && (PAGES[i].graph == GR_SVSND || c->e[e].lv == SV_PROJ) ? 4u : 0u;
     page_flash();
 }
 /* the entry section sec's button goes to from the one shown: the next group's first with a page here (ARP's one: its first);

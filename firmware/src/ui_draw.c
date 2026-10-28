@@ -1210,21 +1210,6 @@ static void draw_columns(void)
         return;
     }
     /* (ACID FM 3c-1 task 7) JIANT's MIXER cards (LEVEL PAN REV, the DJ FILTER) gone with it: GLO > MIX (ux_glo.c) */
-    if (cur_page()->graph == GR_BROWSE) {
-        uint32_t total, cur = preset_pos(&total);
-        char u[8];
-        if (cur < total) fmt_int(val, (int32_t)cur + 1);
-        else str_cpy(val, total ? "--" : "NONE", 8);   /* (0.6.25: an empty list said "--/0") */
-        str_cpy(u, "/", 8);
-        fmt_int(u + 1, (int32_t)total);
-        if (!total || (cur + 1u >= 100u && total >= 100u)) u[0] = 0;   /* (0.7.0) "147/155" is too wide for the card: the
-                                                         * number alone past 99 (every engine's presets counted) */
-        draw_column(0, "No.", val, u, VAL(0u), -1, ICON_NONE);
-        draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), -1, engine_icon(ENGINES[TSEL->eng_req]->name));
-        draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), -1, ICON_X_STAR);
-        draw_column(3, "LIST", N_LIST[list_get()], "", VAL(3u), -1, ICON_X_FOLDER);
-        return;
-    }
     if (cur_page()->graph == GR_PATS) {                  /* PAT, then LOAD (a GO button) */
         uint32_t n = pat_count(), k = pat_pick();
         char tag[4], nm[13];
@@ -1255,15 +1240,7 @@ static void draw_columns(void)
         draw_act_column(3, "SAVE", T_THEME, ICON_AUTO);
         return;
     }
-    if (cur_page()->graph == GR_USER) {                  /* SLOT, then three GO buttons */
-        int used = up_used(ui.uslot);
-        up_slot_label(val, ui.uslot);
-        draw_column(0, "SLOT", val, "", VAL(0u), (int32_t)ui.uslot * 1000 / (int32_t)(UP_SLOTS - 1u), ICON_AUTO);
-        draw_act_column(1, "LOAD", used ? T_THEME : T_DIM, ICON_AUTO);
-        draw_act_column(2, "ERASE", used ? T_THEME : T_DIM, ICON_AUTO);
-        draw_act_column(3, "SAVE", T_THEME, ICON_AUTO);
-        return;
-    }
+    /* (ACID FM 3c-2 task 2) PRESETS' columns (No. ENG FAV LIST) and USER's (SLOT, LOAD ERASE SAVE) gone: SAVE > SOUND is ux_save.c's */
     /* (ACID FM 3b task 8) SL PITCH's columns gone: FX > MORE's SLICE PITCH rows */
     /* (ACID FM 3b task 7) MSEQ's and MOD's columns gone: LFO is drawn by ux_section.c (MOD MATRIX, its MORE's STEPS) */
     /* (ACID FM 3c-1 task 4) the step locks' cards, the DRUM grid's and NOTE's columns gone: SEQ's pages are ux_seq.c's (the lock

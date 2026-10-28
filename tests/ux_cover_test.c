@@ -120,6 +120,18 @@ static const uxc_id_t UXC_JIANT[] = {
     {SEC_GLO, GLO, ID_LV_TGT}, {SEC_GLO, GLO, ID_LV_RATE}, {SEC_GLO, GLO, ID_LV_CUT}, {SEC_GLO, GLO, ID_LV_DENS},
 };
 
+/* (ACID FM 3c-2 task 2) SAVE: what the inherited USER and PRESETS pages reached (their knobs: controls, not settings of their own:
+ * USER's SLOT LOAD ERASE SAVE, PRESETS' No. ENG FAV LIST) and where each is now: a SAVE > SOUND knob (its column and name) or a SAVE
+ * > MORE row (kind, id). The first rows: task 4 adds the inherited SECTIONS, ARRANGE, PROJECTS and TOOLS pages' */
+enum { UXC_SV_ROW = 4u };                               /* (knob: 0..3 SOUND's, UXC_SV_ROW a MORE row) */
+typedef struct { const char *was; uint8_t knob, kind, id; const char *now; } uxc_sv_t;
+static const uxc_sv_t UXC_SAVE[] = {
+    {"USER SLOT", 0, 0, 0, "SLOT"}, {"USER LOAD", UXC_SV_ROW, UXR_ACTION, UXM_A_ULOAD, "LOAD SLOT"},
+    {"USER ERASE", UXC_SV_ROW, UXR_ACTION, UXM_A_ERASE, "ERASE USER SLOT"}, {"USER SAVE", 3, 0, 0, "SAVE"},
+    {"PRESETS PRESET", 1, 0, 0, "PRESET"}, {"PRESETS ENGINE", UXC_SV_ROW, UXR_GLOBAL, ID_SV_ENGINE, "ENGINE"},
+    {"PRESETS FAVORITE", UXC_SV_ROW, UXR_GLOBAL, ID_SV_FAV, "FAVORITE"}, {"PRESETS LIST", UXC_SV_ROW, UXR_GLOBAL, ID_SV_LIST, "LIST"},
+};
+
 /* the settings left off every page and MORE list on purpose, each with why. They keep their stored value */
 typedef struct { uint8_t key, glo, id; const char *why; } uxc_hid_t;
 static const uxc_hid_t UXC_HIDDEN[] = {
@@ -286,7 +298,8 @@ static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",  
                                        "MORE SHIFT", "MORE DIRECTION", "MORE RANGE", "MORE FOCUS", "MORE BEND", "MORE LAP",
                                        "MORE INTERVAL", "MORE RATCHET", "MORE EVERY",
                                        "LIVE DJ FILTER", "MORE CUT", "MORE DENSITY", "MORE TRACKS",
-                                       "MORE NOTES OUT"};   /* (3c-1 task 8: KEYS+SEQ, the ruling's KEYS + SEQUENCE short;
+                                       "MORE NOTES OUT",
+                                       "MORE ENGINE"};   /* (3c-2 task 2: SAVE > MORE's ENGINE, the engine's name whole: ANALOG) */   /* (3c-1 task 8: KEYS+SEQ, the ruling's KEYS + SEQUENCE short;
                                                          * the list spells it in UF_HDR, the status line in full) */   /* (3c-1 task 6: the DJ FILTER's cutoff and
                                                          * its side, "5.4K HP"; the RAILS rows' steps, RATCHET X3, SYNTHS, spelled in
                                                          * UF_HDR on the list) */   /* (3c-1 task 4: SEQ > MORE's step options
@@ -689,6 +702,76 @@ static int uxc_widths(void)
         for (k = 0; k < 4u; k++)
             if (text_w(&UF_LBL, kn[k].label) > UX_COL_W - 4) { printf("  MIDI %s: its name too wide\n", kn[k].label); uxc_wbad++; }
     }
+    {   /* (ACID FM 3c-2 task 2) SAVE > SOUND's knobs (ux_save.c uxv_knobs: SLOT every slot, PRESET every place in every engine's
+         * list, NAME, SAVE armed or not) and SAVE > MORE's views (param_ref reads them from the state: set, not *vp), their names */
+        static const uint8_t SV[] = {ID_SV_ENGINE, ID_SV_FAV, ID_SV_LIST};
+        track_t keep = *TSEL;
+        uint32_t k0 = ui.uslot, a0 = ui.act, l0 = list_get(), r, k, c;
+        ux_row_t rw = {0, UXR_GLOBAL, 0};
+        ux_knob_t kn[4];
+        nav_put(SEC_SAVE, "SOUND");
+        up_store(2, "A LONG NAME!");
+        for (k = 0; k < UP_SLOTS; k++)
+            for (c = 0; c < 2u; c++) {
+                ui.uslot = (uint8_t)k;
+                ui.act = (uint8_t)(c ? 4u : 0u);
+                uxs_knobs(cur_page(), kn);
+                for (r = 0; r < 4u; r++) {
+                    char w[32];
+                    str_cpy(w, "SOUND ", sizeof w);
+                    str_cpy(w + str_len(w), kn[r].label, sizeof w - str_len(w));
+                    uxc_wfit(w, kn[r].value);
+                    if (text_w(&UF_LBL, kn[r].label) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+                }
+            }
+        for (e = 0; e < NENGINES; e++) {                /* (PRESET: every sound of every engine, ALL and FAV) */
+            uint32_t total, p;
+            if (!eng_ok(e))
+                continue;
+            set_engine_of(TSEL, e);
+            TSEL->engine = TSEL->eng_req;
+            for (c = 0; c < 2u; c++) {
+                list_put(c);
+                (void)preset_pos(&total);
+                for (p = 0; p < ENGINES[e]->npresets; p++) {
+                    TSEL->preset = (uint8_t)p;
+                    uxs_knobs(cur_page(), kn);
+                    uxc_wfit("SOUND PRESET", kn[1].value);
+                }
+            }
+            for (r = 0; r < NELEM(SV); r++)             /* (MORE: ENGINE each, FAVORITE on and off, LIST each) */
+                for (k = 0; k <= PT_N; k++) {
+                    char v[24], w[32];
+                    uint8_t bar;
+                    const char *nm;
+                    if ((SV[r] == ID_SV_FAV && k > 1u) || (SV[r] == ID_SV_ENGINE && k))
+                        continue;
+                    if (SV[r] == ID_SV_FAV) preset_mark((int)k);
+                    if (SV[r] == ID_SV_LIST) list_put(k);
+                    rw.id = SV[r];
+                    nm = uxm_row_text(&rw, v, sizeof v, &bar);
+                    str_cpy(w, "MORE ", sizeof w);
+                    str_cpy(w + str_len(w), nm, sizeof w - str_len(w));
+                    uxc_wfit(w, v);
+                    uxc_wmore++;
+                    if (text_w(&UF_LBL, nm) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+                }
+            preset_mark(0);
+        }
+        rw.kind = UXR_ACTION;
+        for (r = 0; r < 2u; r++) {                      /* (MORE: its actions' names on KNOB 2's column) */
+            char v[24];
+            uint8_t bar;
+            const char *nm;
+            rw.id = r ? UXM_A_ERASE : UXM_A_ULOAD;
+            nm = uxm_row_text(&rw, v, sizeof v, &bar);
+            if (text_w(&UF_LBL, nm) > UX_COL_W - 4) { printf("  MORE %s: its name too wide\n", nm); uxc_wbad++; }
+        }
+        (void)up_put(2, 0);
+        list_put(l0);
+        *TSEL = keep;
+        ui.uslot = (uint8_t)k0; ui.act = (uint8_t)a0;
+    }
     for (i = 0; i < NELEM(UXL_LOOP); i++) uxc_wfit("FX LOOP", UXL_LOOP[i]);
     for (i = 0; i < NELEM(UXL_IVL); i++) uxc_wfit("FX INTERVAL", UXL_IVL[i]);
     printf("ux widths: %u values a 3b knob can show (%u on MORE pages' knob rows), %u names kept whole in a smaller face "
@@ -833,6 +916,33 @@ int main(int argc, char **argv)
         ok &= got[TRK][P_AMODE] && got[TRK][P_AORDER];
     }
     bad += check("ux cover: the reach counts the pages' knobs (every step and slot) and the MORE rows, and sees a gap", ok);
+    {   /* (ACID FM 3c-2 task 2) SAVE: each control the inherited USER and PRESETS pages had is a SOUND knob or a SAVE > MORE row */
+        ux_knob_t kn[4];
+        uint64_t m;
+        ok = 1;
+        nav_put(SEC_SAVE, "SOUND");
+        uxs_knobs(cur_page(), kn);
+        m = uxm_mask(&UXM_SAVE);
+        for (i = 0; i < NELEM(UXC_SAVE); i++) {
+            const uxc_sv_t *v = &UXC_SAVE[i];
+            int got = 0;
+            if (v->knob < UXC_SV_ROW)
+                got = str_eq(cur_page()->title, "SAVE SOUND") && str_eq(kn[v->knob].label, v->now);
+            else
+                for (s = 0; s < UXM_SAVE.n; s++)
+                    if (UXM_SAVE.rows[s].kind == v->kind && UXM_SAVE.rows[s].id == v->id && uxm_pick_ok(&UXM_SAVE, m, s)) {
+                        char val[24];
+                        uint8_t bar;
+                        got = str_eq(uxm_list_name(&UXM_SAVE.rows[s], uxm_row_text(&UXM_SAVE.rows[s], val, sizeof val, &bar)),
+                                     v->now);
+                    }
+            if (!got)
+                printf("  SAVE: the inherited %s is not at %s\n", v->was, v->now);
+            ok &= got;
+        }
+        bad += check("ux cover: SAVE (3c-2 task 2): every control USER and PRESETS had is a SOUND knob or a SAVE > MORE row", ok &&
+                     NELEM(UXC_SAVE) == 8u);
+    }
     bad += uxc_widths();
     printf("ux cover: %u settings JIANT reached, %u hidden on purpose, %u GLO's elsewhere (checked)\n", (unsigned)n, (unsigned)nh,
            (unsigned)ne);

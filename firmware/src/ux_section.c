@@ -27,7 +27,7 @@
  * (TP / GP: the web editor reads them, editor.c) stay as they are. Each fits a knob's column in UF_LBL (tests/ui_test.c) */
 typedef char uxs_sec_edit_ok[SEC_EDIT == UXS_SEC_EDIT && SEC_ENV == UXS_SEC_ENV && SEC_SCL == UXS_SEC_SCL &&
                             SEC_ARP == UXS_SEC_ARP && SEC_LFO == UXS_SEC_LFO && SEC_FX == UXS_SEC_FX && SEC_SEQ == UXS_SEC_SEQ &&
-                            SEC_GLO == UXS_SEC_GLO ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
+                            SEC_GLO == UXS_SEC_GLO && SEC_SAVE == UXS_SEC_SAVE ? 1 : -1];   /* (ux_section.h's sections are ui_lens.c's) */
 #define UXS_ALL 0xFFu
 typedef struct { uint8_t sec, eng, glo, id; const char *p; } uxs_name_t;   /* id: a P_* (glo 0) or G_* (glo 1), or a view */
 static const uxs_name_t UXS_NAME[] = {
@@ -823,6 +823,11 @@ static void uxs_vtext(const param_desc_t *d, int32_t v, uint32_t glo, uint32_t i
         str_cpy(b, UXS_NOTES_K, nb);
         return;
     }
+    if (glo && svv_is(id) && d->names && v >= d->min && v <= d->max) {   /* (3c-2 task 2) SAVE > MORE's ENGINE, LIST: the words
+                                                         * whole ("ANALOG": not param_format's five letters) */
+        str_cpy(b, d->names[v], nb);
+        return;
+    }
     if (!uxs_algp(glo, id, v)) {
         uxs_val(d, v, b, nb);
         return;
@@ -898,6 +903,8 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         uxg_knobs(k);
         return;
     }
+    if (pg->fam == FAM_SAVE && uxv_knobs(pg, k))        /* (3c-2 task 2) SAVE > SOUND: SLOT PRESET NAME SAVE (ux_save.c) */
+        return;
     if (pg->fam == FAM_SEQ && pg->graph != GR_MORE && uxq_knobs(pg, k))   /* (3c-1 task 2) SEQ's: ux_seq.c (STEPS: STEP NOTE
                                                          * ACC/SLD GATE, the grid's; task 3: STEP EXTRAS'; PATTERN its settings', below) */
         return;
@@ -1056,6 +1063,11 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
     if (sec == uxs_hint_sec) {
         str_cpy(b, SEC_NAME[sec], sizeof b);
         str_cpy(b + str_len(b), UXS_HINT, sizeof b - str_len(b));
+        return b;
+    }
+    if (pg->fam == FAM_SAVE && uxv_say(pg, b, sizeof b)) {   /* (3c-2 task 2) SAVE > SOUND: the slot and what OCT+ does; PRESET
+                                                         * turned, the sound (ux_save.c) */
+        *col = h >= 0 ? UX_TEXT : UX_MID;
         return b;
     }
     if (pg->more == &UXM_SEQ && uxq_more_say())         /* (3c-1 task 4) SEQ > MORE: what OCT+ does on the row picked */
@@ -2882,6 +2894,10 @@ static void uxs_picture(const page_t *pg)
         uxg_midi_picture();
         return;
     }
+    if (pg->fam == FAM_SAVE && pg->graph != GR_MORE) {  /* (3c-2 task 2) SAVE > SOUND: the slots, the track's sound (ux_save.c) */
+        uxv_picture(pg);
+        return;
+    }
     if (pg->graph == GR_MORE) {
         ux_more_draw(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top);
         return;
@@ -2999,6 +3015,8 @@ static void ux_section_draw(void)
         sig = sig * 31u + uxg_cpu_pct();                /* (ux_glo.c: at most once a second, a panel then; scrolled off, none) */
     if (pg->graph == GR_MIX)                            /* (3c-1 task 7) GLO > MIX: the six tracks' columns */
         sig = sig * 31u + uxg_mix_sig();
+    if (pg->fam == FAM_SAVE && pg->graph != GR_MORE)    /* (3c-2 task 2) SAVE > SOUND: the slots, the track's sound (ux_save.c) */
+        sig = sig * 31u + uxv_sig(pg);
     if (pg->graph == GR_MIDI) {                         /* (3c-1 task 8) GLO > MIDI: the table (uxg_midi_sig); the clock's diamond
                                                          * as it blinks, as STEPS' playhead (UX_TRK_MS, slower under load, never
                                                          * frozen): two panels a beat at most, none while no clock comes */

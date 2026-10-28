@@ -69,8 +69,7 @@ static uint32_t up_gen;                      /* bumped on every user bank change
  * favourite byte 18: 0 in older settings, ALL / FAV as they were) */
 #define list_type (favorites.factory[15][18])
 _Static_assert(PT_N == 10, "settings_persist.c checks the LIST type against 10");
-static const char *const N_LIST[PT_N + 1] = {"ALL", "FAV", "BASS", "LEAD", "PAD", "KEYS", "PLUCK", "BELL", "VOX", "DRUM",
-                                              "FX"};
+/* (its words, N_LIST: params.c, SAVE > MORE's LIST row since 3c-2 task 2) */
 static uint32_t list_get(void) { return list_type && list_type < PT_N ? list_type + 1u : favorites.filter ? 1u : 0u; }
 static void list_put(uint32_t v)
 {
@@ -517,7 +516,7 @@ static uint32_t large_kind(void)
     if (ui.home)
         return LK_TALL;
     g = cur_page()->graph;
-    return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
+    return g == GR_SLOTS || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
            g == GR_LIVE ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
@@ -711,6 +710,13 @@ static uint32_t mov_get(uint32_t id)
 {
     return id == ID_MO_NOTES ? mout_notes() : id == ID_MO_CLOCK ? mout_clock() : ml.on;
 }
+/* (ACID FM 3c-2 task 2) SAVE > MORE's ENGINE, FAVORITE, LIST (params.c ID_SV_*, views): the value now (ENGINE: the track's
+ * engine's place in the shown order; FAVORITE: the sound marked; LIST: ALL, FAV, a type). ui_input.c sv_view_turn sets them */
+static int preset_favorite(void);
+static uint32_t sv_get(uint32_t id)
+{
+    return id == ID_SV_ENGINE ? eng_rank(TSEL->eng_req) : id == ID_SV_FAV ? (uint32_t)(preset_favorite() != 0) : list_get();
+}
 static void mov_put(uint32_t id, int32_t v)
 {
     if (id == ID_ML_LEARN) {
@@ -755,9 +761,10 @@ static int lock_page_ok(uint32_t i)
 {
     uint32_t k;
     if (i < NPAGES && PAGES[i].graph == GR_MORE)        /* (3b task 9, the user: every MORE row) its rows: KNOB 2 locks the */
-        return PAGES[i].more != 0 && PAGES[i].fam != FAM_SEQ && PAGES[i].fam != FAM_GLO;   /* one picked when the lock store
-                                                         * holds it (ux_more.c uxm_lock_why); (3c-1 task 4) not SEQ's: a step locks
-                                                         * the sound; (task 6) nor GLO's: the song's */
+        return PAGES[i].more != 0 && PAGES[i].fam != FAM_SEQ && PAGES[i].fam != FAM_GLO && PAGES[i].fam != FAM_SAVE;   /* one
+                                                         * picked when the lock store holds it (ux_more.c uxm_lock_why); (3c-1 task 4)
+                                                         * not SEQ's: a step locks the sound; (task 6) nor GLO's: the song's; (3c-2
+                                                         * task 2) nor SAVE's */
     if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD)
         return 0;
     for (k = 0; k < 4u; k++)
@@ -805,7 +812,7 @@ static void page_entered(void)
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* clear the previous page's emphasis */
-    ui.act = pg->graph == GR_USER ? 4u : 0u;     /* the save screen is ready for OCT+ */
+    ui.act = pg->graph == GR_SVSND ? 4u : 0u;    /* the save screen is ready for OCT+ (3c-2 task 2: SAVE > SOUND, was USER) */
     ui.force = 1;
 }
 
@@ -1811,7 +1818,7 @@ static uint8_t dx_ui_lane_tr[NTRK], dx_ui_side_tr[NTRK];
 #define dx_ui_side (dx_ui_side_tr[song.sel % NTRK])
 
 /* ---------------------------------------------------- action pages --- */
-/* Pages whose purpose is an action (SEQ > PATTERNS, SAVE > USER, PROJECT, TOOLS): the knobs pick,
+/* Pages whose purpose is an action (SEQ > PATTERNS, SAVE > SOUND, PROJECT, TOOLS): the knobs pick,
  * OCT+ does it, OCT- cancels the picked action or goes HOME (ui_input.c). There OCT- / OCT+ do not
  * shift the octave */
 static int go_id(uint32_t id) { return id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND; }
@@ -1831,8 +1838,8 @@ static uint32_t act_cols(void)                   /* the columns that are actions
         return 1u;                               /* (0.8.5) ADD a row (PLAY: the song) */
     if (pg->graph == GR_PATS)
         return 2u;                               /* LOAD */
-    if (pg->graph == GR_USER)
-        return 14u;                              /* LOAD ERASE SAVE */
+    if (pg->graph == GR_SVSND)
+        return 8u;                               /* (3c-2 task 2) SAVE > SOUND: SAVE (LOAD, ERASE: SAVE > MORE's rows) */
     if (pg->scope == SC_GLOBAL)
         for (c = 0; c < 4u; c++)
             if (go_id(pg->id[c]))
@@ -1856,7 +1863,6 @@ static uint32_t act_col(void)
 
 static const char *act_name(uint32_t c)          /* column c's action (the footer hint) */
 {
-    static const char *const UP_GO[3] = {"LOAD", "ERASE", "SAVE"};
     uint32_t id = cur_page()->id[c & 3u];
     if (uxq_more_kind() == UXQ_MK_LIST) return ev_act_name();
     if (cur_page()->graph == GR_TOOLS) {
@@ -1867,8 +1873,8 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
         return "ADD";
     if (cur_page()->graph == GR_PATS)
         return "LOAD";
-    if (cur_page()->graph == GR_USER)
-        return UP_GO[(c + 2u) % 3u];
+    if (cur_page()->graph == GR_SVSND)                  /* (3c-2 task 2) SAVE > SOUND */
+        return "SAVE";
     return id == G_CLRSEQ ? "CLEAR" : id == G_INITSND ? "INIT" : id == G_LOAD ? "LOAD" : "SAVE";
 }
 
@@ -1887,8 +1893,8 @@ static int act_ready(void)
         return !chain_busy() && chain_config.count < CHAIN_ROWS;
     if (cur_page()->graph == GR_PATS)
         return pat_last[s] != pat_pick() + 1u || steps_sig(TSEL) != pat_sig[s];
-    if (cur_page()->graph == GR_USER)
-        return c == 3u ? !song.playing : up_used(ui.uslot) && (c == 1u || !song.playing);
+    if (cur_page()->graph == GR_SVSND)                  /* (3c-2 task 2) SAVE > SOUND's SAVE: stopped */
+        return c == 3u && !song.playing;
     id = cur_page()->id[c & 3u];
     if (id == G_LOAD)
         return project_used((uint32_t)song.g[G_SLOT] - 1u);

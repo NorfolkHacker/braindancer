@@ -94,7 +94,7 @@ T = dict(
          'SEQ': 'PRESETS: the patterns (PHRASES). KNOB 1: all 64 steps on STEPS (a fast turn several); SELECT on the last cell: the next 16.',
          'EDIT': 'Synths: page 3 is VOICE on ANALOG, FILTER on the others; MORE lists the rest (KNOB 1 picks, KNOB 2 sets). FM6: KNOB 1 picks the operator on OPERATOR and OP ENV. DRUM-X: KNOB 1 picks the drum on SOUND and SOUND 2 (a key struck picks it too).',
          'FX': 'SENDS: the track\'s DISTORT and sends as bars; SPACE: the echoes and the reverb\'s tail; MASTER: the output\'s meter. MORE: DELAY, REVERB, CHORUS, SLICER, the PUNCH LANE (CHORUS and SLICER hidden with LOAD ECO).',
-         'SAVE': 'From outside, USER and SECTIONS come with SAVE armed: SAVE · OCT+ · OCT+.',
+         'SAVE': 'From outside, SOUND and SECTIONS come with SAVE armed: SAVE · OCT+ · OCT+. SOUND: KNOB 1 the slot, 2 the preset, 3 NAME, 4 SAVE; MORE: LOAD SLOT, ENGINE, FAVORITE, LIST, ERASE USER SLOT.',
          'ARP': 'ARP again: the other page. The picture: the notes it plays from C G E held.',
          'SCL': 'TRANSPOSE on MORE; ROTATE and SEQ PITCH on SEQ › MORE (and the layer). The picture: what each key plays.',
          'ENV': 'AMP: the envelope as it sounds; ENV TO: what that same envelope moves (FILTER, PITCH, SHAPE).', 'GLO': 'Opens on LIVE: the keys play the tricks (white) on the tracks held (black), KNOB 4 the DJ FILTER. MIX: level bars in dB. MIDI: IN, OUT, CHANNEL of each track; CLOCK. MORE: the RAILS, SYSTEM, TEMPO, MIDI, UNDO.',

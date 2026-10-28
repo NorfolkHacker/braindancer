@@ -158,6 +158,7 @@ static void hc_note(const void *h, int built)
 #include "../firmware/src/ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
 #include "../firmware/src/ux_seq.c"                 /* (ACID FM 3c-1) the SEQ pages (ux_seq.h) */
 #include "../firmware/src/ux_glo.c"                 /* (ACID FM 3c-1 task 6) the GLO pages (ux_glo.h) */
+#include "../firmware/src/ux_save.c"                /* (ACID FM 3c-2 task 2) the SAVE pages (ux_save.h) */
 #include "../firmware/src/ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
 #include "../firmware/src/ux_layer.c"               /* (ACID FM 3b task 9) the held layers (ux_layer.h) */
 #include "../firmware/src/ux_dialog.c"              /* (ACID FM 3c-2 task 1) the dialogs, full screen */
@@ -289,6 +290,8 @@ static void seqm(uint32_t id, int32_t s);
 static void seqm_act(uint32_t a);
 static const char *uxq_t_say(void);
 static void uxg_t_more_at(uint32_t kind, uint32_t id);   /* (3c-1 task 7) GLO > MORE, a row picked */
+static void u2_more_at(uint32_t kind, uint32_t id);      /* (3c-2 task 2) SAVE > MORE, a row picked */
+static void u2_view_turn(uint32_t id, int32_t s);       /* .. its view id (ENGINE FAVORITE LIST) turned s on KNOB 2 */
 static int uxq_t_is(const char *what, const char *got, const char *want);
 static void frame(void)
 {
@@ -1388,9 +1391,9 @@ static int test_patterns(void)
     press(B_OCTUP);
     bad += check("over a project's steps: the dialog", ui.confirm == CF_LOAD_PAT);
     press(B_OCTDN);
-    /* the hint: PRESETS page K3 PAT, and a load moves the pick there */
-    go_page(GR_BROWSE);
-    turn(EN_K1, 1);
+    /* the hint: a load moves the pick there (3c-2 task 2: SAVE > SOUND's PRESET, the inherited PRESETS page's KNOB 1) */
+    go_page(GR_SVSND);
+    turn(EN_K2, 1);
     bad += check("PRESETS: a factory preset's suggested pattern becomes the pick", preset_pat_hint() >= 0 &&
                  ui.ppick == (uint8_t)preset_pat_hint());
     return bad;
@@ -1570,8 +1573,8 @@ static int test_save(void)
     ui_power_on();
     trk[0].p[P_E0] = 5;
     press(B_SAVE);
-    bad += check("SAVE opens USER with SAVE selected, without writing a slot",
-                 !ui.home && cur_page()->graph == GR_USER && ui.act == 4u && !up_used(0));
+    bad += check("SAVE opens SOUND (3c-2 task 2: was USER) with SAVE selected, without writing a slot",
+                 !ui.home && cur_page()->graph == GR_SVSND && ui.act == 4u && !up_used(0));
     press(B_OCTUP);
     bad += check("SAVE then OCT+ opens NAME (the automatic name), writes nothing yet",
                  name_on() && nm.kind == NK_USER_SAVE && str_eq(nm.s, nm.ph) && nm.cur == nm.len && !up_used(0));
@@ -1586,18 +1589,16 @@ static int test_save(void)
     press(B_SAVE);                                        /* (0.9.2) a SAVE tap on SAVE: the next group (was the other set) */
     bad += check("0.9.2 SAVE again: the next group, PROJECT's SECTIONS (was SOUND's other set, PRESETS)",
                  cur_page()->graph == GR_SLOTS && save_level() == SV_PROJ && ui.act == 0u);
-    turn(EN_SELECT, -1);
-    bad += check("0.9.2 SELECT left: PRESETS (the chain: USER PRESETS SECTIONS ..)", cur_page()->graph == GR_BROWSE &&
-                 save_level() == SV_SOUND);
     go_home();
     press(B_SAVE);
-    bad += check("0.9.2 SAVE from HOME: the page left, PRESETS (rule 2; was always USER)", cur_page()->graph == GR_BROWSE);
+    bad += check("0.9.2 SAVE from HOME: the page left, SECTIONS (rule 2; was always USER)", cur_page()->graph == GR_SLOTS);
     turn(EN_SELECT, -1);
-    bad += check("0.9.2 SELECT onto USER from inside: SAVE not armed", cur_page()->graph == GR_USER && ui.act == 0u);
+    bad += check("0.9.2 SELECT onto SOUND from inside: SAVE not armed (3c-2 task 2: SOUND, was USER)",
+                 cur_page()->graph == GR_SVSND && ui.act == 0u);
     go_home();
     press(B_SAVE);
-    bad += check("0.9.2 SAVE from HOME onto USER: SAVE armed (SAVE . OCT+ . OCT+ as before)",
-                 cur_page()->graph == GR_USER && ui.act == 4u);
+    bad += check("0.9.2 SAVE from HOME onto SOUND: SAVE armed (SAVE . OCT+ . OCT+ as before)",
+                 cur_page()->graph == GR_SVSND && ui.act == 4u);
     press(B_OCTUP);
     bad += check("direct SAVE still asks before overwriting an occupied slot",
                  ui.confirm == CF_OVR_USER && up_value(up_rec(0), P_E0) == 5);
@@ -1654,17 +1655,13 @@ static int test_save(void)
     press(B_OCTUP);
     bad += check("KNOB 3 LOAD, OCT+: the project back; LOAD stays picked", trk[0].p[P_LEVEL] != 11 &&
                  trk[0].p[P_LEVEL] == stored_param(0, 0, P_LEVEL) && msg_is("LOADED") && ui.act == 3u);
-    /* user presets */
-    for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].graph == GR_USER)
-            break;
-    ui.page = (uint8_t)i;
-    page_entered();
+    /* user presets (3c-2 task 2: SAVE > SOUND, was USER; ERASE SAVE > MORE's row) */
+    go_page(GR_SVSND);
     up_store(4, "OLD");
     ui.uslot = 4;
     turn(EN_K4, 1);
     press(B_OCTUP);
-    bad += check("USER SAVE over a used slot: the OVERWRITE? dialog", ui.confirm == CF_OVR_USER && ui.confirm_trk == 4u);
+    bad += check("SOUND's SAVE over a used slot: the OVERWRITE? dialog", ui.confirm == CF_OVR_USER && ui.confirm_trk == 4u);
     press(B_OCTUP);
     bad += check("YES: NAME with the sound's name (not the old slot's)", name_on() && !str_eq(nm.s, "OLD"));
     press(B_OCTUP);
@@ -1673,11 +1670,11 @@ static int test_save(void)
         up_name(4, nm);
         bad += check("OCT+ stores the sound there", ui.confirm == CF_NONE && !str_eq(nm, "OLD"));
     }
+    u2_more_at(UXR_ACTION, UXM_A_ERASE);
     song.playing = 1;
     ui.msg_t = 0;
-    turn(EN_K3, 1);                               /* ERASE */
-    press(B_OCTUP);
-    bad += check("USER ERASE while playing: STOP TO SAVE", msg_is("STOP TO SAVE") && up_used(4));
+    turn(EN_K2, 1);                               /* ERASE USER SLOT */
+    bad += check("SAVE > MORE's ERASE USER SLOT while playing: STOP TO SAVE", msg_is("STOP TO SAVE") && up_used(4) && !ui.confirm);
     stop_transport();
     return bad;
 }
@@ -2325,12 +2322,12 @@ static int test_preset_types(void)
     bad += check("0.9.12 every factory preset has a sound type (DRUM's kits DRUM), MONO still bit 0", ok);
     ui_power_on();
     my_steps(TSEL);
-    go_page(GR_BROWSE);
+    u2_more_at(UXR_GLOBAL, ID_SV_LIST);                 /* (3c-2 task 2: SAVE > MORE's LIST, the inherited PRESETS KNOB 4) */
     ok = list_get() == 0u;
-    turn(EN_K4, 1); ok &= list_get() == 1u && favorites.filter && !list_type;
+    turn(EN_K2, 1); ok &= list_get() == 1u && favorites.filter && !list_type;
     for (t = PT_BASS; t < PT_N; t++) {
         uint32_t i, all, cnt;
-        turn(EN_K4, 1);
+        turn(EN_K2, 1);
         ok &= list_get() == t + 1u && list_type == t && !favorites.filter && str_eq(N_LIST[list_get()], N_LIST[t + 1u]);
         preset_pos(&total);
         ok &= total == n[t];
@@ -2342,21 +2339,22 @@ static int test_preset_types(void)
         }
         sum += cnt;
     }
-    turn(EN_K4, 1); ok &= list_get() == PT_N;            /* (the end: FX stays) */
+    turn(EN_K2, 1); ok &= list_get() == PT_N;            /* (the end: FX stays) */
     bad += check("0.9.12 PRESETS LIST: ALL FAV BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX, each type every engine's presets of it", ok && sum == n[PT_BASS] + n[PT_LEAD] + n[PT_PAD] + n[PT_KEYS] + n[PT_PLUCK] + n[PT_BELL] + n[PT_VOX] + n[PT_DRUM] + n[PT_FX]);
-    while (list_get() != PT_BASS + 1u) turn(EN_K4, -1);
+    while (list_get() != PT_BASS + 1u) turn(EN_K2, -1);
     before = *TSEL;
-    {   /* KNOB 1 / the PRESETS knob through the basses: every sound loaded a bass, several engines, the steps kept */
+    go_page(GR_SVSND);                                  /* (3c-2 task 2: SAVE > SOUND's PRESET, the inherited PRESETS KNOB 1) */
+    {   /* KNOB 2 (PRESET) / the PRESETS knob through the basses: every sound loaded a bass, several engines, the steps kept */
         uint32_t i, eng = 0;
         ok = 1;
         for (i = 0; i < n[PT_BASS] + 2u; i++) {
-            turn(i & 1u ? EN_PRESET : EN_K1, 1);
+            turn(i & 1u ? EN_PRESET : EN_K2, 1);
             ok &= user_of(TSEL) >= UP_SLOTS &&
                   PR_TAG(&ENGINES[TSEL->eng_req]->presets[TSEL->preset % ENGINES[TSEL->eng_req]->npresets]) == PT_BASS;
             eng |= 1u << TSEL->eng_req;
         }
         ok &= !memcmp(TSEL->step, before.step, sizeof before.step) && __builtin_popcount(eng) >= 4;
-        bad += check("0.9.12 LIST BASS: KNOB 1 and PRESETS load only bass sounds, across the engines, the steps kept", ok);
+        bad += check("0.9.12 LIST BASS: SAVE > SOUND's PRESET and PRESETS load only bass sounds, across the engines, the steps kept", ok);
     }
     {   /* the settings keep it; an unknown type reads as none */
         persist_t p;
@@ -2395,10 +2393,10 @@ static int test_favorites(void)
     ui_power_on();
     my_steps(TSEL);
     TSEL->p[P_AMODE] = 2;
-    go_page(GR_BROWSE);
-    before = *TSEL;
-    turn(EN_K3, 1);
-    turn(EN_K4, 1);
+    before = *TSEL;                                     /* (3c-2 task 2: SAVE > MORE's FAVORITE and LIST, the inherited PRESETS
+                                                         * page's KNOB 3 and 4) */
+    u2_view_turn(ID_SV_FAV, 1);
+    u2_view_turn(ID_SV_LIST, 1);
     pos = preset_pos(&total);
     bad += check("FAV and LIST mark/filter the current sound without loading or touching its steps",
                  preset_favorite() && favorites.filter && total == 1 && pos == 0 &&
@@ -2407,31 +2405,31 @@ static int test_favorites(void)
                  preset_visible(pos, total, 0) == 0 && preset_visible(pos, total, 1) == total);
     select_engine(ENGI_DRUM);
     before = *TSEL;
-    turn(EN_K3, 1);
+    u2_view_turn(ID_SV_FAV, 1);
     bad += check("a DRUM sound can be a favorite on any track", preset_favorite() &&
                  favorite_has(ENGI_DRUM, 0) && !memcmp(TSEL, &before, sizeof before));
     turn(EN_PRESET, 1);
     bad += check("filtered browsing crosses DRUM and synth sounds while retaining the track's pattern and ARP",
                  TSEL->eng_req == 0 && preset_favorite() && !memcmp(TSEL->step, before.step, sizeof before.step) &&
                  TSEL->p[P_AMODE] == 2);
-    turn(EN_K3, -1);
+    u2_view_turn(ID_SV_FAV, -1);
     pos = preset_pos(&total);
     bad += check("unmarking the current sound leaves it loaded even when outside the filtered list",
                  !preset_favorite() && total == 1 && pos == total && TSEL->eng_req == 0);
     turn(EN_PRESET, -1);
     bad += check("browsing from a nonfavorite selects the last favorite", TSEL->eng_req == ENGI_DRUM);
-    turn(EN_K3, -1);
+    u2_view_turn(ID_SV_FAV, -1);
     before = *TSEL;
     turn(EN_PRESET, 1);
     bad += check("empty favorites explains LIST ALL and retains the current sound and steps",
                  msg_is("NO FAVORITES") && !memcmp(TSEL, &before, sizeof before));
-    turn(EN_K4, -1);
+    u2_view_turn(ID_SV_LIST, -1);
     preset_pos(&total);
     bad += check("LIST ALL restores the full browser without an implicit load", !favorites.filter && total > 1 &&
                  !memcmp(TSEL, &before, sizeof before));
     up_store(31, "Favorite");
     up_load(31);
-    turn(EN_K3, 1);
+    u2_view_turn(ID_SV_FAV, 1);
     bad += check("user slot 32 has its own favorite reference", favorite_has(NENGINES, 31) && preset_favorite());
     up_store(31, "Renamed");
     bad += check("overwriting or renaming a user slot retains its star", favorite_has(NENGINES, 31));
@@ -3646,7 +3644,8 @@ static int test_product_ux(void)
     for (p = 0; p < NPALETTES; p++) for (b = 0; b < 1u; b++) {
         uint16_t graph[240 * H_GRAPH], columns[240 * (Y_SEP_END - Y_LABEL)];
         ui_power_on(); palette_set(p); settings.zoom = 1;
-        open_family(FAM_SAVE); frame();                 /* (3b task 6: FX's, ENV's the ux pages'; task 8: FX's too) */
+        go_page(GR_SLOTS); frame();                     /* (3b task 6: FX's, ENV's the ux pages'; task 8: FX's too; 3c-2 task 2:
+                                                         * SAVE's SOUND too: PROJECT's) */
         uint32_t gy = lz_on() ? LZ_GRAPH_Y : Y_GRAPH;   /* (0.8.5: ENV a lens, its panel under the cards' 38 px) */
         memcpy(graph, host_screen + gy * 240, sizeof graph);
         memcpy(columns, host_screen + Y_LABEL * 240, sizeof columns);
@@ -4024,7 +4023,7 @@ static int test_name(void)
     uint32_t i, mo;
     char b[16];
     ui_power_on();
-    go_page(GR_USER);
+    go_page(GR_SVSND);                            /* (3c-2 task 2: SAVE > SOUND, was USER) */
     ui.uslot = 2;
     press(B_OCTUP);                               /* (SAVE picked on entry) */
     up_auto_name(b, TSEL->eng_req, 2);
@@ -4144,13 +4143,13 @@ static int test_name(void)
     ui.msg_t = 0;
     hold(B_SAVE);
     btn_down(B_FX); frames(600); ok = !ui.layer; btn_up(B_FX); frame();
-    bad += check("  SAVE held, FX held: nothing in NAME (no undo, no map, no page)", name_on() && ok && cur_page()->graph == GR_USER &&
+    bad += check("  SAVE held, FX held: nothing in NAME (no undo, no map, no page)", name_on() && ok && cur_page()->graph == GR_SVSND &&
                  !ui.msg_t);
     press(B_OCTDN);
-    /* rename: SAVE + C5 on USER (0.9.2; EDIT until 0.9.1) */
+    /* rename: SAVE + C5 on SOUND (3c-2 task 2: was USER; 0.9.2; EDIT until 0.9.1) */
     ui.uslot = 5;
     name_key();
-    bad += check("  0.9.2 SAVE + C5 on an empty slot: EMPTY SLOT", !name_on() && msg_is("EMPTY SLOT") && cur_page()->graph == GR_USER);
+    bad += check("  0.9.2 SAVE + C5 on an empty slot: EMPTY SLOT", !name_on() && msg_is("EMPTY SLOT") && cur_page()->graph == GR_SVSND);
     ui.uslot = 2;
     up_load(2);                                   /* (the sound now comes from U03) */
     trk[0].p[P_E0] = 33;                          /* an edit: a rename must not store it */
@@ -4668,7 +4667,7 @@ static int test_bughunt_ui(void)
     int bad = 0, ok;
     /* 1: REC in NAME, the menu or a dialog: nothing (PLAY cannot stop the transport there) */
     ui_power_on();
-    go_page(GR_USER); ui.uslot = 3;
+    go_page(GR_SVSND); ui.uslot = 3;
     press(B_OCTUP);                                     /* NAME opens */
     press(B_REC);
     bad += check("REC in NAME does nothing (no arm, no transport start); NAME stays",
@@ -4677,7 +4676,7 @@ static int test_bughunt_ui(void)
     bad += check("REC in the menu does nothing (then PLAY: nothing either)", ui.menu && !song.rec && !transport_req);
     ui_power_on();
     up_ui(2, 5);
-    go_page(GR_USER); ui.uslot = 5; press(B_OCTUP);
+    go_page(GR_SVSND); ui.uslot = 5; press(B_OCTUP);
     press(B_REC);
     ok = ui.confirm == CF_OVR_USER && !song.rec && !transport_req;
     press(B_OCTUP);
@@ -4698,12 +4697,13 @@ static int test_bughunt_ui(void)
         bad += check("  the beat counter runs (a bar of blocks wraps the beat of the bar)", beat_n < 4u && beat_pos < b);
         trk[2].p[P_AMODE] = 0; trk[2].nheld = 0;
     }
-    /* 3: USER ERASE asks first (ERASE U02?): OCT- keeps the preset, OCT+ erases it */
+    /* 3: ERASE asks first (ERASE U02?): OCT- keeps the preset, OCT+ erases it (3c-2 task 2: SAVE > MORE's ERASE USER SLOT, was
+     * USER's KNOB 3) */
     ui_power_on();
-    go_page(GR_USER); ui.uslot = 1;
+    go_page(GR_SVSND); ui.uslot = 1;
     up_ui(2, 1);
-    turn(EN_K1 + 2, 1);                                 /* KNOB 3: ERASE picked */
-    press(B_OCTUP);
+    u2_more_at(UXR_ACTION, UXM_A_ERASE);
+    turn(EN_K2, 1);                                     /* ERASE USER SLOT */
     ok = ui.confirm == CF_ERASE_USER && ui.confirm_trk == 1u && up_used(1);
     {
         uxd_text_t qt;
@@ -4712,10 +4712,10 @@ static int test_bughunt_ui(void)
     }
     press(B_OCTDN);
     ok &= !ui.confirm && up_used(1);
-    turn(EN_K1 + 2, 1); press(B_OCTUP); press(B_OCTUP);
-    bad += check("USER ERASE: the ERASE U02? dialog; OCT- keeps the preset, OCT+ erases it",
+    turn(EN_K2, 1); press(B_OCTUP);
+    bad += check("ERASE USER SLOT: the ERASE U02? dialog; OCT- keeps the preset, OCT+ erases it",
                  ok && !ui.confirm && !up_used(1));
-    turn(EN_K1 + 2, 1); press(B_OCTUP);
+    turn(EN_K2, 1);
     bad += check("  an empty slot: no dialog, EMPTY SLOT", !ui.confirm && msg_is("EMPTY SLOT"));
     {   /* 4: CHANCE is not STEP: no grid, no key entry, no EDIT clear (its knobs only) */
         uint32_t before;
@@ -4821,7 +4821,7 @@ static int test_bughunt_ui(void)
     /* 9: no layer hint over NAME (0.9.2: SAVE + C5 renames on USER / PROJECT; EDIT tapped there until 0.9.1) */
     ui_power_on();
     up_ui(2, 0);
-    go_page(GR_USER); ui.uslot = 0; frame();
+    go_page(GR_SVSND); ui.uslot = 0; frame();
     ui.msg_t = 0;
     name_key();
     ok = name_on() && !frames_layer_hint(UXT_DWELL_MS + 64u);
@@ -5296,7 +5296,7 @@ static int test_bughunt_ui2(void)
     }
     {   /* 5. NAME: PLAY stops a transport started meanwhile (so the name can be saved), never starts it; REC ignored */
         uint32_t ok;
-        ui_power_on(); go_page(GR_USER); ui.uslot = 3; press(B_OCTUP);
+        ui_power_on(); go_page(GR_SVSND); ui.uslot = 3; press(B_OCTUP);
         ok = name_on();
         press(B_PLAY); frame();
         ok &= !transport_req && !song.playing && name_on();          /* stopped: PLAY starts nothing */
@@ -5497,13 +5497,13 @@ static int test_fm4_retired(void)
     }
     bad += check("PRESETS: the list holds every engine's presets but the retired ones' (DIGITAL PHYS SAMPLE GRAIN SLICE TRIO WHEEL ANIMAL)",
                  seen == all && NENG_SHOWN == NENGINES - 8u);
-    go_page(GR_BROWSE);
+    u2_more_at(UXR_GLOBAL, ID_SV_ENGINE);               /* (3c-2 task 2: SAVE > MORE's ENGINE, the inherited PRESETS KNOB 2) */
     set_engine_of(TSEL, 0);
     for (i = 0, seen = 0; i < NENG_SHOWN; i++) {
         turn(EN_K2, 1);
         seen |= 1u << TSEL->eng_req;
     }
-    bad += check("PRESETS KNOB 2: the engines in order (0.9.9: DRUM first, NOISE last, round), DIGITAL skipped, back to the first",
+    bad += check("SAVE > MORE's ENGINE (PRESETS KNOB 2 until 3c-2): the engines in order (0.9.9: DRUM first, NOISE last, round), DIGITAL skipped, back to the first",
                  seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == ENGI_NOISE &&
                  eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_LOFI && eng_step(ENGI_DRUM, 1) == ENGI_VOICE &&
                  eng_step(ENGI_VOICE, 1) == ENGI_PHASE && eng_step(ENGI_PHASE, 1) == ENGI_LOFI &&
@@ -6728,7 +6728,7 @@ static int test_layer_knob_race(void)
                     if (pg < NPAGES && !page_visible(pg))
                         continue;
                     if (mode == 2u && LB[l] == B_EDIT && pg < NPAGES &&   /* (EDIT's tap acts there: no lock) */
-                        (PAGES[pg].graph == GR_USER || PAGES[pg].graph == GR_SLOTS || PAGES[pg].graph == GR_ROLL))
+                        (PAGES[pg].graph == GR_SVSND || PAGES[pg].graph == GR_SLOTS || PAGES[pg].graph == GR_ROLL))
                         continue;
                     rc_run(LB[l], mode, k, pg, 0, &a0, &b0);
                     rc_run(LB[l], mode, k, pg, 1, &a1, &b1);
@@ -6869,27 +6869,25 @@ static void tl_drum(void)
  * set; SELECT zooms LIBRARY <-> PROJECT <-> SOUND (no wrap), each level back at its set; every SAVE page reached; the
  * mock-up's layout (tabs, cards, panel, breadcrumb) on each, the level's tab THEME; LIBRARY's KNOB 1 / PRESETS the
  * project; a layer's map or NAME over it: the usual layout */
-/* (0.9.2) SAVE: SOUND (USER PRESETS) . PROJECT (SECTIONS ARRANGE) . LIBRARY (PROJECTS TOOLS) one chain; SAVE from
- * elsewhere the page left, USER and SECTIONS with their SAVE armed (SAVE . OCT+ . OCT+); a SAVE tap the next group;
- * KNOB 1 the slot / section / project; PRESETS a sound. (Was 0.8.5's lens: SELECT LIBRARY <-> PROJECT <-> SOUND, a tap
- * the level's other set, SAVE from elsewhere always USER, PRESETS the slot / project) */
+/* (0.9.2) SAVE: SOUND . PROJECT (SECTIONS ARRANGE) . LIBRARY (PROJECTS TOOLS) . MORE one chain (3c-2 task 2: SOUND the ux page, was
+ * USER PRESETS; MORE); SAVE from elsewhere the page left, SOUND and SECTIONS with their SAVE armed (SAVE . OCT+ . OCT+); a SAVE tap
+ * the next group; KNOB 1 the slot / section / project; PRESETS a sound. (Was 0.8.5's lens: SELECT LIBRARY <-> PROJECT <-> SOUND, a
+ * tap the level's other set, SAVE from elsewhere always USER, PRESETS the slot / project) */
 static int test_save_lens(void)
 {
-    static const char *const CH[6] = {"USER", "PRESETS", "SECTIONS", "ARRANGE", "PROJECTS", "TOOLS"};
-    static const char *const TP[2] = {"SECTIONS", "PROJECTS"};
+    static const char *const CH[6] = {"SOUND", "SECTIONS", "ARRANGE", "PROJECTS", "TOOLS", "MORE"};
+    static const char *const TP[3] = {"SECTIONS", "PROJECTS", "MORE"};
     int bad = 0, ok;
     uint32_t pr;
     ui_power_on();
     go_home(); frame();
     press(B_SAVE); frame();
-    ok = save_on() && save_level() == SV_SOUND && cur_page()->graph == GR_USER && ui.act == 4u && lz_on() &&
-         card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && foot_y() == LZ_FOOT_Y && lz_tab_lit(0) &&
-         lz_crumb_is("SAVE \xB7 SOUND \xB7 USER") && lz_count_is("1/6");
-    bad += check("0.9.2 SAVE from HOME at power-on: SOUND's USER, SAVE armed; the tabs (SOUND lit), the crumb, 1/6", ok);
-    bad += check("0.9.2 SAVE: one chain USER PRESETS SECTIONS ARRANGE PROJECTS TOOLS; a SAVE tap the next group, round",
-                 chain_walk(B_SAVE, CH, 6, TP, 2));
+    ok = save_on() && cur_page()->graph == GR_SVSND && ui.act == 4u && ux_page_owns() && !strcmp(uxs_count(), "1 / 6");
+    bad += check("0.9.2 SAVE from HOME at power-on: SOUND (3c-2 task 2: the ux page, was USER), SAVE armed, 1 / 6", ok);
+    bad += check("0.9.2 SAVE: one chain SOUND SECTIONS ARRANGE PROJECTS TOOLS MORE; a SAVE tap the next group, round",
+                 chain_walk(B_SAVE, CH, 6, TP, 3));
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame();
-    turn(EN_SELECT, 3); frame();                                             /* ARRANGE, left there */
+    turn(EN_SELECT, 2); frame();                                             /* ARRANGE, left there */
     go_home(); frame(); press(B_SAVE); frame();
     ok = cur_page()->graph == GR_SONG && save_level() == SV_PROJ;            /* (the page left; was always USER) */
     turn(EN_SELECT, -1); frame();
@@ -6898,7 +6896,7 @@ static int test_save_lens(void)
     ok &= cur_page()->graph == GR_SLOTS && ui.act == 4u;                     /* (SECTIONS from elsewhere: SAVE armed) */
     turn(EN_SELECT, 2); frame();
     ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u && lz_crumb_is("SAVE \xB7 LIBRARY \xB7 PROJECTS");
-    bad += check("0.9.2 SAVE from elsewhere the page left (ARRANGE); USER and SECTIONS from elsewhere armed, inside not", ok);
+    bad += check("0.9.2 SAVE from elsewhere the page left (ARRANGE); SOUND and SECTIONS from elsewhere armed, inside not", ok);
     turn(EN_K1, 1); frame();                                                 /* LIBRARY: KNOB 1 the project */
     ok = song_cur == 1u;
     turn(EN_K1, -1); frame();
@@ -8529,7 +8527,7 @@ static int test_browse_no_pattern(void)
         track_defaults_steps(t);
         ok &= seq_is_empty(t) && up_has_pat(3);
         if (pass & 1u) song.playing = 1;              /* playing: the other tracks run, this one is empty */
-        if (pass & 2u) go_page(GR_BROWSE);
+        if (pass & 2u) go_page(GR_SVSND);
         preset_pos(&total);
         for (n = 0; n < total + 2u; n++) {
             turn(EN_PRESET, 1);
@@ -9883,7 +9881,7 @@ static int test_large(void)
 
     (void)c;                                            /* (the tall cards' columns: FELUCCA_FM4 only) */
     /* per page type: lists and rolls keep the layout, the layers too */
-    go_page(GR_BROWSE); frame();
+    go_page(GR_SLOTS); frame();                         /* (3c-2 task 2: PRESETS gone, SAVE > SOUND the ux pages': PROJECT's) */
     ok = large_kind() == LK_LABEL && card_h() == LZ_CARD_H && graph_y() == LZ_GRAPH_Y && graph_h() == LZ_GRAPH_H;   /* (0.8.5:
                                                          * SAVE's lens, the mock-up's layout) */
     go_page(GR_ROLL); frame();
@@ -9893,7 +9891,7 @@ static int test_large(void)
     ok &= ui.layer && large_kind() == LK_LABEL && card_h() == LZ_CARD_H;   /* (0.8.5: the layer's lens) */
     btn_up(B_GLO); frame(); frame();
     ok &= !ui.layer && !ui.home;
-    bad += check("#15 LARGE: PRESETS and the roll keep the layout (labels in M), the layers too", ok);
+    bad += check("#15 LARGE: PROJECT (was PRESETS) and the roll keep the layout (labels in M), the layers too", ok);
 
     {   /* saved with the settings; settings from before it: OFF (and so again: idempotent) */
         persist_t p, q;
@@ -10665,7 +10663,8 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
                                                          * NOTE COMP AUTOMATION; task 4: STEPS STEP EXTRAS PATTERN MORE; task 6:
                                                          * GLO LIVE (MIXER SENDS) GLOBAL SYSTEM MORE, opening on MIXER; task 7:
                                                          * LIVE MIX MORE, opening on LIVE; SELECT on MORE its rows; task 8: LIVE
-                                                         * MIX MIDI MORE) */
+                                                         * MIX MIDI MORE; 3c-2 task 2: SAVE SOUND (SECTIONS ARRANGE PROJECTS
+                                                         * TOOLS) MORE, a group a tap, round) */
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10674,7 +10673,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
     "EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/2/FM6 OP ENV|EDIT/2/FM6 OP ENV|HOME/0/*",   /* (3b task 5) */
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10683,7 +10682,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10692,7 +10691,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
     "EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/2/DRUM SOUND 2|EDIT/2/DRUM SOUND 2|HOME/0/*",   /* (3b task 5) */
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10701,7 +10700,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10710,7 +10709,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10719,7 +10718,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/0/USER|SAVE/2/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS|SAVE/5/TOOLS|SAVE/4/PROJECT|SAVE/4/PROJECT|SAVE/5/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/3/PROJECT|SAVE/5/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/PROJECT|SAVE/2/ARRANGE|SAVE/3/PROJECT|SAVE/2/ARRANGE|SAVE/2/ARRANGE|SAVE/3/PROJECT",
 };
 static int test_ux_nav_sections(void)
 {
@@ -11883,7 +11882,7 @@ static const old_lv_t OLD_LV[] = {
     {FAM_GLO, 0, 9, {"LIVE", "MIX", "GLO MORE"}},   /* (3c-1 task 7: GLO its own; JIANT's MIXER SENDS GLOBAL SYSTEM MIX's knobs,
                                                          * MORE's rows; SENDS FX's) */
     {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}}, {FAM_SAVE, SV_PROJ, 9, {"PROJECT", "ARRANGE"}},
-    {FAM_SAVE, SV_SOUND, 9, {"USER", "PRESETS"}},
+    {FAM_SAVE, 0, 9, {"SAVE SOUND", "SAVE MORE"}},   /* (3c-2 task 2: SOUND the inherited USER and PRESETS) */
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "SEQ MORE"}},   /* (3c-1 task 4: JIANT's STRETCH PLAYHEADS TRACK MUTATE NOTE AUTOMATION
                                                          * AUTO LIST COMP COMP 2 pages SEQ > MORE's rows) */
     {FAM_SEQ, LV_BAR, 9, {"STEP"}},
@@ -12020,7 +12019,7 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {7, 3, 16, 6, 13, 7, 10, 2, 25, 1, 7, 7, 17, 9};   /* (3c-1 task 8: task 14 9, GLO's MIDI page
+    static const uint8_t WANT[14] = {7, 3, 16, 6, 13, 7, 11, 2, 25, 1, 7, 7, 17, 9};   /* (3c-1 task 8: task 14 9, GLO's MIDI page
                                                          * before MORE; task 7: task 14 8, was 4:
                                                          * GLO > SYSTEM gone, its TRACKS GLO > MORE's 5th setting after LIVE's
                                                          * RAILS, the spec's order) */   /* (3c-1 task 2: task 13 14, was 11: SEQ
@@ -12073,8 +12072,9 @@ static int test_nav_tasks(void)
             tk_start(0); tk_btn(B_SAVE); tk_go(EN_K1, 4); tk_btn(B_OCTUP); tk_btn(B_OCTUP);
             ok = ui.uslot == 4u && up_used(4) && !name_on();
             break;
-        case 6:                                         /* the sound into U05, SAVE left on ARRANGE */
-            tk_start(3); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_go(EN_K1, 4); tk_val(EN_K4, 1);
+        case 6:                                         /* the sound into U05, SAVE left on ARRANGE (3c-2 task 2: 11, was 10:
+                                                         * SAVE's MORE between PROJECTS and SOUND) */
+            tk_start(3); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_btn(B_SAVE); tk_go(EN_K1, 4); tk_val(EN_K4, 1);
             tk_btn(B_OCTUP); tk_btn(B_OCTUP);
             ok = ui.uslot == 4u && up_used(4) && !name_on();
             break;
@@ -12130,8 +12130,8 @@ static int test_nav_tasks(void)
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
     bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (115: 3b task 8, FX's DLY MOD and "
                  "SLICER in MORE; 82: 3b task 5, FM6's filter in MORE; 0.9.18 no BAR 80, was 73; 118: 3c-1 task 2, COMP after STEPS' "
-                 "groups; 120: task 3, STEP EXTRAS; 125: task 4, TRACK's and COMP 2's in SEQ > MORE; 129: task 7, GLO's TRACKS in GLO > MORE; 130: task 8, GLO's MIDI page)",
-                 okall && tot == 130u);
+                 "groups; 120: task 3, STEP EXTRAS; 125: task 4, TRACK's and COMP 2's in SEQ > MORE; 129: task 7, GLO's TRACKS in GLO > MORE; 130: task 8, GLO's MIDI page; 131: 3c-2 task 2, SAVE's MORE)",
+                 okall && tot == 131u);
     ui_power_on();
     return bad;
 }
@@ -12183,8 +12183,8 @@ static int test_nav_rules(void)
     press(B_OCTDN); frame();
     go_title("ENV"); frame();
     name_key();
-    ok &= !name_on() && msg_is("NAME: ON USER OR PROJECT");
-    bad += check("0.9.2 SAVE + C5: NAME, the slot's rename on USER / PROJECT (its map names it); elsewhere it says where", ok);
+    ok &= !name_on() && msg_is("NAME: ON SOUND OR PROJECT");
+    bad += check("0.9.2 SAVE + C5: NAME, the slot's rename on SOUND / PROJECT (its map names it); elsewhere it says where", ok);
     ui_power_on(); go_home(); frame();
     fm1_ms += 1200u;
     held_turn(B_HOME, 1); frame();
@@ -12206,7 +12206,7 @@ static int test_nav_rules(void)
     held_turn(B_SCL, 1); frame();
     ok &= str_eq(cur_page()->title, "CHORD") && !ui.layer;   /* SCL + SELECT: its chain (from its page left, KEY) */
     fm1_ms += 1200u;
-    held_turn(B_SAVE, 2); frame();
+    held_turn(B_SAVE, 1); frame();                      /* (3c-2 task 2: 1, was 2: SOUND one page, was USER PRESETS) */
     ok &= str_eq(cur_page()->title, "SECTIONS") || cur_page()->graph == GR_SLOTS;   /* SAVE + SELECT: its chain */
     fm1_ms += 1200u;
     held_turn(B_LFO, 1); frame();
@@ -20207,6 +20207,273 @@ static int test_u1_home_head(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3c-2 task 2: SAVE = SOUND -> (the inherited SECTIONS ARRANGE PROJECTS TOOLS until tasks 3-4) -> MORE. SOUND (ux_save.c,
+ * spec 2.1): KNOB 1 SLOT (the 32 user slots), 2 PRESET (the inherited PRESETS KNOB 1), 3 NAME (a turn right: the slot's rename),
+ * 4 SAVE (an action knob; OCT+ saves: STOP TO SAVE playing, the overwrite dialog over a used slot, else NAME); its picture the
+ * slots as a scrolling list. SAVE > MORE's SOUND (LOAD SLOT, ENGINE, FAVORITE, LIST: the inherited USER and PRESETS knobs) and
+ * TOOLS (ERASE USER SLOT) rows. The inherited USER and PRESETS pages gone
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static void u2_open(void)                               /* SAVE opened from HOME, stopped, the slots empty */
+{
+    uint32_t k;
+    ui_power_on(); frame();
+    stop_transport();
+    for (k = 0; k < UP_SLOTS; k++)
+        (void)up_put(k, 0);
+    go_home(); frame();
+    press(B_SAVE); frames(320);
+}
+static uint32_t u2_row(uint32_t kind, uint32_t id)      /* row (kind, id) of SAVE > MORE (UXM_SAVE.n: none) */
+{
+    uint32_t r;
+    for (r = 0; r < UXM_SAVE.n && !(UXM_SAVE.rows[r].kind == kind && UXM_SAVE.rows[r].id == id); r++)
+        ;
+    return r;
+}
+static void u2_more_at(uint32_t kind, uint32_t id)      /* SAVE > MORE, row (kind, id) picked */
+{
+    uint32_t k;
+    nav_put(SEC_SAVE, "MORE"); frame();
+    k = uxm_key();
+    uxm_at[k].sel = (uint8_t)u2_row(kind, id);
+    uxm_at[k].top = 0;
+    frames(UX_HOT_MS + 100u);
+}
+static void u2_view_turn(uint32_t id, int32_t s)
+{
+    u2_more_at(UXR_GLOBAL, id);
+    turn(EN_K2, s);
+}
+static const char *u2_row_val(uint32_t kind, uint32_t id)   /* the value SAVE > MORE shows on row (kind, id) */
+{
+    static char v[24];
+    uint8_t bar;
+    v[0] = 0;
+    if (u2_row(kind, id) < UXM_SAVE.n)
+        (void)uxm_row_text(&UXM_SAVE.rows[u2_row(kind, id)], v, sizeof v, &bar);
+    return v;
+}
+/* SAVE opens on SOUND; the footer counts the pages shown (the inherited ones until task 4) and MORE; SOUND and MORE drawn by
+ * ux_section.c, SECTIONS not yet; no USER or PRESETS page left */
+static int test_u2_nav(void)
+{
+    int bad = 0, ok;
+    uint32_t i;
+    ux_knob_t kn[4];
+    char b[48];
+    u2_open();
+    uxs_knobs(cur_page(), kn);
+    uxs_foot(uxs_where(), kn, uxs_count(), uxs_next(), b, sizeof b);
+    ok = str_eq(cur_page()->title, "SAVE SOUND") && cur_page()->graph == GR_SVSND && uxv_owns() && ux_page_owns() &&
+         ux_section_owns(SEC_SAVE) && uxq_t_is("SOUND's footer", b, "1 / 6 \xB7 NEXT SECTIONS") &&
+         uxq_t_is("SOUND's place", uxs_where(), "SAVE \xB7 SOUND") && str_eq(kn[0].label, "SLOT") && str_eq(kn[1].label, "PRESET") &&
+         str_eq(kn[2].label, "NAME") && str_eq(kn[3].label, "SAVE") && ui.act == 4u;
+    press(B_SAVE); frames(320);
+    ok &= str_eq(nav_page_name(), "SECTIONS") && !uxv_owns() && !ux_page_owns();
+    nav_put(SEC_SAVE, "MORE"); frames(320);
+    ok &= str_eq(cur_page()->title, "SAVE MORE") && cur_page()->more == &UXM_SAVE && uxv_owns() && ux_page_owns() &&
+          !strcmp(uxs_count(), "6 / 6") && !lock_page_ok(ui.page);
+    press(B_SAVE); frames(320);
+    ok &= str_eq(cur_page()->title, "SAVE SOUND");
+    turn(EN_SELECT, 1); frames(64);
+    ok &= str_eq(nav_page_name(), "SECTIONS");
+    for (i = 0; i < NPAGES; i++)
+        ok &= !str_eq(PAGES[i].title, "USER") && !str_eq(PAGES[i].title, "PRESETS");
+    bad += check("ACID FM 3c-2 task 2: SAVE opens on SOUND (1 / 6 . NEXT SECTIONS), SOUND and MORE on the ux pages, USER and PRESETS "
+                 "gone", ok);
+    ui_power_on();
+    return bad;
+}
+/* SOUND's knobs: SLOT, PRESET (as preset_step), NAME (the rename; an empty slot said), SAVE (armed right, dropped left; OCT+ as the
+ * inherited USER's SAVE); SAVE + C5 renames there; the status line names the slot and what OCT+ does */
+static int test_u2_knobs(void)
+{
+    int bad = 0, ok;
+    track_t cp = *TSEL;
+    uint32_t pre, eng;
+    u2_open();
+    ok = ui.uslot == 0u;
+    turn(EN_K1, 3); frame();
+    ok &= ui.uslot == 3u;
+    turn(EN_K1, -10); frame();
+    ok &= ui.uslot == 0u;
+    turn(EN_K1, 40); frame();
+    ok &= ui.uslot == 31u;
+    turn(EN_K1, -40); frame();
+    ok &= ui.uslot == 0u;
+    bad += check("ACID FM 3c-2 task 2: SOUND's KNOB 1 the slot (0..31, clamped)", ok);
+    cp = *TSEL;                                         /* (KNOB 2: what preset_step(+1) does, on a copy) */
+    preset_step(1);
+    pre = TSEL->preset; eng = TSEL->eng_req;
+    *TSEL = cp;
+    frame();
+    turn(EN_K2, 1); frame();
+    ok = TSEL->preset == pre && TSEL->eng_req == eng && (pre != cp.preset || eng != cp.eng_req);
+    frames(UX_HOT_MS / 2u);
+    {
+        char nmb[16], want[40];
+        sound_name(TSEL, nmb);
+        str_cpy(want, "PRESET \xB7 ", sizeof want);
+        str_cpy(want + str_len(want), nmb, sizeof want - str_len(want));
+        ok &= uxq_t_is("PRESET turned", uxq_t_say(), want);
+    }
+    bad += check("  KNOB 2 PRESET: the preset as preset_step (the inherited PRESETS KNOB 1); said", ok);
+    up_store(3, "DEEP SUB");
+    ui.uslot = 3; ui.act = 4; frames(UX_HOT_MS + 100u);
+    ok = uxq_t_is("the slot said", uxq_t_say(), "U04 \xB7 DEEP SUB \xB7 OCT+ SAVES OVER IT");
+    ui.uslot = 5; frames(32);
+    ok &= uxq_t_is("an empty slot said", uxq_t_say(), "U06 \xB7 EMPTY \xB7 OCT+ SAVES HERE");
+    ui.uslot = 3;
+    turn(EN_K3, 1); frame();
+    ok &= name_on() && nm.kind == NK_USER_RENAME && nm.slot == 3u;
+    press(B_OCTDN); frame();
+    ok &= !name_on();
+    ui.uslot = 5; ui.msg_t = 0;
+    turn(EN_K3, 1); frame();
+    ok &= !name_on() && msg_is("EMPTY SLOT");
+    bad += check("  KNOB 3 NAME: a used slot's rename (NAME), an empty one EMPTY SLOT; the status line the slot and OCT+", ok);
+    ui.msg_t = 0;
+    turn(EN_K4, -1); frame();
+    ok = ui.act == 0u;
+    press(B_OCTUP); frame();
+    ok &= !name_on() && !ui.confirm;
+    turn(EN_K4, 1); frame();
+    ok &= ui.act == 4u;
+    press(B_OCTUP); frame();
+    ok &= name_on() && nm.kind == NK_USER_SAVE && nm.slot == 5u;
+    press(B_OCTDN); frame();
+    ui.uslot = 3;
+    turn(EN_K4, 1); frame();
+    press(B_OCTUP); frame();
+    ok &= ui.confirm == CF_OVR_USER && ui.confirm_trk == 3u;
+    press(B_OCTDN); frame();
+    ok &= !ui.confirm && up_used(3);
+    seq_start(); frame();
+    ui.msg_t = 0;
+    turn(EN_K4, 1); frame();
+    press(B_OCTUP); frame();
+    ok &= msg_is("STOP TO SAVE") && !name_on() && !ui.confirm;
+    stop_transport(); frame();
+    bad += check("  KNOB 4 SAVE: right arms, left drops; OCT+ NAME on an empty slot, OVERWRITE? on a used one, STOP TO SAVE playing", ok);
+    ui.msg_t = 0;
+    ui.uslot = 3;
+    name_key();
+    ok = name_on() && nm.kind == NK_USER_RENAME && str_eq(nm.s, "DEEP SUB") && str_eq(cur_page()->title, "SAVE SOUND");
+    press(B_OCTDN); frame();
+    ui.uslot = 5;
+    name_key();
+    ok &= !name_on() && msg_is("EMPTY SLOT");
+    bad += check("  SAVE + C5 on SOUND: the slot's rename (an empty one: EMPTY SLOT)", ok);
+    ui_power_on();
+    return bad;
+}
+/* the picture: redrawn on a change only (uxs_panels); the slots' list scrolls with the pick */
+static int test_u2_pace(void)
+{
+    int bad = 0, ok;
+    uint32_t n0;
+    u2_open();
+    frames(400);
+    n0 = uxs_panels;
+    frames(800);
+    ok = uxs_panels == n0;
+    turn(EN_K1, 1); frames(64);
+    ok &= uxs_panels == n0 + 1u;
+    n0 = uxs_panels;
+    up_store(1, "PAD"); frames(64);
+    ok &= uxs_panels == n0 + 1u;
+    n0 = uxs_panels;
+    frames(800);
+    ok &= uxs_panels == n0;
+    bad += check("ACID FM 3c-2 task 2: SOUND's picture drawn on a change (a slot picked, stored), none idle", ok);
+    ui_power_on();
+    return bad;
+}
+/* SAVE > MORE: TOOLS' ERASE USER SLOT (the dialog on the slot picked; an empty one said), SOUND's LOAD SLOT, ENGINE, FAVORITE, LIST
+ * (what the inherited USER's LOAD and PRESETS' KNOB 2 .. 4 wrote) */
+static int test_u2_more(void)
+{
+    static const struct { uint8_t kind, id; const char *nm; } ROWS[] = {
+        {UXR_HEAD, UXM_H_TOOLS, "TOOLS"}, {UXR_ACTION, UXM_A_ERASE, "ERASE USER SLOT"}, {UXR_HEAD, UXM_H_SOUND, "SOUND"},
+        {UXR_ACTION, UXM_A_ULOAD, "LOAD SLOT"}, {UXR_GLOBAL, ID_SV_ENGINE, "ENGINE"}, {UXR_GLOBAL, ID_SV_FAV, "FAVORITE"},
+        {UXR_GLOBAL, ID_SV_LIST, "LIST"}};
+    int bad = 0, ok = 1;
+    uint32_t i, e0;
+    char v[24];
+    uint8_t bar;
+    u2_open();
+    ok &= UXM_SAVE.n == NELEM(ROWS);
+    for (i = 0; i < NELEM(ROWS) && i < UXM_SAVE.n; i++)
+        ok &= UXM_SAVE.rows[i].kind == ROWS[i].kind && UXM_SAVE.rows[i].id == ROWS[i].id &&
+              uxq_t_is("SAVE > MORE row", uxm_list_name(&UXM_SAVE.rows[i], uxm_row_text(&UXM_SAVE.rows[i], v, sizeof v, &bar)),
+                       ROWS[i].nm) &&
+              (UXM_SAVE.rows[i].kind == UXR_HEAD || ux_row_shown(&UXM_SAVE.rows[i]));
+    ok &= UXM_ACT[UXM_A_ERASE].ask == CF_ERASE_USER && UXM_ACT[UXM_A_ERASE].arg == UXA_USLOT &&
+          UXM_ACT[UXM_A_LANE].arg == UXA_SEL && UXM_ACT[UXM_A_CLRAUTO].arg == UXA_SEL;
+    bad += check("ACID FM 3c-2 task 2: SAVE > MORE's rows: TOOLS (ERASE USER SLOT), SOUND (LOAD SLOT, ENGINE, FAVORITE, LIST)", ok);
+    {   /* LOAD SLOT: the slot picked loaded, as up_ui(0, ..) (the inherited USER's LOAD); an empty one said */
+        trk[0].p[P_E0] = 7;
+        up_store(3, "DEEP SUB");
+        trk[0].p[P_E0] = 21;
+        ui.uslot = 3;
+        u2_more_at(UXR_ACTION, UXM_A_ULOAD);
+        ui.msg_t = 0;
+        turn(EN_K2, 1); frame();
+        ok = user_of(TSEL) == 3u && TSEL->p[P_E0] == 7 && msg_is("LOADED U04");
+        ui.uslot = 9; ui.msg_t = 0;
+        turn(EN_K2, 1); frame();
+        ok &= msg_is("EMPTY SLOT") && user_of(TSEL) == 3u;
+        bad += check("  LOAD SLOT loads the slot picked on SOUND (LOADED U04); an empty one: EMPTY SLOT", ok);
+    }
+    {   /* ERASE USER SLOT: CF_ERASE_USER on the slot picked; an empty one said */
+        ui.uslot = 3;
+        u2_more_at(UXR_ACTION, UXM_A_ERASE);
+        turn(EN_K2, 1); frame();
+        ok = ui.confirm == CF_ERASE_USER && ui.confirm_trk == 3u;
+        press(B_OCTDN); frame();
+        ok &= !ui.confirm && up_used(3);
+        ui.uslot = 9; ui.msg_t = 0;
+        turn(EN_K2, 1); frame();
+        ok &= !ui.confirm && msg_is("EMPTY SLOT");
+        ui.uslot = 3;
+        turn(EN_K2, 1); frame();
+        press(B_OCTUP); frame();
+        ok &= !ui.confirm && !up_used(3);
+        bad += check("  ERASE USER SLOT: the dialog on the slot picked (OCT- keeps it, OCT+ erases); an empty one: EMPTY SLOT", ok);
+    }
+    {   /* ENGINE, FAVORITE, LIST: the inherited PRESETS KNOB 2, 3, 4 */
+        e0 = TSEL->eng_req;
+        u2_more_at(UXR_GLOBAL, ID_SV_ENGINE);
+        ok = uxq_t_is("ENGINE", u2_row_val(UXR_GLOBAL, ID_SV_ENGINE), ENGINES[e0]->name);
+        turn(EN_K2, 1); frame();
+        ok &= TSEL->eng_req == eng_step(e0, 1) && uxq_t_is("ENGINE turned", u2_row_val(UXR_GLOBAL, ID_SV_ENGINE),
+                                                           ENGINES[eng_step(e0, 1)]->name);
+        turn(EN_K2, -1); frame();
+        ok &= TSEL->eng_req == e0;
+        u2_more_at(UXR_GLOBAL, ID_SV_FAV);
+        preset_mark(0);
+        ok &= !preset_favorite() && uxq_t_is("FAVORITE", u2_row_val(UXR_GLOBAL, ID_SV_FAV), "OFF");
+        turn(EN_K2, 1); frame();
+        ok &= preset_favorite() && uxq_t_is("FAVORITE turned", u2_row_val(UXR_GLOBAL, ID_SV_FAV), "ON");
+        turn(EN_K2, -1); frame();
+        ok &= !preset_favorite();
+        u2_more_at(UXR_GLOBAL, ID_SV_LIST);
+        list_put(0);
+        turn(EN_K2, 1); frame();
+        ok &= list_get() == 1u && uxq_t_is("LIST", u2_row_val(UXR_GLOBAL, ID_SV_LIST), "FAV");
+        turn(EN_K2, 5); frame();
+        ok &= list_get() == 2u && uxq_t_is("LIST a detent", u2_row_val(UXR_GLOBAL, ID_SV_LIST), "BASS");
+        list_put(0);
+        bad += check("  ENGINE, FAVORITE, LIST write what the inherited PRESETS KNOB 2, 3, 4 wrote (a detent a turn)", ok);
+    }
+    for (i = 0; i < NENG_SHOWN; i++)                    /* (ENGINE's names: the engines' own, in ENGINE_ORDER) */
+        ok &= str_eq(N_SV_ENG[i], ENGINES[eng_vis(i)]->name);
+    bad += check("  ENGINE's words are the engines' names in their shown order", ok && NELEM(N_SV_ENG) == NENG_SHOWN);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -20427,6 +20694,10 @@ int main(void)
     bad += test_u1_all();
     bad += test_u1_lines();
     bad += test_u1_home_head();
+    bad += test_u2_nav();                               /* (ACID FM 3c-2 task 2) */
+    bad += test_u2_knobs();
+    bad += test_u2_pace();
+    bad += test_u2_more();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

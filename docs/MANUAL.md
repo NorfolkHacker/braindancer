@@ -129,7 +129,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | **EDIT / SEQ / LFO / FX** held + **SELECT** | The dice: the sound / the sequence / the LFO / the effects (see [8](#8-dice-and-undo)). |
 | **ENV / SCL / ARP / SAVE** held + **SELECT** | Into that section and along its chain, as SELECT inside it. |
 | **SEQ** held + **G5** | **CLR STEP**: clears the picked step and its locks (with a note in FOCUS: that note; on the AUTOMATION list: deletes the record). |
-| **SAVE** held + **C5** | **NAME**: renames the slot on SAVE > USER, the section or project on SECTIONS / PROJECTS. |
+| **SAVE** held + **C5** | **NAME**: renames the slot on SAVE > SOUND, the section or project on SECTIONS / PROJECTS. |
 | A step held (SEQ › STEPS) + **KNOB 1–4** | A lock on that step (**LOCK · SETTING · VALUE**). |
 | A step held (SEQ › STEPS) + **SELECT** | The page those knobs lock: walks the track's EDIT pages (SOUND → TONE → … → MORE) without leaving STEPS. |
 | **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
@@ -320,11 +320,11 @@ the rest is the song's)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| PRESETS | No. (the sound) | ENG (the engine) | FAV (mark a favourite) | LIST (ALL / FAV / a sound type: BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX) |
-| USER | SLOT (U01–U32) | LOAD (action) | ERASE (action) | SAVE (action) |
+| SOUND | SLOT (U01–U32) | PRESET (the track's sound) | NAME (renames the slot) | SAVE (action) |
 | PROJECTS / SECTIONS (the PROJECT page) | PROJECT (1–8; on SECTIONS: SECT A–D) | SECT (A–D; on SECTIONS: the section's NAME) | LOAD (action) | SAVE (action) |
 | ARRANGE | ROW ("2/6") | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
 | TOOLS | any knob picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT, CPU TEST | | | |
+| MORE | the row (TOOLS: ERASE USER SLOT · SOUND: LOAD SLOT, ENGINE, FAVORITE, LIST) | its value | — | — |
 
 **ARP** (per track)
 
@@ -429,9 +429,9 @@ keep controlling the macros on every page) until you press LFO again. F3 rolls n
 ## 4. Engines
 
 Seven engines, all synthesis, no samples. Any engine can go on any track. Pick them with **PRESETS** (one list over
-every engine) or with KNOB 2 (ENG) on SAVE › PRESETS.
+every engine) or with ENGINE on SAVE › MORE.
 
-**The order**: PRESETS, KNOB 2 (ENG) and the web editor's lists show the engines as **DRUM-X, VOICE, PHASE, LOFI,
+**The order**: PRESETS, SAVE › MORE's ENGINE and the web editor's lists show the engines as **DRUM-X, VOICE, PHASE, LOFI,
 ANALOG, FM6, NOISE** (the first six are the tracks at power-on, T1–T6). PROGRAM CHANGE numbers the sounds in this
 order (see [14](#14-midi-and-usb)).
 
@@ -1521,7 +1521,7 @@ This is the chapter to read carefully. ACID FM keeps several kinds of data in di
 | The music now (sounds, steps, automation, tempo, effects, kit, macros, punch-in lane, SLICER) | RAM | Not saved by itself — store it into a section. The **autosave** keeps a copy. | Only via the autosave |
 | A **section** (A–D of a project) | Flash | **SAVE > SECTIONS > SAVE** (stopped), or **SAVE layer C4–F4 / OCT+** | Yes (layer stores: once you stop) |
 | The **arrangement** (rows, bars, END, scenes) of each project | Flash (song index) | Automatically, ~2 s after a change while stopped | Yes |
-| **User presets** U01–U32 (one sound + a 16-step pattern) | Flash | **SAVE > USER > SAVE** (stopped) | Yes |
+| **User presets** U01–U32 (one sound + a 16-step pattern) | Flash | **SAVE > SOUND > SAVE** (stopped) | Yes |
 | **Settings** (MENU, TRACKS, LOAD, favourites) | Flash | Automatically (MENU: when it closes; while playing: after you stop) | Yes |
 | The **autosave** | Flash, its own place | 10 s after the last change, stopped and idle, at most once a minute | Yes (restored at power-on if RESTORE LAST is ON) |
 | The **FM6 voice bank** B1–B32 | Flash, its own place | Sent from the web editor | Yes (not in the backup: keep the .syx) |
@@ -1613,7 +1613,7 @@ when you stop**. If you power off before stopping, it's lost — so stop before 
 ### Naming (the NAME screen)
 
 Opens when you save a section or a user preset, and with **SAVE held + C5** (NAME)
-on SAVE > USER, SECTIONS or PROJECTS (renames the selected slot, section or project; only the name is written). Up to 12 characters, upper case.
+on SAVE > SOUND, SECTIONS or PROJECTS (renames the selected slot, section or project; only the name is written). Up to 12 characters, upper case.
 
 | Control | Does |
 | --- | --- |
@@ -1628,13 +1628,15 @@ An empty name: a project section gets none, a user preset an automatic one.
 The same screen types a VOICE track's **lyric** (EDIT › MORE › TYPE LYRIC, KNOB 2 to the right): up to 63 characters, the field scrolls with the
 cursor, **KNOB 3** throws the dice, and OCT+ sets it even while playing (it is not a flash write).
 
-### User presets (SAVE > USER)
+### User presets (SAVE > SOUND)
 
 32 slots for single sounds. **SAVE** comes back to this page with SAVE already picked (when you left SAVE on it, as at
 power-on), so **SAVE, OCT+, OCT+** saves the selected track's sound with the offered name.
 
-- **KNOB 1**: the slot (U01–U32). **KNOB 2** LOAD, **KNOB 3** ERASE (asks first), **KNOB 4** SAVE (asks before
-  overwriting, then NAME). Turn the knob right to pick, **OCT+** to do it. Saving and erasing need the transport stopped.
+- **KNOB 1**: the slot (U01–U32, a list: each slot's engine colour and name). **KNOB 2** the preset, **KNOB 3** NAME
+  (renames the slot), **KNOB 4** SAVE (asks before overwriting, then NAME): turn it right, **OCT+** to do it. On SAVE ›
+  MORE: **LOAD SLOT** and **ERASE USER SLOT** (asks first) act on the slot picked here. Saving and erasing need the
+  transport stopped.
 - A user preset stores the **engine, its sound parameters and a 16-step pattern**; an FM6 sound keeps its patch.
 - It does **not** store the **DRUM-X kit** (that lives in the project sections).
 - Loading one loads the sound only.

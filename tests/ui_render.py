@@ -38,7 +38,7 @@ for f in sorted((out / "ppm").glob("*.ppm")):
     if name.startswith("roll_") or name in ("step", "drum"):   # the STEP page's piano roll (and the grid)
         (out.parent / "ui_roll").mkdir(parents=True, exist_ok=True)
         img.save(out.parent / "ui_roll" / f"{pal}_{name}.png")
-    if pal in ("ACID",) and (name.startswith("name_") or name in ("project_named", "song_named", "user_foot")):
+    if pal in ("ACID",) and (name.startswith("name_") or name in ("project_named", "song_named")):
         (out.parent / "ui_name").mkdir(parents=True, exist_ok=True)   # NAME (src/ui_name.c) and the names it shows
         img.save(out.parent / "ui_name" / f"{pal}_{name}.png")
 for pal in ("ACID",):   # DIGITAL's 8 algorithm charts (+ OP LEVEL): x3, the panel, in build/ui_alg/

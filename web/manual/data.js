@@ -42,7 +42,7 @@ controls: {
       {k: "ENV+SELECT", t: "into ENV and along its chain (also SCL, ARP, SAVE)"},
       {k: "STEP+SELECT", t: "with a step held on SEQ › STEPS: the EDIT page the knobs lock"}
     ]},
-  "PRESETS": {kind: "knob", sec: "basic", shot: 'save_presets',
+  "PRESETS": {kind: "knob", sec: "basic", shot: 'save_sound',
     alone: "Always loads presets: the track's sounds (factory, then yours); on the SEQ pages the patterns (PHRASES, OCT+ loads); on GEN the genre. Never changes page or track."},
   "ALGORITHM": {kind: "knob", sec: "basic", shot: 'home',
     alone: "Picks the track T1–T6 from any page (T1–T4 with TRACKS 4; the default is 6). In the MENU, the tab.",
@@ -131,7 +131,7 @@ controls: {
     held: "About 0.7 s: opens the MENU.",
     combos: [{k: "HOME+SELECT", t: "GEN, the song generator"}]},
   "SAVE": {kind: "button", sec: "save", shot: 'save_sound', layer: "SAVE",
-    alone: "The SAVE section: SOUND → PROJECT → LIBRARY. From outside, USER and SECTIONS come with SAVE armed: SAVE, OCT+, OCT+ stores.",
+    alone: "The SAVE section: SOUND → PROJECT → LIBRARY → MORE. From outside, SOUND and SECTIONS come with SAVE armed: SAVE, OCT+, OCT+ stores.",
     held: "SAVE layer (song): play and store sections live, LOOP/SONG, SONG REC, NAME; KNOB 1 the project.",
     combos: [
       {k: "SAVE+C5", t: "NAME: rename the slot, section or project"},
@@ -230,8 +230,9 @@ pages: {
   "SCL/KEY": ["ROOT", "SCALE", "SNAP", "ALL TRACKS"], "SCL/CHORD": ["CHORD", "VOICING", "STRUM", "—"],
   "SCL/MORE": ["SETTING", "(its value)", "—", "—"],
   "ARP/ARP": ["ARP", "RATE", "OCTAVES", "GATE"], "ARP/ARP 2": ["SWING", "CHANCE", "HOLD", "ORDER"],
-  "SAVE/USER": ["SLOT", "LOAD", "ERASE", "SAVE"], "SAVE/PRESETS": ["No.", "ENG", "FAV", "LIST"], "SAVE/SECTIONS": ["SECT", "NAME", "LOAD", "SAVE"],
-  "SAVE/ARRANGE": ["ROW", "SECT", "BARS", "SCENE"], "SAVE/PROJECTS": ["PROJECT", "SECT", "LOAD", "SAVE"], "SAVE/TOOLS": ["(the list)", "", "", ""]
+  "SAVE/SOUND": ["SLOT", "PRESET", "NAME", "SAVE"], "SAVE/SECTIONS": ["SECT", "NAME", "LOAD", "SAVE"],
+  "SAVE/ARRANGE": ["ROW", "SECT", "BARS", "SCENE"], "SAVE/PROJECTS": ["PROJECT", "SECT", "LOAD", "SAVE"], "SAVE/TOOLS": ["(the list)", "", "", ""],
+  "SAVE/MORE": ["SETTING", "(its value)", "—", "—"]
 },
 
 // ------------------------------------------------------------------------------------------- the command reference
@@ -241,7 +242,7 @@ commands: [
    d: "SELECT walks every page of the section as one chain; the section's button jumps to the next group's first page (round). The tabs on top are the groups; at the foot SECTION · GROUP · page n/N. On EDIT the footer gives n / N and where the button goes: NEXT and the next page (on MORE: SETTING and the row picked)."},
   {s: "basic", k: "ALGORITHM", shot: 'home', t: "Pick the track",
    d: "ALGORITHM picks T1–T6 from any page. With TRACKS 4 (the default is 6) it stops at T4: T5 and T6 sleep until GLO › MORE › SYSTEM › TRACKS 6."},
-  {s: "basic", k: "PRESETS", shot: 'save_presets', t: "Change the sound (preset)",
+  {s: "basic", k: "PRESETS", shot: 'save_sound', t: "Change the sound (preset)",
    d: "PRESETS browses the track's sounds: every engine's factory presets (DRUM-X, VOICE, PHASE, LOFI, ANALOG, FM6, NOISE), then your user presets."},
   {s: "basic", k: "GLO+ALGORITHM", shot: 'ly_glo_state', t: "See a layer as MAP, KNOBS or STATE",
    d: "With any layer button held, ALGORITHM switches the view: MAP (the keyboard with what each key does), KNOBS (the four knobs) and STATE (what is on)."},
@@ -459,22 +460,22 @@ commands: [
    d: "LFO + SELECT: a rate mid-range, any wave, FREE or TRIG half the time each, mostly to the filter. BEFORE and NOW side by side: OCT+ KEEP, OCT− NO puts it back, SELECT another."},
 
   // SAVE
-  {s: "save", k: "SAVE", shot: 'save_sound', t: "Save a sound (USER)",
-   d: "SAVE › USER: KNOB 1 the slot (U01–U32), KNOB 2 LOAD, KNOB 3 ERASE, KNOB 4 SAVE; turn right and OCT+. Shortcut: SAVE, OCT+, OCT+. Stores engine, sound and a 16-step pattern (not the DRUM-X kit)."},
+  {s: "save", k: "SAVE", shot: 'save_sound', t: "Save a sound (SOUND)",
+   d: "SAVE › SOUND: KNOB 1 the slot (U01–U32, a list with each slot's engine colour and name), KNOB 2 the preset, KNOB 3 NAME (renames the slot), KNOB 4 SAVE; turn right and OCT+ (over a used slot it asks first). Shortcut: SAVE, OCT+, OCT+. Stores engine, sound and a 16-step pattern (not the DRUM-X kit). LOAD SLOT and ERASE USER SLOT are SAVE › MORE rows."},
   {s: "save", k: "SAVE", shot: 'save_project', t: "Save a section (SECTIONS)",
    d: "Stop the transport. SAVE, SAVE → SECTIONS. KNOB 1 the section A–D, KNOB 4 right, OCT+; if used: OVERWRITE? OCT+; NAME, OCT+. It says SAVED. Stores all the music, with tempo and effects."},
   {s: "save", k: "SAVE", shot: 'save_library', t: "Load a section or project",
    d: "SAVE › PROJECTS: KNOB 1 the project (1–4), KNOB 2 the section, KNOB 3 LOAD, OCT+ (or SECTIONS: KNOB 1 and LOAD). Stops playback and replaces the music; GLO + G4 brings it back."},
   {s: "save", k: "SAVE+C5", shot: 'name_typing', t: "Name it (NAME)",
-   d: "SAVE + C5 on USER, SECTIONS or PROJECTS. White keys: phone-style letters (AB, CD, …); F# cursor ◀, G# space, A# cursor ▶, C# delete, D# ABC/123; KNOB 1 cursor, KNOB 2 character; OCT+ writes, OCT− cancels."},
+   d: "SAVE + C5 on SOUND, SECTIONS or PROJECTS. White keys: phone-style letters (AB, CD, …); F# cursor ◀, G# space, A# cursor ▶, C# delete, D# ABC/123; KNOB 1 cursor, KNOB 2 character; OCT+ writes, OCT− cancels."},
   {s: "save", k: "SAVE+C4", shot: 'layer_song', t: "Quick store while playing",
    d: "SAVE + C4–F4: store into A–D; SAVE + OCT+: into the section playing; SAVE + OCT−: recall it. In RAM at once, to flash when you stop: stop before switching off."},
   {s: "save", k: "SAVE+KNOB 1", t: "Switch project",
    d: "SAVE held + KNOB 1 and let go (stopped): switches project and loads its section A (no UNDO). On SAVE › PROJECTS, KNOB 1 only picks where to save and the music stays."},
   {s: "save", k: "SAVE", shot: 'save_tools', t: "SAVE › TOOLS",
    d: "CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT (everything to zero; UNDO brings it back), CPU TEST (a heavy song to measure). Any knob picks, OCT+ does it."},
-  {s: "save", k: "SAVE", shot: 'save_presets', t: "Presets by type and favourites",
-   d: "SAVE › PRESETS: No., ENG, FAV (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine."},
+  {s: "save", k: "SAVE", shot: 'save_more', t: "Presets by type and favourites",
+   d: "SAVE › MORE › SOUND: LOAD SLOT (the slot SOUND picks), ENGINE, FAVORITE (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine. TOOLS: ERASE USER SLOT (asks first)."},
   {s: "save", k: "HOME", t: "Autosave and RESTORE LAST",
    d: "The autosave copies the music 10 s after the last change, stopped, at most once a minute; never at power-off. With nothing to restore, power-on loads the demo (beat, acid line, pad at 124 BPM; NEW PROJECT starts empty), unless MENU › SYSTEM › RESTORE LAST ON. Save into a section."},
 

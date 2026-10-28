@@ -101,6 +101,7 @@
 #include "ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
 #include "ux_seq.c"                 /* (ACID FM 3c-1) the SEQ pages: STEPS' roll, strip, grid (ux_seq.h) */
 #include "ux_glo.c"                 /* (ACID FM 3c-1 task 6) the GLO pages: LIVE (ux_glo.h) */
+#include "ux_save.c"                /* (ACID FM 3c-2 task 2) the SAVE pages: SOUND (ux_save.h) */
 #include "ux_section.c"             /* (ACID FM 3b) the section pages (ux_section.h) */
 #include "ux_layer.c"               /* (ACID FM 3b task 9) the held layers EDIT, MACRO, FX, SCL (ux_layer.h) */
 #include "ux_dialog.c"              /* (ACID FM 3c-2 task 1) the OCT- / OCT+ dialogs, full screen */

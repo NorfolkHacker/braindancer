@@ -530,9 +530,12 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
 enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE, FAM_ARP, FAM_SEQ, FAM_TRK,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP };   /* (ACID FM 3c-1 task 7: SC_TRK, JIANT's MIXER's, gone with it) */
-enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER,
+enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_SLOTS,
        GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MORPH, GR_DXIMG,
-       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP, GR_MIX, GR_MIDI };   /* (ACID FM 3c-1 task 8) GR_MIDI: GLO > MIDI (ux_glo.c);
+       GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP, GR_MIX, GR_MIDI, GR_SVSND, GR_SVSONG, GR_SVPROJ };   /* (ACID FM
+                                                         * 3c-2 task 2) GR_SVSND: SAVE > SOUND (ux_save.c), the inherited USER
+                                                         * (GR_USER) and PRESETS (GR_BROWSE) gone; GR_SVSONG, GR_SVPROJ: SAVE's SONG
+                                                         * and PROJECT (tasks 3, 4) */   /* (ACID FM 3c-1 task 8) GR_MIDI: GLO > MIDI (ux_glo.c);
                                                          * (task 7) GR_MIX: GLO > MIX (ux_glo.c); GR_TRK,
                                                          * JIANT's MIXER and SENDS, gone with them */   /* (ACID FM 3c-1 task 4 fix 1: GR_MOTION GR_EVENTS GR_COMP GR_MUTATE
                                                          * GR_FUGUE GR_SHAPE gone with SEQ's pages; no value is stored, PAGES' own) */   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
@@ -632,6 +635,27 @@ static int lvv_is(uint32_t id) { return id >= ID_LV_TGT && id < ID_LV_END; }
 enum { ID_MO_NOTES = 0xF2, ID_MO_CLOCK, ID_ML_LEARN, ID_MO_END };
 typedef char mov_ids_ok[(uint32_t)G_COUNT <= (uint32_t)ID_MO_NOTES && (uint32_t)ID_MO_END <= (uint32_t)ID_LV_TGT ? 1 : -1];
 static int mov_is(uint32_t id) { return id >= ID_MO_NOTES && id < ID_MO_END; }
+/* (ACID FM 3c-2 task 2) SAVE > MORE's SOUND rows that are no setting of their own: the inherited PRESETS page's KNOB 2 (ENGINE: the
+ * track's, ui.c select_engine a detent a turn), KNOB 3 (FAVORITE: the sound's mark, preset_mark) and KNOB 4 (LIST: ALL, FAV or a sound
+ * type, list_put). Views as GLO's NOTES OUT: param_ref reads one into sv_ui (sv_get), ui_input.c sv_view_turn writes it with the
+ * inherited knob's handler. Ids past every global (ID_DX_END is 0xE7), below GLO's MIDI views */
+enum { ID_SV_ENGINE = 0xE7, ID_SV_FAV, ID_SV_LIST, ID_SV_END, ID_SV_N };   /* (ID_DX_END is 0xE7) */
+typedef char svv_ids_ok[(uint32_t)ID_SV_N <= (uint32_t)ID_MO_NOTES ? 1 : -1];
+typedef char svv_past_ok[(uint32_t)G_COUNT <= (uint32_t)ID_SV_ENGINE && (uint32_t)ID_DX_END <= (uint32_t)ID_SV_ENGINE ? 1 : -1];
+static int svv_is(uint32_t id) { return id >= ID_SV_ENGINE && id < ID_SV_END; }
+/* ENGINE's words: the engines' names in the order they are shown (engines.c ENGINE_ORDER; tests/ui_test.c test_u2_more) */
+static const char *const N_SV_ENG[] = {"DRUM", "VOICE", "PHASE", "LOFI", "ANALOG", "FM6", "NOISE",
+#if FELUCCA_FM4
+                                       "DIGITAL",
+#endif
+};
+typedef char sv_eng_ok[sizeof N_SV_ENG / sizeof N_SV_ENG[0] == NENG_SHOWN ? 1 : -1];
+/* (JIANT 0.9.12) PRESETS' LIST: ALL, FAV, then the sound types (ui.c list_get; here for SAVE > MORE's LIST, 3c-2 task 2) */
+static const char *const N_LIST[PT_N + 1] = {"ALL", "FAV", "BASS", "LEAD", "PAD", "KEYS", "PLUCK", "BELL", "VOX", "DRUM",
+                                              "FX"};
+static const param_desc_t SV_DESC[3] = {PE("ENGINE", N_SV_ENG, 0), PE("FAVORITE", N_ONOFF, 0), PE("LIST", N_LIST, 0)};
+static int16_t sv_ui;
+static uint32_t sv_get(uint32_t id);                    /* (ui.c: the value now) */
 static const char *const N_MONOTES[] = {"OFF", "KEYS", "KEYS+SEQ"};   /* (the one short form; the status line KEYS + SEQUENCE:
                                                          * ux_section.c uxs_vtext, past param_format's five letters, uxs_vfull) */
 static const param_desc_t MOV_DESC[3] = {PE("NOTES OUT", N_MONOTES, 1), PE("CLOCK OUT", N_ONOFF, 0), PE("LEARN", N_ONOFF, 0)};
@@ -814,6 +838,15 @@ static const ux_row_t UXM_GLO_ROWS[] = {
     {UXM_H_UNDO, UXR_HEAD, 0}, {UXM_A_UNDO, UXR_ACTION, 0},
 };
 static const ux_more_t UXM_GLO = {UXM_GLO_ROWS, (uint8_t)(sizeof UXM_GLO_ROWS / sizeof UXM_GLO_ROWS[0])};
+/* (ACID FM 3c-2 task 2) SAVE's MORE (spec 2.4): TOOLS (ERASE USER SLOT, the inherited USER page's ERASE: the dialog on the slot SOUND
+ * picks; task 4 adds the other tools above it), SOUND (what the inherited USER and PRESETS pages reached that SOUND's knobs do not:
+ * USER's LOAD, PRESETS' ENGINE, FAVORITE, LIST) */
+static const ux_row_t UXM_SAVE_ROWS[] = {
+    {UXM_H_TOOLS, UXR_HEAD, 0}, {UXM_A_ERASE, UXR_ACTION, 0},
+    {UXM_H_SOUND, UXR_HEAD, 0}, {UXM_A_ULOAD, UXR_ACTION, 0}, {ID_SV_ENGINE, UXR_GLOBAL, 0}, {ID_SV_FAV, UXR_GLOBAL, 0},
+    {ID_SV_LIST, UXR_GLOBAL, 0},
+};
+static const ux_more_t UXM_SAVE = {UXM_SAVE_ROWS, (uint8_t)(sizeof UXM_SAVE_ROWS / sizeof UXM_SAVE_ROWS[0])};
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -857,8 +890,9 @@ static const page_t PAGES[] = {
     {"VOICE", FAM_EDIT, SC_TRACK, GR_NONE, {P_VOICE, P_GLIDE, P_GLMODE, P_PRIO}},
     /* (ACID FM 3c-1 task 7) JIANT's GLOBAL (BPM SWING CLOCK TUNE) and SYSTEM (TRACKS LOAD ROUTE CPU) gone: SWING and TUNE GLO >
      * MIX's knobs, the rest GLO > MORE's rows (UXM_GLO; ROUTE, inert since 0.5's per-track MIDI, on none) */
-    {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
-    {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
+    /* (ACID FM 3c-2 task 2) SAVE > SOUND (spec 2.1, ux_save.c): SLOT PRESET NAME SAVE (no ids: ui_input.c save_knob); the inherited
+     * PRESETS (the browser: No. ENG FAV LIST) and USER (SLOT LOAD ERASE SAVE) pages gone, the rest SAVE > MORE's rows (UXM_SAVE) */
+    {"SAVE SOUND", FAM_SAVE, SC_GLOBAL, GR_SVSND, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */
     {"ARRANGE", FAM_SAVE, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.12) the project's song (SEQ > SONG) */
     {"TOOLS", FAM_SAVE, SC_GLOBAL, GR_TOOLS, {G_CLRSEQ, G_INITSND, 0xFF, 0xFF}},
@@ -932,6 +966,8 @@ static const page_t PAGES[] = {
     /* (ACID FM 3c-1 task 8) GLO > MIDI (spec 4.1, ux_glo.c): KNOB 1 IN, 2 OUT, 3 CHANNEL of the selected track (page_id: the
      * first track's id + the track), 4 CLOCK (INT / USB / TRS, the song's; JIANT's GLOBAL's) */
     {"MIDI", FAM_GLO, SC_GLOBAL, GR_MIDI, {G_MRIN1, G_MROUT1, G_MRCH1, G_CLOCK}},
+    /* (ACID FM 3c-2 task 2) SAVE's MORE (ui_lens.c CE_SAVE: SOUND, .., MORE): the song's (its rows views and actions) */
+    {"SAVE MORE", FAM_SAVE, SC_GLOBAL, GR_MORE, {0xFF, 0xFF, 0xFF, 0xFF}, &UXM_SAVE},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot_tr[NTRK];   /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit, a track each (3b task 7: as FM6's
@@ -985,6 +1021,11 @@ static const param_desc_t *param_ref(track_t *t, uint32_t id, int16_t **valp)
         mov_ui = (int16_t)mov_get(id);
         *valp = &mov_ui;
         return &MOV_DESC[id - ID_MO_NOTES];
+    }
+    if (svv_is(id)) {                                 /* (3c-2 task 2) SAVE > MORE's ENGINE, FAVORITE, LIST: the same */
+        sv_ui = (int16_t)sv_get(id);
+        *valp = &sv_ui;
+        return &SV_DESC[id - ID_SV_ENGINE];
     }
     if (t && fld_is(id))                              /* (3b task 5) FM6's operator, DRUM-X's kit: their bytes */
         return fld_ref(id, valp);

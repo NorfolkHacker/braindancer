@@ -15,7 +15,8 @@
 static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", "MOD", "STEPS", "DELAY", "REVERB", "CHORUS",
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
                                               "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
-                                              "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO", "MIDI"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO", "MIDI", "SOUND",
+                                              "TOOLS"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -34,19 +35,29 @@ static const char *uxm_head(uint32_t h)
     return b;
 }
 /* the actions (UXR_ACTION rows' ids): KNOB 2 turned up does it; ask: JIANT's dialog first (a CF_* kind, OCT+ yes / OCT- no:
- * its own handler does the work), 0 at once */
-typedef struct { const char *name; uint8_t ask; } uxm_act_t;
+ * its own handler does the work), 0 at once; (3c-2 task 2) arg: what it acts on (ux_more.h UXA_*: the dialog's target) */
+typedef struct { const char *name; uint8_t ask, arg; } uxm_act_t;
 static const uxm_act_t UXM_ACT[UXM_A_N] = {
-    {"TYPE LYRIC", 0},                                  /* VOICE: the lyric typed on the NAME screen (was WORDS' OCT+ TYPE) */
-    {"CLEAR LANE", CF_CLEAR_PFX},                       /* (3b task 8) FX: the punch-in lane emptied (was FX > PUNCH's CLEAR) */
-    {"CLEAR", CF_CLEAR_MOTION},                         /* (3c-1 task 4) SEQ: the track's automation and locks (was AUTOMATION's
+    {"TYPE LYRIC", 0, UXA_SEL},                         /* VOICE: the lyric typed on the NAME screen (was WORDS' OCT+ TYPE) */
+    {"CLEAR LANE", CF_CLEAR_PFX, UXA_SEL},              /* (3b task 8) FX: the punch-in lane emptied (was FX > PUNCH's CLEAR) */
+    {"CLEAR", CF_CLEAR_MOTION, UXA_SEL},                /* (3c-1 task 4) SEQ: the track's automation and locks (was AUTOMATION's
                                                          * CLEAR, OCT+ then the same dialog) */
-    {"UNDO", 0},                                        /* (3c-1 task 7) GLO: the last big change back, again forward (the GLO
+    {"UNDO", 0, UXA_SEL},                               /* (3c-1 task 7) GLO: the last big change back, again forward (the GLO
                                                          * layer's G4: ui_layer.c glo_undo) */
-    {"CLEAR", 0},                                       /* (3c-1 task 8) GLO: LEARN CLEAR (uxm_list_name; CLEAR on the knob, as
+    {"CLEAR", 0, UXA_SEL},                              /* (3c-1 task 8) GLO: LEARN CLEAR (uxm_list_name; CLEAR on the knob, as
                                                          * MENU's card was), every learned CC forgotten (MENU > MIDI's until 0.5:
                                                          * no dialog, LEARN again brings one back) */
+    {"LOAD SLOT", 0, UXA_USLOT},                        /* (3c-2 task 2) SAVE: the slot SOUND picks loaded (the inherited USER's
+                                                         * LOAD: upreset.c up_ui; an empty slot said) */
+    {"ERASE", CF_ERASE_USER, UXA_USLOT},                /* .. that slot erased, asking first (the inherited USER's ERASE; ERASE USER
+                                                         * SLOT in the list: uxm_list_name) */
 };
+/* (3c-2 task 2) action a's target (its dialog's: ui.confirm_trk) */
+static uint32_t uxm_act_arg(uint32_t a)
+{
+    uint32_t g = a < UXM_A_N ? UXM_ACT[a].arg : UXA_SEL;
+    return g == UXA_USLOT ? ui.uslot : g == UXA_ROW ? ui.song_row : song.sel;
+}
 #define UXM_GO "\x86"                                   /* (an action's value in the list: UF_HDR's arrow) */
 #define UXM_CPU_SAY "CPU: A READOUT"                    /* (3c-1 task 7) KNOB 2 on GLO > MORE's CPU */
 static int uxm_act_ok(uint32_t a) { return a == UXM_A_LYRIC ? trk_engp(TSEL) == &ENG_FORMANT : a < UXM_A_N; }
@@ -54,14 +65,20 @@ static void uxm_act_do(uint32_t a)
 {
     if (a >= UXM_A_N || !uxm_act_ok(a))
         return;
+    if (a == UXM_A_ERASE && (!up_used(ui.uslot) || transport_busy())) {   /* (3c-2 task 2: as the inherited USER's ERASE, the */
+        up_ui(1u, ui.uslot);                            /* dialog only over a used slot, stopped; else up_ui says why: EMPTY SLOT, */
+        return;                                         /* STOP TO SAVE) */
+    }
     if (UXM_ACT[a].ask) {                               /* (as JIANT's pages: not while a song plays, ui_input.c act_do; then */
         if (chain_busy()) {                             /* the dialog, OCT+ yes / OCT- no) */
             ui_message(UX_STOP);
             return;
         }
-        confirm_open(UXM_ACT[a].ask, song.sel);
+        confirm_open(UXM_ACT[a].ask, uxm_act_arg(a));
         return;
     }
+    if (a == UXM_A_ULOAD)                               /* (3c-2 task 2) the inherited USER's LOAD */
+        up_ui(0u, ui.uslot);
     if (a == UXM_A_LYRIC)
         name_open(NK_LYRIC, song.sel);
     if (a == UXM_A_UNDO)
@@ -78,7 +95,7 @@ static int uxm_row_ok(const ux_row_t *r)
     uint32_t id = r->id;
     int view = id == ID_ALLTR || id == G_TRKS || id == ID_LMODE || id == ID_LPHS || id == G_LOADP || id == ID_MSLOT;
     return r->kind == UXR_TRACK ? id < P_COUNT || view || fld_is(id) || sqv_is(id) :
-           r->kind == UXR_GLOBAL ? id < G_COUNT || view || lvv_is(id) || mov_is(id) :
+           r->kind == UXR_GLOBAL ? id < G_COUNT || view || lvv_is(id) || mov_is(id) || svv_is(id) :
            r->kind == UXR_ACTION ? id < UXM_A_N : r->kind == UXR_HEAD && id < UXM_H_N;
 }
 /* (3b task 8) a global LOAD ECO takes out of the sound (fx.c fx_buses: no chorus; slicer.c slicer_on: no SLICER): its row not
@@ -98,7 +115,8 @@ static int ux_row_shown(const ux_row_t *r)
         return uxm_act_ok(r->id);
     if (r->kind == UXR_TRACK && sqv_is(r->id))          /* (3c-1 task 4) SEQ's views: by the step picked, the track (ux_seq.c) */
         return uxq_vshown(r->id);
-    if (glo && (lvv_is(r->id) || mov_is(r->id)))      /* (3c-1 task 6) GLO's RAILS, (task 8) its MIDI views: always */
+    if (glo && (lvv_is(r->id) || mov_is(r->id) || svv_is(r->id)))   /* (3c-1 task 6) GLO's RAILS, (task 8) its MIDI views, (3c-2
+                                                         * task 2) SAVE's SOUND views: always */
         return 1;
     if (r->kind != UXR_TRACK && !glo)
         return 0;
@@ -444,11 +462,12 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
 }
 
 /* (3c-1 task 8) row r's name in the list and the status line, where the knob row's (name, what uxm_row_text gave: it fits a
- * knob's column) is short for it: GLO's KEYBOARD, KEYBOARD PLAYS SELECTED in full; its CLEAR, LEARN CLEAR */
+ * knob's column) is short for it: GLO's KEYBOARD, KEYBOARD PLAYS SELECTED in full; its CLEAR, LEARN CLEAR; (3c-2 task 2) SAVE's
+ * ERASE, ERASE USER SLOT */
 static const char *uxm_list_name(const ux_row_t *r, const char *name)
 {
     return r->kind == UXR_GLOBAL && r->id == G_MRSEL ? UXM_KBD_SEL : r->kind == UXR_ACTION && r->id == UXM_A_LCLEAR ? UXM_LCLEAR :
-           name;
+           r->kind == UXR_ACTION && r->id == UXM_A_ERASE ? UXM_ERASE_U : name;
 }
 
 /* row r's place in its range: a short meter (UXM_BAR_W x 3) in a column of its own left of the values (ending UXM_BAR_X1),

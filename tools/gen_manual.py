@@ -46,8 +46,8 @@ PAGE_SHOT = {
     'LFO': {'LFO': 'lfo_1', 'DEST': 'lfo_2', 'MOD MATRIX': 'lfo_3', 'MORE': 'lfo_more'},   # (3b task 7: LFO on the ux pages)
     'SCL': {'KEY': 'scl_1', 'CHORD': 'scl_2', 'MORE': 'scl_more'},
     'ARP': {'ARP': 'arp_1', 'ARP 2': 'arp_2'},
-    'SAVE': {'USER': 'save_sound', 'PRESETS': 'save_presets', 'SECTIONS': 'save_project', 'ARRANGE': 'save_arrange',
-             'PROJECTS': 'save_library', 'TOOLS': 'save_tools'},
+    'SAVE': {'SOUND': 'save_sound', 'SECTIONS': 'save_project', 'ARRANGE': 'save_arrange',   # (3c-2 task 2: SOUND the ux page,
+             'PROJECTS': 'save_library', 'TOOLS': 'save_tools', 'MORE': 'save_more'},             # USER PRESETS gone; MORE)
 }
 CHAIN_LABEL = {'CE_SYN': 'SYNTHS', 'CE_FM6': 'FM6', 'CE_DRM': 'DRUM-X'}
 
