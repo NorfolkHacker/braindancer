@@ -303,8 +303,7 @@ static struct {
     uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
     uint8_t menu_sel;            /* MENU: the setting turned last (menu_items.c MI_*; its page MPAGE), kept while it runs */
     uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
-    uint8_t lylv;                /* (0.8.5) a held layer's lens (JIANT's overlay): (ACID FM 3c-2 task 4) unused, every layer keeps
-                                  * uxlv (kept: the tests check it stays 0) */
+    /* (0.8.5) lylv, a held layer's lens (JIANT's overlay): (ACID FM 3c-2 task 4) gone, every layer keeps uxlv */
     uint16_t uxlv;               /* (3b task 9 fix) the ACID layers' (EDIT MACRO FX SCL GLO SEQ REC, ux_layer.c) own: a bit a layer
                                   * (1 << LAYER_*), STATE; clear MAP */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */

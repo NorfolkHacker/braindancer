@@ -11613,7 +11613,7 @@ static int test_lz_layer(void)
     btn_down(B_GLO); frames(800);
     ok = ui.layer == LAYER_GLO && lz_on() && lz_fam() == LZ_LAYER && !uxl_state(LAYER_GLO) && lz_crumb_is("GLO \xB7 MAP");
     turn(EN_ALGO, 1); frame();
-    ok &= uxl_state(LAYER_GLO) == 1u && ui.lylv == 0u && song.sel == 0u;   /* (3c-1 task 9: MAP and STATE, its own bit) */
+    ok &= uxl_state(LAYER_GLO) == 1u && song.sel == 0u;   /* (3c-1 task 9: MAP and STATE, its own bit) */
     turn(EN_ALGO, 1); frame();
     ok &= uxl_state(LAYER_GLO) == 1u && song.sel == 0u;             /* (no further, no wrap) */
     b0 = song.g[G_BPM];
@@ -17395,10 +17395,10 @@ static int test_t9_knobs(void)
         n0 = uxl_panels;
         turn(EN_ALGO, -1); frame();
         ok &= uxl_state(LAYER_FX) == 0u && uxl_panels == n0 + 1u;
-        ui.lylv = 2;                                     /* (GLO's STATE left over: not FX's, 3b task 9 fix; still MAP) */
+        ui.uxlv = (uint16_t)(1u << LAYER_GLO);           /* (GLO's STATE left over: not FX's, 3b task 9 fix; still MAP) */
         turn(EN_ALGO, -1); frame();
-        ok &= uxl_state(LAYER_FX) == 0u && ui.lylv == 2u;
-        ui.lylv = 0;
+        ok &= uxl_state(LAYER_FX) == 0u;
+        ui.uxlv = 0;
     }
     uxt9_close(2);
     pm_off();
@@ -17484,9 +17484,9 @@ static int test_c5_layers(void)
         if (st != LS_OFF || !nm[0] || f != ux_mix(UX_BG, UX_MID, 55)) { printf("  SEQ %u: F3 %04x\n", (unsigned)d, f); ok = 0; }
         if (!strstr(uxl_status(LAYER_SEQ, k, &sc), "REC CLEARS ALL")) { printf("  SEQ %u: no REC hint\n", (unsigned)d); ok = 0; }
         if (!str_eq(uxl_word("CLR AUTO"), "CLEAR AUTO") || !str_eq(uxl_word("CLR STEP"), "CLEAR STEP")) { printf("  words\n"); ok = 0; }
-        ui.lylv = 0; ui.uxlv = 0;                        /* ALGORITHM: this layer's own view bit, not GLO's lens */
+        ui.uxlv = 0;                                     /* ALGORITHM: this layer's own view bit, not GLO's lens */
         turn(EN_ALGO, 1); frame();
-        if (!((ui.uxlv >> LAYER_SEQ) & 1u) || ui.lylv) { printf("  SEQ %u: uxlv %x lylv %u\n", (unsigned)d, ui.uxlv, ui.lylv); ok = 0; }
+        if (ui.uxlv != 1u << LAYER_SEQ) { printf("  SEQ %u: uxlv %x\n", (unsigned)d, ui.uxlv); ok = 0; }
         chain.running = 1;                               /* a song playing: STOP TO EDIT, the REC hint stays */
         if (!strstr(uxl_status(LAYER_SEQ, k, &sc), "REC CLEARS ALL") || !strstr(uxl_status(LAYER_SEQ, k, &sc), "STOP")) { printf("  SEQ %u: busy hint\n", (unsigned)d); ok = 0; }
         chain.running = 0;
@@ -17511,7 +17511,7 @@ static int test_c5_layers(void)
     ok &= str_eq(k[0].label, "CLICK") && !k[1].label[0] && !k[3].label[0] && k[0].value[0];
     ui.uxlv = 0;
     turn(EN_ALGO, 1); frame();
-    ok &= ((ui.uxlv >> LAYER_REC) & 1u) && !ui.lylv;
+    ok &= ui.uxlv == 1u << LAYER_REC;
     turn(EN_ALGO, -1); frame();
     btn_up(B_REC); frames(400);
     rp_put(RP_CLICK, 0u);
@@ -17592,9 +17592,9 @@ static int test_c9_glo(void)
     song.g[G_CLOCK] = 2;
     ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: TRS") != 0;
     song.g[G_CLOCK] = 0;
-    ui.lylv = 0; ui.uxlv = 0;                            /* ALGORITHM: its own view bit; MAP <-> STATE */
+    ui.uxlv = 0;                                         /* ALGORITHM: its own view bit; MAP <-> STATE */
     turn(EN_ALGO, 1); frame();
-    ok &= ((ui.uxlv >> LAYER_GLO) & 1u) && !ui.lylv && uxl_state(LAYER_GLO);
+    ok &= ui.uxlv == 1u << LAYER_GLO && uxl_state(LAYER_GLO);
     turn(EN_ALGO, -1); frame();
     ok &= !((ui.uxlv >> LAYER_GLO) & 1u);
     btn_up(B_GLO); frames(400);
@@ -17818,7 +17818,7 @@ static int test_t9_fix(void)
     btn_down(B_GLO); frames(800);
     ok &= ui.layer == LAYER_GLO && uxl_state(LAYER_GLO) == 0u;
     turn(EN_ALGO, 1); frame();
-    ok &= uxl_state(LAYER_GLO) == 1u && ui.lylv == 0u;
+    ok &= uxl_state(LAYER_GLO) == 1u;
     btn_up(B_GLO); frames(400);
     btn_down(B_FX); frames(800);
     ok &= ui.layer == LAYER_FX && uxl_state(LAYER_FX) == 1u && uxl_state(LAYER_GLO) == 1u;
@@ -20846,11 +20846,13 @@ static int test_u4_project(void)
     press(B_OCTUP); frame();
     ok &= !ui.confirm && proj_cur == 1u && live.cur == 1 && trk[0].p[P_ATK] == a_b && undo_ok && ui.act == 2u;
     bad += check("ACID FM 3c-2 task 4: PROJECT's LOAD, nothing unsaved: section B loaded at once, UNDO marked, LOAD still armed", ok);
-    project_load(0); proj_clean_mark();
+    project_load(0);                                    /* (fix round 1: the load itself marks it clean) */
+    u4_poll(300);
+    ok = !project_unsaved();
     u4_touch();
     a_x = trk[0].p[P_ATK];
     u4_poll(300);
-    ok = project_unsaved() && a_x != a_b;
+    ok &= project_unsaved() && a_x != a_b;
     if (!ok) printf("  LOAD 1: unsaved %d atk %d / %d\n", project_unsaved(), a_x, a_b);
     turn(EN_K2, 1); frame();
     press(B_OCTUP); frame();
@@ -20899,10 +20901,15 @@ static int test_u4_project(void)
     press(B_OCTDN); frame();
     ok &= !name_on() && !project_used(2);
     seq_start(); frame(); ui.msg_t = 0; song.g[G_SLOT] = 2;
+    uxs_knobs(cur_page(), kn);
+    ok &= kn[3].off && kn[2].off;                       /* (fix round 1: NAME dim while playing, as SAVE) */
     turn(EN_K3, 1); press(B_OCTUP); frame();
     ok &= !ui.confirm && !name_on() && msg_is("STOP TO SAVE");
+    ui.msg_t = 0;
+    turn(EN_K4, 1); frame();
+    ok &= !name_on() && msg_is("STOP TO SAVE");
     stop_transport(); frame();
-    bad += check("  SAVE: over a used section CF_OVR_PROJ, an empty one NAME; playing STOP TO SAVE", ok);
+    bad += check("  SAVE: over a used section CF_OVR_PROJ, an empty one NAME; playing STOP TO SAVE (NAME dim and refusing too)", ok);
     song.g[G_SLOT] = 2;
     turn(EN_K4, 1); frame();
     ok = name_on() && nm.kind == NK_PROJ_RENAME && nm.slot == 1u && str_eq(nm.s, "DAWN");
@@ -20957,6 +20964,50 @@ static int test_u4_unsaved(void)
     u4_poll(300);
     ok &= !project_unsaved();
     bad += check("ACID FM 3c-2 task 4: unsaved within 300 ms of a knob turn; clean after a load, a store, a save, NEW PROJECT", ok);
+    {   /* (fix round 1) the song's rows are no change a load loses: a row added on SONG, another project opened, then LOAD at once;
+         * a sound turned: the dialog; power-on (autosave_boot): clean */
+        int16_t a_b;
+        u4_proj();
+        project_load(1); a_b = trk[0].p[P_ATK]; project_load(0);
+        nav_put(SEC_SAVE, "SONG"); frame();
+        press(B_OCTUP); frame();                        /* (a row added) */
+        u4_poll(300);
+        ok = chain_config.count == 1u && !project_unsaved();
+        nav_put(SEC_SAVE, "PROJECT"); frame();
+        turn(EN_K2, 1); frame();
+        press(B_OCTUP); frame();
+        ok &= !ui.confirm && proj_cur == 1u && trk[0].p[P_ATK] == a_b;
+        if (!ok) printf("  rows: unsaved %d confirm %u proj_cur %u\n", project_unsaved(), (unsigned)ui.confirm, (unsigned)proj_cur);
+        bad += check("  a row added on SONG: still clean, LOAD at once (no dialog)", ok);
+        project_save_as(1, "DAWN");
+        turn(EN_K1, 1); frame();                        /* (project 2 open, the music kept) */
+        u4_poll(300);
+        ok = song_cur == 1u && !project_unsaved();
+        project_save_as(0, "TWO A");                    /* (a section there to load) */
+        turn(EN_K2, 1); frame();
+        song.g[G_SLOT] = 1;
+        press(B_OCTUP); frame();
+        ok &= !ui.confirm && proj_cur == 0u;
+        u4_touch(); u4_poll(300);
+        ok &= project_unsaved();
+        turn(EN_K2, 1); frame();
+        press(B_OCTUP); frame();
+        ok &= ui.confirm == CF_LOAD_PROJ;
+        press(B_OCTDN); frame();
+        bad += check("  another project opened (KNOB 1): clean, LOAD at once; a sound turned: the dialog", ok);
+        u4_touch(); u4_poll(300);
+        ok = project_unsaved();
+        (void)autosave_boot(0);                         /* (power-on: the music as it is, restored or not) */
+        ok &= !project_unsaved();
+        u4_poll(300);
+        ok &= !project_unsaved();
+        turn(EN_K2, 1); frame();
+        press(B_OCTUP); frame();
+        ok &= !ui.confirm && proj_cur == 0u;
+        bad += check("  power-on (autosave_boot): clean, the first LOAD at once", ok);
+        nav_put(SEC_SAVE, "PROJECT"); frame();
+        turn(EN_K1, -1); frame();                       /* (project 1 again: ui_power_on keeps song_cur) */
+    }
     ui_power_on();
     return bad;
 }

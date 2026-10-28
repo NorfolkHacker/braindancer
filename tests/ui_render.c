@@ -2012,7 +2012,7 @@ static void setup(int s)
      * turned: its readout), FX held (REPEAT 1/16, GLITCH, CRUSH, T2's mute; the macros up), SCL (D# MINOR), FX's STATE (EDIT on a
      * DRUM-X track: layer_edit_drum, S_EDIT_DRUM); a step held on STEP with EDIT's MORE the locks' page (MORPH locked on it) */
     case S_LAYER_EDIT: case S_LAYER_MACRO: case S_LAYER_FX: case S_LAYER_SCL: case S_LAYER_FX_STATE:
-        go_title("ENV"); ui.lylv = 0; ui.uxlv = 0; ux_hot_k = -1;
+        go_title("ENV"); ui.uxlv = 0; ux_hot_k = -1;
         ui.layer = (uint8_t)(s == S_LAYER_EDIT ? LAYER_EDIT : s == S_LAYER_MACRO ? LAYER_MACRO :
                              s == S_LAYER_SCL ? LAYER_SCL : LAYER_FX);
         if (s == S_LAYER_MACRO) {

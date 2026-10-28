@@ -380,8 +380,8 @@ static int uxv_proj_knobs(ux_knob_t k[4])
         k[c].bar = (uint8_t)(on ? 255u : 0u);
         k[c].off = (uint8_t)(!on || (c == 1u ? chain_busy() || !used : transport_busy()));
     }
-    str_cpy(k[3].value, UXV_WORD[used ? UXV_W_EDIT : UXV_W_NONE], sizeof k[3].value);   /* NAME: the section's rename */
-    k[3].off = (uint8_t)!used;
+    str_cpy(k[3].value, UXV_WORD[used ? UXV_W_EDIT : UXV_W_NONE], sizeof k[3].value);   /* NAME: the section's rename (not while */
+    k[3].off = (uint8_t)(!used || transport_busy());   /* playing: name_rename's STOP TO SAVE) */
     return 1;
 }
 /* PROJECT's status line: the project, the section SONG picks, what OCT+ does with LOAD or SAVE armed ("PROJECT 2 . SECTION B . OCT+
