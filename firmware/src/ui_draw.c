@@ -1387,109 +1387,11 @@ static void draw_countin(void)
     ui.force = 0;
 }
 
-/* the OCT- / OCT+ dialog: what it does (ui.confirm, ui.confirm_trk) on two lines, on a surface */
-#define DLG_X 16
-#define DLG_Y 62
-#define DLG_W 208
-#define DLG_H 116
-static void confirm_text(char *a, char *b)
-{
-    uint32_t k = ui.confirm_trk;
-    b[0] = 0;
-    switch (ui.confirm) {
-    case CF_CLEAR_TRK:
-        str_cpy(a, "CLEAR TRACK 1?", 24);
-        a[12] = (char)('1' + k % NTRK);
-        break;
-    case CF_OVR_PROJ:
-        str_cpy(a, "OVERWRITE PROJECT A?", 24);
-        a[18] = (char)('A' + (k & 3u));
-        if (!project_name(k & 3u, b) || !b[0])          /* the project's name, else what SONG plays from it */
-            str_cpy(b, "SONG PATTERN CHANGES", 24);
-        break;
-    case CF_DEL_ROW:
-        str_cpy(a, "DELETE SONG ROW?", 24);
-        break;
-    case CF_CLEAR_SONG:
-        str_cpy(a, "CLEAR SONG ORDER?", 24);
-        break;
-    case CF_INIT_SOUND:
-        str_cpy(a, drum_track(TSEL) ? "INIT SOUND + KIT?" : "INITIALIZE SOUND?", 24);
-        break;
-    case CF_CLEAR_ALL:
-        str_cpy(a, "CLEAR ALL SEQUENCES?", 24);
-        break;
-    case CF_CPU_TEST:                                /* (0.6.83) SAVE > TOOLS 6 */
-        str_cpy(a, "BUILD CPU TEST SONG?", 24);
-        str_cpy(b, "UNDO AFTER: GLO + G4", 24);
-        break;
-    case CF_LIVE_COMMIT:                             /* (0.9.11) GLO > LIVE (k: the tracks); (3c-1 task 6) OCT+ KEEP */
-        str_cpy(a, "KEEP THE LIVE TRICKS?", 24);
-        str_cpy(b, "UNDO AFTER: GLO + G4", 24);
-        break;
-    case CF_MUT_BACK:                                /* (0.9.3) MUTATE turned OFF on track k (project.c mut_ask_poll) */
-        str_cpy(a, "BACK TO BEFORE MUTATE?", 24);
-        str_cpy(b, "T1: SOUND AND PATTERN", 24);
-        b[1] = (char)('1' + k % NTRK);
-        break;
-    case CF_INIT_SYS:                                /* (0.6.40) SAVE > TOOLS 5 */
-        str_cpy(a, "NEW PROJECT?", 24);
-        str_cpy(b, "UNDO AFTER: GLO + G4", 24);
-        break;
-    case CF_DICE_SOUND:                              /* (0.6.65) EDIT + SELECT: heard already */
-    case CF_DICE_SEQ:                                /* (0.6.67) SEQ / LFO / FX + SELECT */
-    case CF_DICE_LFO:
-    case CF_DICE_FX:
-        str_cpy(a, ui.confirm == CF_DICE_SEQ ? "KEEP DICED SEQ?" : ui.confirm == CF_DICE_LFO ? "KEEP DICED LFO?" :
-                   ui.confirm == CF_DICE_FX ? "KEEP DICED FX?" : drum_track(TSEL) ? "KEEP DICED KIT?" : "KEEP DICED SOUND?", 24);
-        str_cpy(b, "SELECT: DICE AGAIN", 24);
-        break;
-    case CF_DICE_ALL:                                /* (0.6.21) HOME + SELECT */
-        str_cpy(a, "DICE EVERYTHING?", 24);
-        str_cpy(b, "UNDO AFTER: GLO + G4", 24);
-        break;
-    case CF_RECALL_SOUND:
-        str_cpy(a, drum_track(TSEL) ? "RECALL SOUND + KIT?" : "RECALL SAVED SOUND?", 24);
-        break;
-    case CF_CLEAR_MOTION:
-        str_cpy(a, "CLEAR T1 AUTOMATION?", 24); a[7] = (char)('1' + k % NTRK);
-        break;
-    case CF_CLEAR_PFX:
-        str_cpy(a, "CLEAR THE PUNCH LANE?", 24);
-        break;
-    case CF_OVR_USER:
-        str_cpy(a, "OVERWRITE ", 24);
-        up_slot_label(a + str_len(a), k);
-        str_cpy(a + str_len(a), "?", 2);
-        up_name(k, b);                               /* the sound stored there */
-        break;
-    case CF_ERASE_USER:
-        str_cpy(a, "ERASE ", 24);
-        up_slot_label(a + str_len(a), k);
-        str_cpy(a + str_len(a), "?", 2);
-        up_name(k, b);
-        break;
-    case CF_LOAD_PAT: {
-        char tag[4];
-        str_cpy(a, "REPLACE T1 SEQUENCE?", 24);
-        a[9] = (char)('1' + k % NTRK);
-        pat_label(pat_pick(), tag, b);               /* with the pattern picked */
-        break;
-    }
-    default:
-        str_cpy(a, "CLEAR T1 SEQUENCE?", 24);     /* the header (T1..T4) is hidden */
-        a[7] = (char)('1' + k % NTRK);
-        break;
-    }
-}
 static void gen_cards(void);                            /* (0.8.5) gen.c: GEN in HOME's lens, its cards */
-static int ux_dialog_owns(uint32_t kind);               /* (ACID FM 3c-2 task 1) ux_dialog.c: the dialogs drawn there */
+/* (ACID FM 3c-2 tasks 1 and 1b) the OCT- / OCT+ dialogs, the dice's too, full screen: ux_dialog.c (0.8.5 .. ACID FM 0.5: here, NOTICE's
+ * card and DICE's box under their tabs, the breadcrumb at the foot) */
+static int ux_dialog_owns(uint32_t kind);
 static void ux_dialog_draw(void);
-/* (0.8.5) the dialogs as the approved mock-up (NOTICE . DICE . NAME): their tabs under the header, the breadcrumb at the
- * foot. NOTICE (the OCT- / OCT+ questions): a RAISE card under a THEME rule, "?" in the accent, the question, the detail,
- * two buttons (OCT- NO, OCT+ YES in the accent, underlined). DICE (KEEP DICED ...?): the part's cards, BEFORE and NOW
- * side by side (dice_panel, ui_input.c), the question in a strip with its two buttons. No icons */
-static void dice_panel(void);                            /* (ui_input.c: what the dice had, what it has) */
 /* (0.9.0) BG under the header everywhere but in the n rectangles {x, y, w, h} the screen is about to draw (a dialog's, NAME's
  * strips): a band at a time between their edges, the gaps across it (was all of it filled, then drawn over: ~1.7 screens) */
 static void fill_around(const int16_t (*r)[4], uint32_t n)
@@ -1521,88 +1423,6 @@ static void fill_around(const int16_t (*r)[4], uint32_t n)
         }
     }
 }
-#define DLG_TAB_H (!(ui_prefs & PREF_LARGE) ? LB_TAB_H : LT_H)   /* the dialogs' tabs (tabs_paint) */
-static void dlg_tabs(uint32_t lv)
-{
-    static const char *const DN[3] = {"NOTICE", "DICE", "NAME"};
-    tabs_paint(3, lv, DN, 0, 0, 0);                     /* (0.8.9: in the skin's tabs) */
-}
-static void dlg_crumb(const char *a, const char *b)     /* "SAVE . NOTICE . CONFIRM": the section, the dialog's kind THEME,
-                                                         * what it asks TEXT (0.9.2: was "LENTE") */
-{
-    int32_t x;
-    cv_begin(240, LZ_FOOT_H, T_BG);
-    x = cv_text(6, CRUMB_Y, &AF_X, SEC_NAME[nav_sec()], T_DIM);
-    x = cv_text(x, CRUMB_Y, &AF_X, " \xB7 ", T_DIM);
-    x = cv_text(x, CRUMB_Y, &AF_X, a, T_THEME);
-    x = cv_text(x, CRUMB_Y, &AF_X, " \xB7 ", T_DIM);
-    cv_text(x, CRUMB_Y, &AF_X, b, T_TEXT);
-    cv_blit(0, LZ_FOOT_Y);
-}
-/* (0.8.9) a dialog's card: none, a THEME line over it (BOTTOM / HUD / AIR; COLORS's rounded card gone with it, ACID FM 0.3) */
-static uint16_t dlg_card(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t under)
-{
-    (void)h;
-    cv_rect(x, y, w, 1, T_THEME);
-    return under;
-}
-static void dlg_button(int32_t x, int32_t y, int32_t w, const char *k, const char *a, int yes, uint16_t under)
-{
-    cv_text_on(x + 6, y + 5 - AF_X_CAP_Y, &AF_X, k, T_DIM, under);
-    cv_text_on(x + 6, y + 16 - AF_M_CAP_Y, &AF_M, a, yes ? T_ACCENT : T_TEXT, under);
-    cv_rect(x + 6, y + 30, w - 12, yes ? 2 : 1, yes ? T_ACCENT : T_LINE);
-}
-static void draw_confirm(void)
-{
-    char a[24], b[24];
-    const aafont_t *tf = &AF_M;
-    int dk = ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX;
-    confirm_text(a, b);
-    if (dk)
-        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);   /* (DICE: BEFORE / NOW fill the screen, its box) */
-    /* (0.9.5) NOTICE: its tabs, its card and the breadcrumb alone, the page live round them (ui_draw_page, dlg_holes; 0.9.0
-     * .. 0.9.4: BG round them, the page gone) */
-    ui.head_sig = ~0u;
-    dlg_tabs(dk ? 1u : 0u);
-    if (dk) {                                         /* DICE: the part, BEFORE / NOW, the question in a strip */
-        static const char *const PART[4] = {"SOUND", "SEQ", "LFO", "FX"};
-        uint32_t pk = (uint32_t)(ui.confirm - CF_DICE_SOUND) & 3u;
-        dice_panel();
-        uint16_t cb, kb;
-        cv_begin(240, 30, T_BG);
-        cb = dlg_card(4, 0, 232, 30, T_BG);
-        kb = cb;
-        cv_text_on(10, 7 - AF_S_CAP_Y, &AF_S, a, T_TEXT, cb);
-        cv_text_on(10, 20 - AF_X_CAP_Y, &AF_X, b, T_DIM, cb);
-        cv_text_in(148, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT-", T_DIM, kb);
-        cv_text_in(148, 17 - AF_X_CAP_Y, 40, &AF_X, "CANCEL", T_MID, kb);
-        cv_text_in(192, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT+", T_DIM, kb);
-        cv_text_in(192, 17 - AF_X_CAP_Y, 40, &AF_X, "OK", T_ACCENT, kb);
-        cv_blit(0, 194);
-        dlg_crumb("DICE", drum_track(TSEL) && pk == 0u ? "KIT" : PART[pk]);
-        return;
-    }
-    cv_begin(212, 140, T_BG);                         /* NOTICE: the card */
-    {
-    uint16_t cb = dlg_card(0, 0, 212, 140, T_BG);
-    cv_text_on(12, 12 - AF_M_CAP_Y, &AF_M, "?", T_ACCENT, cb);
-    if (text_w(tf, a) > 196)
-        tf = &AF_S;
-    GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog question centred");
-    cv_text_in(0, 36, 212, tf, a, T_TEXT, cb);
-    if (b[0]) {
-        char f[32];
-        text_fit(f, sizeof f, b, &AF_S, 196);          /* a name: free text */
-        GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog detail centred");
-        cv_text_flags(ink_in(&AF_S, f, 212), 60, &AF_S, f, T_MID, cb, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
-    }
-    dlg_button(12, 92, 90, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : ui.confirm == CF_MUT_BACK ? "KEEP" : "NO", 0, cb);
-    dlg_button(110, 92, 90, "OCT +", ui.confirm == CF_MUT_BACK ? "BACK" : "YES", 1, cb);
-    }
-    cv_blit(14, 66);
-    dlg_crumb("NOTICE", "CONFIRM");
-}
-
 /* (ACID FM 0.3) style_apply gone: one skin, one style (the stored STYLE and SKIN bytes are not read) */
 
 /* (0.8.5) the end of a lens screen drawn outside the page path (GEN): the second message, the timers, the footer and the
@@ -1667,18 +1487,11 @@ static void ui_draw_body(uint32_t counting)
         draw_head();
         return;
     }
-    if (dlg_on() && ux_dialog_owns(ui.confirm)) {       /* (ACID FM 3c-2 task 1) the OCT- / OCT+ dialog full screen (ux_dialog.c) */
+    if (dlg_on() && ux_dialog_owns(ui.confirm)) {       /* (ACID FM 3c-2 tasks 1, 1b) the OCT- / OCT+ dialog full screen, the
+                                                         * dice's too (ux_dialog.c; the header shows recording) */
         ux_dialog_draw();
         pf_on = 0;
         ui.force = 0;
-        return;
-    }
-    if (dlg_on()) {                                     /* the dice's BEFORE / NOW (until 3c-2 task 1b) */
-        if (ui.force) {
-            draw_confirm();
-            ui.force = 0;
-        }
-        draw_head();                                    /* recording remains visible over confirmations */
         return;
     }
     if (name_on()) {                                    /* NAME: a user preset's or a project's (ui_name.c) */

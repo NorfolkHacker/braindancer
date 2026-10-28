@@ -1773,62 +1773,60 @@ static void dk_vis_take(void)
         dkv.v[i] = TSEL->p[trk_engp(TSEL)->knob[i] % P_COUNT];
     dkv.ok = 1;
 }
-static void dice_side(uint32_t now, int32_t x0)          /* one half of the panel: BEFORE (0) or NOW */
+/* (ACID FM 3c-2 task 1b) the DICE dialog's comparison in ux_dialog.c's panel (ux_panel_begin .. ux_panel_end, 240 x 150), rows
+ * DKP_Y .. DKP_Y + DKP_H between the question and the keys: BEFORE on the left, NOW on the right in UX_ACID (was its own box,
+ * dice_panel, 240 x 148 at LZ_CARD_Y). The sound's four HOME knobs, the LFO's and the effects' first four, as bars named as
+ * their pages name them; the sequence's first 16 steps as dots by pitch */
+#define DKP_Y 28
+#define DKP_H 70
+static uint16_t ux_under(int32_t x, int32_t y);         /* (ux_home.c) */
+static void dice_side(uint32_t now, int32_t x0)          /* one half: BEFORE (0) or NOW */
 {
     const track_t *t = TSEL;
-    uint32_t i, kind = ui.confirm;
-    cv_text_in(x0, 6 - AF_X_CAP_Y, 112, &AF_X, now ? "NOW" : "BEFORE", T_DIM, T_SURF);
-    if (kind == CF_DICE_SOUND) {                        /* the sound's four HOME knobs as bars, named as EDIT names them */
-        if (!dkv.ok)                                    /* (opened without a dice: as it is) */
-            dk_vis_take();
-        for (i = 0; i < 4u; i++) {
-            uint32_t id = trk_engp(t)->knob[i] % P_COUNT;
-            int16_t v = now ? t->p[id] : dkv.v[i];
-            const param_desc_t *d = track_desc(t, id);
-            int32_t w = d ? clamp(RATIO(d, enum_rank(d, v)), 0, 1000) * 96 / 1000 : 0;
-            cv_text(x0 + 8, 20 + (int32_t)i * 20 - AF_X_CAP_Y, &AF_X, d ? uxs_label(SEC_EDIT, 0, id, d->label) : "", T_DIM);
-            cv_rect(x0 + 8, 29 + (int32_t)i * 20, 96, 3, T_LINE);
-            cv_rect(x0 + 8, 29 + (int32_t)i * 20, w ? w : 1, 3, now ? T_ACCENT : T_MID);
-        }
-    } else if (kind == CF_DICE_SEQ) {                   /* the first 16 steps' notes as dots */
+    uint32_t i, kind = ui.confirm, id, sec = kind == CF_DICE_LFO ? SEC_LFO : kind == CF_DICE_FX ? SEC_FX : SEC_EDIT;
+    uint16_t ink = now ? UX_ACID : UX_MID;
+    cv_text_on(x0, DKP_Y, &UF_LBL, now ? "NOW" : "BEFORE", UX_TEXT, ux_under(x0, DKP_Y + 4));
+    if (kind == CF_DICE_SEQ) {                          /* the first 16 steps' notes as dots */
         const step_t *st = now ? t->step : dk.step;
         for (i = 0; i < 16u; i++)
             if (step_on(&st[i]))
-                cv_rect(x0 + 4 + (int32_t)i * 7, 96 - clamp((int32_t)st[i].note[0] - 36, 0, 40) * 2, 5, 3,
-                        now ? T_ACCENT : T_MID);
-    } else {                                            /* LFO / FX: their four first values as bars */
-        const uint8_t *ids = kind == CF_DICE_LFO ? DK_LFO : DK_FXT;
-        for (i = 0; i < 4u; i++) {
-            int16_t v = now ? t->p[ids[i]] : dk.v[i];
-            const param_desc_t *d = track_desc(t, ids[i]);
-            int32_t w = d ? clamp(RATIO(d, enum_rank(d, v)), 0, 1000) * 96 / 1000 : 0;
-            cv_text(x0 + 8, 20 + (int32_t)i * 20 - AF_X_CAP_Y, &AF_X, d ? d->label : "", T_DIM);
-            cv_rect(x0 + 8, 29 + (int32_t)i * 20, 96, 3, T_LINE);
-            cv_rect(x0 + 8, 29 + (int32_t)i * 20, w ? w : 1, 3, now ? T_ACCENT : T_MID);
+                cv_rect(x0 + (int32_t)i * 6, DKP_Y + DKP_H - 4 - clamp((int32_t)st[i].note[0] - 36, 0, 26) * 2, 5, 3, ink);
+        return;
+    }
+    if (kind == CF_DICE_SOUND && !dkv.ok)               /* (opened without a dice: as it is) */
+        dk_vis_take();
+    for (i = 0; i < 4u; i++) {
+        int32_t y = DKP_Y + 12 + (int32_t)i * 14, w;
+        int16_t v;
+        const param_desc_t *d;
+        if (kind == CF_DICE_SOUND) {
+            id = trk_engp(t)->knob[i] % P_COUNT;
+            v = now ? t->p[id] : dkv.v[i];
+        } else {
+            id = (kind == CF_DICE_LFO ? DK_LFO : DK_FXT)[i];
+            v = now ? t->p[id] : dk.v[i];
         }
+        d = track_desc(t, id);
+        w = d ? clamp(RATIO(d, enum_rank(d, v)), 0, 1000) * 100 / 1000 : 0;
+        cv_text_on(x0, y, &UF_LBL, d ? uxs_label(sec, 0, id, d->label) : "", UX_MID, ux_under(x0, y + 4));
+        cv_rect(x0, y + 11, 100, 2, UX_LINE);
+        cv_rect(x0, y + 11, w ? w : 1, 2, ink);
     }
 }
-static void dice_panel(void)
+static void dice_panel_body(void)
 {
-    cv_begin(240, 148, T_BG);
-    cv_rect(4, 0, 232, 148, T_SURF);
-    cv_bg = T_SURF;
-    cv_rect(119, 8, 1, 132, T_LINE);
-    dice_side(0, 4);
-    cv_rect(117, 0, 6, 148, T_SURF);                    /* (BEFORE's tendrils kept on its side) */
-    cv_rect(119, 8, 1, 132, T_LINE);
-    dice_side(1, 124);
-    cv_rect(0, 0, 4, 148, T_BG);
-    cv_rect(236, 0, 4, 148, T_BG);
-    {   /* (0.8.9 COLORS: the panel's corners rounded, as the lens's) */
-        int32_t j, i;
-        for (j = 0; j < 4; j++)
-            for (i = 0; i < 4 - j - (j == 0); i++) {
-                cv_pset(4 + i, j, T_BG); cv_pset(235 - i, j, T_BG);
-                cv_pset(4 + i, 147 - j, T_BG); cv_pset(235 - i, 147 - j, T_BG);
-            }
-    }
-    cv_blit(0, LZ_CARD_Y);
+    GFX_HOOK_CELL(8, DKP_Y, 232, DKP_Y + DKP_H);
+    cv_rect(120, DKP_Y, 1, DKP_H, UX_LINE);
+    dice_side(0, 8);
+    dice_side(1, 128);
+}
+/* what the dice moved: NOW's sound, steps, the shared effects, a DRUM track's kit; BEFORE taken (ux_dialog.c uxd_sig: redrawn on
+ * a dice) */
+static uint32_t dice_sig(void)
+{
+    const track_t *t = TSEL;
+    uint32_t h = fnv(fnv(steps_sig(t) + dkv.ok, t->p, sizeof t->p), song.g, sizeof song.g);
+    return drum_track(t) ? fnv(h, dx_kit, sizeof dx_kit) : h;
 }
 static void dk_keep(uint32_t kind)
 {

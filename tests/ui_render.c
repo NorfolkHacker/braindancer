@@ -192,12 +192,7 @@ static void hk_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 /* STYLE LINE: the dividers drawn on the screen (ui_draw.c lcd_rule) while no later blit or fill covers them */
 static int16_t rules[32][4];
 static uint32_t nrules;
-static void hk_rule_k(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t k);
-static void hk_rule(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
-{
-    hk_rule_k((int32_t)x, (int32_t)y, (int32_t)(x + w), (int32_t)(y + h), 0u);
-}
-static void hk_rule_put(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+static void hk_rule(uint32_t x, uint32_t y, uint32_t w, uint32_t h)   /* (3c-2 task 1b: a NOTICE's holes gone, all of it) */
 {
     if (nrules < 32u) {
         rules[nrules][0] = (int16_t)x; rules[nrules][1] = (int16_t)y;
@@ -438,38 +433,6 @@ static void hk_overlay(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
             memmove(cells[k++], cells[i], sizeof cells[i]);
     ncells = k;
 }
-/* (0.9.5) a screen box under one of the holes a NOTICE keeps (gfx.c scr_holes): never sent, the dialog's there */
-static int in_hole(const rbox_t *b)
-{
-    uint32_t j;
-    for (j = 0; j < scr_nhole; j++)
-        if (b->x0 < scr_hole[j][0] + scr_hole[j][2] && scr_hole[j][0] < b->x1 && b->y0 < scr_hole[j][1] + scr_hole[j][3] &&
-            scr_hole[j][1] < b->y1)
-            return 1;
-    return 0;
-}
-/* (0.9.5) a divider less the NOTICE's holes (what of it the screen got: gfx.c sends nothing there) */
-static void hk_rule_k(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t k)
-{
-    int32_t hx0, hy0, hx1, hy1, a, b;
-    if (x1 <= x0 || y1 <= y0)
-        return;
-    if (k >= scr_nhole) {
-        hk_rule_put((uint32_t)x0, (uint32_t)y0, (uint32_t)(x1 - x0), (uint32_t)(y1 - y0));
-        return;
-    }
-    hx0 = scr_hole[k][0]; hy0 = scr_hole[k][1]; hx1 = hx0 + scr_hole[k][2]; hy1 = hy0 + scr_hole[k][3];
-    if (hx0 >= x1 || hx1 <= x0 || hy0 >= y1 || hy1 <= y0) {
-        hk_rule_k(x0, y0, x1, y1, k + 1u);
-        return;
-    }
-    a = hy0 > y0 ? hy0 : y0;
-    b = hy1 < y1 ? hy1 : y1;
-    hk_rule_k(x0, y0, x1, a, k + 1u);
-    hk_rule_k(x0, b, x1, y1, k + 1u);
-    hk_rule_k(x0, a, hx0 < x1 ? hx0 : x1, b, k + 1u);
-    hk_rule_k(hx1 > x0 ? hx1 : x0, a, x1, b, k + 1u);
-}
 static void hk_blit(uint32_t x, uint32_t y, uint32_t r0, uint32_t w, uint32_t h)
 {
     uint32_t i, k = 0;
@@ -482,7 +445,6 @@ static void hk_blit(uint32_t x, uint32_t y, uint32_t r0, uint32_t w, uint32_t h)
         if (b.y1 <= (int32_t)r0) continue;           /* rows not blitted */
         if (b.y0 < (int32_t)r0) b.flags |= 2u;
         b.x0 += (int16_t)x; b.x1 += (int16_t)x; b.y0 += (int16_t)y; b.y1 += (int16_t)y;
-        if (in_hole(&b)) continue;                   /* (under a NOTICE's box: not on the screen) */
         if (!split_pair(&b)) pend[k++] = b;
     }
     cover((int32_t)x, (int32_t)(y + r0), (int32_t)(x + w), (int32_t)(y + h));
@@ -644,7 +606,8 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER, S_GEN_LEAD, S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2,
        S_ED_OPERATOR, S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD,
        S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_SCL_MORE, S_SCL_WHITE, S_ARP_CHORD, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE,
-       S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK, S_DRUM_X4, S_DRUM_GHOST,
+       S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_DICE_KIT, S_DLG_DICE_LFO,
+       S_DLG_MUT_BACK, S_DRUM_X4, S_DRUM_GHOST,
        S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP,
        S_GEN_EXPLORE, S_GLO_LIVE, S_GLO_LIVE_TRICKS, S_GLO_LIVE_LATCH, S_GLO_MORE, S_MIXER_T4, S_MOCK_HOME,
        S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_TOAST_ENV, S_TOAST_MUTATE,
@@ -694,7 +657,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "fx_more_delay", "fx_more_reso", "fx_more_slicer", "fx_3", "gen_lead", "ed_filter",
     "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop", "env_first", "lfo_more_end",
     "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs",
-    "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "drum_hit_x4",
+    "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_dice_kit",
+    "dlg_dice_lfo", "dlg_mut_back", "drum_hit_x4",
     "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum",
     "comp_jump", "gen_explore", "glo_live", "glo_live_tricks", "glo_live_latch", "glo_more", "mixer_tracks4",
     "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu", "toast_env",
@@ -1335,12 +1299,16 @@ static void setup(int s)
         seq_more_at(UXR_TRACK, P_MSND);
         ui.confirm = CF_MUT_BACK; ui.confirm_trk = 2;
         break;
-    case S_DLG_DICE_SOUND: case S_DLG_DICE_SEQ: case S_DLG_DICE_FX: {   /* (0.8.5) the DICE dialog: BEFORE / NOW */
-        uint32_t k = s == S_DLG_DICE_SOUND ? CF_DICE_SOUND : s == S_DLG_DICE_SEQ ? CF_DICE_SEQ : CF_DICE_FX;
+    case S_DLG_DICE_SOUND: case S_DLG_DICE_SEQ: case S_DLG_DICE_FX: case S_DLG_DICE_KIT: case S_DLG_DICE_LFO: {
+        /* (0.8.5) the DICE dialog: BEFORE / NOW; (3c-2 task 1b) full screen (ux_dialog.c), a DRUM track's KIT, the LFO's */
+        uint32_t k = s == S_DLG_DICE_SOUND || s == S_DLG_DICE_KIT ? CF_DICE_SOUND : s == S_DLG_DICE_SEQ ? CF_DICE_SEQ :
+                     s == S_DLG_DICE_LFO ? CF_DICE_LFO : CF_DICE_FX;
+        if (s == S_DLG_DICE_KIT) { song.sel = 0; set_engine_of(TSEL, ENGI_DRUM); }
         go_title("EDIT 1"); song.playing = 0;
         dk_keep(k); dk_vis_take();
-        if (k == CF_DICE_SOUND) { TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] = 100; TSEL->p[ENGINES[TSEL->eng_req]->knob[2]] = 5; }
+        if (k == CF_DICE_SOUND) { TSEL->p[trk_engp(TSEL)->knob[0] % P_COUNT] = 100; TSEL->p[trk_engp(TSEL)->knob[2] % P_COUNT] = 5; }
         else if (k == CF_DICE_SEQ) for (uint32_t i = 0; i < 16u; i += 3u) { TSEL->step[i].time = ST_NOTE; TSEL->step[i].n = 1; TSEL->step[i].note[0] = (uint8_t)(48 + i); }
+        else if (k == CF_DICE_LFO) { TSEL->p[P_LRATE] = 90; TSEL->p[P_LD_FLT] = 40; }
         else { TSEL->p[P_DIST] = 90; TSEL->p[P_CHOR] = 60; }
         ui.confirm = k; ui.confirm_trk = song.sel;
         break;
@@ -2550,13 +2518,8 @@ static void align_sweeps(void)
             ui.col[i & 3u][0] = 0;
         }
         ui.layer = 0; ui.hot_t = 0; ui_prefs = 0;
-        cur_name = st ? "sweep LINE: dialogs" : "sweep FLAT: dialogs";
-        for (i = CF_CLEAR_SEQ; i <= CF_DICE_SOUND; i++)   /* (0.6.65: every dialog, the sound dice's CANCEL / OK too) */
-            for (k = 0; k < 4u; k++) {
-                ui.confirm = (uint8_t)i; ui.confirm_trk = (uint8_t)k;
-                draw_confirm();
-            }
-        cur_name = st ? "sweep LINE: full-screen dialogs" : "sweep FLAT: full-screen dialogs";   /* (3c-2 task 1: ux_dialog.c) */
+        cur_name = st ? "sweep LINE: full-screen dialogs" : "sweep FLAT: full-screen dialogs";   /* (3c-2 tasks 1, 1b: ux_dialog.c,
+                                                         * the dice too; ui_draw.c's draw_confirm gone) */
         for (i = CF_CLEAR_SEQ; i <= CF_LIVE_COMMIT; i++)
             for (k = 0; k < 8u && ux_dialog_owns(i); k++) {
                 ui.confirm = (uint8_t)i; ui.confirm_trk = (uint8_t)k; ui.force = 1;

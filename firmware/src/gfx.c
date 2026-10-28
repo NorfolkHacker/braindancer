@@ -206,70 +206,8 @@ static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
         cv_px[i] = s;
 }
 
-/* (0.9.5) holes in the screen: while a dialog's box is up over a live page (ui_draw.c ui_draw_page), what the page sends
- * there is left out (a band at a time round each hole), so the page goes on drawing and moving round the box and nothing
- * blacks it out. No hole (the rest of the time): straight to the panel */
-#define SCR_HOLES 3u
-static int16_t scr_hole[SCR_HOLES][4];  /* x, y, w, h */
-static uint8_t scr_nhole;
-static void scr_holes(const int16_t (*r)[4], uint32_t n)
-{
-    uint32_t i;
-    scr_nhole = (uint8_t)(n < SCR_HOLES ? n : SCR_HOLES);
-    for (i = 0; i < scr_nhole; i++) {
-        scr_hole[i][0] = r[i][0]; scr_hole[i][1] = r[i][1]; scr_hole[i][2] = r[i][2]; scr_hole[i][3] = r[i][3];
-    }
-}
-/* x, y, w, h less holes k..: the parts sent (px: rows of stride pixels; else a fill of c) */
-static void scr_out(int32_t x, int32_t y, int32_t w, int32_t h, const uint16_t *px, uint32_t stride, uint16_t c, uint32_t k)
-{
-    int32_t hx, hy, hx1, hy1, y0, y1, r;
-    if (w <= 0 || h <= 0)
-        return;
-    if (k >= scr_nhole) {
-        if (!px)
-            lcd_fill((uint32_t)x, (uint32_t)y, (uint32_t)w, (uint32_t)h, c);
-        else if ((uint32_t)w == stride)
-            lcd_blit((uint32_t)x, (uint32_t)y, (uint32_t)w, (uint32_t)h, px);
-        else
-            for (r = 0; r < h; r++)
-                lcd_blit((uint32_t)x, (uint32_t)(y + r), (uint32_t)w, 1u, px + (uint32_t)r * stride);
-        return;
-    }
-    hx = scr_hole[k][0]; hy = scr_hole[k][1]; hx1 = hx + scr_hole[k][2]; hy1 = hy + scr_hole[k][3];
-    if (hx >= x + w || hx1 <= x || hy >= y + h || hy1 <= y) {
-        scr_out(x, y, w, h, px, stride, c, k + 1u);
-        return;
-    }
-    y0 = hy > y ? hy : y;
-    y1 = hy1 < y + h ? hy1 : y + h;
-    scr_out(x, y, w, y0 - y, px, stride, c, k + 1u);                                   /* above it */
-    scr_out(x, y1, w, y + h - y1, px ? px + (uint32_t)(y1 - y) * stride : 0, stride, c, k + 1u);   /* below */
-    if (hx > x)                                                                         /* left of it */
-        scr_out(x, y0, hx - x, y1 - y0, px ? px + (uint32_t)(y0 - y) * stride : 0, stride, c, k + 1u);
-    if (hx1 < x + w)                                                                    /* right */
-        scr_out(hx1, y0, x + w - hx1, y1 - y0, px ? px + (uint32_t)(y0 - y) * stride + (uint32_t)(hx1 - x) : 0, stride, c, k + 1u);
-}
-static void scr_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
-{
-    if (!scr_nhole) lcd_fill(x, y, w, h, c);
-    else scr_out((int32_t)x, (int32_t)y, (int32_t)w, (int32_t)h, 0, 0u, c, 0u);
-}
-static void scr_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *px)
-{
-    if (!scr_nhole) lcd_blit(x, y, w, h, px);
-    else scr_out((int32_t)x, (int32_t)y, (int32_t)w, (int32_t)h, px, w, 0u, 0u);
-}
-#ifdef LCD_HAS_STRIDE
-static void scr_blit_stride(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *px, uint32_t stride)
-{
-    if (!scr_nhole) lcd_blit_stride(x, y, w, h, px, stride);
-    else scr_out((int32_t)x, (int32_t)y, (int32_t)w, (int32_t)h, px, stride, 0u, 0u);
-}
-#define lcd_blit_stride scr_blit_stride
-#endif
-#define lcd_fill scr_fill               /* (everything after: through the holes) */
-#define lcd_blit scr_blit
+/* (0.9.5 .. ACID FM 3c-2 task 1b) the holes a NOTICE kept in the screen (scr_holes, scr_out) gone with it: the dialogs are full
+ * screen (ux_dialog.c), the panel written straight */
 
 static uint8_t dc_stale;          /* (0.9.0) a strip went to the panel outside cv_blit_cells: the cells' hashes are stale */
 static void cv_blit(uint32_t x, uint32_t y)

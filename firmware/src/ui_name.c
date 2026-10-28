@@ -433,19 +433,27 @@ static void nm_draw_foot(void)
             transport_busy() ? "LENTE \xB7 NAME \xB7 STOP TO SAVE" : "LENTE \xB7 NAME \xB7 OCT- CANCEL", T_DIM);
     cv_blit(0, LZ_FOOT_Y);
 }
+/* NAME's tabs (NOTICE . DICE . NAME, NAME lit; 0.8.5: the dialogs' tabs, ui_draw.c's until ACID FM 3c-2 task 1b drew the other
+ * two dialogs full screen) */
+#define NM_TAB_H (!(ui_prefs & PREF_LARGE) ? LB_TAB_H : LT_H)
+static void nm_tabs(void)
+{
+    static const char *const DN[3] = {"NOTICE", "DICE", "NAME"};
+    tabs_paint(3, 2u, DN, 0, 0, 0);
+}
 static void name_draw(void)
 {
     uint8_t st[7] = {nm.kind, nm.slot, nm.len, nm.cur, nm.num, nm.key, nm.tap};
     uint32_t sig = fnv(fnv(2166136261u, st, sizeof st), nm.s, sizeof nm.s) + ux.gen * 7919u +
                    (uint32_t)transport_busy() * 104729u;
     if (ui.force) {
-        const int16_t R[7][4] = {{0, LT_Y, 240, (int16_t)DLG_TAB_H}, {CARD_X(0), LZ_CARD_Y, CARD_W, LZ_CARD_H},
+        const int16_t R[7][4] = {{0, LT_Y, 240, (int16_t)NM_TAB_H}, {CARD_X(0), LZ_CARD_Y, CARD_W, LZ_CARD_H},
                                  {CARD_X(1), LZ_CARD_Y, CARD_W, LZ_CARD_H}, {CARD_X(2), LZ_CARD_Y, CARD_W, LZ_CARD_H},
                                  {CARD_X(3), LZ_CARD_Y, CARD_W, LZ_CARD_H}, {0, LZ_GRAPH_Y, 240, LZ_GRAPH_H},
                                  {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
         fill_around(R, 7);                             /* (0.8.5: the lens's layout, the dialogs' tabs; 0.9.0: round its
                                                         * strips, not under them too) */
-        dlg_tabs(2u);
+        nm_tabs();
         nm.sig = ~sig;
     }
     draw_head();

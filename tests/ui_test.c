@@ -3576,9 +3576,9 @@ static int test_product_ux(void)
     seqm_act(UXM_A_CLRAUTO);
     bad += check("MOTION clear always asks confirmation", ui.confirm == CF_CLEAR_MOTION && motion_count(TSEL) == 1);
     {
-        char qa[24], qb[24];
-        confirm_text(qa, qb);
-        bad += check("#93   the dialog asks CLEAR T1 AUTOMATION?", str_eq(qa, "CLEAR T1 AUTOMATION?"));
+        uxd_text_t qt;
+        uxd_text(ui.confirm, ui.confirm_trk, &qt);     /* (3c-2 task 1b: ux_dialog.c's words; was confirm_text's) */
+        bad += check("#93   the dialog asks CLEAR T1'S AUTOMATION?", str_eq(qt.q, "CLEAR T1'S AUTOMATION?"));
     }
     press(B_OCTDN); seqm_act(UXM_A_CLRAUTO); press(B_OCTUP);
     bad += check("confirmed MOTION clear removes the events", motion_count(TSEL) == 0 &&
@@ -4706,9 +4706,9 @@ static int test_bughunt_ui(void)
     press(B_OCTUP);
     ok = ui.confirm == CF_ERASE_USER && ui.confirm_trk == 1u && up_used(1);
     {
-        char a[24], b[24];
-        confirm_text(a, b);
-        ok &= str_eq(a, "ERASE U02?") && b[0];
+        uxd_text_t qt;
+        uxd_text(ui.confirm, ui.confirm_trk, &qt);     /* (3c-2 task 1b: was confirm_text's) */
+        ok &= str_eq(qt.q, "ERASE U02?") && qt.lost[0];
     }
     press(B_OCTDN);
     ok &= !ui.confirm && up_used(1);
@@ -11630,8 +11630,8 @@ static int test_lz_layer(void)
     return bad;
 }
 
-/* the dialogs as the mock-up (ui_draw.c draw_confirm, dice_panel, ui_name.c): NOTICE / DICE / NAME tabs, a NOTICE
- * card, DICE's BEFORE / NOW with SELECT still re-rolling, a lens page's toast in its panel, NAME's tabs */
+/* the dialogs (3c-2 tasks 1 and 1b: full screen, ux_dialog.c; until then ui_draw.c's NOTICE / DICE tabs and card): no
+ * NOTICE / DICE tab, DICE's BEFORE / NOW with SELECT still re-rolling, a lens page's toast in its panel, NAME's tabs */
 static int dlg_tab_lit(uint32_t l)                     /* (the one skin's tab words: the lit one's THEME; until ACID FM 0.3
                                                          * COLORS' boxes) */
 {
@@ -11660,15 +11660,17 @@ static int test_lz_dialogs(void)
     ok &= !ui.confirm;
     bad += check("0.8.5 .. 3c-2 task 1 dialogs: a question full screen (ux_dialog), no NOTICE tab; OCT- NO", ok);
     ui_power_on(); go_title("EDIT 1"); frame(); fm1_ms += 1200u;
+    acc = uxd_draws;
     held_turn(B_EDIT, 1);
-    ok = ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
+    ok = ui.confirm == CF_DICE_SOUND && uxd_draws > acc && !dlg_tab_lit(1);
     e0 = TSEL->p[P_E0];
     fm1_ms += 1200u; turn(EN_SELECT, 1); fm1_ms += 1200u; turn(EN_SELECT, 1); frame();
-    ok &= ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
+    ok &= ui.confirm == CF_DICE_SOUND && !dlg_tab_lit(1);
     (void)e0;
     press(B_OCTUP); frame();
     ok &= !ui.confirm;
-    bad += check("0.8.5 dialogs: EDIT + SELECT opens DICE (its tab), SELECT re-rolls inside it, OCT+ keeps", ok);
+    bad += check("0.8.5 .. 3c-2 task 1b dialogs: EDIT + SELECT opens DICE full screen (ux_dialog; was its tab), SELECT re-rolls "
+                 "inside it, OCT+ keeps", ok);
     (void)x; (void)y;
     bad += test_toasts();                               /* (0.9.5: the toast a pill over the live page; was boxed alone in it) */
     bad += test_card_heat();
@@ -18524,7 +18526,7 @@ static int test_t34_step_rows(void)
 static int test_t34_auto(void)
 {
     int bad = 0, ok;
-    char qa[24], qb[24];
+    uxd_text_t qt;
     uxq_t_open(16, ENGI_ANALOG);
     uxq_t_note(2, 43, 0);
     cursor_set(2); frames(20);
@@ -18538,8 +18540,8 @@ static int test_t34_auto(void)
     seqm(ID_SQ_PLAY, -1); frames(4);
     ok &= !motion_enabled(TSEL) && motion_count(TSEL) == 2u;
     seqm_act(UXM_A_CLRAUTO); frame();
-    confirm_text(qa, qb);
-    ok &= ui.confirm == CF_CLEAR_MOTION && str_eq(qa, "CLEAR T1 AUTOMATION?");
+    uxd_text(ui.confirm, ui.confirm_trk, &qt);         /* (3c-2 task 1b: was confirm_text's) */
+    ok &= ui.confirm == CF_CLEAR_MOTION && str_eq(qt.q, "CLEAR T1'S AUTOMATION?");
     press(B_OCTDN); frame();
     ok &= !ui.confirm && motion_count(TSEL) == 2u;
     bad += check("ACID FM 3c-1 task 4: AUTOMATION's PLAY, EVENTS and LOCKS counts; CLEAR asks first (CLEAR T1 AUTOMATION?), OCT- keeps",
@@ -19896,13 +19898,27 @@ static int test_u1_answers(void)
     /* CLEAR SONG */
     ui_power_on(); frame();
     chain_config.count = 3;
+    for (i = 0; i < 3u; i++) chain_config.row[i] = (chain_row_t){(uint8_t)i, 8};
     u1_ask(CF_CLEAR_SONG, 0); press(B_OCTUP); frame();
-    ok = msg_is("SONG CLEARED") && chain_config.count != 3u;
-    all &= ok; if (!ok) printf("  CLEAR SONG\n");
-    /* INIT SOUND */
-    ui_power_on(); frame();
+    ok = msg_is("SONG CLEARED") && chain_config.count == 0u && chain_config.row[0].bars == 1u && chain_config.row[0].slot == 0u;
+    all &= ok; if (!ok) printf("  CLEAR SONG: %u rows\n", (unsigned)chain_config.count);
+    /* INIT SOUND: a synth track SOUND INIT; a DRUM track with the only kit SOUND INIT and the factory kit; a DRUM track whose
+     * kit another track plays INIT, KIT KEPT (the kit left alone) */
+    ui_power_on(); frame(); song.playing = 0;
+    for (i = 0; i < NTRK; i++) set_engine_of(&trk[i], ENGI_ANALOG);
+    song.sel = 2; frame();
     u1_ask(CF_INIT_SOUND, song.sel); press(B_OCTUP); frame();
-    ok = msg_is("SOUND INIT") || msg_is("INIT, KIT KEPT");
+    ok = msg_is("SOUND INIT");
+    if (!ok) printf("  INIT SOUND synth '%s'\n", ui.msg);
+    set_engine_of(&trk[2], ENGI_DRUM); frame();
+    dx_kit[0].a[0] = (uint8_t)(DX_KIT_DEF[0].a[0] ^ 7u);
+    u1_ask(CF_INIT_SOUND, song.sel); press(B_OCTUP); frame();
+    ok &= msg_is("SOUND INIT") && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
+    if (!ok) printf("  INIT SOUND drum '%s'\n", ui.msg);
+    set_engine_of(&trk[0], ENGI_DRUM); frame();
+    dx_kit[0].a[0] = (uint8_t)(DX_KIT_DEF[0].a[0] ^ 7u);
+    u1_ask(CF_INIT_SOUND, song.sel); press(B_OCTUP); frame();
+    ok &= msg_is("INIT, KIT KEPT") && dx_kit[0].a[0] == (uint8_t)(DX_KIT_DEF[0].a[0] ^ 7u);
     all &= ok; if (!ok) printf("  INIT SOUND '%s'\n", ui.msg);
     /* NEW PROJECT */
     ui_power_on(); frame();
@@ -19911,14 +19927,31 @@ static int test_u1_answers(void)
     all &= ok; if (!ok) printf("  INIT SYS '%s'\n", ui.msg);
     /* CPU TEST */
     ui_power_on(); frame();
-    u1_ask(CF_CPU_TEST, 0); press(B_OCTUP); frame();
-    ok = msg_is("CPU TEST: PRESS PLAY") && cpt_arm == (trk_live == NPART) && song.g[G_BPM] == 160;
+    {   /* (TRACKS 6: the song built on every track, armed to be measured) */
+        uint8_t rp = ui_rec_prefs;
+        ui_rec_prefs |= (uint8_t)(PREF_SIX >> 8);       /* (MENU > TRACKS 6: rp_apply's trk_live every frame) */
+        frame();
+        u1_ask(CF_CPU_TEST, 0); press(B_OCTUP); frame();
+        ok = msg_is("CPU TEST: PRESS PLAY") && cpt_arm && song.g[G_BPM] == 160 && song.g[G_RTYPE] == 4 && undo_ok;
+        for (i = 0; i < NPART; i++)
+            ok &= trk[i].p[P_SLEN] == 32 && trk[i].p[P_VOICE] == V_POLY && trk[i].step[31].time == ST_NOTE &&
+                  (i + 1u == NPART ? drum_track(&trk[i]) && trk[i].step[0].hit == 0xFFu : !drum_track(&trk[i]) && trk[i].step[0].n == 4u);
+        ui_rec_prefs = rp;
+    }
     all &= ok; if (!ok) printf("  CPU TEST arm %u BPM %d\n", (unsigned)cpt_arm, song.g[G_BPM]);
     /* LIVE COMMIT */
     ui_power_on(); frame();
+    song.playing = 0;                                   /* (T3: a LOOP of 4 from step 5, live: written, steps 5..8 to 1..4) */
+    for (i = 0; i < 16u; i++) { step_clear(&trk[2].step[i]); trk[2].step[i].time = ST_NOTE; trk[2].step[i].n = 1; trk[2].step[i].note[0] = (uint8_t)(40 + i); }
+    trk[2].p[P_SLEN] = 16;
+    trk[2].seq_idx = 5;                                 /* (LIVE's own: LOOP 4 where the playhead is, live_publish's want) */
+    lv.cut[2] = 7; lv.here |= 1u << 2;
+    frame();
+    ok = LV_CUT[7] == 4u && lv.want[2].cut == 4u && lv.want[2].ws == 4u;
     u1_ask(CF_LIVE_COMMIT, 4); press(B_OCTUP); frame();
-    ok = !ui.confirm && undo_ok;
-    all &= ok; if (!ok) printf("  LIVE COMMIT\n");
+    ok &= !ui.confirm && undo_ok && trk[2].p[P_SLEN] == 4 && trk[2].step[0].note[0] == 44u && trk[2].step[3].note[0] == 47u &&
+         msg_is("WRITTEN: GLO+G4 UNDO");
+    all &= ok; if (!ok) printf("  LIVE COMMIT: LEN %d, step 1 %u '%s'\n", trk[2].p[P_SLEN], trk[2].step[0].note[0], ui.msg);
     /* MUT BACK: OCT- keeps */
     ui_power_on(); frame();
     u1_ask(CF_MUT_BACK, 2); press(B_OCTDN); frame();
@@ -19955,6 +19988,221 @@ static int test_u1_answers(void)
     ok = msg_is("SOUND RECALLED");
     all &= ok; if (!ok) printf("  RECALL SOUND '%s'\n", ui.msg);
     bad += check("ACID FM 3c-2 task 1: every dialog answers as before (OCT+ runs it, OCT- leaves it, the same messages)", all);
+    ui_power_on();
+    return bad;
+}
+
+/* (ACID FM 3c-2 task 1b) the dice dialogs in ux_dialog.c's layout; ui_draw.c's inherited dialog drawing gone: a name it had,
+ * declared again here, does not compile while it is still there */
+static char draw_confirm, confirm_text, dlg_card, dlg_button, dlg_crumb, dlg_tabs, dlg_notice, dice_panel;
+#if defined(DLG_X) || defined(DLG_Y) || defined(DLG_W) || defined(DLG_H) || defined(DLG_TAB_H)
+#error "ui_draw.c's inherited dialog drawing is back"
+#endif
+static int32_t u1_ink(uint32_t y0, uint32_t y1, uint32_t x0, uint32_t x1)   /* the light ink's width in the box (0: none) */
+{
+    uint32_t x, y;
+    int32_t l = -1, r = -1;
+    for (y = y0; y < y1; y++)
+        for (x = x0; x < x1; x++) {
+            uint16_t p = ux_px(x, y);
+            if (((p >> 11) & 31u) >= 18u && ((p >> 5) & 63u) >= 36u && (p & 31u) >= 18u) {
+                if (l < 0 || (int32_t)x < l) l = (int32_t)x;
+                if ((int32_t)x > r) r = (int32_t)x;
+            }
+        }
+    return l < 0 ? 0 : r - l + 1;
+}
+static dx_lane_t u1_kit[2][8];                         /* (the kit dice: a DRUM track's kit, not its settings) */
+static void u1_take(int16_t *p, step_t *st, int16_t *g, uint32_t kit)
+{
+    memcpy(p, TSEL->p, sizeof TSEL->p);
+    memcpy(st, TSEL->step, sizeof TSEL->step);
+    memcpy(g, song.g, sizeof song.g);
+    memcpy(u1_kit[kit], dx_kit, sizeof dx_kit);
+}
+static int u1_same(const int16_t *p, const step_t *st, const int16_t *g, uint32_t kit)
+{
+    return !memcmp(p, TSEL->p, sizeof TSEL->p) && !memcmp(st, TSEL->step, sizeof TSEL->step) && !memcmp(g, song.g, sizeof song.g) &&
+           !memcmp(u1_kit[kit], dx_kit, sizeof dx_kit);
+}
+static int test_u1_dice(void)
+{
+    static const struct { uint8_t btn, kind, drum; const char *q, *back, *msg; } D[5] = {
+        {B_EDIT, CF_DICE_SOUND, 0, "KEEP THE DICED SOUND?", "SOUND BACK", "SOUND DICED"},
+        {B_EDIT, CF_DICE_SOUND, 1, "KEEP THE DICED KIT?", "SOUND BACK", "KIT DICED"},
+        {B_SEQ, CF_DICE_SEQ, 0, "KEEP THE DICED SEQUENCE?", "SEQ BACK", 0},
+        {B_LFO, CF_DICE_LFO, 0, "KEEP THE DICED LFO?", "LFO BACK", "LFO DICED"},
+        {B_FX, CF_DICE_FX, 0, "KEEP THE DICED EFFECTS?", "FX BACK", "FX DICED"}};
+    static int16_t p0[P_COUNT], g0[G_COUNT], p1[P_COUNT], g1[G_COUNT];
+    static step_t s0[NSTEP], s1[NSTEP];
+    int bad = 0, all = 1;
+    uint32_t i, j;
+    for (i = 0; i < 5u; i++) {
+        uint32_t d0, wb, wn, py = UX_Y_PANEL + DKP_Y;
+        int ok, moved, back;
+        uxd_text_t t;
+        char l[40], r[40], wl[40];
+        const char *m;
+        ui_power_on(); frame(); song.playing = 0;
+        song.sel = 2;
+        for (j = 0; j < NTRK; j++) set_engine_of(&trk[j], ENGI_ANALOG);   /* (the kit T3's alone: diced, not KIT OF T4 KEPT) */
+        set_engine_of(&trk[2], D[i].drum ? ENGI_DRUM : ENGI_ANALOG);
+        for (j = 0; j < 16u; j += 2u) { trk[2].step[j].time = ST_NOTE; trk[2].step[j].n = 1; trk[2].step[j].note[0] = (uint8_t)(40 + j); }
+        go_home(); frames(30); fm1_ms += 1200u;
+        u1_take(p0, s0, g0, 0);
+        d0 = uxd_draws;
+        held_turn(D[i].btn, 1); frame();
+        uxd_text(ui.confirm, ui.confirm_trk, &t);
+        uxd_foot(l, sizeof l, r, sizeof r);
+        str_cpy(wl, SEC_NAME[nav_sec()], sizeof wl);
+        uxd_cat(wl, sizeof wl, " \xB7 DICE");
+        wb = (uint32_t)u1_ink(py, py + 12u, 8, 118);
+        wn = (uint32_t)u1_ink(py, py + 12u, 124, 236);
+        ok = ui.confirm == D[i].kind && ux_dialog_owns(D[i].kind) && uxd_draws > d0 && !u1_same(p0, s0, g0, 0) &&
+             str_eq(t.word, "DICE") && str_eq(t.verb, "KEEP") && str_eq(t.no, "NO") && str_eq(t.q, D[i].q) &&
+             str_eq(t.lost, "OCT- puts it back. SELECT dices again.") && !t.loses && str_eq(l, wl) &&
+             str_eq(r, "OCT+ YES \xB7 OCT- NO") &&
+             wb + 2u >= (uint32_t)text_w(&UF_LBL, "BEFORE") && wb <= (uint32_t)text_w(&UF_LBL, "BEFORE") + 2u &&
+             wn + 2u >= (uint32_t)text_w(&UF_LBL, "NOW") && wn <= (uint32_t)text_w(&UF_LBL, "NOW") + 2u &&
+             u1_count(UX_Y_KNOBS + 8u, UX_Y_KNOBS + 24u, 8, 120, UX_ACID) > 0u &&
+             u1_count(UX_Y_KNOBS + 8u, UX_Y_KNOBS + 24u, 8, 120, UX_ACCENT) == 0u &&
+             u1_ink(UX_Y_STATUS, UX_Y_STATUS + UX_H_STATUS, 8, 232) > 100;
+        if (!ok)
+            printf("  dice %u: confirm %u drew %u q '%s' lost '%s' foot '%s' / '%s' BEFORE %u NOW %u px (%d / %d), status %d px\n",
+                   (unsigned)i, (unsigned)ui.confirm, (unsigned)(uxd_draws - d0), t.q, t.lost, l, r, (unsigned)wb, (unsigned)wn,
+                   text_w(&UF_LBL, "BEFORE"), text_w(&UF_LBL, "NOW"), (int)u1_ink(UX_Y_STATUS, UX_Y_STATUS + UX_H_STATUS, 8, 232));
+        u1_take(p1, s1, g1, 1);                         /* SELECT again: diced again (a dice may land where it was: again), drawn */
+        for (j = 0, moved = 0; j < 4u && !moved; j++) {
+            d0 = uxd_draws;
+            fm1_ms += 1200u; turn(EN_SELECT, 1); frame();
+            moved = !u1_same(p1, s1, g1, 1) && uxd_draws > d0;
+        }
+        ok &= moved && ui.confirm == D[i].kind;
+        if (!moved) printf("  dice %u: SELECT again changed nothing drawn\n", (unsigned)i);
+        press(B_OCTDN); frame();                        /* OCT-: as before the first dice (the sequence's: its steps and LEN, what
+                                                         * dk_back keeps; the level dice_seq sets, dlevel, stays as before 1b) */
+        back = D[i].kind == CF_DICE_SEQ ? !memcmp(s0, TSEL->step, sizeof s0) && TSEL->p[P_SLEN] == p0[P_SLEN] : u1_same(p0, s0, g0, 0);
+        ok &= !ui.confirm && msg_is(D[i].back) && back;
+        if (!msg_is(D[i].back) || !back) printf("  dice %u: OCT- '%s', back %d\n", (unsigned)i, ui.msg, back);
+        fm1_ms += 1200u;
+        held_turn(D[i].btn, 1); frame();
+        m = dk.msg;
+        press(B_OCTUP); frame();                        /* OCT+: kept, dk.msg */
+        ok &= !ui.confirm && m && msg_is(m) && (!D[i].msg || str_eq(m, D[i].msg)) && !u1_same(p0, s0, g0, 0);
+        if (!ok) printf("  dice %u: OCT+ '%s' (dk.msg '%s')\n", (unsigned)i, ui.msg, m ? m : "");
+        all &= ok;
+    }
+    bad += check("ACID FM 3c-2 task 1b: EDIT / SEQ / LFO / FX + SELECT: the dice full screen (ux_dialog): DICE, KEEP THE DICED "
+                 "SOUND / KIT / SEQUENCE / LFO / EFFECTS?, BEFORE / NOW in the panel, the lost line in the status line, the footer; "
+                 "SELECT dices again, OCT- puts it back, OCT+ keeps", all);
+    ui_power_on();
+    return bad;
+}
+/* every confirmation but GEN drawn by ux_dialog.c (the inherited drawing gone: the declarations above compile) */
+static int test_u1_all(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t kind, d0;
+    ui_power_on(); frame(); song.playing = 0;
+    for (kind = CF_CLEAR_SEQ; kind <= CF_LIVE_COMMIT; kind++) {
+        if (kind == CF_DICE_ALL)
+            continue;
+        d0 = uxd_draws;
+        ui.confirm = (uint8_t)kind; ui.confirm_trk = song.sel; ui.force = 1; frame();
+        if (!ux_dialog_owns(kind) || uxd_draws != d0 + 1u) {
+            printf("  kind %u: owns %d, drew %u\n", (unsigned)kind, ux_dialog_owns(kind), (unsigned)(uxd_draws - d0));
+            ok = 0;
+        }
+        ui.confirm = 0; ui.force = 1; frame();
+    }
+    ok &= !ux_dialog_owns(CF_DICE_ALL) && !ux_dialog_owns(CF_NONE);
+    (void)draw_confirm; (void)confirm_text; (void)dlg_card; (void)dlg_button; (void)dlg_crumb; (void)dlg_tabs; (void)dlg_notice;
+    (void)dice_panel;
+    bad += check("ACID FM 3c-2 task 1b: every confirmation but GEN (CF_DICE_ALL) drawn full screen by ux_dialog; ui_draw.c's "
+                 "draw_confirm, confirm_text, dlg_* and dice_panel gone", ok);
+    ui_power_on();
+    return bad;
+}
+/* (task 1 review) the words of every dialog fit: on synth and DRUM tracks, every track / slot / row / pattern, the longest
+ * names (12 W's) and the largest counts: the question in two lines of UF_VAL at most, the lost line in two of UF_HDR (the dice:
+ * one each, the lost line the status line's), nothing cut (uxd_wrap 3) */
+static int test_u1_lines(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t drum, kind, k, i, s, n, pk, np;
+    static const char W12[] = "WWWWWWWWWWWW";
+    for (drum = 0; drum < 2u; drum++) {
+        ui_power_on(); frame(); song.playing = 0;
+        for (i = 0; i < UP_SLOTS; i++) (void)up_store(i, W12);
+        for (i = 0; i < 4u; i++) (void)project_save_as(i, W12);
+        for (i = 0; i < NTRK; i++) {
+            track_t *t = &trk[i];
+            set_engine_of(t, drum ? ENGI_DRUM : ENGI_ANALOG);
+            t->p[P_SLEN] = NSTEP;
+            for (s = 0; s < NSTEP; s++) {
+                t->step[s].time = ST_NOTE; t->step[s].n = 4; t->step[s].hit = 0xFF;
+                t->step[s].note[0] = t->step[s].note[1] = t->step[s].note[2] = t->step[s].note[3] = 60;
+            }
+        }
+        for (i = 0; i < NTRK; i++)                      /* (the most locks and records the store takes) */
+            for (s = 0; s < NSTEP; s++) {
+                (void)motion_set_lock(&trk[i], s, P_FCUT, 40);
+                (void)motion_set_event(&trk[i], s, P_REV, 40);
+            }
+        chain_config.count = CHAIN_ROWS;
+        for (i = 0; i < CHAIN_ROWS; i++) chain_config.row[i] = (chain_row_t){3, CHAIN_BARS};
+        np = pat_count();
+        for (kind = CF_CLEAR_SEQ; kind <= CF_LIVE_COMMIT; kind++) {
+            uint32_t nk = kind == CF_OVR_USER || kind == CF_ERASE_USER ? UP_SLOTS : kind == CF_DEL_ROW ? CHAIN_ROWS : NTRK;
+            int dice = kind >= CF_DICE_SOUND && kind <= CF_DICE_FX;
+            if (!ux_dialog_owns(kind))
+                continue;
+            for (k = 0; k < nk; k++)
+                for (pk = 0; pk < (kind == CF_LOAD_PAT ? np : 1u); pk++) {
+                    uxd_text_t t;
+                    char ln[2][UXD_LN];
+                    uint32_t nq, nl;
+                    ui.ppick = (uint8_t)pk;
+                    song.sel = (uint8_t)(k % NTRK);         /* (the dice: the selected track's) */
+                    uxd_text(kind, k, &t);
+                    nq = uxd_wrap(t.q, &UF_VAL, ln);
+                    nl = uxd_wrap(t.lost, &UF_HDR, ln);
+                    n = dice ? nq == 1u && text_w(&UF_HDR, t.lost) <= UXD_W : nq <= 2u && nl <= 2u;
+                    n &= t.q[str_len(t.q) - 1u] == '?' && t.lost[str_len(t.lost) - 1u] == '.';   /* (nothing cut off the end) */
+                    if (!n) {
+                        if (ok) printf("  %s kind %u k %u pat %u: q '%s' (%u lines) lost '%s' (%u lines)\n", drum ? "DRUM" : "synth",
+                                       (unsigned)kind, (unsigned)k, (unsigned)pk, t.q, (unsigned)nq, t.lost, (unsigned)nl);
+                        ok = 0;
+                    }
+                }
+        }
+    }
+    song.sel = 0; ui.ppick = 0;
+    bad += check("ACID FM 3c-2 task 1b (task 1 review): every dialog's question in two lines of UF_VAL, its lost line in two of "
+                 "UF_HDR (the dice one each), on synth and DRUM tracks, every slot, row and pattern, 12-W names, the largest counts", ok);
+    ui_power_on();
+    return bad;
+}
+/* (task 1 review) a dialog opened from HOME keeps HOME's header (SEQ + REC: CLEAR EVERY SEQUENCE?) */
+static int test_u1_home_head(void)
+{
+    int bad = 0, ok;
+    static uint16_t head[UX_Y_KNOBS * 240u];
+    char l[40], r[40];
+    ui_power_on(); go_home(); frames(64);
+    ok = ui.home;
+    memcpy(head, host_screen, sizeof head);
+    btn_down(B_SEQ); frame();
+    btn_down(B_REC); frame();
+    btn_up(B_REC); frame();
+    btn_up(B_SEQ); frames(4);
+    uxd_foot(l, sizeof l, r, sizeof r);
+    ok &= ui.confirm == CF_CLEAR_ALL && ui.home && !memcmp(head, host_screen, sizeof head) && str_eq(l, "HOME \xB7 CLEAR");
+    if (!ok) printf("  confirm %u home %u header %s, foot '%s'\n", (unsigned)ui.confirm, (unsigned)ui.home,
+                    memcmp(head, host_screen, sizeof head) ? "changed" : "kept", l);
+    press(B_OCTDN); frames(4);
+    ok &= !ui.confirm && ui.home && !memcmp(head, host_screen, sizeof head);
+    bad += check("ACID FM 3c-2 task 1b (task 1 review): a dialog from HOME (SEQ + REC) keeps HOME's header; OCT- HOME again", ok);
     ui_power_on();
     return bad;
 }
@@ -20175,6 +20423,10 @@ int main(void)
     bad += test_u1_counts();
     bad += test_u1_full();
     bad += test_u1_answers();
+    bad += test_u1_dice();
+    bad += test_u1_all();
+    bad += test_u1_lines();
+    bad += test_u1_home_head();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

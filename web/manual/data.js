@@ -280,7 +280,7 @@ commands: [
   {s: "edit", k: "EDIT", shot: 'edit_analog_1', t: "Edit the engine (SOUND / TONE)",
    d: "EDIT opens the track's engine pages: SOUND (E1–E4), TONE (E5–E8), VOICE (ANALOG) or FILTER (the other synths) and MORE, with a picture of what it sounds like (middle C as it strikes): on ANALOG, SOUND shows the oscillators and TONE the sound after DRIVE and the filter. Values carry their unit (355HZ, 1.9K, 1.0MS). An EDIT tap inside goes to the next page, round."},
   {s: "edit", k: "EDIT+SELECT", shot: 'dlg_dice_sound', t: "Sound dice",
-   d: "EDIT held + SELECT: a random factory preset of the engine, each parameter moved up to a quarter of its range. SELECT again: another; OCT+ OK keeps it; OCT− CANCEL brings the old one back. After OK, GLO + G4 undoes it."},
+   d: "EDIT held + SELECT: a random factory preset of the engine, each parameter moved up to a quarter of its range. SELECT again: another; OCT+ KEEP keeps it; OCT− NO brings the old one back. The screen shows BEFORE and NOW side by side. After KEEP, GLO + G4 undoes it."},
   {s: "edit", k: "EDIT+F3", shot: 'layer_edit_active', t: "INIT and RECALL the sound",
    d: "EDIT + F3 INIT: the sound to its engine's own defaults, dry (on DRUM the factory kit too). EDIT + G3 RECALL: the sound as the section stored it. Both ask first and leave the steps alone."},
   {s: "edit", k: "EDIT", shot: 'ed_filter', t: "FILTER (every engine)",
@@ -344,7 +344,7 @@ commands: [
   {s: "seq", k: "SEQ+C4", shot: 'layer_seq_tools_drum', t: "SEQ TOOLS: reverse, shift, random, cook",
    d: "SEQ held: F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT, C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO, D5 REVERT. On DRUM: G4 CLR, A4 REV, B4 FILL, C5 RND on the lane picked with black keys 1–8. No undo."},
   {s: "seq", k: "SEQ+SELECT", shot: 'dlg_dice_seq', t: "Sequence dice",
-   d: "SEQ + SELECT: a new sequence in the scale (a beat on DRUM, else a bass, chords or lead by what it sounds like). OCT+ OK, OCT− CANCEL, SELECT another."},
+   d: "SEQ + SELECT: a new sequence in the scale (a beat on DRUM, else a bass, chords or lead by what it sounds like). BEFORE and NOW side by side: OCT+ KEEP, OCT− NO puts it back, SELECT another."},
   {s: "seq", k: "PRESETS", shot: 'phrases', t: "Load a pattern (PHRASES)",
    d: "PRESETS on a SEQ page opens PHRASES with the next pattern picked; OCT+ loads it into the track, OCT− goes back."},
   {s: "seq", k: "SEQ", shot: 'seq_pattern', t: "Length, division, swing, gate (PATTERN)",
@@ -406,7 +406,7 @@ commands: [
   {s: "fx", k: "FX", shot: 'fx_more', t: "MORE: the rest of the effects",
    d: "KNOB 1 picks, KNOB 2 sets. DISTORT (DIST TYPE, DIST TONE), AUTO PAN (PAN DEPTH, RATE, SYNC, WAVE), DELAY (TONE, MIX, WIDE, PITCH, SPRAY, MOD, TYPE, PING), REVERB (DAMP, PRE / AIR / PITCH by the TYPE, MOD, RATE, TONE, WIDE; on RESO DAMP is FOLLOW), CHORUS, SLICER (MODE, PAT, RATE, DEPTH, T1–T6, FX) and its 16 pitches, PUNCH LANE (CLEAR LANE asks first). With LOAD ECO there is no CHORUS or SLICER."},
   {s: "fx", k: "FX+SELECT", shot: 'dlg_dice_fx', t: "Effects dice",
-   d: "FX + SELECT: drive, chorus/delay/reverb sends, sometimes AUTO PAN, and the reverb's kind and size and the delay's time. OCT+ OK, OCT− CANCEL."},
+   d: "FX + SELECT: drive, chorus/delay/reverb sends, sometimes AUTO PAN, and the reverb's kind and size and the delay's time. BEFORE and NOW side by side: OCT+ KEEP, OCT− NO puts it back, SELECT another."},
 
   // PUNCH-IN
   {s: "punch", k: "FX+F3", shot: 'perform_held', t: "Punch-in effects (FX held)",
@@ -455,8 +455,8 @@ commands: [
    d: "LFO › MORE: PHASE (in degrees, 180°: where MODE TRIG starts the LFO) and STEPS, a 16-level sequencer (was MSEQ): LENGTH, STEP RATE (how long each step lasts), SMOOTH (how far it glides from one level to the next), STEP 1–16. With a STEPS row picked, the 16 steps show as bars under the list: the picked one lit, a line where LENGTH ends. Use it from MOD MATRIX with SOURCE STEPS."},
   {s: "mod", k: "LFO+KNOB 1", shot: 'layer_macro', t: "Macros M1–M4",
    d: "LFO held: KNOB 1–4 are MACRO 1–4 (M1–M4); let go and they stay latched (LFO · LATCHED) on any page until LFO is pressed. F3 rolls new routes on the tracks sounding, G3 clears them. Edit them on MOD MATRIX (SOURCE MACRO 1–4)."},
-  {s: "mod", k: "LFO+SELECT", t: "LFO dice",
-   d: "LFO + SELECT: a rate mid-range, any wave, FREE or TRIG half the time each, mostly to the filter. OCT+ OK, OCT− CANCEL."},
+  {s: "mod", k: "LFO+SELECT", shot: 'dlg_dice_lfo', t: "LFO dice",
+   d: "LFO + SELECT: a rate mid-range, any wave, FREE or TRIG half the time each, mostly to the filter. BEFORE and NOW side by side: OCT+ KEEP, OCT− NO puts it back, SELECT another."},
 
   // SAVE
   {s: "save", k: "SAVE", shot: 'save_sound', t: "Save a sound (USER)",
