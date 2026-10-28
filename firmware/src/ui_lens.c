@@ -19,7 +19,7 @@
  *     SECTION . GROUP . page and n/N of the chain (ui_draw.c draw_tabs, draw_crumbs).
  * Each section's chain is a table (CH_*): the page (its PAGES title; HOME's are its own), the name shown, the group
  * and the level its pictures were drawn for (0.8.5's lenses: the panels, the cards and the knobs as they were, read
- * through lens_level / save_level / pd_level / home_level). Each section remembers the page last shown (ui.nmem, EDIT
+ * through lens_level / pd_level / home_level). Each section remembers the page last shown (ui.nmem, EDIT
  * one per kind of track); a page put by code brings its entry (nav_cur). Included by ui.c. */
 enum { LZ_SEQ, LZ_SAVE, LZ_FX, LZ_HOME, LZ_EDIT, LZ_ENV, LZ_MOD, LZ_KEY, LZ_GLO, LZ_MENU, LZ_LAYER, LZ_DLG, LZ_NONE };
 enum { PD_EDIT, PD_ENV, PD_MOD, PD_KEY, PD_GLO, PD_N };
@@ -106,13 +106,12 @@ static const nv_t CE_SCL[] = {NV("SCL", "KEY", 0, 0), NV("CHORD", 0, 1, 0), NV("
 static const ng_t CG_SCL[] = {{"KEY", 0}, {"CHORD", 0}, {"MORE", 0}};
 static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 0), NV("ARP 2", 0, 1, 0)};
 static const ng_t CG_ARP[] = {{"ARP", 0}, {"ARP 2", 0}};
-enum { SV_LIB, SV_PROJ };                               /* (3c-2 task 2 review: SV_SOUND, USER's and PRESETS' level, gone) */
-/* (ACID FM 3c-2 task 2) SAVE = SOUND -> SONG -> PROJECT -> MORE (spec 2): SOUND and (task 3) SONG on the ux pages (ux_save.c: the
- * inherited USER and PRESETS pages; SECTIONS and ARRANGE), MORE (params.c UXM_SAVE); the inherited PROJECTS, TOOLS (LIBRARY)
- * between them until task 4 */
-static const nv_t CE_SAVE[] = {NV("SAVE SOUND", "SOUND", 0, 0), NV("SAVE SONG", "SONG", 1, 0), NV("PROJECT", "PROJECTS", 2, SV_LIB),
-                               NV("TOOLS", 0, 2, SV_LIB), NV("SAVE MORE", "MORE", 3, 0)};
-static const ng_t CG_SAVE[] = {{"SOUND", 0}, {"SONG", 0}, {"LIBRARY", 0}, {"MORE", 0}};
+/* (ACID FM 3c-2 task 2) SAVE = SOUND -> SONG -> PROJECT -> MORE (spec 2), a page a group, all on the ux pages (ux_save.c): SOUND
+ * (the inherited USER and PRESETS pages), (task 3) SONG (SECTIONS and ARRANGE), (task 4) PROJECT (PROJECTS), MORE (params.c UXM_SAVE:
+ * TOOLS' rows too). The levels (SV_*, save_level) gone with the inherited LIBRARY */
+static const nv_t CE_SAVE[] = {NV("SAVE SOUND", "SOUND", 0, 0), NV("SAVE SONG", "SONG", 1, 0), NV("SAVE PROJECT", "PROJECT", 2, 0),
+                               NV("SAVE MORE", "MORE", 3, 0)};
+static const ng_t CG_SAVE[] = {{"SOUND", 0}, {"SONG", 0}, {"PROJECT", 0}, {"MORE", 0}};
 #define CH(e, g) {e, g, (uint8_t)NELEM(e), (uint8_t)NELEM(g)}
 #define NAV_KEYS (SEC_N + 3u)                           /* the sections' memories: EDIT's synth one, then FM6 DRUM DIGITAL */
 static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, CG_HOME), CH(CE_SYN, CG_SYN), CH(CE_SEQ, CG_SEQ), CH(CE_FX, CG_FX),
@@ -210,7 +209,6 @@ static uint32_t nav_edit_same(uint32_t pg)
 }
 static uint32_t nav_lv(void) { return nav_ch(nav_sec())->e[nav_cur()].lv; }   /* the 0.8.5 lens level it is drawn as */
 static uint32_t pd_level(void) { return nav_lv(); }
-static uint32_t save_level(void) { return nav_lv(); }
 static uint32_t home_level(void) { return gen_on() ? 2u : 0u; }   /* (the 0.8.5 lens level: GEN 2, HOME's pages 0) */
 static int home_macros(void) { return ui.home && !ui.menu && ux_home_page() == UXH_VISUAL; }   /* VISUAL: M1..M4 (spec 4.3;
                                                          * ux_home_page: GEN while it is open) */
@@ -275,8 +273,8 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
     ui.page = (uint8_t)i;
     ui.home = 0;
     page_entered();
-    if (PAGES[i].graph == GR_SVSND || PAGES[i].graph == GR_SLOTS)
-        ui.act = outside && PAGES[i].graph == GR_SVSND ? 4u : 0u;
+    if (PAGES[i].graph == GR_SVSND)
+        ui.act = outside ? 4u : 0u;
     page_flash();
 }
 /* the entry section sec's button goes to from the one shown: the next group's first with a page here (ARP's one: its first);

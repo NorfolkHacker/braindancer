@@ -123,9 +123,9 @@ static const uxc_id_t UXC_JIANT[] = {
 /* (ACID FM 3c-2 task 2) SAVE: what the inherited USER and PRESETS pages reached (their knobs: controls, not settings of their own:
  * USER's SLOT LOAD ERASE SAVE, PRESETS' No. ENG FAV LIST) and where each is now: a SAVE page's knob (the page, its column and name)
  * or a SAVE > MORE row (kind, id). (Task 3) SECTIONS' SECT and ARRANGE's ROW SECT BARS SCENE END and its SECT left of A (DELETE ROW;
- * TOOLS' DELETE ROW and CLEAR SONG too): SONG's knobs and MORE's SONG rows. Task 4 adds the inherited PROJECTS and TOOLS pages'
- * (SECTIONS' NAME LOAD SAVE: PROJECT's) */
-enum { UXC_SV_ROW = 4u };                               /* (knob: 0..3 the page's, UXC_SV_ROW a MORE row) */
+ * TOOLS' DELETE ROW and CLEAR SONG too): SONG's knobs and MORE's SONG rows. (Task 4) the inherited PROJECTS and TOOLS pages' (SECTIONS'
+ * NAME LOAD SAVE: PROJECT's knobs; TOOLS' MORE's TOOLS rows); ARRANGE's ADD SONG's OCT+ */
+enum { UXC_SV_ROW = 4u, UXC_SV_OCT };                  /* (knob: 0..3 the page's, UXC_SV_ROW a MORE row, UXC_SV_OCT the page's OCT+) */
 typedef struct { const char *was, *page; uint8_t knob, kind, id; const char *now; } uxc_sv_t;
 static const uxc_sv_t UXC_SAVE[] = {
     {"USER SLOT", "SOUND", 0, 0, 0, "SLOT"}, {"USER LOAD", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_ULOAD, "LOAD SLOT"},
@@ -139,6 +139,14 @@ static const uxc_sv_t UXC_SAVE[] = {
     {"ARRANGE DELETE ROW", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_DELROW, "DELETE ROW"},
     {"TOOLS DELETE ROW", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_DELROW, "DELETE ROW"},
     {"TOOLS CLEAR SONG", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_CLRSONG, "CLEAR SONG"},
+    {"ARRANGE ADD", "SONG", UXC_SV_OCT, 0, 0, "ADD"},   /* (task 4) ARRANGE's + ADD: SONG's OCT+; the inherited PROJECTS (PROJECT */
+    {"PROJECTS PROJECT", "PROJECT", 0, 0, 0, "PROJECT"}, {"PROJECTS SECT", "SONG", 0, 0, 0, "SECTION"},   /* SECT LOAD SAVE; */
+    {"PROJECTS LOAD", "PROJECT", 1, 0, 0, "LOAD"}, {"PROJECTS SAVE", "PROJECT", 2, 0, 0, "SAVE"},   /* SECTIONS' NAME) and TOOLS */
+    {"SECTIONS NAME", "PROJECT", 3, 0, 0, "NAME"},
+    {"TOOLS CLEAR SEQ", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_CLRSEQ, "CLEAR SEQ"},
+    {"TOOLS INIT SOUND", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_INITSND, "INIT SOUND"},
+    {"TOOLS NEW PROJECT", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_NEWPROJ, "NEW PROJECT"},
+    {"TOOLS CPU TEST", 0, UXC_SV_ROW, UXR_ACTION, UXM_A_CPUTEST, "CPU TEST"},
 };
 
 /* the settings left off every page and MORE list on purpose, each with why. They keep their stored value */
@@ -768,9 +776,10 @@ static int uxc_widths(void)
             preset_mark(0);
         }
         rw.kind = UXR_ACTION;
-        for (r = 0; r < 4u; r++) {                      /* (MORE: its actions' names on KNOB 2's column; task 3: DELETE ROW, CLEAR
-                                                         * SONG) */
-            static const uint8_t ACT[4] = {UXM_A_ULOAD, UXM_A_ERASE, UXM_A_DELROW, UXM_A_CLRSONG};
+        for (r = 0; r < 8u; r++) {                      /* (MORE: its actions' names on KNOB 2's column; task 3: DELETE ROW, CLEAR
+                                                         * SONG; task 4: TOOLS') */
+            static const uint8_t ACT[8] = {UXM_A_ULOAD, UXM_A_ERASE, UXM_A_DELROW, UXM_A_CLRSONG, UXM_A_CLRSEQ, UXM_A_INITSND,
+                                           UXM_A_NEWPROJ, UXM_A_CPUTEST};
             char v[24];
             uint8_t bar;
             const char *nm;
@@ -782,6 +791,39 @@ static int uxc_widths(void)
         list_put(l0);
         *TSEL = keep;
         ui.uslot = (uint8_t)k0; ui.act = (uint8_t)a0;
+    }
+    {   /* (ACID FM 3c-2 task 4) SAVE > PROJECT's knobs (every project, every section picked, LOAD / SAVE armed or not, the section
+         * stored or not, playing or not) and its status line (UF_HDR in the line's 224 px) */
+        uint8_t c0 = song_cur, a0 = ui.act;
+        int16_t s0 = song.g[G_SLOT];
+        uint32_t p, g, a, pl, k;
+        ux_knob_t kn[4];
+        char st[64], w[32];
+        nav_put(SEC_SAVE, "PROJECT");
+        for (p = 0; p < NSONG; p++)
+            for (g = 0; g < 4u; g++)
+                for (a = 0; a < 4u; a++)
+                    for (pl = 0; pl < 2u; pl++) {
+                        song_cur = (uint8_t)p;
+                        song.g[G_SLOT] = (int16_t)(g + 1u);
+                        ui.act = (uint8_t)(a < 2u ? 0u : a);
+                        chain.running = (uint8_t)pl;
+                        song.playing = (uint8_t)pl;
+                        uxs_knobs(cur_page(), kn);
+                        for (k = 0; k < 4u; k++) {
+                            str_cpy(w, "PROJECT ", sizeof w);
+                            str_cpy(w + str_len(w), kn[k].label, sizeof w - str_len(w));
+                            uxc_wfit(w, kn[k].value);
+                            if (text_w(&UF_LBL, kn[k].label) > UX_COL_W - 4) { printf("  %s: its name too wide\n", w); uxc_wbad++; }
+                        }
+                        st[0] = 0;
+                        if (!uxv_say(cur_page(), st, sizeof st) || text_w(&UF_HDR, st) > 224) {
+                            printf("  PROJECT's status line too wide: %s\n", st);
+                            uxc_wbad++;
+                        }
+                    }
+        chain.running = 0; song.playing = 0;
+        song_cur = c0; song.g[G_SLOT] = s0; ui.act = a0;
     }
     {   /* (ACID FM 3c-2 task 3) SAVE > SONG's knobs (ux_save.c uxv_knobs: every section, every row of every length 0..16, bars
          * 1..CHAIN_BARS, a scene or none) and its status line (UF_HDR in the line's 224 px: also playing, full); MORE's END every
@@ -987,12 +1029,13 @@ int main(int argc, char **argv)
         for (i = 0; i < NELEM(UXC_SAVE); i++) {
             const uxc_sv_t *v = &UXC_SAVE[i];
             int got = 0;
-            if (v->knob < UXC_SV_ROW) {
+            if (v->knob < UXC_SV_ROW || v->knob == UXC_SV_OCT) {
                 str_cpy(pt, "SAVE ", sizeof pt);
                 str_cpy(pt + 5, v->page, sizeof pt - 5);
                 nav_put(SEC_SAVE, v->page);
                 uxs_knobs(cur_page(), kn);
-                got = str_eq(cur_page()->title, pt) && str_eq(kn[v->knob].label, v->now);
+                got = str_eq(cur_page()->title, pt) &&
+                      (v->knob == UXC_SV_OCT ? act_col() && str_eq(act_name(act_col() - 1u), v->now) : str_eq(kn[v->knob].label, v->now));
             }
             else
                 for (s = 0; s < UXM_SAVE.n; s++)
@@ -1006,8 +1049,8 @@ int main(int argc, char **argv)
                 printf("  SAVE: the inherited %s is not at %s\n", v->was, v->now);
             ok &= got;
         }
-        bad += check("ux cover: SAVE (3c-2 tasks 2, 3): every control USER, PRESETS, SECTIONS and ARRANGE had is a SAVE page's knob "
-                     "or a SAVE > MORE row", ok && NELEM(UXC_SAVE) == 17u);
+        bad += check("ux cover: SAVE (3c-2 tasks 2 .. 4): every control USER, PRESETS, SECTIONS, ARRANGE, PROJECTS and TOOLS had is "
+                     "a SAVE page's knob (ADD: SONG's OCT+) or a SAVE > MORE row", ok && NELEM(UXC_SAVE) == 27u);
     }
     bad += uxc_widths();
     printf("ux cover: %u settings JIANT reached, %u hidden on purpose, %u GLO's elsewhere (checked)\n", (unsigned)n, (unsigned)nh,

@@ -55,7 +55,12 @@ static const uxm_act_t UXM_ACT[UXM_A_N] = {
                                                          * TOOLS' DELETE ROW and ARRANGE's SECT left of A; DELETE ROW in the list:
                                                          * uxm_list_name); no row: NO ROW */
     {"CLEAR", CF_CLEAR_SONG, UXA_SEL},                  /* .. every row gone, asking first (the inherited TOOLS' CLEAR SONG; CLEAR
-                                                         * SONG in the list) */
+                                                         * SONG in the list); no rows: NOTHING TO CLEAR, as TOOLS */
+    {"CLEAR", CF_CLEAR_SEQ, UXA_SEL},                   /* (3c-2 task 4) SAVE: the selected track's steps, asking first (the inherited
+                                                         * TOOLS' CLEAR SEQ; CLEAR SEQ in the list); nothing: NOTHING TO CLEAR */
+    {"INIT", CF_INIT_SOUND, UXA_SEL},                   /* .. its sound at its engine's defaults (TOOLS' INIT SOUND) */
+    {"NEW", CF_INIT_SYS, UXA_SEL},                      /* .. everything as at power-on (TOOLS' NEW PROJECT) */
+    {"CPU TEST", CF_CPU_TEST, UXA_SEL},                 /* .. the heaviest song (TOOLS' CPU TEST) */
 };
 /* (3c-2 task 2) action a's target (its dialog's: ui.confirm_trk) */
 static uint32_t uxm_act_arg(uint32_t a)
@@ -70,6 +75,14 @@ static void uxm_act_do(uint32_t a)
 {
     if (a >= UXM_A_N || !uxm_act_ok(a))
         return;
+    if (UXM_ACT[a].ask && chain_busy()) {               /* (as JIANT's pages: not while a song plays, ui_input.c act_do; 3c-2 task 4: */
+        ui_message(UX_STOP);                            /* first, as the inherited TOOLS) */
+        return;
+    }
+    if ((a == UXM_A_CLRSEQ && seq_is_empty(TSEL) && !motion_count(TSEL)) || (a == UXM_A_CLRSONG && !chain_config.count)) {
+        ui_message("NOTHING TO CLEAR");                 /* (3c-2 task 4: as the inherited TOOLS' act_ready, nothing there) */
+        return;
+    }
     if (a == UXM_A_ERASE && (!up_used(ui.uslot) || transport_busy())) {   /* (3c-2 task 2: as the inherited USER's ERASE, the */
         up_ui(1u, ui.uslot);                            /* dialog only over a used slot, stopped; else up_ui says why: EMPTY SLOT, */
         return;                                         /* STOP TO SAVE) */
@@ -82,11 +95,7 @@ static void uxm_act_do(uint32_t a)
         if (ui.song_row >= chain_config.count)
             ui.song_row = (uint8_t)(chain_config.count - 1u);
     }
-    if (UXM_ACT[a].ask) {                               /* (as JIANT's pages: not while a song plays, ui_input.c act_do; then */
-        if (chain_busy()) {                             /* the dialog, OCT+ yes / OCT- no) */
-            ui_message(UX_STOP);
-            return;
-        }
+    if (UXM_ACT[a].ask) {                               /* (then the dialog, OCT+ yes / OCT- no) */
         confirm_open(UXM_ACT[a].ask, uxm_act_arg(a));
         return;
     }
@@ -476,12 +485,13 @@ static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8
 
 /* (3c-1 task 8) row r's name in the list and the status line, where the knob row's (name, what uxm_row_text gave: it fits a
  * knob's column) is short for it: GLO's KEYBOARD, KEYBOARD PLAYS SELECTED in full; its CLEAR, LEARN CLEAR; (3c-2 task 2) SAVE's
- * ERASE, ERASE USER SLOT; (task 3) its DELETE, DELETE ROW; its CLEAR, CLEAR SONG */
+ * ERASE, ERASE USER SLOT; (task 3) its DELETE, DELETE ROW; its CLEAR, CLEAR SONG; (task 4) CLEAR SEQ, INIT SOUND, NEW PROJECT */
 static const char *uxm_list_name(const ux_row_t *r, const char *name)
 {
     if (r->kind == UXR_ACTION)
         return r->id == UXM_A_LCLEAR ? UXM_LCLEAR : r->id == UXM_A_ERASE ? UXM_ERASE_U : r->id == UXM_A_DELROW ? UXM_DELROW :
-               r->id == UXM_A_CLRSONG ? UXM_CLRSONG : name;
+               r->id == UXM_A_CLRSONG ? UXM_CLRSONG : r->id == UXM_A_CLRSEQ ? UXM_CLRSEQ : r->id == UXM_A_INITSND ? UXM_INITSND :
+               r->id == UXM_A_NEWPROJ ? UXM_NEWPROJ : name;
     return r->kind == UXR_GLOBAL && r->id == G_MRSEL ? UXM_KBD_SEL : name;
 }
 

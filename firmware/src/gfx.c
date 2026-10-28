@@ -915,40 +915,7 @@ static int32_t cv_clip_text(int32_t x, int32_t y, const aafont_t *f, const char 
     return cv_text_flags(x, y, f, b, fg, bg, 8u);
 }
 
-/* (0.8.9) a 1-bit face's s turned a quarter left (reading upwards, as the mock-up's keys name themselves): its line's top
- * at column x, its first character's foot at row y; maxh: at most this many rows (the rest dropped). Returns the rows used */
-static int32_t cv_text_up(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t fg, uint16_t bg, int32_t maxh)
-{
-    int32_t pen = 0, x0 = 0x7FFF, y0 = 0x7FFF, x1 = -0x7FFF, y1 = -0x7FFF;
-    uint16_t c = swap16(fg);
-    const char *s0 = s;
-    GFX_HOOK_INK(fg, bg);
-    (void)bg;
-    for (; *s; s++) {
-        const aag_t gv = ag(f, glyph(f, fold(f, (uint8_t)*s))), *g = &gv;
-        uint32_t r, q, k = 0;
-        int32_t adv = (g->adv + 8) >> 4;
-        if (pen + adv - 1 > maxh)
-            break;
-        for (r = 0; r < g->bh; r++)
-            for (q = 0; q < g->bw; q++, k++)
-                if ((f->data[g->off + (k >> 3)] >> (7u - (k & 7u))) & 1u) {
-                    int32_t px = x + g->by + (int32_t)r, py = y - (pen + g->bx + (int32_t)q) + cv_oy;
-                    if ((uint32_t)px < cv_w && py >= cv_cy0 && py < cv_cy1)
-                        cv_px[(uint32_t)py * cv_w + (uint32_t)px] = c;
-                    if (px < x0) x0 = px;
-                    if (px + 1 > x1) x1 = px + 1;
-                    if (py < y0) y0 = py;
-                    if (py + 1 > y1) y1 = py + 1;
-                }
-        pen += adv;
-    }
-    cv_txt_note(x0, y0, x1, y1);
-    if (GFX_HOOKS && x1 > x0)
-        GFX_HOOK_TEXT(x0, y0, x1, y1, s0, 0u);
-    (void)x0; (void)y0; (void)x1; (void)y1; (void)s0;
-    return pen;
-}
+/* (0.8.9) cv_text_up, a face turned a quarter left (the layers' keys): (ACID FM 3c-2 task 4) gone with JIANT's layer map */
 
 /* ---------------------------------------------------------- keycaps --- */
 /* a pre-rendered pill (tools/gen_aa_keycaps.py): nibble 0 outside, 1..4 the edge over `under`, 5 the fill,

@@ -29,8 +29,10 @@ enum { UXM_H_ARP, UXM_H_VOICE, UXM_H_FILTER, UXM_H_TONE, UXM_H_MOD, UXM_H_MSEQ, 
  * (3c-1 task 4) SEQ's CLEAR, the track's automation, asking; (task 7) GLO's UNDO, the GLO layer's G4; (task 8) GLO's LEARN CLEAR,
  * MENU's until 0.5 */
 enum { UXM_A_LYRIC, UXM_A_LANE, UXM_A_CLRAUTO, UXM_A_UNDO, UXM_A_LCLEAR, UXM_A_ULOAD, UXM_A_ERASE, UXM_A_DELROW, UXM_A_CLRSONG,
-       UXM_A_N };   /* (3c-2 task 2) SAVE's LOAD SLOT (the inherited USER's LOAD) and ERASE USER SLOT (its ERASE, asking first);
-                     * (task 3) its DELETE ROW and CLEAR SONG (the inherited TOOLS' and ARRANGE's, asking first) */
+       UXM_A_CLRSEQ, UXM_A_INITSND, UXM_A_NEWPROJ, UXM_A_CPUTEST, UXM_A_N };   /* (3c-2 task 2) SAVE's LOAD SLOT (the inherited USER's
+                     * LOAD) and ERASE USER SLOT (its ERASE, asking first); (task 3) its DELETE ROW and CLEAR SONG (the inherited
+                     * TOOLS' and ARRANGE's, asking first); (task 4) its CLEAR SEQ, INIT SOUND, NEW PROJECT, CPU TEST (the inherited
+                     * TOOLS', asking first) */
 /* (3c-2 task 2) what an action acts on (ux_more.c uxm_act_t.arg): the selected track (song.sel), the user slot SAVE > SOUND picks
  * (ui.uslot), the song's row picked (ui.song_row: task 3's DELETE ROW) */
 enum { UXA_SEL, UXA_USLOT, UXA_ROW };
@@ -44,6 +46,9 @@ enum { UXA_SEL, UXA_USLOT, UXA_ROW };
 #define UXM_ERASE_U "ERASE USER SLOT"                   /* (3c-2 task 2) SAVE's ERASE USER SLOT in the list (ERASE on the knob) */
 #define UXM_DELROW "DELETE ROW"                         /* (3c-2 task 3) .. its DELETE ROW (DELETE on the knob) */
 #define UXM_CLRSONG "CLEAR SONG"                        /* .. its CLEAR SONG (CLEAR on the knob) */
+#define UXM_CLRSEQ "CLEAR SEQ"                          /* (3c-2 task 4) .. its CLEAR SEQ (CLEAR on the knob) */
+#define UXM_INITSND "INIT SOUND"                        /* .. its INIT SOUND (INIT on the knob) */
+#define UXM_NEWPROJ "NEW PROJECT"                       /* .. its NEW PROJECT (NEW on the knob) */
 #define UXS_PICK "SETTING"                              /* MORE's KNOB 1 (the knob row, a step held's cards) */
 /* (3b task 9) why a MORE row takes no step lock (ux_more.c uxm_lock_why, UXM_WHY its words): it does (UXM_LOCKS), a global, an FM6
  * patch byte, a DRUM-X kit byte, an action, a track setting the lock store does not hold (motion.c motion_param: "NAME" + its words) */

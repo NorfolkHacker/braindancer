@@ -530,13 +530,14 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
 enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE, FAM_ARP, FAM_SEQ, FAM_TRK,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP };   /* (ACID FM 3c-1 task 7: SC_TRK, JIANT's MIXER's, gone with it) */
-enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_SLOTS,
-       GR_MOD, GR_PATS, GR_TOOLS, GR_CHANCE, GR_MORPH, GR_DXIMG,
+enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL,
+       GR_MOD, GR_PATS, GR_CHANCE, GR_MORPH, GR_DXIMG,
        GR_LYRIC, GR_LIVE, GR_MORE, GR_SYN, GR_FM6P, GR_DXP, GR_MIX, GR_MIDI, GR_SVSND, GR_SVSONG, GR_SVPROJ };   /* (ACID FM
                                                          * 3c-2 task 2) GR_SVSND: SAVE > SOUND (ux_save.c), the inherited USER
                                                          * (GR_USER) and PRESETS (GR_BROWSE) gone; GR_SVSONG, GR_SVPROJ: SAVE's SONG
                                                          * and PROJECT (tasks 3, 4); (task 3) GR_SONG, the inherited ARRANGE and
-                                                         * SEQ > SONG, gone with them */   /* (ACID FM 3c-1 task 8) GR_MIDI: GLO > MIDI (ux_glo.c);
+                                                         * SEQ > SONG, gone with them; (task 4) GR_SLOTS and
+                                                         * GR_TOOLS, the inherited PROJECT and TOOLS, too */   /* (ACID FM 3c-1 task 8) GR_MIDI: GLO > MIDI (ux_glo.c);
                                                          * (task 7) GR_MIX: GLO > MIX (ux_glo.c); GR_TRK,
                                                          * JIANT's MIXER and SENDS, gone with them */   /* (ACID FM 3c-1 task 4 fix 1: GR_MOTION GR_EVENTS GR_COMP GR_MUTATE
                                                          * GR_FUGUE GR_SHAPE gone with SEQ's pages; no value is stored, PAGES' own) */   /* (ACID FM 3b task 4) GR_SYN: a synth's EDIT page 3 (VOICE, FILTER);
@@ -844,12 +845,13 @@ static const ux_row_t UXM_GLO_ROWS[] = {
 };
 static const ux_more_t UXM_GLO = {UXM_GLO_ROWS, (uint8_t)(sizeof UXM_GLO_ROWS / sizeof UXM_GLO_ROWS[0])};
 /* (ACID FM 3c-2 task 2) SAVE's MORE (spec 2.4): (task 3) SONG (END, the inherited ARRANGE's END row; DELETE ROW, the dialog on the
- * row SONG picks; CLEAR SONG, the inherited TOOLS'), TOOLS (ERASE USER SLOT, the inherited USER page's ERASE: the dialog on the slot
- * SOUND picks; task 4 adds the other tools), SOUND (what the inherited USER and PRESETS pages reached that SOUND's knobs do not:
- * USER's LOAD, PRESETS' ENGINE, FAVORITE, LIST) */
+ * row SONG picks; CLEAR SONG, the inherited TOOLS'), TOOLS (task 4: the inherited TOOLS page's CLEAR SEQ, INIT SOUND, NEW PROJECT,
+ * CPU TEST, each its dialog; ERASE USER SLOT, the inherited USER page's ERASE: the dialog on the slot SOUND picks), SOUND (what the
+ * inherited USER and PRESETS pages reached that SOUND's knobs do not: USER's LOAD, PRESETS' ENGINE, FAVORITE, LIST) */
 static const ux_row_t UXM_SAVE_ROWS[] = {
     {UXM_H_SONG, UXR_HEAD, 0}, {ID_SV_END, UXR_GLOBAL, 0}, {UXM_A_DELROW, UXR_ACTION, 0}, {UXM_A_CLRSONG, UXR_ACTION, 0},
-    {UXM_H_TOOLS, UXR_HEAD, 0}, {UXM_A_ERASE, UXR_ACTION, 0},
+    {UXM_H_TOOLS, UXR_HEAD, 0}, {UXM_A_CLRSEQ, UXR_ACTION, 0}, {UXM_A_INITSND, UXR_ACTION, 0}, {UXM_A_ERASE, UXR_ACTION, 0},
+    {UXM_A_NEWPROJ, UXR_ACTION, 0}, {UXM_A_CPUTEST, UXR_ACTION, 0},
     {UXM_H_SOUND, UXR_HEAD, 0}, {UXM_A_ULOAD, UXR_ACTION, 0}, {ID_SV_ENGINE, UXR_GLOBAL, 0}, {ID_SV_FAV, UXR_GLOBAL, 0},
     {ID_SV_LIST, UXR_GLOBAL, 0},
 };
@@ -903,8 +905,10 @@ static const page_t PAGES[] = {
     /* (ACID FM 3c-2 task 3) SAVE > SONG (spec 2.2, ux_save.c): SECTION ROW BARS SCENE (no ids: ui_input.c save_knob); the inherited
      * SECTIONS (PROJECT's KNOB 1 the section) and ARRANGE (the song's rows) pages gone, END SAVE > MORE's row */
     {"SAVE SONG", FAM_SAVE, SC_GLOBAL, GR_SVSONG, {0xFF, 0xFF, 0xFF, 0xFF}},
-    {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */
-    {"TOOLS", FAM_SAVE, SC_GLOBAL, GR_TOOLS, {G_CLRSEQ, G_INITSND, 0xFF, 0xFF}},
+    /* (ACID FM 3c-2 task 4) SAVE > PROJECT (spec 2.3, ux_save.c): PROJECT LOAD SAVE NAME (no ids: ui_input.c save_knob); the
+     * inherited PROJECT (PROJECT, SECT, LOAD, SAVE: G_SLOT G_LOAD G_SAVE) and TOOLS (CLEAR SEQ INIT SOUND DELETE ROW CLEAR SONG NEW
+     * PROJECT CPU TEST) pages gone: SECT SAVE > SONG's SECTION, the tools SAVE > MORE's rows */
+    {"SAVE PROJECT", FAM_SAVE, SC_GLOBAL, GR_SVPROJ, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"ARP", FAM_ARP, SC_TRACK, GR_ARP, {P_AMODE, P_ARATE, P_AOCT, P_AGATE}},
     {"ARP 2", FAM_ARP, SC_TRACK, GR_NONE, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},
     /* (0.6.90) SEQ: STEP (the piano roll) and the pages that edit it, one after another: NOTE, TIMING, STRETCH, COMP,

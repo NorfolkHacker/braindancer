@@ -18,8 +18,16 @@
  *            the picked one lit), under them ARRANGE and the song's rows as chips ("A16", the picked one lit, the one playing
  *            underlined, a dot for a scene), the song's length and end ("72 BARS . LOOP") under them. The status line: the row
  *            and what OCT+ does ("ROW 3 . B . 16 BARS . OCT+ ADDS A ROW").
- *   MORE     (spec 2.4; params.c UXM_SAVE) SONG (task 3): END, DELETE ROW, CLEAR SONG; TOOLS: ERASE USER SLOT; SOUND: LOAD SLOT,
- *            ENGINE, FAVORITE, LIST (the inherited USER's LOAD, PRESETS' KNOB 2 .. 4, ARRANGE's END: ui_input.c sv_view_turn).
+ *   PROJECT  (spec 2.3; task 4: the inherited PROJECTS page) KNOB 1 PROJECT (song_open: the four projects, the music kept), 2 LOAD
+ *            and 3 SAVE (action knobs: right arms, left drops; OCT+ does the armed one) and 4 NAME of the section SONG picks (G_SLOT):
+ *            ui_input.c save_knob, save_oct. LOAD over changes not stored asks first (CF_LOAD_PROJ); SAVE over a stored section
+ *            asks (CF_OVR_PROJ), an empty one NAME. The picture: the four projects as cards (the number, the name: section A's,
+ *            the bars of its song, its sections stored as chips, a dot when the project in memory has changes not stored, OPEN on
+ *            the one open, lit, the section SONG picks framed there). The status line: the project, the section, what OCT+ does
+ *            ("PROJECT 2 . SECTION B . OCT+ LOADS").
+ *   MORE     (spec 2.4; params.c UXM_SAVE) SONG (task 3): END, DELETE ROW, CLEAR SONG; TOOLS: (task 4) CLEAR SEQ, INIT SOUND, ERASE
+ *            USER SLOT, NEW PROJECT, CPU TEST; SOUND: LOAD SLOT, ENGINE, FAVORITE, LIST (the inherited USER's LOAD, PRESETS' KNOB 2 ..
+ *            4, ARRANGE's END: ui_input.c sv_view_turn; TOOLS' tools, each its dialog: ux_more.c).
  * The picture is redrawn when what it shows changes (uxv_sig): none while nothing changes. Included after ux_glo.c, before
  * ux_section.c. */
 
@@ -58,12 +66,16 @@ static int uxv_armed(void) { return ui.act == 4u; }     /* (SOUND's SAVE picked:
 
 static int uxv_song_knobs(ux_knob_t k[4]);
 static int uxv_song_say(char *b, uint32_t nb);
+static int uxv_proj_knobs(ux_knob_t k[4]);
+static int uxv_proj_say(char *b, uint32_t nb);
 static int uxv_knobs(const page_t *pg, ux_knob_t k[4])
 {
     uint32_t total, cur, c;
     int used = up_used(ui.uslot);
     if (pg->graph == GR_SVSONG)
         return uxv_song_knobs(k);
+    if (pg->graph == GR_SVPROJ)
+        return uxv_proj_knobs(k);
     if (pg->graph != GR_SVSND)
         return 0;
     for (c = 0; c < 4u; c++)
@@ -99,6 +111,8 @@ static int uxv_say(const page_t *pg, char *b, uint32_t nb)
     uint32_t at;
     if (pg->graph == GR_SVSONG)
         return uxv_song_say(b, nb);
+    if (pg->graph == GR_SVPROJ)
+        return uxv_proj_say(b, nb);
     if (pg->graph != GR_SVSND)
         return 0;
     if (ux_knob_hot() == 1) {
@@ -324,20 +338,172 @@ static __attribute__((noinline)) void uxv_song_picture(void)
     GFX_HOOK_CELL(8, ly - 2, 232, ly + 10);
     cv_text_on(8, ly - UF_HDR_CAP_Y, &UF_HDR, b, chain_config.count ? UX_MID : UX_DIM(UX_MID, 55), ux_under(8, ly + 4));
 }
+/* --------------------------------------------------------------------------------------------------------- PROJECT --- */
+/* (task 4) the other projects' sections and names, from their flash headers (project.c lib_scan), one project a frame, cached until
+ * a project is written, loaded or renamed or another one opened (lib_gen). (0.8.5: SAVE > LIBRARY's, ui_graph.c; with it gone,
+ * PROJECT's) */
+static struct {
+    uint32_t gen;                                       /* lib_gen() when the scan began */
+    uint8_t next;                                       /* the next project to scan (NSONG: done) */
+    uint8_t mask[NSONG];                                /* sections stored, a bit each */
+    char name[NSONG][13u];
+} lib = {0xFFFFFFFFu, 0, {0}, {{0}}};
+static void lib_poll(void)                              /* (uxv_sig: once a frame on PROJECT) */
+{
+    if (lib.gen != lib_gen()) {
+        lib.gen = lib_gen();
+        lib.next = 0;
+    }
+    if (lib.next < NSONG) {
+#if FELUCCA_FLASH
+        lib.mask[lib.next] = (uint8_t)lib_scan(lib.next, lib.name[lib.next]);
+#endif
+        lib.next++;
+    }
+}
+static const char *const UXV_PLABEL[4] = {"PROJECT", "LOAD", "SAVE", "NAME"};
+/* PROJECT's words (tests/ux_msg_scan.py, as above) */
+static const char *const UXV_PWORD[] = {"PROJECT ", "SECTION ", "OCT+ LOADS", "OCT+ SAVES", "OPEN", "BARS", "BAR", "EMPTY SLOT"};
+enum { UXV_P_PROJ, UXV_P_SECT, UXV_P_LOADS, UXV_P_SAVES, UXV_P_OPEN, UXV_P_BARS, UXV_P_BAR, UXV_P_EMPTY };
+static uint32_t uxv_psec(void) { return (uint32_t)(song.g[G_SLOT] - 1) & 3u; }   /* the section SONG picks (G_SLOT) */
+static int uxv_proj_knobs(ux_knob_t k[4])
+{
+    uint32_t c, used = (uint32_t)graph_project_used(uxv_psec());   /* (cached: no CRC a frame) */
+    for (c = 0; c < 4u; c++)
+        k[c].label = UXV_PLABEL[c];
+    fmt_int(k[0].value, (int32_t)song_cur + 1);         /* PROJECT: "2" */
+    k[0].bar = (uint8_t)(song_cur * 255u / (NSONG - 1u));
+    k[0].off = (uint8_t)transport_busy();
+    for (c = 1; c < 3u; c++) {                          /* LOAD, SAVE: armed, OCT+ does it */
+        int on = ui.act == c + 1u;
+        str_cpy(k[c].value, UXV_WORD[on ? UXV_W_OCT : UXV_W_NONE], sizeof k[c].value);
+        k[c].bar = (uint8_t)(on ? 255u : 0u);
+        k[c].off = (uint8_t)(!on || (c == 1u ? chain_busy() || !used : transport_busy()));
+    }
+    str_cpy(k[3].value, UXV_WORD[used ? UXV_W_EDIT : UXV_W_NONE], sizeof k[3].value);   /* NAME: the section's rename */
+    k[3].off = (uint8_t)!used;
+    return 1;
+}
+/* PROJECT's status line: the project, the section SONG picks, what OCT+ does with LOAD or SAVE armed ("PROJECT 2 . SECTION B . OCT+
+ * LOADS"); LOAD on an empty section EMPTY SLOT, the song playing STOP TO EDIT; SAVE playing STOP TO SAVE */
+static int uxv_proj_say(char *b, uint32_t nb)
+{
+    char t[2] = {(char)('A' + uxv_psec()), 0};
+    str_cpy(b, UXV_PWORD[UXV_P_PROJ], nb);
+    fmt_int(b + str_len(b), (int32_t)song_cur + 1);
+    uxv_cat(b, nb, UXV_WORD[UXV_W_DOT]);
+    uxv_cat(b, nb, UXV_PWORD[UXV_P_SECT]);
+    uxv_cat(b, nb, t);
+    if (ui.act != 2u && ui.act != 3u)
+        return 1;
+    uxv_cat(b, nb, UXV_WORD[UXV_W_DOT]);
+    if (ui.act == 2u)
+        uxv_cat(b, nb, chain_busy() ? UXV_SWORD[UXV_S_STOP] : !graph_project_used(uxv_psec()) ? UXV_PWORD[UXV_P_EMPTY] :
+                       UXV_PWORD[UXV_P_LOADS]);
+    else
+        uxv_cat(b, nb, transport_busy() ? UXV_WORD[UXV_W_STOP] : UXV_PWORD[UXV_P_SAVES]);
+    return 1;
+}
+#define UXV_KY 4                 /* the projects' cards: top, height, pitch, width (the sections' blocks' columns) */
+#define UXV_KH 140
+static uint32_t uxv_pbars(uint32_t n)                   /* project n's song: its bars */
+{
+    const chain_config_t *c = n == song_cur ? &chain_config : &song_idx.rows[n];
+    uint32_t i, b = 0;
+    for (i = 0; i < c->count && i < CHAIN_ROWS; i++)
+        b += c->row[i].bars;
+    return b;
+}
+static uint32_t uxv_pmask(uint32_t n)                   /* project n's sections stored, a bit each */
+{
+    uint32_t i, m = 0;
+    if (n != song_cur)
+        return lib.mask[n];
+    for (i = 0; i < 4u; i++)
+        m |= (uint32_t)graph_project_used(i) << i;
+    return m;
+}
+static const char *uxv_pname(uint32_t n)                /* .. its name: section A's ("" none) */
+{
+    return n == song_cur ? (graph_project_used(0) ? graph_project_name(0) : "") : lib.name[n];
+}
+/* project n's card: its number, the dot (changes not stored), its name (USED unnamed, EMPTY none), its bars, its sections as chips
+ * (stored: the section's colour; the open one's picked section framed), OPEN; the open one lit (BG2, KNOB 1's colour on top) */
+static void uxv_card(uint32_t n)
+{
+    int32_t x = 8 + (int32_t)n * UXV_BP, y = UXV_KY, cy;
+    int on = n == song_cur;
+    uint32_t m = uxv_pmask(n), j, bars = uxv_pbars(n);
+    const char *nm = uxv_pname(n);
+    uint16_t bg;
+    char b[8];
+    if (on) {
+        cv_rect(x, y, UXV_BW, UXV_KH, UX_BG2);
+        cv_rect(x, y, UXV_BW, 2, UX_ACID);
+        bg = UX_BG2;
+    } else {
+        cv_frame(x, y, UXV_BW, UXV_KH, UX_LINE);
+        bg = ux_under(x + 8, y + UXV_KH / 2);
+    }
+    GFX_HOOK_CELL(x, y, x + UXV_BW, y + UXV_KH);
+    fmt_int(b, (int32_t)n + 1);
+    cv_text_on(x + 6, y + 8 - UF_VAL_CAP_Y, &UF_VAL, b, m ? UX_TEXT : UX_MID, bg);
+    if (on && project_unsaved())                        /* (changes not stored) */
+        cv_rect(x + UXV_BW - 10, y + 10, 5, 5, UX_ACCENT);
+    if (!nm[0])
+        nm = m ? UXV_SWORD[UXV_S_USED] : UXV_WORD[UXV_W_EMPTY];
+    cv_clip_text(x + 6, y + 34 - UF_LBL_CAP_Y, &UF_LBL, nm, m ? (on ? UX_TEXT : UX_MID) : UX_DIM(UX_MID, 55), bg, UXV_BW - 9);
+    if (bars) {
+        fmt_int(b, (int32_t)bars);
+        cv_text_on(x + 6, y + 50 - UF_HDR_CAP_Y, &UF_HDR, b, on ? UX_TEXT : UX_MID, bg);
+        cv_text_on(x + 6, y + 66 - UF_LBL_CAP_Y, &UF_LBL, UXV_PWORD[bars == 1u ? UXV_P_BAR : UXV_P_BARS], UX_MID, bg);
+    }
+    for (j = 0; j < 4u; j++) {                          /* the sections, 2 x 2 */
+        int32_t sx = x + 5 + (int32_t)(j % 2u) * 22, sy = y + 84 + (int32_t)(j / 2u) * 20;
+        int used = (int)((m >> j) & 1u);
+        uint16_t c = used ? (on ? sec_col(j) : UX_DIM(sec_col(j), 62)) : UX_EMPTY;
+        char l[2] = {(char)('A' + j), 0};
+        cv_rect(sx, sy, 20, 16, c);
+        if (on && j == uxv_psec())
+            cv_frame(sx - 1, sy - 1, 22, 18, UX_TEXT);
+        GFX_HOOK_CELL(sx, sy, sx + 20, sy + 16);
+        cv_text_in(sx, sy + (16 - UF_LBL_CAP_H) / 2 - UF_LBL_CAP_Y, 20, &UF_LBL, l, used ? (on ? UX_BG : UX_TEXT) : UX_MID, c);
+    }
+    cy = y + UXV_KH - 14;
+    if (on)
+        cv_text_on(x + 6, cy - UF_LBL_CAP_Y, &UF_LBL, UXV_PWORD[UXV_P_OPEN], UX_ACID, bg);
+}
+static __attribute__((noinline)) void uxv_proj_picture(void)
+{
+    uint32_t n;
+    for (n = 0; n < NSONG; n++)
+        uxv_card(n);
+}
 static void uxv_picture(const page_t *pg)
 {
     if (pg->graph == GR_SVSND)
         uxv_sound_picture();
     else if (pg->graph == GR_SVSONG)
         uxv_song_picture();
+    else if (pg->graph == GR_SVPROJ)
+        uxv_proj_picture();
 }
 /* what SOUND's picture is drawn from: the slot picked, the user bank (up_gen: a slot stored, erased, renamed), the track's sound;
- * (task 3) SONG's: the section picked and playing, the sections' names, the rows, their scenes, the row picked and playing, END */
+ * (task 3) SONG's: the section picked and playing, the sections' names, the rows, their scenes, the row picked (as drawn: uxv_srow)
+ * and playing, END; (task 4) PROJECT's: the project open, the section picked, the changes not stored, the projects' sections, names
+ * and bars */
 static uint32_t uxv_sig(const page_t *pg)
 {
     uint32_t h, i;
+    if (pg->graph == GR_SVPROJ) {
+        lib_poll();
+        h = ((song_cur * 131u + uxv_psec()) * 8191u + (uint32_t)project_unsaved()) * 31u + graph_pname_sig;
+        for (i = 0; i < NSONG; i++)
+            h = (h ^ (uxv_pmask(i) + 16u * uxv_pbars(i))) * 16777619u;
+        return fnv(fnv(h, lib.name, sizeof lib.name), lib.mask, sizeof lib.mask);
+    }
     if (pg->graph == GR_SVSONG) {
-        h = (((uint32_t)song.g[G_SLOT] * 131u + ui.song_row) * 8191u + chain_config.count) * 31u + SONG_END(&chain_config);
+        h = (((uint32_t)song.g[G_SLOT] * 131u + uxv_srow()) * 8191u + chain_config.count) * 31u + SONG_END(&chain_config);
         h = h * 131u + (uint32_t)(live.cur + 1) + song_cur * 7u + graph_pname_sig;
         for (i = 0; i < 4u; i++)
             h = h * 3u + (uint32_t)graph_project_used(i);

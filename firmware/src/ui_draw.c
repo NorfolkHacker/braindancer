@@ -242,8 +242,7 @@ static void sound_name(const track_t *t, char *b);
 static uint16_t head_title(char *b)
 {
     const page_t *pg = cur_page();
-    int glob = !ui.home && !ui.layer && (pg->graph == GR_SLOTS || pg->graph == GR_TOOLS ||
-                                         pg->fam == FAM_GLO || pg->fam == FAM_SAVE);
+    int glob = !ui.home && !ui.layer && (pg->fam == FAM_GLO || pg->fam == FAM_SAVE);
     if (ui.menu) {                                      /* (0.8.5) the menu: "MENU . DISPLAY", "ABOUT / CREDITS" */
         str_cpy(b, ui.menu == 2 ? "ABOUT / CREDITS" : ui.menu == 3 ? "ABOUT / PROFILE" : "MENU \xB7 ", 40);
         if (ui.menu == 1)
@@ -1170,12 +1169,8 @@ static void draw_columns(void)
     /* (ACID FM 3c-2 task 3) ARRANGE's columns (ROW SECT BARS SCENE, END) gone: SAVE > SONG is ux_save.c's */
     /* (ACID FM 3c-1 task 4) STRETCH's, PLAYHEADS', COMP's and AUTO LIST's columns gone: SEQ > MORE's rows (ux_seq.c) */
     /* (0.6.99 .. ACID FM 3b task 8) FX > PUNCH's cards (LEN RES, its state, CLEAR): FX > MORE's PUNCH LANE rows */
-    if (cur_page()->graph == GR_TOOLS) {
-        static const char *const labels[] = {"PAT", "SOUND", "ROW", "SONG"};
-        static const uint8_t icons[] = {ICON_AUTO, ICON_AUTO, ICON_X_SONG, ICON_X_SONG};   /* ROW, SONG: the song's */
-        for (c = 0; c < 4u; c++) draw_act_column(c, labels[c], VAL(c), icons[c]);
-        return;
-    }
+    /* (ACID FM 3c-2 task 4) TOOLS' columns (PAT SOUND ROW SONG) and PROJECT's (PROJECT SECT LOAD SAVE) gone: SAVE > MORE's TOOLS
+     * rows, SAVE > PROJECT (ux_save.c) */
     /* (ACID FM 3c-1 task 7) JIANT's MIXER cards (LEVEL PAN REV, the DJ FILTER) gone with it: GLO > MIX (ux_glo.c) */
     if (cur_page()->graph == GR_PATS) {                  /* PAT, then LOAD (a GO button) */
         uint32_t n = pat_count(), k = pat_pick();
@@ -1185,18 +1180,6 @@ static void draw_columns(void)
         draw_act_column(1, "LOAD", T_THEME, ICON_AUTO);
         draw_column(2, "", "", "", T_THEME, -1, ICON_AUTO);
         draw_column(3, "", "", "", T_THEME, -1, ICON_AUTO);
-        return;
-    }
-    if (cur_page()->graph == GR_SLOTS) {                 /* (0.6.12) PROJECT, SECT A-D, then LOAD and SAVE */
-        uint32_t k = (uint32_t)song.g[G_SLOT] - 1u;
-        int used = graph_project_used(k);
-        /* (ACID FM 3c-2 task 3) SECTIONS' columns (SECT, its NAME) gone with it: SAVE > SONG's SECTION */
-        fmt_int(val, (int32_t)song_cur + 1);
-        draw_column(0, "PROJECT", val, "", VAL(0u), (int32_t)song_cur * 1000 / (int32_t)(NSONG - 1u), ICON_X_SONG);
-        val[0] = (char)('A' + (k & 3u)); val[1] = 0;
-        draw_column(1, "SECT", val, "", VAL(1u), (int32_t)(k & 3u) * 1000 / 3, ICON_AUTO);
-        draw_act_column(2, "LOAD", used ? T_THEME : T_DIM, ICON_AUTO);
-        draw_act_column(3, "SAVE", T_THEME, ICON_AUTO);
         return;
     }
     /* (ACID FM 3c-2 task 2) PRESETS' columns (No. ENG FAV LIST) and USER's (SLOT, LOAD ERASE SAVE) gone: SAVE > SOUND is ux_save.c's */
@@ -1442,15 +1425,9 @@ static void ui_draw_body(uint32_t counting)
             ui.force = 1, hm_was = hm;
         if (hm)
             ui.layer = LAYER_MACRO;
-        if (ux_layer_owns(ui.layer)) {                  /* (ACID FM 3b task 9) EDIT, MACRO, FX, SCL: ux_layer.c, its own strips */
-            ux_layer_draw();
-            pf_on = 0;
-        } else {
-            if (ui.force)
-                draw_frame();
-            draw_head();
-            draw_layer();
-        }
+        ux_layer_draw();                                /* (ACID FM 3b task 9 .. 3c-2 task 4) every layer: ux_layer.c, its own
+                                                         * strips (JIANT's overlay, draw_layer, gone with SAVE's) */
+        pf_on = 0;
         if (hm)
             ui.layer = 0;
         if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {

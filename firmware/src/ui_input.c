@@ -1172,11 +1172,26 @@ static void song_row_insert(uint32_t after)
  * the slot's rename, ui_name.c name_rename; an empty slot says so), 4 SAVE (right arms it, left drops it: OCT+ saves, save_oct).
  * SONG (spec 2.2): KNOB 1 SECTION (G_SLOT A..D, the inherited SECTIONS' KNOB 1; a row picked: its section too), 2 ROW (the song's
  * rows), 3 BARS (the row's, 1..CHAIN_BARS), 4 SCENE (the inherited ARRANGE KNOB 4: right stores the state now, left clears it); the
- * row's edits not while the song plays (STOP TO EDIT), as ARRANGE's */
+ * row's edits not while the song plays (STOP TO EDIT), as ARRANGE's.
+ * PROJECT (task 4, spec 2.3): KNOB 1 the project (the inherited PROJECTS KNOB 1: song_open, the music kept; playing it says STOP TO
+ * CHANGE PROJECT), 2 LOAD and 3 SAVE (right arms, left drops: OCT+ does it, save_oct), 4 NAME (right: the rename of the section SONG
+ * picks, G_SLOT: ui_name.c name_rename) */
 static void save_knob(const page_t *pg, uint32_t slot, int32_t steps)
 {
     chain_row_t *r;
     int row;
+    if (pg->graph == GR_SVPROJ) {
+        if (slot == 0u) {
+            int32_t n = clamp((int32_t)song_cur + (steps > 0 ? 1 : -1), 0, (int32_t)NSONG - 1);
+            if ((uint32_t)n != song_cur)
+                (void)song_open((uint32_t)n);
+        } else if (slot == 3u) {
+            if (steps > 0)
+                name_rename();
+        } else
+            ui.act = steps > 0 ? (uint8_t)(slot + 1u) : ui.act == slot + 1u ? 0u : ui.act;
+        return;
+    }
     if (pg->graph == GR_SVSND) {
         if (slot == 0u)
             ui.uslot = (uint8_t)clamp((int32_t)ui.uslot + steps, 0, UP_SLOTS - 1);
@@ -1221,9 +1236,36 @@ static void save_knob(const page_t *pg, uint32_t slot, int32_t steps)
 }
 /* (ACID FM 3c-2 tasks 2, 3) OCT+ on SAVE's pages (act_do). SOUND, SAVE armed: as the inherited USER's SAVE: playing STOP TO SAVE, a
  * used slot the overwrite dialog first, else NAME (it writes the slot). SONG: a row after the one picked (song_row_insert; the
- * inherited ARRANGE's ADD): not while the song plays, 16 at most */
+ * inherited ARRANGE's ADD): not while the song plays, 16 at most. (Task 4) PROJECT, of the section SONG picks (G_SLOT): LOAD (the
+ * inherited PROJECTS' LOAD: not while the song plays; an empty section said; over changes not stored, the dialog first,
+ * CF_LOAD_PROJ; else at once, UNDO marked; it stays armed), SAVE (the inherited G_SAVE: playing STOP TO SAVE, a stored section the
+ * overwrite dialog, CF_OVR_PROJ, else NAME) */
 static void save_oct(const page_t *pg)
 {
+    if (pg->graph == GR_SVPROJ) {
+        uint32_t k = (uint32_t)(song.g[G_SLOT] - 1) & 3u;
+        if (ui.act == 2u) {
+            if (chain_busy())
+                ui_message("STOP TO EDIT");
+            else if (!project_used(k))
+                ui_message("EMPTY SLOT");
+            else if (project_unsaved())
+                confirm_open(CF_LOAD_PROJ, k);
+            else {
+                undo_mark();                            /* (0.6.21) UNDO: the music before the load */
+                project_load(k);
+            }
+        } else if (ui.act == 3u) {
+            ui.act = 0;
+            if (transport_busy())
+                ui_message("STOP TO SAVE");
+            else if (project_used(k))
+                confirm_open(CF_OVR_PROJ, k);
+            else
+                name_open(NK_PROJ_SAVE, k);             /* (the NAME screen writes it) */
+        }
+        return;
+    }
     if (pg->graph == GR_SVSONG) {
         if (chain_busy())
             ui_message("STOP TO EDIT");
@@ -1358,27 +1400,19 @@ static void edit_param(uint32_t slot, int32_t steps)
         tracks_edit(slot, steps);
         return;
     }
-    if (pg->graph == GR_SVSND || pg->graph == GR_SVSONG) {   /* (ACID FM 3c-2 tasks 2, 3) SAVE > SOUND, SONG (save_knob) */
+    if (pg->graph == GR_SVSND || pg->graph == GR_SVSONG || pg->graph == GR_SVPROJ) {   /* (ACID FM 3c-2 tasks 2 .. 4) SAVE >
+                                                         * SOUND, SONG, PROJECT (save_knob) */
         save_knob(pg, slot, steps);
         return;
     }
-    if (pg->graph == GR_TOOLS) {                          /* (0.6.25) TOOLS: a list, any knob (and PRESETS) moves the
-                                                         * pick down / up; OCT+ does it (its dialog first) */
-        ui.act = steps < 0 && ui.act <= 1u ? 0u : (uint8_t)clamp((int32_t)ui.act + (steps > 0 ? 1 : -1), 1, 6);   /* (left
-                                                         * past the first: none picked) */
-        return;
-    }
+    /* (0.6.25 .. ACID FM 3c-2 task 4) TOOLS' list (any knob moved the pick) gone: SAVE > MORE's TOOLS rows (ux_more.c) */
     /* (0.8.5) SAVE > PROJECT's SECTIONS (KNOB 1 the section, KNOB 2 its name) gone (ACID FM 3c-2 task 3: SAVE > SONG's SECTION) */
     if ((act_cols() >> slot) & 1u) {                      /* an action's knob picks it (right) or drops it (left); */
         if (pg->graph != GR_PATS)                         /* OCT+ does it (act_do) */
             ui.act = steps > 0 ? (uint8_t)(slot + 1u) : ui.act == slot + 1u ? 0u : ui.act;
         return;
     }
-    if (pg->graph == GR_SLOTS && slot == 0u) {            /* (0.6.12) KNOB 1 the project: its sections, the music kept */
-        int32_t n = clamp((int32_t)song_cur + (steps > 0 ? 1 : -1), 0, (int32_t)NSONG - 1);
-        if ((uint32_t)n != song_cur) (void)song_open((uint32_t)n);
-        return;
-    }
+    /* (0.6.12) PROJECT's KNOB 1, the project: (ACID FM 3c-2 task 4) SAVE > PROJECT's (save_knob) */
     if (pg->graph == GR_PATS) {                          /* KNOB 1 the pattern */
         if (slot == 0u)
             ui.ppick = (uint8_t)clamp((int32_t)pat_pick() + steps, 0, (int32_t)pat_count() - 1);
@@ -1399,7 +1433,7 @@ static void edit_param(uint32_t slot, int32_t steps)
  * are dropped once done. Flash writes only while stopped; over the user's data: the dialog */
 static void act_do(void)
 {
-    uint32_t c = act_col(), id, k = (uint32_t)song.g[G_SLOT] - 1u;
+    uint32_t c = act_col();
     if (!c--)
         return;
     /* (0.6.99 .. ACID FM 3b task 8) FX > PUNCH's CLEAR (the punch-in lane, a dialog): FX > MORE's CLEAR LANE (ux_more.c); (3c-1
@@ -1408,16 +1442,8 @@ static void act_do(void)
         ev_oct();
         return;
     }
-    if (cur_page()->graph == GR_TOOLS) {
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        if (!act_ready()) {                               /* nothing there to clear or delete */
-            ui_message(c == 2u ? "NOTHING TO DELETE" : "NOTHING TO CLEAR");
-            return;
-        }
-        confirm_open(c == 0u ? CF_CLEAR_SEQ : c == 1u ? CF_INIT_SOUND : c == 2u ? CF_DEL_ROW : c == 4u ? CF_INIT_SYS :
-                     c == 5u ? CF_CPU_TEST : CF_CLEAR_SONG, c == 2u ? ui.song_row : song.sel);
-        return;
-    }
+    /* (0.6.25 .. ACID FM 3c-2 task 4) TOOLS' six (CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT, CPU TEST): SAVE >
+     * MORE's rows (ux_more.c uxm_act_do: the same dialogs, the same refusals) */
     if (cur_page()->graph == GR_PATS) {
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         if (pat_needs_confirm(TSEL))                      /* the user's steps: the dialog */
@@ -1428,37 +1454,11 @@ static void act_do(void)
         }
         return;
     }
-    if (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SVSONG) {   /* (ACID FM 3c-2 tasks 2, 3) SAVE > SOUND's SAVE,
-                                                         * SONG's ADD (save_oct) */
+    if (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SVSONG || cur_page()->graph == GR_SVPROJ)   /* (ACID FM 3c-2
+                                                         * tasks 2 .. 4) SAVE > SOUND's SAVE, SONG's ADD, PROJECT's LOAD SAVE */
         save_oct(cur_page());
-        return;
-    }
-    id = cur_page()->id[c & 3u];
-    if (id != G_LOAD)
-        ui.act = 0;
-    switch (id) {
-    case G_LOAD:
-        undo_mark();                                      /* (0.6.21) UNDO: the music before the load */
-        project_load(k);
-        break;
-    case G_SAVE:                                          /* the NAME screen writes it */
-        if (transport_busy())
-            ui_message("STOP TO SAVE");
-        else if (project_used(k))
-            confirm_open(CF_OVR_PROJ, k);
-        else
-            name_open(NK_PROJ_SAVE, k);
-        break;
-    case G_CLRSEQ:
-        if (chain_busy()) { ui_message("STOP TO EDIT"); break; }
-        confirm_open(CF_CLEAR_SEQ, song.sel);
-        break;
-    default:                                              /* G_INITSND */
-        set_engine(TSEL->eng_req);                        /* engine defaults + its first preset (the steps stay) */
-        ui_message("SOUND INIT");
-        ui.force = 1;
-        break;
-    }
+    /* (ACID FM 3c-2 task 4) the inherited PROJECT's LOAD and SAVE (G_LOAD, G_SAVE) and TOOLS' CLEAR and INIT (G_CLRSEQ, G_INITSND)
+     * gone: SAVE > PROJECT's (save_oct), SAVE > MORE's TOOLS rows */
 }
 
 /* OCT- / OCT+ where they answer (the dialogs, the menu, action pages): on release, and only a press
@@ -2288,11 +2288,9 @@ static void ui_input_frame(void)
              * OCT- put back the layer's track only) */
             int32_t a = panel_enc(EN_ALGO);
             if (a && ui.layer) {
-                if (ux_layer_owns(ui.layer))            /* (3b task 9: the ACID layers' MAP, STATE, their knob row always shown;
-                                                         * fix: each its own, uxlv, not GLO's lens) */
-                    ui.uxlv = (uint16_t)(a > 0 ? ui.uxlv | 1u << ui.layer : ui.uxlv & ~(1u << ui.layer));
-                else
-                    ui.lylv = (uint8_t)clamp((int32_t)ui.lylv + a, 0, 2);
+                ui.uxlv = (uint16_t)(a > 0 ? ui.uxlv | 1u << ui.layer : ui.uxlv & ~(1u << ui.layer));   /* (3b task 9: the
+                                                         * ACID layers' MAP, STATE, their knob row always shown; fix: each its
+                                                         * own, uxlv; 3c-2 task 4: SAVE's too, the last) */
                 ui.force = 1;
                 combo = 1;
             }
@@ -2410,6 +2408,9 @@ static void ui_input_frame(void)
                     ui.song_row = 0;
                     ui_message("SONG CLEARED");
                 }
+            } else if (kind == CF_LOAD_PROJ) {          /* (ACID FM 3c-2 task 4) SAVE > PROJECT's LOAD over changes not stored
+                                                         * (UNDO: marked above, GLO + G4 brings them back) */
+                project_load(ui.confirm_trk & 3u);
             } else if (kind == CF_LIVE_COMMIT) {        /* (0.9.11) LIVE: the modifiers written (UNDO: marked above) */
                 live_commit(ui.confirm_trk);
             } else if (kind == CF_MUT_BACK) {           /* (0.9.3) MUTATE OFF: the track as the anchor (UNDO: marked above) */

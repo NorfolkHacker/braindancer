@@ -47,7 +47,8 @@ PAGE_SHOT = {
     'SCL': {'KEY': 'scl_1', 'CHORD': 'scl_2', 'MORE': 'scl_more'},
     'ARP': {'ARP': 'arp_1', 'ARP 2': 'arp_2'},
     'SAVE': {'SOUND': 'save_sound', 'SONG': 'save_song',   # (3c-2 task 2: SOUND the ux page, USER PRESETS gone; MORE;
-             'PROJECTS': 'save_library', 'TOOLS': 'save_tools', 'MORE': 'save_more'},   # task 3: SONG, SECTIONS ARRANGE gone)
+             'PROJECT': 'save_project', 'MORE': 'save_more'},   # task 3: SONG, SECTIONS ARRANGE gone; task 4: PROJECT, PROJECTS
+                                                                 # TOOLS gone)
 }
 CHAIN_LABEL = {'CE_SYN': 'SYNTHS', 'CE_FM6': 'FM6', 'CE_DRM': 'DRUM-X'}
 

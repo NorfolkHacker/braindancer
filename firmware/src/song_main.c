@@ -162,6 +162,7 @@ static int section_load(uint32_t s)
     ui.song_row = row;
     proj_cur = (uint8_t)(s & 3u);
     live.cur = (int8_t)(s & 3u);
+    proj_clean_mark();                                  /* (ACID FM 3c-2 task 4) */
     return 0;
 }
 
@@ -212,6 +213,7 @@ static void section_store(uint32_t s)
     memcpy(&proj_slot[s], &proj_wire, sizeof proj_slot[s]);
     live.cur = (int8_t)s;
     live.dirty |= (uint8_t)(1u << s);
+    proj_clean_mark();                                  /* (ACID FM 3c-2 task 4) */
     ui_say("STORED ", b);
 }
 /* RECALL: the section playing back as it was stored */

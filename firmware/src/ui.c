@@ -32,7 +32,8 @@ static const uint8_t MUT_BARS[7] = {0, 1, 2, 4, 8, 16, 32};   /* .. SOUND / PATT
 static int undo_do(void);                       /* .. back (and again: forward) */
 static uint8_t undo_ok;
 static int project_used(uint32_t slot);
-static uint32_t lib_scan(uint32_t n, char *b);           /* (0.8.5) project.c: SAVE > LIBRARY's tiles */
+static int project_unsaved(void);                        /* (ACID FM 3c-2 task 4) project.c: the music changed since stored or loaded */
+static uint32_t lib_scan(uint32_t n, char *b);           /* (0.8.5) project.c: SAVE > PROJECT's cards (ux_save.c) */
 static uint32_t lib_gen(void);
 static int project_recall_sound(uint32_t slot, uint32_t k);
 static int undo_sound(uint32_t k);                 /* (0.6.65) project.c: the sound dice's CANCEL */
@@ -302,8 +303,8 @@ static struct {
     uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
     uint8_t menu_sel;            /* MENU: the setting turned last (menu_items.c MI_*; its page MPAGE), kept while it runs */
     uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
-    uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held); SAVE only
-                                  * (JIANT's overlay; every other layer keeps uxlv) */
+    uint8_t lylv;                /* (0.8.5) a held layer's lens (JIANT's overlay): (ACID FM 3c-2 task 4) unused, every layer keeps
+                                  * uxlv (kept: the tests check it stays 0) */
     uint16_t uxlv;               /* (3b task 9 fix) the ACID layers' (EDIT MACRO FX SCL GLO SEQ REC, ux_layer.c) own: a bit a layer
                                   * (1 << LAYER_*), STATE; clear MAP */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */
@@ -349,11 +350,12 @@ static uint16_t val_col(uint32_t c) { return c == ui.hot_col && ui.hot_t ? T_ACC
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER, CF_CLEAR_PFX,
        CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS, CF_DICE_SOUND, CF_DICE_SEQ, CF_DICE_LFO,
-       CF_DICE_FX, CF_CPU_TEST, CF_MUT_BACK, CF_LIVE_COMMIT };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
+       CF_DICE_FX, CF_CPU_TEST, CF_MUT_BACK, CF_LIVE_COMMIT, CF_LOAD_PROJ };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
                                    * everything diced; (0.6.65) EDIT + SELECT: keep the diced sound?; (0.6.67) SEQ / LFO / FX + SELECT:
                                    * keep the diced sequence / LFO / effects?;
                                    * SAVE over a used slot; a pattern over the user's steps;
-                                   * USER ERASE; (0.9.3) MUTATE turned OFF: BACK TO BEFORE MUTATE?; (0.9.11) LIVE's COMMIT */
+                                   * USER ERASE; (0.9.3) MUTATE turned OFF: BACK TO BEFORE MUTATE?; (0.9.11) LIVE's COMMIT;
+                                   * (ACID FM 3c-2 task 4) SAVE > PROJECT's LOAD over changes not stored (RAM only: never stored) */
 /* (0.9.11) GLO > LIVE (ui_live.c, included by ui_layer.c; ACID FM 3c-1 task 6: drawn by ux_glo.c, the RAILS rows GLO > MORE's) */
 static int live_page(void);
 static int live_mano(void);
@@ -516,7 +518,7 @@ static uint32_t large_kind(void)
     if (ui.home)
         return LK_TALL;
     g = cur_page()->graph;
-    return g == GR_SLOTS || g == GR_PATS || g == GR_ROLL ||
+    return g == GR_PATS || g == GR_ROLL ||
            g == GR_LIVE ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
@@ -555,7 +557,6 @@ static int32_t ink_w(const aafont_t *f, const char *s)
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
 enum { LAYER_NONE, LAYER_FX, LAYER_GLO, LAYER_SCL, LAYER_EDIT, LAYER_SEQ, LAYER_REC, LAYER_SAVE, LAYER_MACRO, LAYER_N };
-static void draw_layer(void);
 static const char *layer_head(void);
 static uint32_t layer_leds(uint32_t *br);
 static uint32_t layer_btn(void);
@@ -632,7 +633,8 @@ static uint32_t page_first(uint32_t fam)
  * for the level it was on (lens_level, save_level, pd_level, home_level):
  *   SEQ   PATTERN's bars (PATTERN STRETCH TRACK, the new BAR), the roll (STEP NOTE AUTOMATION AUTO LIST), the step
  *         large (COMP COMP 2); PHRASES (PRESETS' pattern loader) and SONG read as PATTERN, CHANCE as STEP
- *   SAVE  LIBRARY (PROJECTS TOOLS); (ACID FM 3c-2 tasks 2, 3) SOUND and SONG ux_save.c's (were USER PRESETS, SECTIONS ARRANGE)
+ *   SAVE  (ACID FM 3c-2 tasks 2 .. 4) SOUND, SONG, PROJECT and MORE ux_save.c's (were USER PRESETS, SECTIONS ARRANGE, PROJECTS
+ *         TOOLS: LIBRARY gone with ui_lzsave.c)
  * (ACID FM 3b task 8: FX's, TRACK BUSES and the effects, gone with its lens: FX is ux_section.c's) */
 static int lens_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SEQ; }
 static int save_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SAVE; }
@@ -672,7 +674,7 @@ static uint32_t menu_tab(void);
 static uint32_t menu_page(void);                        /* (0.9.18) the MENU's page (ui_menu.c) */
 static int ux_layer_owns(uint32_t l);                  /* (ux_layer.c) */
 /* the layer held's view: 0 MAP, 1 KNOBS, 2 STATE (the ACID layers: MAP or STATE, their own, uxlv) */
-static uint32_t layer_lv(void) { return ux_layer_owns(ui.layer) ? ((ui.uxlv >> ui.layer) & 1u) * 2u : ui.lylv % 3u; }
+static uint32_t layer_lv(void) { return ((ui.uxlv >> ui.layer) & 1u) * 2u; }   /* (3c-2 task 4: every layer, ui.lylv gone) */
 static uint32_t lz_level(void)
 {
     uint8_t cnt[8], gi[8];
@@ -1820,21 +1822,19 @@ static uint8_t dx_ui_lane_tr[NTRK], dx_ui_side_tr[NTRK];
 #define dx_ui_side (dx_ui_side_tr[song.sel % NTRK])
 
 /* ---------------------------------------------------- action pages --- */
-/* Pages whose purpose is an action (SEQ > PATTERNS, SAVE > SOUND, PROJECT, TOOLS): the knobs pick,
+/* Pages whose purpose is an action (SEQ > PATTERNS, SAVE > SOUND, SONG, PROJECT): the knobs pick,
  * OCT+ does it, OCT- cancels the picked action or goes HOME (ui_input.c). There OCT- / OCT+ do not
- * shift the octave */
-static int go_id(uint32_t id) { return id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND; }
+ * shift the octave. (ACID FM 3c-2 task 4) the inherited PROJECT's LOAD SAVE (G_LOAD G_SAVE) and TOOLS (G_CLRSEQ G_INITSND ..)
+ * gone: SAVE > PROJECT's LOAD SAVE, SAVE > MORE's TOOLS rows */
 
 static uint32_t act_cols(void)                   /* the columns that are actions, a bit each; 0 = not such a page */
 {
     const page_t *pg = cur_page();
-    uint32_t c, m = 0;
     if (ui.home)
         return 0;
     if (uxq_more_kind() == UXQ_MK_LIST) return 16u;   /* (3c-1 task 4) SEQ > MORE's AUTO LIST rows: no knob is an action; OCT+
                                                          * adds / toggles (ev_oct), as JIANT's AUTO LIST page (AUTOMATION's
                                                          * CLEAR: MORE's action row) */
-    if (pg->graph == GR_TOOLS) return 15u;
     /* (0.8.5 .. ACID FM 3b task 4) WORDS' OCT+ TYPE: its page MORE's rows now, TYPE LYRIC an action there (ux_more.c) */
     if (pg->graph == GR_SVSONG)
         return 1u;                               /* (0.8.5) ADD a row (PLAY: the song); (3c-2 task 3) SAVE > SONG, was ARRANGE */
@@ -1842,11 +1842,7 @@ static uint32_t act_cols(void)                   /* the columns that are actions
         return 2u;                               /* LOAD */
     if (pg->graph == GR_SVSND)
         return 8u;                               /* (3c-2 task 2) SAVE > SOUND: SAVE (LOAD, ERASE: SAVE > MORE's rows) */
-    if (pg->scope == SC_GLOBAL)
-        for (c = 0; c < 4u; c++)
-            if (go_id(pg->id[c]))
-                m |= 1u << c;
-    return m;
+    return pg->graph == GR_SVPROJ ? 6u : 0u;     /* (3c-2 task 4) SAVE > PROJECT: LOAD, SAVE (KNOB 2, 3) */
 }
 
 /* the action OCT+ does: its column + 1, 0 = none picked yet (PATTERNS has LOAD only) */
@@ -1865,44 +1861,31 @@ static uint32_t act_col(void)
 
 static const char *act_name(uint32_t c)          /* column c's action (the footer hint) */
 {
-    uint32_t id = cur_page()->id[c & 3u];
     if (uxq_more_kind() == UXQ_MK_LIST) return ev_act_name();
-    if (cur_page()->graph == GR_TOOLS) {
-        static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
-        return actions[c < 5u ? c : 4u];
-    }
     if (cur_page()->graph == GR_SVSONG)                 /* (0.8.5) OCT+ adds a row (PLAY plays); 3c-2 task 3: SAVE > SONG */
         return "ADD";
     if (cur_page()->graph == GR_PATS)
         return "LOAD";
-    if (cur_page()->graph == GR_SVSND)                  /* (3c-2 task 2) SAVE > SOUND */
-        return "SAVE";
-    return id == G_CLRSEQ ? "CLEAR" : id == G_INITSND ? "INIT" : id == G_LOAD ? "LOAD" : "SAVE";
+    return cur_page()->graph == GR_SVPROJ && c == 1u ? "LOAD" : "SAVE";   /* (3c-2 tasks 2, 4) SAVE > SOUND's SAVE; PROJECT's LOAD,
+                                                         * SAVE */
 }
 
 /* the picked action would do something now (OCT+ breathes): another pattern, a used slot, stopped for
  * a flash write, steps to clear */
 static int act_ready(void)
 {
-    uint32_t c = act_col(), s = song.sel, id;
+    uint32_t c = act_col(), s = song.sel;
     if (!c--)
         return 0;
     if (uxq_more_kind() == UXQ_MK_LIST) return ev_act_ready();
-    if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
-        return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
-                                 c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);
     if (cur_page()->graph == GR_SVSONG)
         return !chain_busy() && chain_config.count < CHAIN_ROWS;
     if (cur_page()->graph == GR_PATS)
         return pat_last[s] != pat_pick() + 1u || steps_sig(TSEL) != pat_sig[s];
     if (cur_page()->graph == GR_SVSND)                  /* (3c-2 task 2) SAVE > SOUND's SAVE: stopped */
         return c == 3u && !song.playing;
-    id = cur_page()->id[c & 3u];
-    if (id == G_LOAD)
-        return project_used((uint32_t)song.g[G_SLOT] - 1u);
-    if (id == G_SAVE)
-        return !song.playing;
-    if (id == G_CLRSEQ)
-        return !seq_is_empty(TSEL);
-    return 1;
+    if (cur_page()->graph != GR_SVPROJ)
+        return 0;
+    return c == 1u ? !chain_busy() && project_used((uint32_t)(song.g[G_SLOT] - 1) & 3u) :   /* (3c-2 task 4) PROJECT's LOAD: a */
+           c == 2u && !song.playing;                    /* stored section; SAVE: stopped */
 }

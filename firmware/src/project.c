@@ -1504,6 +1504,18 @@ static int proj_unpack(project_t *q, const uint8_t *b, uint32_t st)
 }
 
 #ifndef PROJ_HOST
+/* (ACID FM 3c-2 task 4) changes not stored: the music (autosave_sig, what a project holds) since it was last loaded, stored or made
+ * new (proj_clean_mark: project_save_as, project_load, section_load, section_store, system_init). Refreshed on autosave_poll's
+ * 250 ms tick, main loop only. SAVE > PROJECT's dot; its LOAD asks first over it (CF_LOAD_PROJ). RAM only, never stored */
+static uint32_t autosave_sig(void);
+static uint32_t proj_clean_sig;                         /* autosave_sig() when the music was last loaded, stored or made new */
+static uint8_t proj_unsaved;                            /* autosave_sig() != proj_clean_sig, at the last tick */
+static void proj_clean_mark(void)
+{
+    proj_clean_sig = autosave_sig();
+    proj_unsaved = 0;
+}
+static int project_unsaved(void) { return proj_unsaved; }
 /* the GM drum part of a project of before 1.0 (proj_drums_to_part): DRUM's first kit, as a preset load sets it
  * (until 1.0.2 the SAMPLE engine's PERC set, retired since) */
 static void proj_legacy_drums(track_t *t)
@@ -1676,6 +1688,7 @@ static int project_save_as(uint32_t slot, const char *name)
         proj_cur = (uint8_t)(slot & 3u);
         live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing, SAVE > PROJECT shows it) */
         live.dirty &= (uint8_t)~(1u << (slot & 3u));    /* (stored in flash now) */
+        proj_clean_mark();
         ui_message("SAVED");
         return 0;
     }
@@ -1684,6 +1697,7 @@ static int project_save_as(uint32_t slot, const char *name)
     proj_name_get(proj_name, (const uint8_t *)p->name);
     proj_cur = (uint8_t)(slot & 3u);
     live.cur = (int8_t)(slot & 3u);
+    proj_clean_mark();
     ui_message("SAVED (NO FLASH)");
     return 0;
 }
@@ -1962,6 +1976,7 @@ static void system_init(void)
     }
     proj_name[0] = 0;
     mut_forget();                                       /* (0.9.3: the anchor is the old music's) */
+    proj_clean_mark();                                  /* (ACID FM 3c-2 task 4: a new project, nothing to store yet) */
     ui.force = 1;
 }
 /* (JIANT 0.6.43) MUTATE: each track's SOUND and PATTERN change by themselves every OFF / 1 .. 32 bars, on the bar (the
@@ -2294,6 +2309,7 @@ static void project_load(uint32_t slot)
     if (!project_restore_runtime(&proj_scratch)) {
         proj_cur = (uint8_t)(slot & 3u);
         live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing) */
+        proj_clean_mark();                              /* (ACID FM 3c-2 task 4) */
     }
 }
 
@@ -2515,9 +2531,11 @@ static void proj_fill_poll(uint32_t sig)
 static void autosave_poll(void)
 {
     static uint32_t fill_poll;
-    if (fm1_ms - fill_poll >= 250u) {                   /* (JIANT 0.6) how full the music is, flash or not */
+    if (fm1_ms - fill_poll >= 250u) {                   /* (JIANT 0.6) how full the music is, flash or not; (ACID FM 3c-2 */
+        uint32_t s = autosave_sig();                    /* task 4) changes not stored */
         fill_poll = fm1_ms;
-        proj_fill_poll(autosave_sig());
+        proj_unsaved = (uint8_t)(s != proj_clean_sig);
+        proj_fill_poll(s);
     }
 #if FELUCCA_FLASH
     uint32_t sig;

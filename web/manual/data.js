@@ -21,7 +21,7 @@ sections: [
   {id: "punch", t: "PUNCH-IN"},
   {id: "scl", t: "SCL · CHORD · ARP"},
   {id: "mod", t: "ENV · LFO · MOD"},
-  {id: "save", t: "SAVE · TOOLS"},
+  {id: "save", t: "SAVE · PROJECT"},
   {id: "song", t: "SONG"},
   {id: "menu", t: "MENU · USB · MIDI"}
 ],
@@ -131,7 +131,7 @@ controls: {
     held: "About 0.7 s: opens the MENU.",
     combos: [{k: "HOME+SELECT", t: "GEN, the song generator"}]},
   "SAVE": {kind: "button", sec: "save", shot: 'save_sound', layer: "SAVE",
-    alone: "The SAVE section: SOUND → SONG → LIBRARY → MORE. From outside, SOUND comes with SAVE armed: SAVE, OCT+, OCT+ stores.",
+    alone: "The SAVE section: SOUND → SONG → PROJECT → MORE. From outside, SOUND comes with SAVE armed: SAVE, OCT+, OCT+ stores.",
     held: "SAVE layer (song): play and store sections live, LOOP/SONG, SONG REC, NAME; KNOB 1 the project.",
     combos: [
       {k: "SAVE+C5", t: "NAME: rename the slot, section or project"},
@@ -188,7 +188,7 @@ layers: {
     "F#3": "BD", "G#3": "SD", "A#3": "CP", "C#4": "CH", "D#4": "OH", "F#4": "TM", "G#4": "RS", "A#4": "CB"}},
   SAVE: {shot: 'layer_song', t: "SAVE held: song", keys: {
     "F3": "PLAY A", "G3": "PLAY B", "A3": "PLAY C", "B3": "PLAY D", "C4": "STORE A", "D4": "STORE B", "E4": "STORE C", "F4": "STORE D",
-    "C5": "NAME", "D5": "LOOP/SONG", "E5": "SONG REC", "G5": "ARRANGE"}},
+    "C5": "NAME", "D5": "LOOP/SONG", "E5": "SONG REC", "G5": "SONG PAGE"}},
   EDIT: {shot: 'layer_edit_drum', t: "EDIT held", keys: {
     "F3": "INIT", "G3": "RECALL",
     "F#3": "MUTE BD", "G#3": "MUTE SD", "A#3": "MUTE CP", "C#4": "MUTE CH", "D#4": "MUTE OH", "F#4": "MUTE TM", "G#4": "MUTE RS", "A#4": "MUTE CB"}},
@@ -231,7 +231,7 @@ pages: {
   "SCL/MORE": ["SETTING", "(its value)", "—", "—"],
   "ARP/ARP": ["ARP", "RATE", "OCTAVES", "GATE"], "ARP/ARP 2": ["SWING", "CHANCE", "HOLD", "ORDER"],
   "SAVE/SOUND": ["SLOT", "PRESET", "NAME", "SAVE"], "SAVE/SONG": ["SECTION", "ROW", "BARS", "SCENE"],
-  "SAVE/PROJECTS": ["PROJECT", "SECT", "LOAD", "SAVE"], "SAVE/TOOLS": ["(the list)", "", "", ""],
+  "SAVE/PROJECT": ["PROJECT", "LOAD", "SAVE", "NAME"],
   "SAVE/MORE": ["SETTING", "(its value)", "—", "—"]
 },
 
@@ -339,7 +339,7 @@ commands: [
   {s: "seq", k: "STEP+EDIT", t: "Clear only a step's locks",
    d: "A step held + EDIT: clears that step's locks, the notes stay (LOCKS CLEARED / NO LOCKS)."},
   {s: "seq", k: "REC+F3", shot: 'layer_rec', t: "Clear the track",
-   d: "REC held + F3: clears the selected track's steps and automation, no dialog (UNDO brings it back). Also SEQ + F3 or SAVE › TOOLS › CLEAR SEQ."},
+   d: "REC held + F3: clears the selected track's steps and automation, no dialog (UNDO brings it back). Also SEQ + F3 or SAVE › MORE › CLEAR SEQ."},
   {s: "seq", k: "SEQ+REC", shot: 'dlg_clear_all', t: "Clear every sequence",
    d: "SEQ held + REC: CLEAR ALL SEQUENCES?, OCT+ confirms: the six tracks' steps and automation and the punch-in lane."},
   {s: "seq", k: "SEQ+C4", shot: 'layer_seq_tools_drum', t: "SEQ TOOLS: reverse, shift, random, cook",
@@ -462,20 +462,20 @@ commands: [
   // SAVE
   {s: "save", k: "SAVE", shot: 'save_sound', t: "Save a sound (SOUND)",
    d: "SAVE › SOUND: KNOB 1 the slot (U01–U32, a list with each slot's engine colour and name), KNOB 2 the preset, KNOB 3 NAME (renames the slot), KNOB 4 SAVE; turn right and OCT+ (over a used slot it asks first). Shortcut: SAVE, OCT+, OCT+. Stores engine, sound and a 16-step pattern (not the DRUM-X kit). LOAD SLOT and ERASE USER SLOT are SAVE › MORE rows."},
-  {s: "save", k: "SAVE", shot: 'save_library', t: "Save a section",
-   d: "Stop the transport. SAVE › PROJECTS: KNOB 2 the section A–D (SAVE › SONG's KNOB 1 picks it too), KNOB 4 right, OCT+; if used: OVERWRITE? OCT+; NAME, OCT+. It says SAVED. Stores all the music, with tempo and effects."},
-  {s: "save", k: "SAVE", shot: 'save_library', t: "Load a section or project",
-   d: "SAVE › PROJECTS: KNOB 1 the project (1–4), KNOB 2 the section, KNOB 3 LOAD, OCT+. Stops playback and replaces the music; GLO + G4 brings it back."},
+  {s: "save", k: "SAVE", shot: 'save_project', t: "Save a section",
+   d: "Stop the transport. SAVE › SONG's KNOB 1 picks the section A–D; SAVE › PROJECT: KNOB 3 (SAVE) right, OCT+; if used: SAVE OVER SECTION A? OCT+; NAME, OCT+. It says SAVED. Stores all the music, with tempo and effects."},
+  {s: "save", k: "SAVE", shot: 'save_project', t: "Load a section or project",
+   d: "SAVE › PROJECT: KNOB 1 the project (1–4), KNOB 2 (LOAD) right, OCT+: the section SONG picks. Stops playback and replaces the music; over changes not stored (the dot on the card) it asks first; GLO + G4 brings them back."},
   {s: "save", k: "SAVE+C5", shot: 'name_typing', t: "Name it (NAME)",
-   d: "SAVE + C5 on SOUND (the slot), SONG (the section) or PROJECTS. White keys: phone-style letters (AB, CD, …); F# cursor ◀, G# space, A# cursor ▶, C# delete, D# ABC/123; KNOB 1 cursor, KNOB 2 character; OCT+ writes, OCT− cancels."},
+   d: "SAVE + C5 on SOUND (the slot), SONG or PROJECT (the section). White keys: phone-style letters (AB, CD, …); F# cursor ◀, G# space, A# cursor ▶, C# delete, D# ABC/123; KNOB 1 cursor, KNOB 2 character; OCT+ writes, OCT− cancels."},
   {s: "save", k: "SAVE+C4", shot: 'layer_song', t: "Quick store while playing",
    d: "SAVE + C4–F4: store into A–D; SAVE + OCT+: into the section playing; SAVE + OCT−: recall it. In RAM at once, to flash when you stop: stop before switching off."},
   {s: "save", k: "SAVE+KNOB 1", t: "Switch project",
-   d: "SAVE held + KNOB 1 and let go (stopped): switches project and loads its section A (no UNDO). On SAVE › PROJECTS, KNOB 1 only picks where to save and the music stays."},
-  {s: "save", k: "SAVE", shot: 'save_tools', t: "SAVE › TOOLS",
-   d: "CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT (everything to zero; UNDO brings it back), CPU TEST (a heavy song to measure). Any knob picks, OCT+ does it."},
+   d: "SAVE held + KNOB 1 and let go (stopped): switches project and loads its section A (no UNDO). On SAVE › PROJECT, KNOB 1 only picks where to save and the music stays."},
+  {s: "save", k: "SAVE", shot: 'save_more', t: "SAVE › MORE's tools",
+   d: "SAVE › MORE › TOOLS: CLEAR SEQ, INIT SOUND, ERASE USER SLOT, NEW PROJECT (everything to zero; UNDO brings it back), CPU TEST (a heavy song to measure). KNOB 1 picks the row, KNOB 2 right asks; OCT+ does it."},
   {s: "save", k: "SAVE", shot: 'save_more', t: "Presets by type and favourites",
-   d: "SAVE › MORE › SONG: END (STOP, X2–X8, LOOP), DELETE ROW (the row SONG picks), CLEAR SONG (both ask first). SOUND: LOAD SLOT (the slot SOUND picks), ENGINE, FAVORITE (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine. TOOLS: ERASE USER SLOT (asks first)."},
+   d: "SAVE › MORE › SONG: END (STOP, X2–X8, LOOP), DELETE ROW (the row SONG picks), CLEAR SONG (both ask first). SOUND: LOAD SLOT (the slot SOUND picks), ENGINE, FAVORITE (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine. TOOLS: CLEAR SEQ, INIT SOUND, ERASE USER SLOT, NEW PROJECT, CPU TEST (each asks first)."},
   {s: "save", k: "HOME", t: "Autosave and RESTORE LAST",
    d: "The autosave copies the music 10 s after the last change, stopped, at most once a minute; never at power-off. With nothing to restore, power-on loads the demo (beat, acid line, pad at 124 BPM; NEW PROJECT starts empty), unless MENU › SYSTEM › RESTORE LAST ON. Save into a section."},
 
@@ -507,9 +507,9 @@ commands: [
   {s: "menu", k: "HOME", shot: 'about_profile', t: "PROFILE: where the CPU goes",
    d: "MENU › SYSTEM › ABOUT, OCT+: PROFILE. Every part of the audio (sequencer, T1–T6 with their engine, effect buses, reverb, the wait between cores, master, USB…) in % of a block: the mean and the worst of the last second playing, and greyed stopped. It measures from when it is opened. Photograph it playing and after STOP: that is how ACID FM gets tuned to the real FM-1."},
   {s: "menu", k: "HOME", shot: 'about', t: "CPU TEST measured",
-   d: "SAVE › TOOLS 6 CPU TEST, PLAY 10 s or more, STOP: the mean load is kept in the settings (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE sizes its pieces by it; unmeasured, it assumes an FM-1 1.6 times heavier than the estimate."},
+   d: "SAVE › MORE › CPU TEST, PLAY 10 s or more, STOP: the mean load is kept in the settings (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE sizes its pieces by it; unmeasured, it assumes an FM-1 1.6 times heavier than the estimate."},
   {s: "menu", k: "HOME", t: "NEW PROJECT: start from zero",
-   d: "SAVE › TOOLS › NEW PROJECT, OCT+: everything to zero for a new song (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI, T5 ANALOG, T6 FM6). Saved projects, presets and MENU stay. UNDO brings the music back."}
+   d: "SAVE › MORE › NEW PROJECT, KNOB 2, OCT+: everything to zero for a new song (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI, T5 ANALOG, T6 FM6). Saved projects, presets and MENU stay. UNDO brings the music back."}
 ],
 
 // ------------------------------------------------------------------------------------------- task recipes
@@ -541,17 +541,17 @@ recipes: [
     "A step held + EDIT clears its locks; SEQ › MORE › AUTOMATION shows and edits them one by one."]},
   {id: "clear", s: "seq", shots: ['layer_seq_tools', 'dlg_clear_all'], t: "Clear a step, a track or everything", steps: [
     "A step: SEQ held + G5 (CLR STEP) clears the cursor's and its locks. Or KNOB 4 GATE down to REST.",
-    "A track: REC + F3 (or SEQ + F3, or SAVE › TOOLS › CLEAR SEQ).",
+    "A track: REC + F3 (or SEQ + F3, or SAVE › MORE › CLEAR SEQ).",
     "Every sequence: SEQ held + REC, OCT+.",
-    "Everything (sounds, mix, song): SAVE › TOOLS › NEW PROJECT. UNDO (GLO + G4) brings the music back."]},
+    "Everything (sounds, mix, song): SAVE › MORE › NEW PROJECT. UNDO (GLO + G4) brings the music back."]},
   {id: "auto", s: "seq", shots: ['motion', 'auto_list'], t: "Automation and its list", steps: [
     "With REC armed and the track playing, turn a knob: its movement is recorded.",
     "SEQ › MORE › AUTOMATION: PLAY turns it on/off; EVENTS and LOCKS count; CLEAR (KNOB 2, OCT+ in the dialog) erases.",
     "SEQ › MORE › AUTOMATION: rows ROW, STEP, SETTING, VALUE; OCT+ LOCK ↔ AUTO; SEQ + G5 deletes the row.",
     "Clear only one part: REC + FX / EDIT / ENV / LFO / SCL / ARP / GLO."]},
-  {id: "song", s: "song", shots: ['save_library', 'save_song'], t: "Make a song", steps: [
-    "Make music and stop. SAVE › PROJECTS; KNOB 2 to A, KNOB 4 right, OCT+, a name, OCT+: section A.",
-    "Make a variation; KNOB 2 to B and save it the same way. (While playing: SAVE + C4–F4 stores quickly.)",
+  {id: "song", s: "song", shots: ['save_project', 'save_song'], t: "Make a song", steps: [
+    "Make music and stop. SAVE › PROJECT (section A, SONG's pick at first): KNOB 3 right, OCT+, a name, OCT+: section A.",
+    "Make a variation; SAVE › SONG KNOB 1 to B, then save it the same way. (While playing: SAVE + C4–F4 stores quickly.)",
     "SAVE › SONG: KNOB 1 the section, OCT+ adds a row after the one picked, KNOB 2 the row, KNOB 3 its bars; KNOB 4 a scene.",
     "SAVE › MORE › END: STOP, X2–X8 or LOOP. PLAY plays the song. Or record it live: SAVE + E5 and SAVE + F3–B3."]},
   {id: "gen", s: "gen", shots: ['gen_explore', 'gen_parts'], t: "Use GEN / EXPLORE", steps: [
@@ -586,8 +586,8 @@ recipes: [
     "Stems: STEMS = an 8-channel input (1–6 the tracks, 7–8 the FX return), before the master. Pick 8 channels in the DAW; USB LEVEL −6 dB gives headroom; record at LOAD FULL.",
     "IN+OUT: the FM-1 is also the computer's output and that audio comes into the last track (T4 with TRACKS 4, else T6). STEMS+IN: stems + input (10 channels), made for the phone app (a separate product, coming soon).",
     "MIDI: the port is “ACID FM”. NOTES OUT and CLOCK OUT in GLO › MORE › MIDI; to follow the DAW, GLO › MIDI › KNOB 4 CLOCK USB."]},
-  {id: "backup", s: "save", shots: ['save_library'], t: "Save, back up and restore", steps: [
-    "Save into sections (SAVE › PROJECTS), stopped: the autosave is not a save and never happens at power-off.",
+  {id: "backup", s: "save", shots: ['save_project'], t: "Save, back up and restore", steps: [
+    "Save into sections (SAVE › PROJECT), stopped: the autosave is not a save and never happens at power-off.",
     "Stop and wait a moment before switching off (SAVE-layer stores reach flash when you stop).",
     "Backup: web editor (Chrome/Edge, USB) › Projects › Save backup: all 4 projects, arrangements, user presets and settings. Not the FM6 bank: keep the .syx.",
     "Restore: the same place, Restore backup, USB connected. Back up before updating or returning to stock."]},

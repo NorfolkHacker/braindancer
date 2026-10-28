@@ -53,19 +53,18 @@ enum { LK_HOLD, LK_SET };
 typedef struct {
     uint8_t btn, kind, fam;            /* the button, HOLD / SET, the family whose first page KNOB 1..4 edit */
     const char *head;                  /* (FAM_HOME: the layer's own knobs) the header over the map */
-    khint_t foot[3];                   /* the footer's key hints (a third with no word: none) */
-} layer_t;
+} layer_t;                              /* (3c-2 task 4: the footer's key hints, foot, gone with JIANT's KNOBS view: ux_layer.c's
+                                        * status lines say them) */
 static const layer_t LAYERS[LAYER_N] = {
-    {0, 0, 0, "", {{0, 0}, {0, 0}, {0, 0}}},
-    {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_KEYS, "EFFECTS"}, {KC_K14, "MACROS"}, {0, 0}}},   /* (LET GO: the header's HOLD) */
-    {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{0, 0}, {0, 0}, {0, 0}}},   /* (3c-1 task 9: drawn by ux_layer.c) */
-    {B_SCL, LK_SET, FAM_SCL, "[SCL] SET", {{KC_KEYS, "ROOT"}, {KC_SCL, "DONE"}, {0, 0}}},
-    {B_EDIT, LK_SET, FAM_EDIT, "[EDIT] SET", {{KC_KEYS, "INIT / RECALL"}, {KC_EDIT, "DONE"}, {0, 0}}},
-    {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS", {{0, 0}, {0, 0}, {0, 0}}},   /* (3c-1: drawn by ux_layer.c, its status
-                                                                     * line says REC CLEARS ALL) */
-    {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{0, 0}, {0, 0}, {0, 0}}},
-    {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SONG", {{KC_KEYS, "PLAY"}, {KC_OCTUP, "STORE"}, {KC_OCTDN, "RECALL"}}},
-    {B_LFO, LK_SET, FAM_HOME, "[LFO] MACRO", {{KC_K14, "M1-M4"}, {KC_SELECT, "DICE"}, {KC_KEYS, "DICE / CLEAR"}}},   /* JIANT (mod.c macro_v; SELECT, F3: macro_dice, G3 clears) */
+    {0, 0, 0, ""},
+    {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD"},             /* (LET GO: the header's HOLD) */
+    {B_GLO, LK_SET, FAM_HOME, "[GLO] SET"},             /* (3c-1 task 9: drawn by ux_layer.c) */
+    {B_SCL, LK_SET, FAM_SCL, "[SCL] SET"},
+    {B_EDIT, LK_SET, FAM_EDIT, "[EDIT] SET"},
+    {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS"},            /* (3c-1: drawn by ux_layer.c, its status line says REC CLEARS ALL) */
+    {B_REC, LK_SET, FAM_HOME, "[REC] SET"},
+    {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SONG"},          /* (3c-2 task 4: drawn by ux_layer.c) */
+    {B_LFO, LK_SET, FAM_HOME, "[LFO] MACRO"},           /* JIANT (mod.c macro_v; SELECT, F3: macro_dice, G3 clears) */
 };
 /* SCL's knobs: the key and the sequence offset (cur_page() while the layer edits or draws them: page_over) */
 static const page_t LY_SCL = {"SCL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_SOFS, P_POFS}};
@@ -270,7 +269,7 @@ static void layer_tap(uint32_t l)
 {
     if (l == LAYER_REC)                                 /* REC: arms / disarms (no page) */
         (void)rec_tap();
-    else if (l == LAYER_SAVE)                           /* SAVE: its pages (presets, user sounds, projects) */
+    else if (l == LAYER_SAVE)                           /* SAVE: its pages (SOUND, SONG, PROJECT, MORE) */
         open_family(FAM_SAVE);
     else
         (void)page_tap(LAYERS[l].btn);
@@ -407,6 +406,11 @@ static void rec_key(uint32_t p)
 #define SK_NAME 11u                                     /* (0.9.2) C5: NAME, the slot's rename (EDIT's until 0.9.1) */
 #define TL_STEP 15u                                     /* (0.9.2) SEQ's G5: CLR STEP (ui_input.c seq_clr_step) */
 #define TL_MREV 12u                                     /* (0.9.3) SEQ's D5: REVERT, the track back to MUTATE's anchor */
+static int ly_name_here(void)                          /* (3c-2 task 4) SAVE + C5 renames something here: SOUND, SONG, PROJECT */
+{
+    uint32_t g = cur_page()->graph;
+    return !ui.home && (g == GR_SVSND || g == GR_SVSONG || g == GR_SVPROJ);
+}
 static void song_key(uint32_t p)
 {
     uint32_t k;
@@ -430,12 +434,12 @@ static void song_key(uint32_t p)
         ui_message(live.mode ? "PLAY: THE SONG" : "PLAY: THE LOOP");
     } else if (p == SK_REC) {
         song_rec_toggle();
-    } else if (p == SK_NAME) {                          /* (0.9.2) SAVE + C5: SOUND's slot (3c-2 task 2: was USER's), PROJECT's
-                                                         * project or section */
-        if (!ui.home && (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SVSONG || cur_page()->graph == GR_SLOTS))
+    } else if (p == SK_NAME) {                          /* (0.9.2) SAVE + C5: SOUND's slot (3c-2 task 2: was USER's), SONG's and
+                                                         * (task 4) PROJECT's section (G_SLOT) */
+        if (ly_name_here())
             name_rename();                              /* (3c-2 task 3: SONG renames the section, as SECTIONS did) */
         else
-            ui_message("NAME: ON SOUND OR PROJECT");
+            ui_message("NAME: ON SOUND, SONG OR PROJECT");
     } else if (p == SK_PAGE) {
         (void)nav_put(SEC_SAVE, "SONG");                /* (ACID FM 3c-2 task 3) SAVE > SONG (was the first GR_SONG page,
                                                          * ARRANGE) */
@@ -658,8 +662,9 @@ static void layer_knob(uint32_t k, int32_t s)
 {
     uint32_t l = layer_open();
     lys.used = 1;
-    if (ux_layer_owns(l) && (l != LAYER_REC || k < RL_N))
-        ux_knob_touch(k);                               /* (3b task 9: its column lit, its readout on the status line) */
+    if (ux_layer_owns(l) && (l != LAYER_REC || k < RL_N) && (l != LAYER_SAVE || !k))
+        ux_knob_touch(k);                               /* (3b task 9: its column lit, its readout on the status line; REC's and
+                                                         * SAVE's knobs that are nobody's: none) */
     if (l == LAYER_FX) {                                /* (0.9.14) the performance macros (perform.c perf_m), not recorded; */
         uint32_t g = perf_gfocus();                     /* (0.9.17) a glitcher's key down: its own */
         if (g == PF_N)
@@ -975,11 +980,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             nm[6] = (char)('A' + p - SK_STORE);
             return (live.dirty >> (p - SK_STORE)) & 1u ? LS_WAIT : LS_OFF;
         }
-        str_cpy(nm, p == SK_MODE ? (live.mode ? "SONG" : "LOOP") : p == SK_REC ? "SONG REC" : p == SK_PAGE ? "ARRANGE" :
-                    p == SK_NAME ? "NAME" : "", 12);
+        str_cpy(nm, p == SK_MODE ? (live.mode ? "SONG" : "LOOP") : p == SK_REC ? "SONG REC" : p == SK_PAGE ? "SONG PAGE" :
+                    p == SK_NAME ? "NAME" : "", 12);   /* (3c-2 task 4: G5 SONG PAGE, SAVE > SONG; was ARRANGE) */
         if (p == SK_NAME)
-            return !ui.home && (cur_page()->graph == GR_SVSND || cur_page()->graph == GR_SVSONG || cur_page()->graph == GR_SLOTS) ?
-                   LS_OFF : LS_DIM;
+            return ly_name_here() ? LS_OFF : LS_DIM;
         return p == SK_MODE && live.mode ? LS_SEL : p == SK_REC ? (live.srec == 2u ? LS_HELD : live.srec ? LS_WAIT : LS_OFF) : LS_OFF;
     }
     if (l == LAYER_MACRO && !blk && p < 2u && layer_open()) {   /* F3 DICE, G3 CLEAR (held; latched the keys play: 3b task 9 fix) */
@@ -988,98 +992,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
     }
     return LS_OFF;
 }
-/* a key's fill and its name's ink by its state (named: n) */
-static uint16_t pk_fill(uint32_t st, int blk, int n, uint16_t *ink)
-{
-    *ink = st == LS_DIM ? T_DIM : blk ? T_TEXT : T_TEXT;
-    if (st == LS_HELD) { *ink = T_INK; return T_ACCENT; }
-    if (st == LS_SEL || st == LS_WAIT) { *ink = T_INK; return st == LS_WAIT ? ux_mix(T_RAISE, T_THEME, 55) : T_THEME; }
-    if (st == LS_MUTE) { *ink = T_INK; return T_KEY; }
-    if (!n)
-        return blk ? T_BG : ux_mix(T_BG, T_TEXT, 7);
-    return blk ? ux_mix(T_BG, T_THEME, 34) : ux_mix(T_BG, T_TEXT, 17);
-}
-static void ly_piano(uint32_t l)
-{
-    int32_t h = (int32_t)graph_h() - 6, y = 3, bh = 54, i;
-    char nm[12], nt[2] = {0, 0};
-    for (i = 0; i < 16; i++) {                          /* the white keys */
-        int32_t x0 = 4 + i * 232 / 16, w = 4 + (i + 1) * 232 / 16 - x0 - 1;
-        uint16_t ink, fill = pk_fill(ly_keyname(l, 0, (uint32_t)i, nm), 0, nm[0] != 0, &ink);
-        cv_rect(x0, y, w, h, fill);
-        if (nm[0])
-            cv_text_up(x0 + HALF_UP(w - AF_X_CAP_H) - AF_X_CAP_Y, y + h - 14, &AF_X, nm, ink, fill, h - 14 - bh - 6);
-        nt[0] = W_NOTE[i];                              /* (its note, the letter) */
-        GFX_HOOK_ALIGN(x0, 0, x0 + w, 0, AL_H, "layer key's note centred");
-        cv_text_in(x0, y + h - 9 - AF_X_CAP_Y, w, &AF_X, nt, ink == T_INK ? ink : T_DIM, fill);
-    }
-    for (i = 0; i < 11; i++) {                          /* the black keys over them */
-        int32_t x0 = 4 + PK_BLK[i] * 232 / 16 - 5;
-        uint16_t ink, fill = pk_fill(ly_keyname(l, 1, (uint32_t)i, nm), 1, nm[0] != 0, &ink);
-        cv_rect(x0 - 1, y, 12, bh + 1, T_BG);
-        cv_rect(x0, y, 10, bh, fill);
-        if (nm[0])
-            cv_text_up(x0 + HALF_UP(10 - AF_X_CAP_H) - AF_X_CAP_Y, y + bh - 4, &AF_X, nm, fill == T_BG ? T_DIM : ink, fill, bh - 8);
-    }
-}
-/* (3c-1 tasks 5, 9) SAVE's cards: the rest are ux_layer.c's knob row */
-static void layer_cards(uint32_t l)
-{
-    char val[12];
-    if (l == LAYER_SAVE) {                              /* the section, LOOP / SONG, SONG REC, the song row */
-        uint32_t n = lys.song ? lys.song - 1u : song_cur;
-        fmt_int(val, (int32_t)n + 1);
-        draw_column(0, "SONG", val, n != song_cur ? "NEXT" : "", VAL(0u), (int32_t)(n * 1000u / (NSONG - 1u)),
-                    ICON_X_SONG);
-        val[0] = live.cur >= 0 ? (char)('A' + live.cur) : '-'; val[1] = 0;
-        draw_column(1, "SECT", val, "", live.cur >= 0 ? VAL(1u) : T_DIM, -1, ICON_X_PATTERN);
-        draw_column(2, "PLAY", live.mode ? "SONG" : "LOOP", "", VAL(2u), -1, ICON_LOOP);
-        draw_column(3, "REC", live.srec == 2u ? "ON" : live.srec ? "ARM" : "OFF", "", live.srec ? VAL(3u) : T_DIM, -1,
-                    ICON_X_REC);
-    }
-}
-
-/* (0.8.5) a layer as a lens, as the approved mock-up (MAP . KNOBS . STATE; ALGORITHM while it is held): MAP the keys'
- * map (the cells, no icons), KNOBS the four cards as gauges, STATE the key hints (the footer's until 0.8.4) and what is
- * on. The header "[FX] HELD"; the breadcrumb "LENTE . MAP . FX" */
-static const khint_t *layer_foot(uint32_t l) { return LAYERS[l].foot; }   /* (3b task 9: FX's and MACRO's latches, the
-                                                         * glitcher's: ux_layer.c's status line) */
-static void layer_knobs(uint32_t l)                     /* the four as gauges in their knobs' colours, the keys' words */
-{
-    const khint_t *ft = layer_foot(l);
-    uint32_t c, k;
-    char b[48];
-    for (c = 0; c < 4u; c++) {
-        int32_t cx = CARD_X(c) + 28;
-        if (!ly_card[c].l[0]) {
-            lz_arc(cx, 50, 25, 1, 0, T_LINE, T_LINE);
-            continue;
-        }
-        lz_arc(cx, 50, 25, 4, ly_card[c].r < 0 ? 0 : ly_card[c].r, T_LINE,
-               ly_card[c].r < 0 ? T_LINE : knob_col(c, ly_card[c].r, ly_card[c].b));   /* (0.9.5 JIANT: its heat) */
-        GFX_HOOK_ALIGN(cx - 26, 0, cx + 26, 0, AL_H, "layer KNOBS gauge's words centred");
-        cv_text_in(cx - 26, 44 - AF_X_CAP_Y, 52, &AF_X, ly_card[c].l, T_MID, T_SURF);
-        cv_text_in(cx - 26, 54 - AF_X_CAP_Y, 52, &AF_X, ly_card[c].v, T_TEXT, T_SURF);
-    }
-    b[0] = 0;
-    for (k = 0; k < 3u; k++)                            /* the keycaps' words (SAVE's) */
-        if (ft[k].act) {
-            if (b[0])
-                str_cpy(b + str_len(b), " \xB7 ", sizeof b - str_len(b));
-            str_cpy(b + str_len(b), KC[ft[k].key % KC_COUNT].label, sizeof b - str_len(b));
-            str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
-            str_cpy(b + str_len(b), ft[k].act, sizeof b - str_len(b));
-        }
-    GFX_HOOK_ALIGN(4, 0, 236, 0, AL_H, "layer KNOBS keys' words centred");
-    cv_text_in(4, 100 - AF_X_CAP_Y, 232, &AF_X, b, T_DIM, T_SURF);
-}
-/* STATE: "GLO . HELD", then what is on as chips, two a row (on: a THEME stripe, TEXT; off: DIM) */
+/* STATE: what is on as chips, two a row (ux_layer.c uxl_chip; 3c-2 task 4: JIANT's own chips, its "GLO . HELD" line, gone) */
 static uint32_t lst_n __attribute__((section(".pool")));
-static uint8_t lst_ux;                                  /* (3b task 9) STATE drawn for ux_layer.c: its chips (uxl_chip) */
 static void lst_chip(const char *a, const char *v, int on)
 {
-    int32_t x = 4 + (int32_t)(lst_n & 1u) * 117, y = 16 + (int32_t)(lst_n >> 1) * 15;
-    uint16_t bg = T_SURF;                               /* (BOTTOM, HUD, AIR: no chip box) */
     char b[24];
     if (lst_n >= 16u)
         return;
@@ -1089,24 +1005,12 @@ static void lst_chip(const char *a, const char *v, int on)
         str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
         str_cpy(b + str_len(b), v, sizeof b - str_len(b));
     }
-    if (lst_ux) {
-        uxl_chip(lst_n - 1u, b, on);
-        return;
-    }
-    if (on)
-        cv_rect(x, y + 2, 2, 9, T_THEME);
-    cv_clip_text(x + 6, y + 3 - AF_X_CAP_Y, &AF_X, b, on ? T_TEXT : T_DIM, bg, 104);
+    uxl_chip(lst_n - 1u, b, on);
 }
 static void layer_state(uint32_t l)
 {
-    static const char *const LN[LAYER_N] = {"", "FX", "GLO", "SCL", "EDIT", "SEQ", "REC", "SAVE", "LFO"};
     uint32_t k, e;
     char b[48], v[8];
-    if (!lst_ux) {                                      /* (ux_layer.c: its footer says it) */
-        str_cpy(b, LN[l], sizeof b);
-        str_cpy(b + str_len(b), " \xB7 HELD", sizeof b - str_len(b));
-        cv_text(6, 5 - AF_X_CAP_Y, &AF_X, b, T_THEME);
-    }
     lst_n = 0;
     if (l == LAYER_FX) {                                /* the lock, the tracks, the latch, the effects held */
         uint32_t held = perf_kill ? 0u : perf_held | perf_latched;
@@ -1206,28 +1110,7 @@ static uint32_t layer_sig(uint32_t l)
                (uint32_t)drum_track(TSEL) * 11u + up_gen * 101u;
     return sig;
 }
-static void draw_layer(void)
-{
-    uint32_t l = ui.layer % LAYER_N, sig;
-    layer_cards(l);
-    sig = layer_sig(l);
-    sig += ui.lylv * 0x9E3779B1u + (ui.lylv == 1u ? str_hash(7u, ly_card[0].v) + str_hash(9u, ly_card[1].v) * 3u +
-                                     str_hash(11u, ly_card[2].v) * 5u + str_hash(13u, ly_card[3].v) * 7u : 0u);
-    if (ui.force || sig != ui.layer_sig) {
-        ui.layer_sig = sig;
-        cv_begin(240, graph_h(), T_BG);
-        /* (0.8.5: the lens's panel; 0.8.9 COLORS rounded; BOTTOM / HUD / AIR, the one skin since ACID FM 0.3: none) */
-        cv_bg = T_SURF;
-        if (ui.lylv % 3u == 1u)                         /* KNOBS: the four as gauges */
-            layer_knobs(l);
-        else if (ui.lylv % 3u == 2u)                    /* STATE: what is on */
-            layer_state(l);
-        else                                            /* MAP: the keyboard */
-            ly_piano(l);
-        cv_blit(0, graph_y());
-    }
-    draw_tabs();                                        /* (0.8.5: MAP . KNOBS . STATE, the breadcrumb) */
-    draw_foot();
-}
+/* (0.8.5) a layer as a lens (MAP . KNOBS . STATE: ly_piano, layer_knobs, layer_cards, draw_layer): (ACID FM 3c-2 task 4) gone with
+ * SAVE's, the last; every layer is ux_layer.c's */
 
 #include "ui_live.c"                                    /* (0.9.11) GLO > LIVE: MANO, RIELES */

@@ -23,7 +23,8 @@ static const char *const UXD_WORD[] = {
     [CF_LOAD_PAT] = "LOAD", [CF_DEL_ROW] = "DELETE", [CF_CLEAR_SONG] = "CLEAR", [CF_INIT_SOUND] = "INIT",
     [CF_CLEAR_MOTION] = "CLEAR", [CF_ERASE_USER] = "ERASE", [CF_CLEAR_PFX] = "CLEAR", [CF_RECALL_SOUND] = "RECALL",
     [CF_CLEAR_ALL] = "CLEAR", [CF_DICE_ALL] = "", [CF_INIT_SYS] = "NEW", [CF_DICE_SOUND] = "DICE", [CF_DICE_SEQ] = "DICE",
-    [CF_DICE_LFO] = "DICE", [CF_DICE_FX] = "DICE", [CF_CPU_TEST] = "RUN", [CF_MUT_BACK] = "BACK", [CF_LIVE_COMMIT] = "KEEP"};
+    [CF_DICE_LFO] = "DICE", [CF_DICE_FX] = "DICE", [CF_CPU_TEST] = "RUN", [CF_MUT_BACK] = "BACK", [CF_LIVE_COMMIT] = "KEEP",
+    [CF_LOAD_PROJ] = "LOAD"};
 /* the question in UF_VAL ('#' the track's number, '%' a label) */
 static const char *const UXD_Q_VAL[] = {
     [CF_NONE] = "", [CF_CLEAR_SEQ] = "CLEAR T#'S SEQUENCE?", [CF_CLEAR_TRK] = "CLEAR TRACK #?", [CF_OVR_PROJ] = "SAVE OVER SECTION %?",
@@ -33,7 +34,7 @@ static const char *const UXD_Q_VAL[] = {
     [CF_CLEAR_ALL] = "CLEAR EVERY SEQUENCE?", [CF_DICE_ALL] = "", [CF_INIT_SYS] = "START A NEW PROJECT?",
     [CF_DICE_SOUND] = "KEEP THE DICED SOUND?", [CF_DICE_SEQ] = "KEEP THE DICED SEQUENCE?", [CF_DICE_LFO] = "KEEP THE DICED LFO?",
     [CF_DICE_FX] = "KEEP THE DICED EFFECTS?", [CF_CPU_TEST] = "BUILD THE CPU TEST SONG?", [CF_MUT_BACK] = "T# BACK TO BEFORE MUTATE?",
-    [CF_LIVE_COMMIT] = "KEEP THE LIVE TRICKS?"};
+    [CF_LIVE_COMMIT] = "KEEP THE LIVE TRICKS?", [CF_LOAD_PROJ] = "LOAD SECTION %?"};
 static const char *const UXD_QKIT_VAL[] = {             /* (a DRUM track: its kit too) */
     [CF_INIT_SOUND] = "INIT T#'S SOUND AND KIT?", [CF_RECALL_SOUND] = "RECALL T#'S STORED SOUND AND KIT?",
     [CF_DICE_SOUND] = "KEEP THE DICED KIT?"};
@@ -53,7 +54,8 @@ static const char *const UXD_LOST_HDR[] = {
     [CF_DICE_LFO] = "OCT- puts it back. SELECT dices again.", [CF_DICE_FX] = "OCT- puts it back. SELECT dices again.",
     [CF_CPU_TEST] = "Plays at 160 BPM on the internal clock. GLO + G4 brings the music back.",
     [CF_MUT_BACK] = "Loses what MUTATE changed in its sound and pattern.",
-    [CF_LIVE_COMMIT] = "Writes them into the steps. GLO + G4 takes them out."};
+    [CF_LIVE_COMMIT] = "Writes them into the steps. GLO + G4 takes them out.",
+    [CF_LOAD_PROJ] = "Loses the changes not stored. GLO + G4 brings them back."};   /* (3c-2 task 4) */
 /* the counted pieces of the lost line: a count's noun (one, then more), the joins; a count of 0 names the thing */
 enum { UXD_P_NOTE, UXD_P_NOTES, UXD_P_LOCK, UXD_P_LOCKS, UXD_P_RECORD, UXD_P_RECORDS, UXD_P_ROW, UXD_P_ROWS, UXD_P_BAR,
        UXD_P_BARS, UXD_P_TRACK, UXD_P_TRACKS, UXD_P_AND, UXD_P_ON, UXD_P_COMMA, UXD_P_ITS_NOTES, UXD_P_THE_NOTES,
@@ -64,15 +66,15 @@ static const char *const UXD_PIECE_HDR[] = {" note", " notes", " lock", " locks"
 static const char *const UXD_NO[2] = {"NO", "KEEP"};   /* OCT-'s word (MUT BACK: KEEP) */
 static const char *const UXD_VERB[1] = {"KEEP"};        /* OCT+'s word where it is not the action word (the dice) */
 static const char *const UXD_FOOT[1] = {"OCT+ YES \xB7 OCT- NO"};
-typedef char uxd_kinds_ok[sizeof UXD_WORD / sizeof UXD_WORD[0] == CF_LIVE_COMMIT + 1u &&
-                          sizeof UXD_Q_VAL / sizeof UXD_Q_VAL[0] == CF_LIVE_COMMIT + 1u &&
-                          sizeof UXD_LOST_HDR / sizeof UXD_LOST_HDR[0] == CF_LIVE_COMMIT + 1u &&
+typedef char uxd_kinds_ok[sizeof UXD_WORD / sizeof UXD_WORD[0] == CF_LOAD_PROJ + 1u &&
+                          sizeof UXD_Q_VAL / sizeof UXD_Q_VAL[0] == CF_LOAD_PROJ + 1u &&
+                          sizeof UXD_LOST_HDR / sizeof UXD_LOST_HDR[0] == CF_LOAD_PROJ + 1u &&
                           sizeof UXD_QKIT_VAL / sizeof UXD_QKIT_VAL[0] == CF_DICE_SOUND + 1u ? 1 : -1];
 
 /* every CF_* but CF_NONE and GEN (CF_DICE_ALL) */
 static int ux_dialog_owns(uint32_t kind)
 {
-    return kind && kind <= CF_LIVE_COMMIT && kind != CF_DICE_ALL;
+    return kind && kind <= CF_LOAD_PROJ && kind != CF_DICE_ALL;
 }
 static int uxd_dice(uint32_t kind) { return kind >= CF_DICE_SOUND && kind <= CF_DICE_FX; }
 
@@ -152,7 +154,7 @@ static void uxd_text(uint32_t kind, uint32_t k, uxd_text_t *t)
     const track_t *tk = &trk[k % NTRK];
     const char *q;
     uint32_t i;
-    if (kind > CF_LIVE_COMMIT)
+    if (kind > CF_LOAD_PROJ)
         kind = CF_NONE;
     a[0] = b[0] = nm[0] = 0;
     t->word = t->verb = UXD_WORD[kind];
@@ -181,6 +183,10 @@ static void uxd_text(uint32_t kind, uint32_t k, uxd_text_t *t)
             uxd_cat(b, sizeof b, UXD_PIECE_HDR[UXD_P_ITS_NOTES]);
         break;
     }
+    case CF_LOAD_PROJ:                                  /* (3c-2 task 4) "LOAD SECTION B?" */
+        b[0] = (char)('A' + (k & 3u));
+        b[1] = 0;
+        break;
     case CF_OVR_PROJ:
         b[0] = (char)('A' + (k & 3u));
         b[1] = 0;
@@ -293,7 +299,7 @@ static uint32_t uxd_wrap(const char *s, const aafont_t *f, char ln[2][UXD_LN])
 /* the footer: "SEQ . CLEAR", "OCT+ YES . OCT- NO" */
 static void uxd_foot(char *left, uint32_t nl, char *right, uint32_t nr)
 {
-    uint32_t kind = ui.confirm <= CF_LIVE_COMMIT ? ui.confirm : CF_NONE;
+    uint32_t kind = ui.confirm <= CF_LOAD_PROJ ? ui.confirm : CF_NONE;
     str_cpy(left, SEC_NAME[nav_sec()], nl);
     uxd_cat(left, nl, " \xB7 ");
     uxd_cat(left, nl, UXD_WORD[kind]);

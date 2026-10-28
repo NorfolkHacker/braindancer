@@ -1619,42 +1619,42 @@ static int test_save(void)
     chain.armed = 0;
     song.playing = 1;
     for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].graph == GR_SLOTS)
+        if (PAGES[i].graph == GR_SVPROJ)
             break;
     ui.home = 0;
     ui.page = (uint8_t)i;
     page_entered();
     ui.msg_t = 0;
-    turn(EN_K4, 1);                               /* SAVE picked */
-    bad += check("PROJECT KNOB 4 picks SAVE, saves nothing", ui.act == 4u && !project_used(0) && !ui.msg_t);
+    turn(EN_K3, 1);                               /* SAVE picked (3c-2 task 4: SAVE > PROJECT's KNOB 3, was PROJECT's 4) */
+    bad += check("PROJECT KNOB 3 picks SAVE, saves nothing", ui.act == 3u && !project_used(0) && !ui.msg_t);
     press(B_OCTUP);
     bad += check("OCT+ while playing: STOP TO SAVE, no NAME", msg_is("STOP TO SAVE") && !project_used(0) &&
                  song.g[G_SAVE] == 0 && !name_on());
     stop_transport();
-    turn(EN_K4, 1);
+    turn(EN_K3, 1);
     press(B_OCTUP);
     bad += check("stopped, an empty slot: OCT+ opens NAME (no name yet: PROJECT A)", name_on() && nm.kind == NK_PROJ_SAVE &&
                  nm.len == 0u && str_eq(nm.ph, "PROJECT A") && !project_used(0));
     press(B_OCTUP);
     bad += check("..OCT+ saves it unnamed, SAVE dropped", !name_on() && project_used(0) && msg_is("SAVED (NO FLASH)") &&
                  ui.act == 0u);
-    turn(EN_K4, 1);
+    turn(EN_K3, 1);
     press(B_OCTUP);
     bad += check("a used slot: the OVERWRITE? dialog", ui.confirm == CF_OVR_PROJ && ui.confirm_trk == 0);
     trk[0].p[P_E0] = 5;
     press(B_OCTDN);
     bad += check("OCT- keeps the slot", ui.confirm == CF_NONE && stored_param(0, 0, P_E0) != 5);
-    turn(EN_K4, 1);
+    turn(EN_K3, 1);
     press(B_OCTUP);
     press(B_OCTUP);
     bad += check("OCT+ (YES): NAME, the slot not written yet", name_on() && stored_param(0, 0, P_E0) != 5);
     press(B_OCTUP);
     bad += check("OCT+ overwrites it", ui.confirm == CF_NONE && !name_on() && stored_param(0, 0, P_E0) == 5);
     trk[0].p[P_LEVEL] = 11;
-    turn(EN_K3, 1);
+    turn(EN_K2, 1);
     press(B_OCTUP);
-    bad += check("KNOB 3 LOAD, OCT+: the project back; LOAD stays picked", trk[0].p[P_LEVEL] != 11 &&
-                 trk[0].p[P_LEVEL] == stored_param(0, 0, P_LEVEL) && msg_is("LOADED") && ui.act == 3u);
+    bad += check("KNOB 2 LOAD, OCT+: the project back; LOAD stays picked", trk[0].p[P_LEVEL] != 11 &&
+                 trk[0].p[P_LEVEL] == stored_param(0, 0, P_LEVEL) && msg_is("LOADED") && ui.act == 2u);
     /* user presets (3c-2 task 2: SAVE > SOUND, was USER; ERASE SAVE > MORE's row) */
     go_page(GR_SVSND);
     up_store(4, "OLD");
@@ -1692,11 +1692,21 @@ static void go_title(const char *title)
     ui.page = (uint8_t)i;
     page_entered();
 }
-static void tools_pick(uint32_t n)                /* (0.6.25) TOOLS: the n-th action picked (KNOB 1 down the list) */
+/* (0.6.25) TOOLS: the n-th action (1 CLEAR SEQ, 2 INIT SOUND, 3 DELETE ROW, 4 CLEAR SONG, 5 NEW PROJECT, 6 CPU TEST) done, its dialog
+ * open. (ACID FM 3c-2 task 4) the TOOLS page gone: SAVE > MORE's row, KNOB 2 (was KNOB 1 down the list, then OCT+) */
+static void tools_run(uint32_t n)
 {
-    uint32_t k;
-    ui.act = 0;
-    for (k = 0; k < n; k++) turn(EN_K1, 1);
+    static const uint8_t A[6] = {UXM_A_CLRSEQ, UXM_A_INITSND, UXM_A_DELROW, UXM_A_CLRSONG, UXM_A_NEWPROJ, UXM_A_CPUTEST};
+    uint32_t r, k;
+    nav_put(SEC_SAVE, "MORE"); frame();                 /* (as u2_more_at: gen_test.c has none of the tests after test_save) */
+    for (r = 0; r < UXM_SAVE.n && !(UXM_SAVE.rows[r].kind == UXR_ACTION && UXM_SAVE.rows[r].id == A[(n - 1u) % 6u]); r++)
+        ;
+    k = uxm_key();
+    uxm_at[k].sel = (uint8_t)r;
+    uxm_at[k].top = 0;
+    frames(UX_HOT_MS + 100u);
+    ui.msg_t = 0;
+    turn(EN_K2, 1);
 }
 static int test_init_system(void)
 {
@@ -1711,7 +1721,7 @@ static int test_init_system(void)
         macro_v[1] = 77; dx_tone = 0x35u; dx_mot[XM_DPTH] = 50; pfx_lane[3] = 9;
         motion_capture(&trk[1], P_LEVEL, 40);
         sig0 = steps_sig(&trk[0]);
-        go_title("TOOLS"); tools_pick(5); press(B_OCTUP);
+        tools_run(5);
         ok2 = ui.confirm == CF_INIT_SYS && trk[0].step[2].n == 1u;
         press(B_OCTUP);
         ok2 &= !ui.confirm && msg_is("NEW PROJECT") && chain_config.count == 0u;
@@ -1732,7 +1742,7 @@ static int test_init_system(void)
         trk[0].step[2] = (step_t){{60}, 1, ST_NOTE, 0, 100};
         song.g[G_BPM] = 97;
         sig0 = steps_sig(&trk[0]);
-        go_title("TOOLS"); tools_pick(6); press(B_OCTUP);
+        tools_run(6);
         ok2 = ui.confirm == CF_CPU_TEST;
         press(B_OCTUP);
         ok2 &= !ui.confirm && msg_is("CPU TEST: PRESS PLAY") && song.g[G_BPM] == 160 && song.g[G_RTYPE] == 4;
@@ -1804,41 +1814,39 @@ static int test_actions(void)
     press(B_OCTDN);
     bad += check("0.9.2 PATTERNS: OCT- back to the SEQ page it is over (was HOME; the octave stays)",
                  !ui.home && cur_page()->fam == FAM_SEQ && cur_page()->graph != GR_PATS && song.octave == 2);
-    /* TOOLS: CLRSQ and INIT are picked, not done, by their knobs */
+    /* (3c-2 task 4: TOOLS gone, its CLEAR and INIT SAVE > MORE's rows) SAVE > PROJECT: LOAD and SAVE are picked, not done, by
+     * their knobs */
     my_steps(t);
-    go_title("TOOLS");
-    bad += check("TOOLS: nothing picked, OCT+ dark", act_cols() == 15u && act_col() == 0u && oct_leds_seen(0) == 1u);
-    turn(EN_K1, 3);
-    bad += check("KNOB 1 picks CLEAR, the steps stay; OCT+ breathes", ui.act == 1u && !seq_is_empty(t) &&
+    stop_transport();
+    project_save(0); proj_clean_mark();
+    go_title("SAVE PROJECT");
+    bad += check("PROJECT: nothing picked, OCT+ dark", act_cols() == 6u && act_col() == 0u && oct_leds_seen(0) == 1u);
+    turn(EN_K2, 1);
+    bad += check("KNOB 2 picks LOAD, nothing loaded; OCT+ breathes", ui.act == 2u && !seq_is_empty(t) &&
                  oct_leds_seen(0) == (1u | OCT_BREATH));
     {
         char a[16], b[16];
         foot_hint(a, b);
-        bad += check("..the footer: OCT+ CLEAR / OCT- CANCEL", str_eq(a, "OCT+ CLEAR") && str_eq(b, "OCT- CANCEL"));
+        bad += check("..the footer: OCT+ LOAD / OCT- CANCEL", str_eq(a, "OCT+ LOAD") && str_eq(b, "OCT- CANCEL"));
     }
-    turn(EN_K1, -1);
-    bad += check("KNOB 1 left drops it", ui.act == 0u);
-    turn(EN_K1, 1); turn(EN_K1, 1);                   /* (0.9.2: KNOB 1; PRESETS a sound there, rule 3) */
-    bad += check("(0.6.25) TOOLS is a list: KNOB 1 moves the pick down (INIT SOUND), any knob too", ui.act == 2u);
-    turn(EN_K3, -1);
-    bad += check("  .. and up", ui.act == 1u);
-    turn(EN_K1, -1);
-    turn(EN_K1, 1);
+    turn(EN_K2, -1);
+    bad += check("KNOB 2 left drops it", ui.act == 0u);
+    turn(EN_K3, 1);
+    bad += check("KNOB 3 picks SAVE", ui.act == 3u);
     press(B_OCTDN);
-    bad += check("OCT- cancels the pick (still on TOOLS)", ui.act == 0u && !ui.home && !seq_is_empty(t));
-    turn(EN_K1, 1);
+    bad += check("OCT- cancels the pick (still on PROJECT)", ui.act == 0u && !ui.home && !ui.confirm && !name_on());
+    tools_run(1);
+    bad += check("MORE's CLEAR SEQ first asks confirmation", ui.confirm == CF_CLEAR_SEQ && !seq_is_empty(t));
     press(B_OCTUP);
-    bad += check("TOOLS CLEAR first asks confirmation", ui.confirm == CF_CLEAR_SEQ && !seq_is_empty(t));
-    press(B_OCTUP);
-    bad += check("OCT+ clears the pattern, the pick dropped", seq_is_empty(t) && msg_is("T1 CLEARED") && str_eq(ui.msg2, "SEQ+REC: ALL TRACKS") && ui.act == 0u);
-    turn(EN_K1, 1);
-    bad += check("nothing to clear: OCT+ dark", oct_leds_seen(0) == 1u);
-    turn(EN_K2, 1);
+    bad += check("OCT+ clears the pattern", seq_is_empty(t) && msg_is("T1 CLEARED") && str_eq(ui.msg2, "SEQ+REC: ALL TRACKS"));
+    tools_run(1);
+    bad += check("nothing to clear: NOTHING TO CLEAR, no dialog", !ui.confirm && msg_is("NOTHING TO CLEAR"));
     t->p[P_E0] = (int16_t)(t->p[P_E0] + 1);
+    tools_run(2);
+    bad += check("MORE's INIT SOUND first asks confirmation", ui.confirm == CF_INIT_SOUND);
     press(B_OCTUP);
-    bad += check("TOOLS INIT first asks confirmation", ui.confirm == CF_INIT_SOUND);
-    press(B_OCTUP);
-    bad += check("KNOB 2 INIT, OCT+: SOUND INIT", msg_is("SOUND INIT") && ui.act == 0u);
+    bad += check("OCT+: SOUND INIT", msg_is("SOUND INIT"));
+    go_title("SAVE PROJECT");
     press(B_OCTDN);
     bad += check("OCT- with nothing picked: HOME", ui.home);
     /* the dialogs and the menu */
@@ -3098,14 +3106,8 @@ static int test_roll(void)
     ok = pat_pick() == 3u && !ui.roll[0].from[0] && roll_static_now();
     bad += check("roll: a change within 40 ms of the last one snaps (a fast turn)", ok);
 
-    /* a name snaps: PROJECT's LOAD card ("--" -> its action picked, N_GO's words), the strip changed, no roll (3c-1 task 7: was
-     * GLOBAL's CLK; a sign, a length: roll_dir's table, above) */
-    ui_power_on(); go_title("PROJECT"); ui.hot_t = 0; ui.bpm_t = 0;
-    for (k = 0; k < 12u; k++) frame();
-    memcpy(roll_shot, host_screen, sizeof roll_shot);
-    turn(EN_K3, 1); frame();
-    ok = ui.act == 3u && !ui.roll[2].from[0] && roll_diff(STRIP(2), 1) > 20u && roll_static_now();
-    bad += check("roll: a name (PROJECT's LOAD card: its action picked) snaps", ok);
+    /* (3c-1 task 7 .. 3c-2 task 4) a name snaps: its last card, PROJECT's LOAD ("--" -> its action picked), gone with the inherited
+     * PROJECT page (SAVE > PROJECT is ux_save.c's knob row); the rule stays roll_dir's (a sign, a length, a word: snap) */
 
     /* snaps: the page, the track, the palette, ui.force */
     ok = 1;
@@ -3113,7 +3115,7 @@ static int test_roll(void)
         ui_power_on(); roll_settle();
         turn(EN_K1, 1);
         ok &= ui.roll[0].from[0] != 0;
-        if (k == 0) go_title("TOOLS");
+        if (k == 0) go_title("SAVE PROJECT");           /* (3c-2 task 4: was TOOLS) */
         else if (k == 1) turn(EN_ALGO, 1);
         else if (k == 2) palette_set(UI_ACID_INDEX);                       /* (the tokens set again, no ui.force) */
         else if (k == 3) set_engine_of(TSEL, eng_step(TSEL->eng_req, 1));   /* (no ui.force) */
@@ -3393,7 +3395,7 @@ static int test_chain(void)
     ui.msg_t = 0; press(B_OCTUP);
     bad += check("SONG: OCT+ to 16 rows, then 16 ROWS", chain_config.count == CHAIN_ROWS && msg_is("16 ROWS"));
     bad += check("SONG append row stays bounded at 16", chain_config.count == CHAIN_ROWS && chain_valid(&chain_config));
-    go_title("TOOLS"); tools_pick(4); press(B_OCTUP);
+    tools_run(4);
     bad += check("CLEAR SONG requires explicit confirmation", ui.confirm == CF_CLEAR_SONG && chain_config.count == CHAIN_ROWS);
     press(B_OCTDN);
     bad += check("cancel preserves the full song", chain_config.count == CHAIN_ROWS);
@@ -3409,7 +3411,7 @@ static int test_chain(void)
     bad += check("SONG: MORE's DELETE ROW asks DELETE ROW?, OCT+ deletes it", ok && chain_config.count == n0 - 1u);
     ui.page = (uint8_t)pg0; ui.force = 1; frame();
     }
-    tools_pick(4); press(B_OCTUP); press(B_OCTUP);
+    tools_run(4); press(B_OCTUP);
     bad += check("confirmed CLEAR SONG keeps musical steps", !chain_config.count && !ui.song_row);
     return bad;
 }
@@ -3650,17 +3652,17 @@ static int test_product_ux(void)
     for (p = 0; p < NPALETTES; p++) for (b = 0; b < 1u; b++) {
         uint16_t graph[240 * H_GRAPH], columns[240 * (Y_SEP_END - Y_LABEL)];
         ui_power_on(); palette_set(p); settings.zoom = 1;
-        go_page(GR_SLOTS); frame();                     /* (3b task 6: FX's, ENV's the ux pages'; task 8: FX's too; 3c-2 task 2:
-                                                         * SAVE's SOUND too: PROJECT's) */
+        go_page(GR_PATS); frame();                      /* (3b task 6: FX's, ENV's the ux pages'; task 8: FX's too; 3c-2 task 2:
+                                                         * SAVE's SOUND too: PROJECT's; task 4: PROJECT too: PHRASES') */
         uint32_t gy = lz_on() ? LZ_GRAPH_Y : Y_GRAPH;   /* (0.8.5: ENV a lens, its panel under the cards' 38 px) */
         memcpy(graph, host_screen + gy * 240, sizeof graph);
         memcpy(columns, host_screen + Y_LABEL * 240, sizeof columns);
-        ui.hot_col = 1; ui.hot_t = 40; ui.force = 1; ui_draw();
+        ui.hot_col = 0; ui.hot_t = 40; ui.force = 1; ui_draw();   /* (3c-2 task 4: PHRASES' PAT, its column 1 the LOAD action) */
         ok &= !memcmp(graph, host_screen + gy * 240, sizeof graph);
         int changed = 0;
         for (uint32_t y = 0; y < Y_SEP_END - Y_LABEL; y++) for (uint32_t x = 0; x < 240; x++) {
             uint16_t old = columns[y * 240 + x], now = host_screen[(Y_LABEL + y) * 240 + x];
-            if (x >= (uint32_t)CARD_X(1) && x < (uint32_t)(CARD_X(1) + CARD_W)) changed |= old != now;   /* (0.8.9 COLORS: the
+            if (x >= (uint32_t)CARD_X(0) && x < (uint32_t)(CARD_X(0) + CARD_W)) changed |= old != now;   /* (0.8.9 COLORS: the
                                                          * card framed in its knob's colour, edge to edge) */
             else ok &= old == now;
         }
@@ -4183,10 +4185,10 @@ static int test_name(void)
     up_name(2, b);
     bad += check("  SAVE of a sound that came from U03: prefilled with U03's name", name_on() && str_eq(nm.s, b));
     press(B_OCTDN);
-    /* projects */
-    go_page(GR_SLOTS);
+    /* projects (3c-2 task 4: SAVE > PROJECT's KNOB 3 SAVE, was the inherited PROJECT's 4) */
+    go_page(GR_SVPROJ);
     song.g[G_SLOT] = 2;
-    turn(EN_K4, 1);
+    turn(EN_K3, 1);
     press(B_OCTUP);
     for (i = 0; i < 4u; i++) { nm_tap(white(7)); nm_tap(white(6)); frames(800); }   /* P N P N .. */
     press(B_OCTUP);
@@ -4769,26 +4771,19 @@ static int test_bughunt_ui(void)
         bad += check("ALGORITHM ignored with a layer's button held; then T2",
                      ok && song.sel == 1u);
     }
-    /* 6: TOOLS: each column its own ready check; nothing to do says so (not STOP TO EDIT) */
+    /* 6: TOOLS (3c-2 task 4: SAVE > MORE's rows): each its own ready check; nothing to do says so (not STOP TO EDIT) */
     ui_power_on();
-    go_title("TOOLS"); frame();
     chain_defaults(&chain_config);                      /* no song rows */
-    tools_pick(3);                                      /* DELETE ROW */
-    press(B_OCTUP);
-    ok = !ui.confirm && msg_is("NOTHING TO DELETE") && text_w(&AF_S, ui.msg) <= 236 - 106;   /* (fits the header) */
-    tools_pick(4);                                      /* CLEAR SONG */
-    press(B_OCTUP);
+    tools_run(3);                                       /* DELETE ROW (3c-2 task 3: NO ROW, was NOTHING TO DELETE) */
+    ok = !ui.confirm && msg_is("NO ROW") && text_w(&AF_S, ui.msg) <= 236 - 106;   /* (fits the header) */
+    tools_run(4);                                       /* CLEAR SONG */
     ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
     track_defaults_steps(TSEL);
     chain_config.count = 1; chain_config.row[0].slot = 0; chain_config.row[0].bars = 1;
-    tools_pick(1);                                      /* CLEAR PAT on an empty track, the song with a row */
-    ok &= !act_ready();
-    press(B_OCTUP);
+    tools_run(1);                                       /* CLEAR PAT on an empty track, the song with a row */
     ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
-    tools_pick(4);
-    ok &= act_ready();
-    press(B_OCTUP);
-    bad += check("TOOLS: DELETE ROW / CLEAR SONG / CLEAR PAT with nothing there: NOTHING TO ..; a song: its dialog",
+    tools_run(4);
+    bad += check("TOOLS: DELETE ROW / CLEAR SONG / CLEAR PAT with nothing there: NO ROW, NOTHING TO CLEAR; a song: its dialog",
                  ok && ui.confirm == CF_CLEAR_SONG);
     /* 7: REC works in the layers, as PLAY: it arms the track (PLAY starts); the layer stays, no page */
     ok = 1;
@@ -5280,7 +5275,7 @@ static int test_bughunt_ui2(void)
         char pn[16];
         uint32_t ok;
         ui_power_on();
-        go_page(GR_SLOTS); song.g[G_SLOT] = 2;
+        go_page(GR_SVPROJ); song.g[G_SLOT] = 2;
         project_save_as(1, "OLD");
         project_save_as(2, "OTHER");
         project_load(1); frame();
@@ -5294,7 +5289,7 @@ static int test_bughunt_ui2(void)
         press(B_OCTUP);
         project_name(1, pn);
         ok &= str_eq(pn, "NEW") && str_eq(proj_name, "NEW");
-        turn(EN_K4, 1); press(B_OCTUP);                               /* SAVE to B: OVERWRITE? */
+        turn(EN_K3, 1); press(B_OCTUP);                               /* SAVE to B: OVERWRITE? */
         press(B_OCTUP);                                               /* YES: NAME */
         ok &= name_on() && str_eq(nm.s, "NEW");
         press(B_OCTDN);
@@ -6734,7 +6729,7 @@ static int test_layer_knob_race(void)
                     if (pg < NPAGES && !page_visible(pg))
                         continue;
                     if (mode == 2u && LB[l] == B_EDIT && pg < NPAGES &&   /* (EDIT's tap acts there: no lock) */
-                        (PAGES[pg].graph == GR_SVSND || PAGES[pg].graph == GR_SLOTS || PAGES[pg].graph == GR_ROLL))
+                        (PAGES[pg].graph == GR_SVSND || PAGES[pg].graph == GR_SVPROJ || PAGES[pg].graph == GR_ROLL))
                         continue;
                     rc_run(LB[l], mode, k, pg, 0, &a0, &b0);
                     rc_run(LB[l], mode, k, pg, 1, &a1, &b1);
@@ -6882,36 +6877,36 @@ static void tl_drum(void)
  * tap the level's other set, SAVE from elsewhere always USER, PRESETS the slot / project) */
 static int test_save_lens(void)
 {
-    static const char *const CH[5] = {"SOUND", "SONG", "PROJECTS", "TOOLS", "MORE"};
-    static const char *const TP[3] = {"SONG", "PROJECTS", "MORE"};
+    static const char *const CH[4] = {"SOUND", "SONG", "PROJECT", "MORE"};   /* (3c-2 task 4: PROJECTS and TOOLS gone, PROJECT) */
+    static const char *const TP[3] = {"SONG", "PROJECT", "MORE"};
     int bad = 0, ok;
     uint32_t pr;
     ui_power_on();
     go_home(); frame();
     press(B_SAVE); frame();
-    ok = save_on() && cur_page()->graph == GR_SVSND && ui.act == 4u && ux_page_owns() && !strcmp(uxs_count(), "1 / 5");
-    bad += check("0.9.2 SAVE from HOME at power-on: SOUND (3c-2 task 2: the ux page, was USER), SAVE armed, 1 / 5 (task 3)", ok);
-    bad += check("0.9.2 SAVE: one chain SOUND SONG PROJECTS TOOLS MORE (3c-2 task 3); a SAVE tap the next group, round",
-                 chain_walk(B_SAVE, CH, 5, TP, 3));
+    ok = save_on() && cur_page()->graph == GR_SVSND && ui.act == 4u && ux_page_owns() && !strcmp(uxs_count(), "1 / 4");
+    bad += check("0.9.2 SAVE from HOME at power-on: SOUND (3c-2 task 2: the ux page, was USER), SAVE armed, 1 / 4 (task 4)", ok);
+    bad += check("0.9.2 SAVE: one chain SOUND SONG PROJECT MORE (3c-2 task 4); a SAVE tap the next group, round",
+                 chain_walk(B_SAVE, CH, 4, TP, 3));
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame();
     turn(EN_SELECT, 1); frame();                                             /* SONG, left there */
     go_home(); frame(); press(B_SAVE); frame();
     ok = cur_page()->graph == GR_SVSONG && ux_page_owns() && ui.act == 0u;   /* (the page left; was always USER) */
     turn(EN_SELECT, 1); frame();
-    ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u && lz_crumb_is("SAVE \xB7 LIBRARY \xB7 PROJECTS");
+    ok &= cur_page()->graph == GR_SVPROJ && ux_page_owns() && ui.act == 0u && str_eq(uxs_where(), "SAVE \xB7 PROJECT");
     go_home(); frame(); press(B_SAVE); frame();
-    ok &= cur_page()->graph == GR_SLOTS && ui.act == 0u;                     /* (PROJECTS from elsewhere: not armed) */
-    bad += check("0.9.2 SAVE from elsewhere the page left (SONG; PROJECTS not armed); SOUND from elsewhere armed, inside not", ok);
-    turn(EN_K1, 1); frame();                                                 /* LIBRARY: KNOB 1 the project */
+    ok &= cur_page()->graph == GR_SVPROJ && ui.act == 0u;                    /* (PROJECT from elsewhere: not armed) */
+    bad += check("0.9.2 SAVE from elsewhere the page left (SONG; PROJECT not armed); SOUND from elsewhere armed, inside not", ok);
+    turn(EN_K1, 1); frame();                                                 /* PROJECT: KNOB 1 the project */
     ok = song_cur == 1u;
     turn(EN_K1, -1); frame();
     ok &= song_cur == 0u;
     pr = TSEL->preset;
     turn(EN_PRESET, 1); frame();
-    ok &= song_cur == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0)) && cur_page()->graph == GR_SLOTS;
-    bad += check("0.9.2 SAVE > PROJECTS: KNOB 1 the project; PRESETS a sound (was the project)", ok);
+    ok &= song_cur == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0)) && cur_page()->graph == GR_SVPROJ;
+    bad += check("0.9.2 SAVE > PROJECT: KNOB 1 the project; PRESETS a sound (was the project)", ok);
     ok = 1;
-    turn(EN_K4, 1); press(B_OCTUP); frame();                                 /* SAVE: the NAME screen, its own layout */
+    turn(EN_K3, 1); press(B_OCTUP); frame();                                 /* SAVE: the NAME screen, its own layout */
     ok &= name_on() && !lz_on();
     press(B_OCTDN); frame();
     ok &= !name_on() && lz_on();
@@ -7907,15 +7902,17 @@ static int test_project_page(void)
     chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
     sl_steps(80);                                       /* the music now: 80.. */
     go_home(); frame(); press(B_SAVE); frame();
-    nav_put(SEC_SAVE, "PROJECTS"); frame();             /* (0.9.2: LIBRARY's PROJECTS, the chain's 5th) */
-    ok = cur_page()->graph == GR_SLOTS && PAGES[ui.page - 1u].graph == GR_SVSONG && str_eq(PAGES[ui.page - 1u].title, "SAVE SONG");
+    nav_put(SEC_SAVE, "PROJECT"); frame();              /* (0.9.2: LIBRARY's PROJECTS; 3c-2 task 4: SAVE > PROJECT, the chain's 3rd) */
+    ok = cur_page()->graph == GR_SVPROJ && PAGES[ui.page - 1u].graph == GR_SVSONG && str_eq(PAGES[ui.page - 1u].title, "SAVE SONG");
     bad += check("PROJECT: SAVE > SONG (the project's song: 3c-2 task 3, was ARRANGE after it), then PROJECT", ok);
     turn(EN_K1, 1); frame();
     ok = song_cur == 1 && trk[0].step[0].note[0] == 80 && live.cur < 0 && !chain_config.count && msg_is("PROJECT 2");
     bad += check("  KNOB 1: project 2 in (its sections, its song), the music kept", ok);
     song.g[G_SLOT] = 1;
-    turn(EN_K2, 1); frame();                            /* LIBRARY: KNOB 2 the section */
-    ok = song.g[G_SLOT] == 2 && save_level() == SV_LIB;
+    turn(EN_K2, 1); frame();                            /* (3c-2 task 4: PROJECT's KNOB 2 is LOAD, the section SONG's KNOB 1) */
+    ok = song.g[G_SLOT] == 1 && ui.act == 2u;
+    turn(EN_K2, -1); frame();
+    song.g[G_SLOT] = 2;
     turn(EN_SELECT, -1); frame();                       /* (3c-2 task 3) SAVE > SONG (one back): KNOB 1 the section (was SECTIONS') */
     ok &= cur_page()->graph == GR_SVSONG;
     turn(EN_K1, 1); frame();
@@ -7926,9 +7923,9 @@ static int test_project_page(void)
     ok &= song.g[G_SLOT] == 4 && song_cur == 1;
     turn(EN_K1, -1); frame();
     ok &= song.g[G_SLOT] == 3;
-    bad += check("  LIBRARY's KNOB 2, SONG's KNOB 1: the section (C); SONG's KNOB 2 the row (0.9.2: PRESETS a sound)", ok);
-    turn(EN_SELECT, 1); frame();                        /* (back to LIBRARY's PROJECTS) */
-    turn(EN_K4, 1); press(B_OCTUP); frame();            /* SAVE into project 2's C: the NAME screen, then OK */
+    bad += check("  PROJECT's KNOB 2 LOAD; SONG's KNOB 1: the section (C); SONG's KNOB 2 the row (0.9.2: PRESETS a sound)", ok);
+    turn(EN_SELECT, 1); frame();                        /* (back to PROJECT) */
+    turn(EN_K3, 1); press(B_OCTUP); frame();            /* SAVE into project 2's C: the NAME screen, then OK */
     for (k = 0; k < 8u && name_on(); k++) { press(B_OCTUP); frame(); }
     ok = project_used(2) && live.cur == 2;
     bad += check("  SAVE: the music into project 2's section C (the music's section: NOW)", ok);
@@ -7938,7 +7935,7 @@ static int test_project_page(void)
     bad += check("  KNOB 1 back: project 1, its song still there (its A: from flash), the music kept", ok);
     if (!FELUCCA_FLASH) { sl_steps(60); project_save(0); sl_steps(80); }
     song.g[G_SLOT] = 1;
-    turn(EN_K3, 1); press(B_OCTUP); frame();            /* LOAD A */
+    turn(EN_K2, 1); press(B_OCTUP); frame();            /* LOAD A */
     ok = trk[0].step[0].note[0] == 60 && live.cur == 0 && chain_config.count == 2;
     bad += check("  LOAD: section A is the music, the project's song kept", ok);
     transport_req = 1; frame();
@@ -9886,12 +9883,12 @@ static int test_large(void)
 
     (void)c;                                            /* (the tall cards' columns: FELUCCA_FM4 only) */
     /* per page type: lists and rolls keep the layout, the layers too */
-    go_page(GR_SLOTS); frame();                         /* (3c-2 task 2: PRESETS gone, SAVE > SOUND the ux pages': PROJECT's) */
+    go_page(GR_SVPROJ); frame();                        /* (3c-2 task 2: PRESETS gone, SAVE > SOUND the ux pages': PROJECT's; task 4: SAVE > PROJECT) */
     ok = large_kind() == LK_LABEL && card_h() == LZ_CARD_H && graph_y() == LZ_GRAPH_Y && graph_h() == LZ_GRAPH_H;   /* (0.8.5:
                                                          * SAVE's lens, the mock-up's layout) */
     go_page(GR_ROLL); frame();
     ok &= large_kind() == LK_LABEL;
-    go_title("TOOLS"); frame();
+    go_title("SAVE MORE"); frame();
     btn_down(B_GLO); frames(800);
     ok &= ui.layer && large_kind() == LK_LABEL && card_h() == LZ_CARD_H;   /* (0.8.5: the layer's lens) */
     btn_up(B_GLO); frame(); frame();
@@ -9974,8 +9971,9 @@ static int test_skin(void)
                      "the screen the same whatever it holds", ok);
     }
     ui_power_on(); frame();                                       /* the geometry, AIR's (ACID FM 3a: HOME is ux_home.c's) */
-    go_title("TOOLS"); frame();                                      /* the knob row on top, under the tabs (3c-1 task 7: SAVE's
-                                                                   * TOOLS, a JIANT lens page; GLO's GLOBAL gone) */
+    go_title("PHRASES"); frame();                                 /* the knob row on top, under the tabs (3c-1 task 7: SAVE's
+                                                                   * TOOLS, a JIANT lens page; GLO's GLOBAL gone; 3c-2 task 4:
+                                                                   * SEQ's PHRASES, TOOLS gone) */
     ok = lg_px(LT_X(0) + LT_W / 2 + 30, LT_Y + 1) == T_BG;        /* (the tabs words: no fill) */
     ok &= lz_low() && card_y() == LA_CARD_Y && graph_y() == LA_GRAPH_Y && graph_h() == LB_GRAPH_H &&
           graph_y() + graph_h() <= LZ_FOOT_Y && skin_ink(LA_CARD_Y, LA_CARD_Y + LB_CARD_H) > 100 &&
@@ -10244,8 +10242,9 @@ static int test_style(void)
     static uint16_t sh[240 * 240];
     uint32_t rule;                                     /* (where LINE's rule over the panel was) */
     ui_power_on();
-    go_title("TOOLS"); frames(200);                     /* (a still page: HOME's beings move every frame; 3b task 8: GLO's, FX's
-                                                         * the ux pages'; 3c-1 task 7: SAVE's TOOLS, GLO the ux pages' too) */
+    go_title("PHRASES"); frames(200);                   /* (a still page: HOME's beings move every frame; 3b task 8: GLO's, FX's
+                                                         * the ux pages'; 3c-1 task 7: SAVE's TOOLS, GLO the ux pages' too; 3c-2
+                                                         * task 4: SEQ's PHRASES, JIANT's last lens page, SAVE the ux pages') */
     rule = (card_y() + card_h() + graph_y()) / 2u * 240u + 120u;
     ok = ui_style == 0u && T_SURF == T_BG && str_eq(MI_NAME[MI_STYLE], "STYLE") && menu_hidden(MI_STYLE) && menu_n(MI_STYLE) == 1u &&
          menu_get(MI_STYLE) == 0u && str_eq(menu_vname(MI_STYLE, 0), "ACID");
@@ -10669,7 +10668,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
                                                          * GLO LIVE (MIXER SENDS) GLOBAL SYSTEM MORE, opening on MIXER; task 7:
                                                          * LIVE MIX MORE, opening on LIVE; SELECT on MORE its rows; task 8: LIVE
                                                          * MIX MIDI MORE; 3c-2 task 2: SAVE SOUND (SECTIONS ARRANGE PROJECTS
-                                                         * TOOLS) MORE, a group a tap, round) */
+                                                         * TOOLS) MORE, a group a tap, round; task 4: SOUND SONG PROJECT MORE) */
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10678,7 +10677,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/2/SAVE PROJECT|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE",
     "EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/0/EDIT 1|EDIT/1/FM6 OP|EDIT/2/FM6 OP ENV|EDIT/3/FM6 MORE|EDIT/2/FM6 OP ENV|EDIT/2/FM6 OP ENV|HOME/0/*",   /* (3b task 5) */
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10687,7 +10686,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/2/SAVE PROJECT|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10696,7 +10695,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/2/SAVE PROJECT|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE",
     "EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/0/EDIT 1|EDIT/1/DRUM SOUND|EDIT/2/DRUM SOUND 2|EDIT/3/DRUM MORE|EDIT/2/DRUM SOUND 2|EDIT/2/DRUM SOUND 2|HOME/0/*",   /* (3b task 5) */
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10705,7 +10704,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/2/SAVE PROJECT|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/3/SYN FILTER|EDIT/4/SYN MORE|EDIT/3/SYN FILTER|EDIT/3/SYN FILTER|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10714,7 +10713,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/2/SAVE PROJECT|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE",
     "EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/0/EDIT 1|EDIT/1/EDIT 2|EDIT/2/SYN VOICE|EDIT/4/SYN MORE|EDIT/2/SYN VOICE|EDIT/2/SYN VOICE|HOME/0/*",
     "SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/0/STEP|SEQ/1/STEP EXTRAS|SEQ/2/PATTERN|SEQ/3/SEQ MORE|SEQ/2/PATTERN|SEQ/2/PATTERN|HOME/0/*",
     "FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/0/FX|FX/1/FX SPACE|FX/2/MASTER|FX/3/FX MORE|FX/2/MASTER|FX/2/MASTER|HOME/0/*",
@@ -10723,7 +10722,7 @@ static const char *const UXN_WANT[NTRK * (SEC_N - 1u)] = {   /* T1 EDIT .. SAVE,
     "LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/0/LFO|LFO/1/LFO DEST|LFO/2/MOD|LFO/3/LFO MORE|LFO/2/MOD|LFO/2/MOD|HOME/0/*",
     "SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/0/SCL|SCL/1/CHORD|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/2/SCL MORE|SCL/1/CHORD|SCL/1/CHORD|SCL/2/SCL MORE",
     "ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/0/ARP|ARP/1/ARP 2|ARP/1/ARP 2|ARP/1/ARP 2|ARP/0/ARP|ARP/0/ARP|ARP/0/ARP",
-    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/4/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/PROJECT|SAVE/3/TOOLS|SAVE/2/PROJECT|SAVE/2/PROJECT|SAVE/3/TOOLS",
+    "SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/0/SAVE SOUND|SAVE/1/SAVE SONG|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE|SAVE/2/SAVE PROJECT|SAVE/2/SAVE PROJECT|SAVE/3/SAVE MORE",
 };
 static int test_ux_nav_sections(void)
 {
@@ -11656,7 +11655,7 @@ static int test_lz_dialogs(void)
     int bad = 0, ok;
     int16_t e0;
     uint32_t y, x, acc = 0;
-    ui_power_on(); go_title("TOOLS"); frame();           /* (3b task 8: a lens page, GLO's; FX's the ux pages'; 3c-1 task 7: SAVE's) */
+    ui_power_on(); go_title("SAVE MORE"); frame();           /* (3b task 8: a lens page, GLO's; FX's the ux pages'; 3c-1 task 7: SAVE's) */
     acc = uxd_draws;
     confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frame();
     ok = uxd_draws == acc + 1u && !dlg_tab_lit(0);      /* (3c-2 task 1: full screen, ux_dialog.c; was the NOTICE tab and card) */
@@ -11704,8 +11703,9 @@ static int test_toasts(void)
             for (lg = 0; lg < 2u; lg++) {
                 ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
                 if (lg) ui_prefs |= PREF_LARGE; else ui_prefs &= ~PREF_LARGE;
-                go_title("PROJECT"); ui.force = 1; frames(1600);   /* (3b task 8: a lens page; was FX > DIST; 3c-1 task 7: SAVE's
-                                                         * PROJECT, was GLO > GLOBAL; TOOLS keeps its toasts out of its list) */
+                go_title("PHRASES"); ui.force = 1; frames(1600);   /* (3b task 8: a lens page; was FX > DIST; 3c-1 task 7:
+                                                         * SAVE's PROJECT, was GLO > GLOBAL; TOOLS keeps its toasts out of its list;
+                                                         * 3c-2 task 4: SEQ's PHRASES, SAVE the ux pages) */
                 memcpy(toast_snap, host_screen, sizeof toast_snap);
                 ui_message("SAVED A LONG MESSAGE"); frame();
                 toast_box(ui.msg, b);
@@ -11753,7 +11753,7 @@ static int test_toasts(void)
 
     for (ok = 1, sk = 0; sk < 1u; sk++) {               /* (3c-2 task 1) a dialog full screen; OCT-: the page back whole */
         ui_power_on(); settings.palette = UI_ACID_INDEX; palette_set(UI_ACID_INDEX);
-        go_title("TOOLS"); ui.force = 1; frames(800);
+        go_title("PHRASES"); ui.force = 1; frames(800);   /* (3c-2 task 4: was TOOLS) */
         memcpy(toast_snap, host_screen, sizeof toast_snap);
         confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frames(160);
         for (n = out = 0, y = UX_Y_KNOBS; y < UX_Y_STATUS; y++)
@@ -11887,9 +11887,9 @@ static const old_lv_t OLD_LV[] = {
     {FAM_SCL, 0, 9, {"SCL", "CHORD", "SCL MORE"}}, {FAM_ARP, 0, 9, {"ARP", "ARP 2"}},
     {FAM_GLO, 0, 9, {"LIVE", "MIX", "GLO MORE"}},   /* (3c-1 task 7: GLO its own; JIANT's MIXER SENDS GLOBAL SYSTEM MIX's knobs,
                                                          * MORE's rows; SENDS FX's) */
-    {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}},
-    {FAM_SAVE, 0, 9, {"SAVE SOUND", "SAVE SONG", "SAVE MORE"}},   /* (3c-2 task 2: SOUND the inherited USER and PRESETS; task 3: SONG
-                                                         * the inherited SECTIONS and ARRANGE, SV_PROJ's) */
+    {FAM_SAVE, 0, 9, {"SAVE SOUND", "SAVE SONG", "SAVE PROJECT", "SAVE MORE"}},   /* (3c-2 task 2: SOUND the inherited USER and
+                                                         * PRESETS; task 3: SONG the inherited SECTIONS and ARRANGE, SV_PROJ's; task 4:
+                                                         * PROJECT the inherited PROJECTS, TOOLS MORE's rows, SV_LIB's) */
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "SEQ MORE"}},   /* (3c-1 task 4: JIANT's STRETCH PLAYHEADS TRACK MUTATE NOTE AUTOMATION
                                                          * AUTO LIST COMP COMP 2 pages SEQ > MORE's rows) */
     {FAM_SEQ, LV_BAR, 9, {"STEP"}},
@@ -12190,8 +12190,8 @@ static int test_nav_rules(void)
     press(B_OCTDN); frame();
     go_title("ENV"); frame();
     name_key();
-    ok &= !name_on() && msg_is("NAME: ON SOUND OR PROJECT");
-    bad += check("0.9.2 SAVE + C5: NAME, the slot's rename on SOUND / PROJECT (its map names it); elsewhere it says where", ok);
+    ok &= !name_on() && msg_is("NAME: ON SOUND, SONG OR PROJECT");   /* (3c-2 task 4: SONG too) */
+    bad += check("0.9.2 SAVE + C5: NAME, the slot's rename on SOUND / SONG / PROJECT (its map names it); elsewhere it says where", ok);
     ui_power_on(); go_home(); frame();
     fm1_ms += 1200u;
     held_turn(B_HOME, 1); frame();
@@ -19527,14 +19527,21 @@ static int test_t38_clock(void)
           text_w(&UF_LBL, UX_GL_OFF) > 0;
     ok &= 8 + text_w(&UF_HDR, "T6 \xB7 MMMMMMMMMMMM") + 6 <= 232 - text_w(&UF_HDR, "4/4 \xB7 " UX_GL_SYNC " " UX_GL_PLAY " 240 BPM");
                                                        /* (a 12-letter name and SEQ's widest right, the mark in it: apart) */
-    {   /* .. and JIANT's header (SAVE's pages, the MENU): a diamond right of the BPM */
+    {   /* .. and JIANT's header (SEQ's PHRASES, the MENU; 3c-2 task 4: SAVE's pages the ux pages'): a diamond right of the BPM (its
+         * cell; the words after it move on with it) */
         static uint16_t h0[24 * 120];
         uint32_t y, x, d = 0;
-        go_title("TOOLS");
+        head_geo_t g;
+        char bb[8];
+        go_title("PHRASES");
         song.g[G_CLOCK] = 0; ui.force = 1; frame();
+        fmt_int(bb, song.g[G_BPM]);
+        head_geo(&g, bb);
         for (y = 0; y < 24u; y++) for (x = 0; x < 120u; x++) h0[y * 120u + x] = host_screen[y * 240u + x];
         song.g[G_CLOCK] = 2; frame();
-        for (y = 0; y < 24u; y++) for (x = 0; x < 120u; x++) d += h0[y * 120u + x] != host_screen[y * 240u + x];
+        for (y = 0; y < 24u; y++)
+            for (x = (uint32_t)(g.bx + g.b[2] + HEAD_GAP); x < (uint32_t)(g.bx + g.b[2] + HEAD_GAP + 7) && x < 120u; x++)
+                d += h0[y * 120u + x] != host_screen[y * 240u + x];
         ok &= d >= 16u && d <= 49u;
         if (d < 16u || d > 49u) printf("  JIANT header: %u px changed with CLOCK TRS\n", d);
     }
@@ -20273,23 +20280,23 @@ static int test_u2_nav(void)
     uxs_knobs(cur_page(), kn);
     uxs_foot(uxs_where(), kn, uxs_count(), uxs_next(), b, sizeof b);
     ok = str_eq(cur_page()->title, "SAVE SOUND") && cur_page()->graph == GR_SVSND && uxv_owns() && ux_page_owns() &&
-         ux_section_owns(SEC_SAVE) && uxq_t_is("SOUND's footer", b, "1 / 5 \xB7 NEXT SONG") &&
+         ux_section_owns(SEC_SAVE) && uxq_t_is("SOUND's footer", b, "1 / 4 \xB7 NEXT SONG") &&
          uxq_t_is("SOUND's place", uxs_where(), "SAVE \xB7 SOUND") && str_eq(kn[0].label, "SLOT") && str_eq(kn[1].label, "PRESET") &&
          str_eq(kn[2].label, "NAME") && str_eq(kn[3].label, "SAVE") && ui.act == 4u;
     press(B_SAVE); frames(320);
     ok &= str_eq(nav_page_name(), "SONG") && uxv_owns() && ux_page_owns();   /* (3c-2 task 3: SONG, was SECTIONS) */
     press(B_SAVE); frames(320);
-    ok &= str_eq(nav_page_name(), "PROJECTS") && !uxv_owns() && !ux_page_owns();
+    ok &= str_eq(nav_page_name(), "PROJECT") && uxv_owns() && ux_page_owns();   /* (task 4: PROJECT, was PROJECTS) */
     nav_put(SEC_SAVE, "MORE"); frames(320);
     ok &= str_eq(cur_page()->title, "SAVE MORE") && cur_page()->more == &UXM_SAVE && uxv_owns() && ux_page_owns() &&
-          !strcmp(uxs_count(), "5 / 5") && !lock_page_ok(ui.page);
+          !strcmp(uxs_count(), "4 / 4") && !lock_page_ok(ui.page);
     press(B_SAVE); frames(320);
     ok &= str_eq(cur_page()->title, "SAVE SOUND");
     turn(EN_SELECT, 1); frames(64);
     ok &= str_eq(nav_page_name(), "SONG");
     for (i = 0; i < NPAGES; i++)
         ok &= !str_eq(PAGES[i].title, "USER") && !str_eq(PAGES[i].title, "PRESETS");
-    bad += check("ACID FM 3c-2 task 2: SAVE opens on SOUND (1 / 5 . NEXT SONG: task 3), SOUND SONG MORE on the ux pages, USER and PRESETS "
+    bad += check("ACID FM 3c-2 task 2: SAVE opens on SOUND (1 / 4 . NEXT SONG: task 4), SOUND SONG PROJECT MORE on the ux pages, USER and PRESETS "
                  "gone", ok);
     ui_power_on();
     return bad;
@@ -20423,7 +20430,9 @@ static int test_u2_more(void)
     static const struct { uint8_t kind, id; const char *nm; } ROWS[] = {
         {UXR_HEAD, UXM_H_SONG, "SONG"}, {UXR_GLOBAL, ID_SV_END, "END"}, {UXR_ACTION, UXM_A_DELROW, "DELETE ROW"},
         {UXR_ACTION, UXM_A_CLRSONG, "CLEAR SONG"},   /* (3c-2 task 3) */
-        {UXR_HEAD, UXM_H_TOOLS, "TOOLS"}, {UXR_ACTION, UXM_A_ERASE, "ERASE USER SLOT"}, {UXR_HEAD, UXM_H_SOUND, "SOUND"},
+        {UXR_HEAD, UXM_H_TOOLS, "TOOLS"}, {UXR_ACTION, UXM_A_CLRSEQ, "CLEAR SEQ"}, {UXR_ACTION, UXM_A_INITSND, "INIT SOUND"},
+        {UXR_ACTION, UXM_A_ERASE, "ERASE USER SLOT"}, {UXR_ACTION, UXM_A_NEWPROJ, "NEW PROJECT"},   /* (task 4) */
+        {UXR_ACTION, UXM_A_CPUTEST, "CPU TEST"}, {UXR_HEAD, UXM_H_SOUND, "SOUND"},
         {UXR_ACTION, UXM_A_ULOAD, "LOAD SLOT"}, {UXR_GLOBAL, ID_SV_ENGINE, "ENGINE"}, {UXR_GLOBAL, ID_SV_FAV, "FAVORITE"},
         {UXR_GLOBAL, ID_SV_LIST, "LIST"}};
     int bad = 0, ok = 1;
@@ -20537,10 +20546,10 @@ static int test_u3_knobs(void)
     uxs_foot(uxs_where(), kn, uxs_count(), uxs_next(), b, sizeof b);
     ok = str_eq(cur_page()->title, "SAVE SONG") && cur_page()->graph == GR_SVSONG && uxv_owns() && ux_page_owns() &&
          str_eq(kn[0].label, "SECTION") && str_eq(kn[1].label, "ROW") && str_eq(kn[2].label, "BARS") && str_eq(kn[3].label, "SCENE") &&
-         uxq_t_is("SONG's place", uxs_where(), "SAVE \xB7 SONG") && uxq_t_is("SONG's footer", b, "2 / 5 \xB7 NEXT PROJECTS") &&
+         uxq_t_is("SONG's place", uxs_where(), "SAVE \xB7 SONG") && uxq_t_is("SONG's footer", b, "2 / 4 \xB7 NEXT PROJECT") &&
          uxq_t_is("SECTION", kn[0].value, "A") && uxq_t_is("ROW", kn[1].value, "1/3") && uxq_t_is("BARS", kn[2].value, "1") &&
          uxq_t_is("SCENE", kn[3].value, "--");
-    bad += check("ACID FM 3c-2 task 3: SAVE > SONG: SECTION ROW BARS SCENE, SAVE . SONG, 2 / 5 . NEXT PROJECTS", ok);
+    bad += check("ACID FM 3c-2 task 3: SAVE > SONG: SECTION ROW BARS SCENE, SAVE . SONG, 2 / 4 . NEXT PROJECT (task 4)", ok);
     ui.song_row = 1;
     turn(EN_K1, 1); frame();
     ok = song.g[G_SLOT] == 2 && chain_config.row[1].slot == 1u && chain_config.row[0].slot == 0u && chain_config.row[2].slot == 2u;
@@ -20707,6 +20716,411 @@ static int test_u3_layer(void)
     for (i = 0; i < (int)NPAGES; i++)
         ok &= !str_eq(PAGES[i].title, "ARRANGE") && !(PAGES[i].fam == FAM_SEQ && str_eq(PAGES[i].title, "SONG"));
     bad += check("ACID FM 3c-2 task 3: SAVE + G5 opens SAVE > SONG; no ARRANGE page, no SEQ > SONG", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3c-2 task 4: SAVE PROJECT (spec 2.3; ux_save.c): KNOB 1 the project (song_open), 2 LOAD and 3 SAVE (action knobs, OCT+
+ * does the armed one) of the section SONG picks (G_SLOT), 4 NAME; LOAD over unsaved changes asks (CF_LOAD_PROJ). SAVE > MORE's
+ * TOOLS group (CLEAR SEQ, INIT SOUND, ERASE USER SLOT, NEW PROJECT, CPU TEST); the unsaved state (project.c); the SAVE layer drawn
+ * by ux_layer.c. The inherited PROJECTS and TOOLS pages and ui_lzsave.c gone
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static void u4_poll(uint32_t ms)                        /* frames with the main loop's autosave_poll (the unsaved state's tick) */
+{
+    uint32_t i;
+    for (i = 0; i < ms / 16u; i++) {
+        frame();
+        autosave_poll();
+    }
+}
+static void u4_proj(void)                               /* SAVE > PROJECT, stopped, sections A and B stored, A loaded, B picked */
+{
+    u2_open();
+    project_save_as(0, "NIGHT RUN");
+    trk[0].p[P_ATK] = (int16_t)(trk[0].p[P_ATK] + 9);
+    project_save_as(1, "DAWN");
+    project_load(0);
+    song.g[G_SLOT] = 2;
+    nav_put(SEC_SAVE, "PROJECT"); frames(320);
+    ui.msg_t = 0;
+}
+static void u4_touch(void)                              /* a knob turned: ENV > AMP's ATTACK, then back on SAVE > PROJECT */
+{
+    nav_put(SEC_ENV, "AMP"); frame();
+    turn(EN_K1, 3); frame();
+    nav_put(SEC_SAVE, "PROJECT"); frame();
+}
+static void u4_more_cur(uint32_t *s, uint32_t *t)      /* SAVE > MORE's pick and scroll as drawn */
+{
+    *s = uxm_at[nav_key(SEC_SAVE)].sel; *t = uxm_at[nav_key(SEC_SAVE)].top;
+    uxm_fix(&UXM_SAVE, uxm_mask(&UXM_SAVE), s, t);
+}
+static int u4_more_in_view(void)
+{
+    uint32_t s, t;
+    uint64_t m = uxm_mask(&UXM_SAVE);
+    u4_more_cur(&s, &t);
+    return uxm_vis(m, s) >= uxm_vis(m, t) && uxm_vis(m, s) < uxm_vis(m, t) + UXM_ROWS;
+}
+/* SAVE = SOUND -> SONG -> PROJECT -> MORE, four pages, the footer counting MORE; SELECT walks and scrolls MORE; ALGORITHM the track;
+ * PRESETS never a page */
+static int test_u4_nav(void)
+{
+    static const char *const T[4] = {"SAVE SOUND", "SAVE SONG", "SAVE PROJECT", "SAVE MORE"};
+    static const char *const F[3] = {"1 / 4 \xB7 NEXT SONG", "2 / 4 \xB7 NEXT PROJECT", "3 / 4 \xB7 NEXT MORE"};
+    int bad = 0, ok = 1;
+    uint32_t i, s, t, s0, t0;
+    ux_knob_t kn[4];
+    char b[48];
+    u2_open();
+    for (i = 0; i < 4u; i++) {
+        uxs_knobs(cur_page(), kn);
+        uxs_foot(uxs_where(), kn, uxs_count(), uxs_next(), b, sizeof b);
+        ok &= str_eq(cur_page()->title, T[i]) && uxv_owns() && ux_page_owns();
+        if (i < 3u)
+            ok &= uxq_t_is("SAVE's footer", b, F[i]);
+        else
+            ok &= uxq_t_is("MORE's count", uxs_count(), "4 / 4");
+        press(B_SAVE); frames(320);
+    }
+    ok &= str_eq(cur_page()->title, "SAVE SOUND");
+    nav_put(SEC_SAVE, "PROJECT"); frames(320);
+    uxs_knobs(cur_page(), kn);
+    ok &= cur_page()->graph == GR_SVPROJ && uxq_t_is("PROJECT's place", uxs_where(), "SAVE \xB7 PROJECT") &&
+          str_eq(kn[0].label, "PROJECT") && str_eq(kn[1].label, "LOAD") && str_eq(kn[2].label, "SAVE") && str_eq(kn[3].label, "NAME");
+    for (i = 0; i < NPAGES; i++)
+        ok &= !str_eq(PAGES[i].title, "PROJECT") && !str_eq(PAGES[i].title, "TOOLS") &&
+              (PAGES[i].fam != FAM_SAVE || PAGES[i].graph == GR_SVSND || PAGES[i].graph == GR_SVSONG || PAGES[i].graph == GR_SVPROJ ||
+               PAGES[i].graph == GR_MORE);
+    bad += check("ACID FM 3c-2 task 4: SAVE = SOUND SONG PROJECT MORE (1 / 4 .. 4 / 4), all on the ux pages; PROJECTS and TOOLS gone",
+                 ok);
+    nav_put(SEC_SAVE, "SOUND"); frames(320);
+    turn(EN_SELECT, 1); frames(32);
+    ok = str_eq(cur_page()->title, "SAVE SONG");
+    turn(EN_SELECT, 1); frames(32);
+    ok &= str_eq(cur_page()->title, "SAVE PROJECT");
+    turn(EN_SELECT, 1); frames(32);
+    ok &= str_eq(cur_page()->title, "SAVE MORE");
+    u4_more_cur(&s0, &t0);
+    turn(EN_SELECT, 1); frames(32);
+    u4_more_cur(&s, &t);
+    ok &= str_eq(cur_page()->title, "SAVE MORE") && t == t0 + 1u && u4_more_in_view();
+    turn(EN_SELECT, 100); frames(32);
+    ok &= str_eq(cur_page()->title, "SAVE MORE") && u4_more_in_view();
+    turn(EN_SELECT, -100); frames(32);
+    turn(EN_SELECT, -1); frames(32);
+    ok &= str_eq(cur_page()->title, "SAVE PROJECT");
+    s = song.sel;
+    turn(EN_ALGO, 1); frames(32);
+    ok &= song.sel == (s + 1u) % NTRK && str_eq(cur_page()->title, "SAVE PROJECT");
+    turn(EN_PRESET, 1); frames(32);
+    ok &= str_eq(cur_page()->title, "SAVE PROJECT");
+    if (!ok) printf("  SAVE's walk: %s, MORE %u/%u -> %u/%u, T%u\n", cur_page()->title, (unsigned)s0, (unsigned)t0, (unsigned)s,
+                    (unsigned)t, (unsigned)song.sel + 1u);
+    bad += check("  SELECT walks SOUND SONG PROJECT MORE and scrolls MORE; ALGORITHM the track; PRESETS never a page", ok);
+    ui_power_on();
+    return bad;
+}
+/* PROJECT's knobs: LOAD (clean: at once, UNDO marked; unsaved: CF_LOAD_PROJ, OCT- nothing, OCT+ loads, GLO + G4 back), SAVE (used:
+ * CF_OVR_PROJ; empty: NAME), NAME (section G_SLOT's rename), PROJECT (song_open; playing: STOP TO CHANGE PROJECT); the status line */
+static int test_u4_project(void)
+{
+    int bad = 0, ok;
+    int16_t a_b, a_x;
+    ux_knob_t kn[4];
+    u4_proj();
+    project_load(1);                                    /* (B's attack: A's + 9) */
+    a_b = trk[0].p[P_ATK];
+    project_load(0);
+    ok = trk[0].p[P_ATK] != a_b;
+    uxs_knobs(cur_page(), kn);
+    ok &= uxq_t_is("PROJECT", kn[0].value, "1");
+    u4_poll(300);
+    ok &= !project_unsaved();
+    turn(EN_K2, 1); frame();
+    ok &= ui.act == 2u;
+    frames(UX_HOT_MS + 100u);
+    ok &= uxq_t_is("LOAD armed", uxq_t_say(), "PROJECT 1 \xB7 SECTION B \xB7 OCT+ LOADS");
+    undo_ok = 0;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && proj_cur == 1u && live.cur == 1 && trk[0].p[P_ATK] == a_b && undo_ok && ui.act == 2u;
+    bad += check("ACID FM 3c-2 task 4: PROJECT's LOAD, nothing unsaved: section B loaded at once, UNDO marked, LOAD still armed", ok);
+    project_load(0); proj_clean_mark();
+    u4_touch();
+    a_x = trk[0].p[P_ATK];
+    u4_poll(300);
+    ok = project_unsaved() && a_x != a_b;
+    if (!ok) printf("  LOAD 1: unsaved %d atk %d / %d\n", project_unsaved(), a_x, a_b);
+    turn(EN_K2, 1); frame();
+    press(B_OCTUP); frame();
+    ok &= ui.confirm == CF_LOAD_PROJ && ui.confirm_trk == 1u && trk[0].p[P_ATK] == a_x;
+    if (!ok) printf("  LOAD 2: confirm %u %u atk %d act %u page %s\n", (unsigned)ui.confirm, (unsigned)ui.confirm_trk, trk[0].p[P_ATK], (unsigned)ui.act, cur_page()->title);
+    press(B_OCTDN); frame();
+    ok &= !ui.confirm && trk[0].p[P_ATK] == a_x && proj_cur == 0u;
+    turn(EN_K2, 1); frame();                            /* (a dialog drops the pick, as every one: confirm_open) */
+    press(B_OCTUP); frame();
+    ok &= ui.confirm == CF_LOAD_PROJ;
+    if (!ok) printf("  LOAD 3: confirm %u\n", (unsigned)ui.confirm);
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && trk[0].p[P_ATK] == a_b && proj_cur == 1u && !project_unsaved();
+    if (!ok) printf("  LOAD 4: atk %d proj_cur %u\n", trk[0].p[P_ATK], (unsigned)proj_cur);
+    ly_white(B_GLO, GLO_UNDO);                          /* GLO + G4: the changes back */
+    ok &= trk[0].p[P_ATK] == a_x;
+    if (!ok) printf("  LOAD: atk %d (A? B %d, changed %d), confirm %u, proj_cur %u, unsaved %d\n", trk[0].p[P_ATK], a_b, a_x,
+                    (unsigned)ui.confirm, (unsigned)proj_cur, project_unsaved());
+    bad += check("  LOAD over unsaved changes: CF_LOAD_PROJ (section B); OCT- nothing; OCT+ loads; GLO + G4 brings them back", ok);
+    {   /* the dialog's words */
+        uxd_text_t t;
+        uxd_text(CF_LOAD_PROJ, 1, &t);
+        ok = str_eq(t.word, "LOAD") && str_eq(t.verb, "LOAD") && str_eq(t.q, "LOAD SECTION B?") &&
+             str_eq(t.lost, "Loses the changes not stored. GLO + G4 brings them back.") && t.loses && ux_dialog_owns(CF_LOAD_PROJ);
+        bad += check("  CF_LOAD_PROJ's words: LOAD, LOAD SECTION B?, what is lost and GLO + G4", ok);
+    }
+    u4_proj();
+    song.g[G_SLOT] = 3; ui.msg_t = 0;
+    turn(EN_K2, 1); press(B_OCTUP); frame();
+    ok = !ui.confirm && msg_is("EMPTY SLOT") && proj_cur == 0u;
+    chain.running = 1; ui.msg_t = 0; song.g[G_SLOT] = 2;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && msg_is("STOP TO EDIT") && proj_cur == 0u;
+    chain.running = 0;
+    bad += check("  LOAD: an empty section EMPTY SLOT; the song playing STOP TO EDIT", ok);
+    turn(EN_K3, 1); frame();
+    ok = ui.act == 3u;
+    frames(UX_HOT_MS + 100u);
+    ok &= uxq_t_is("SAVE armed", uxq_t_say(), "PROJECT 1 \xB7 SECTION B \xB7 OCT+ SAVES");
+    press(B_OCTUP); frame();
+    ok &= ui.confirm == CF_OVR_PROJ && ui.confirm_trk == 1u && ui.act == 0u;
+    press(B_OCTDN); frame();
+    song.g[G_SLOT] = 3;
+    turn(EN_K3, 1); press(B_OCTUP); frame();
+    ok &= !ui.confirm && name_on() && nm.kind == NK_PROJ_SAVE && nm.slot == 2u;
+    press(B_OCTDN); frame();
+    ok &= !name_on() && !project_used(2);
+    seq_start(); frame(); ui.msg_t = 0; song.g[G_SLOT] = 2;
+    turn(EN_K3, 1); press(B_OCTUP); frame();
+    ok &= !ui.confirm && !name_on() && msg_is("STOP TO SAVE");
+    stop_transport(); frame();
+    bad += check("  SAVE: over a used section CF_OVR_PROJ, an empty one NAME; playing STOP TO SAVE", ok);
+    song.g[G_SLOT] = 2;
+    turn(EN_K4, 1); frame();
+    ok = name_on() && nm.kind == NK_PROJ_RENAME && nm.slot == 1u && str_eq(nm.s, "DAWN");
+    press(B_OCTDN); frame();
+    song.g[G_SLOT] = 3; ui.msg_t = 0;
+    turn(EN_K4, 1); frame();
+    ok &= !name_on() && msg_is("EMPTY SLOT");
+    bad += check("  NAME: the rename of the section SONG picks (G_SLOT); an empty one EMPTY SLOT", ok);
+    song.g[G_SLOT] = 2;
+    seq_start(); frame(); ui.msg_t = 0;
+    turn(EN_K1, 1); frame();
+    ok = song_cur == 0u && msg_is("STOP TO CHANGE PROJECT");
+    stop_transport(); frame();
+    turn(EN_K1, 1); frame();
+    uxs_knobs(cur_page(), kn);
+    ok &= song_cur == 1u && uxq_t_is("PROJECT 2", kn[0].value, "2");
+    turn(EN_K1, -1); frame();
+    ok &= song_cur == 0u;
+    bad += check("  KNOB 1 PROJECT: song_open (the music kept); playing STOP TO CHANGE PROJECT", ok);
+    ui_power_on();
+    return bad;
+}
+/* the unsaved state: clean after a load, a store (SAVE + C4), a save, NEW PROJECT; unsaved within 300 ms of a knob turn */
+static int test_u4_unsaved(void)
+{
+    int bad = 0, ok;
+    u4_proj();
+    u4_poll(300);
+    ok = !project_unsaved();
+    u4_touch();
+    u4_poll(300);
+    ok &= project_unsaved();
+    ly_white(B_SAVE, 4u);                               /* SAVE + C4: STORE A */
+    ok &= !project_unsaved();
+    u4_poll(300);
+    ok &= !project_unsaved();
+    u4_touch(); u4_poll(300);
+    ok &= project_unsaved();
+    project_load(1);
+    ok &= !project_unsaved();
+    u4_touch(); u4_poll(300);
+    project_save_as(1, "DAWN");
+    ok &= !project_unsaved();
+    u4_poll(300);
+    ok &= !project_unsaved();
+    u4_touch(); u4_poll(300);
+    ok &= project_unsaved();
+    u2_more_at(UXR_ACTION, UXM_A_NEWPROJ);
+    turn(EN_K2, 1); frame();
+    press(B_OCTUP); frame();
+    ok &= msg_is("NEW PROJECT") && !project_unsaved();
+    u4_poll(300);
+    ok &= !project_unsaved();
+    bad += check("ACID FM 3c-2 task 4: unsaved within 300 ms of a knob turn; clean after a load, a store, a save, NEW PROJECT", ok);
+    ui_power_on();
+    return bad;
+}
+/* SAVE > MORE's TOOLS: each row its dialog (the track, the slot); CLEAR SEQ and CLEAR SONG on nothing: NOTHING TO CLEAR; the song
+ * playing: STOP TO EDIT */
+static int test_u4_tools(void)
+{
+    static const struct { uint8_t a, cf; } T[5] = {{UXM_A_CLRSEQ, CF_CLEAR_SEQ}, {UXM_A_INITSND, CF_INIT_SOUND},
+                                                   {UXM_A_ERASE, CF_ERASE_USER}, {UXM_A_NEWPROJ, CF_INIT_SYS},
+                                                   {UXM_A_CPUTEST, CF_CPU_TEST}};
+    static const struct { uint8_t kind, id; const char *nm; } ROWS[] = {
+        {UXR_HEAD, UXM_H_SONG, "SONG"}, {UXR_GLOBAL, ID_SV_END, "END"}, {UXR_ACTION, UXM_A_DELROW, "DELETE ROW"},
+        {UXR_ACTION, UXM_A_CLRSONG, "CLEAR SONG"}, {UXR_HEAD, UXM_H_TOOLS, "TOOLS"}, {UXR_ACTION, UXM_A_CLRSEQ, "CLEAR SEQ"},
+        {UXR_ACTION, UXM_A_INITSND, "INIT SOUND"}, {UXR_ACTION, UXM_A_ERASE, "ERASE USER SLOT"},
+        {UXR_ACTION, UXM_A_NEWPROJ, "NEW PROJECT"}, {UXR_ACTION, UXM_A_CPUTEST, "CPU TEST"}, {UXR_HEAD, UXM_H_SOUND, "SOUND"},
+        {UXR_ACTION, UXM_A_ULOAD, "LOAD SLOT"}, {UXR_GLOBAL, ID_SV_ENGINE, "ENGINE"}, {UXR_GLOBAL, ID_SV_FAV, "FAVORITE"},
+        {UXR_GLOBAL, ID_SV_LIST, "LIST"}};
+    int bad = 0, ok = 1;
+    uint32_t i;
+    char v[24];
+    uint8_t bar;
+    u2_open();
+    ok &= UXM_SAVE.n == NELEM(ROWS);
+    for (i = 0; i < NELEM(ROWS) && i < UXM_SAVE.n; i++)
+        ok &= UXM_SAVE.rows[i].kind == ROWS[i].kind && UXM_SAVE.rows[i].id == ROWS[i].id &&
+              uxq_t_is("SAVE > MORE row", uxm_list_name(&UXM_SAVE.rows[i], uxm_row_text(&UXM_SAVE.rows[i], v, sizeof v, &bar)),
+                       ROWS[i].nm) &&
+              (UXM_SAVE.rows[i].kind == UXR_HEAD || ux_row_shown(&UXM_SAVE.rows[i]));
+    bad += check("ACID FM 3c-2 task 4: SAVE > MORE: SONG, TOOLS (CLEAR SEQ, INIT SOUND, ERASE USER SLOT, NEW PROJECT, CPU TEST), "
+                 "SOUND", ok);
+    ok = 1;
+    song.sel = 2;
+    trk[2].step[3] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    up_store(4, "DEEP SUB");
+    ui.uslot = 4;
+    for (i = 0; i < 5u; i++) {
+        u2_more_at(UXR_ACTION, T[i].a);
+        turn(EN_K2, 1); frame();
+        ok &= ui.confirm == T[i].cf && ui.confirm_trk == (T[i].a == UXM_A_ERASE ? 4u : 2u);
+        if (ui.confirm != T[i].cf) printf("  TOOLS %u: confirm %u\n", (unsigned)i, (unsigned)ui.confirm);
+        press(B_OCTDN); frame();
+        ok &= !ui.confirm;
+    }
+    bad += check("  each TOOLS row opens its dialog (the selected track; ERASE: the slot SOUND picks), OCT- keeps all", ok);
+    ok = 1;
+    chain.running = 1;
+    for (i = 0; i < 5u; i++) {
+        u2_more_at(UXR_ACTION, T[i].a);
+        ui.msg_t = 0;
+        turn(EN_K2, 1); frame();
+        ok &= !ui.confirm && msg_is("STOP TO EDIT");
+    }
+    chain.running = 0;
+    track_defaults_steps(&trk[2]);
+    u2_more_at(UXR_ACTION, UXM_A_CLRSEQ);
+    ui.msg_t = 0;
+    turn(EN_K2, 1); frame();
+    ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
+    chain_defaults(&chain_config);
+    u2_more_at(UXR_ACTION, UXM_A_CLRSONG);
+    ui.msg_t = 0;
+    turn(EN_K2, 1); frame();
+    ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
+    bad += check("  the song playing: STOP TO EDIT; CLEAR SEQ on an empty track, CLEAR SONG on no rows: NOTHING TO CLEAR", ok);
+    ui_power_on();
+    return bad;
+}
+/* the SAVE layer drawn by ux_layer.c, every key, knob and OCT as before */
+static int test_u4_layer(void)
+{
+    int bad = 0, ok, own;
+    ux_knob_t k[4];
+    uint16_t col;
+    char kn_nm[12];
+    ui_power_on(); frame(); stop_transport();
+    project_save_as(0, "NIGHT RUN"); project_save_as(1, "DAWN");
+    go_home(); frame();
+    btn_down(B_SAVE); frames(800);
+    own = ui.layer == LAYER_SAVE && ux_layer_owns(LAYER_SAVE);
+    uxl_knobs(LAYER_SAVE, k);
+    own &= str_eq(k[0].label, "SONG") && str_eq(k[0].value, "1") && !k[1].label[0] && !k[3].label[0];
+    own &= str_eq(uxl_where(LAYER_SAVE), "SAVE \xB7 HELD") &&
+           str_eq(uxl_status(LAYER_SAVE, k, &col), "SAVE: PLAY/STORE \xB7 OCT+ STORE \xB7 OCT- RECALL");
+    (void)ly_keyname(LAYER_SAVE, 0, 15u, kn_nm);
+    own &= str_eq(kn_nm, "SONG PAGE");
+    turn(EN_K1, 1); frame();
+    ok = lys.song == 2u;
+    uxl_knobs(LAYER_SAVE, k);
+    ok &= str_eq(k[0].value, "2");
+    turn(EN_K1, -1); frame();
+    btn_up(B_SAVE); frames(400);
+    ok &= song_cur == 0u;
+    bad += check("ACID FM 3c-2 task 4: the SAVE layer drawn by ux_layer.c: KNOB 1 SONG, SAVE . HELD, its status line, G5 SONG PAGE",
+                 own);
+    ly_white(B_SAVE, 0u);                               /* F3: PLAY A (stopped: at once) */
+    ok &= live.cur == 0;
+    ly_white(B_SAVE, 5u);                               /* D4: STORE B */
+    ok &= live.cur == 1 && ((live.dirty >> 1) & 1u);
+    ly_white(B_SAVE, 12u);                              /* D5: LOOP / SONG */
+    ok &= live.mode == 1u;
+    ly_white(B_SAVE, 12u);
+    ok &= live.mode == 0u;
+    ly_white(B_SAVE, 13u);                              /* E5: SONG REC */
+    ok &= live.srec != 0u;
+    ly_white(B_SAVE, 13u);
+    ok &= live.srec == 0u;
+    nav_put(SEC_SAVE, "PROJECT"); frame();
+    song.g[G_SLOT] = 2;
+    name_key();                                         /* C5: NAME, on PROJECT the section picked */
+    ok &= name_on() && nm.kind == NK_PROJ_RENAME && nm.slot == 1u;
+    press(B_OCTDN); frame();
+    go_home(); frame(); ui.msg_t = 0;
+    name_key();
+    ok &= !name_on() && msg_is("NAME: ON SOUND, SONG OR PROJECT");
+    ly_white(B_SAVE, 15u);                              /* G5: SAVE > SONG */
+    ok &= str_eq(cur_page()->title, "SAVE SONG");
+    bad += check("  its keys: PLAY A, STORE B, LOOP / SONG, SONG REC, NAME (SOUND, SONG or PROJECT), G5 SAVE > SONG", ok);
+    ui_power_on();
+    return bad;
+}
+/* (task 3 review) SONG: paced; SECTION while the song plays; SAVE + C5 there; the picture's signature the row it draws */
+static int test_u4_song(void)
+{
+    int bad = 0, ok;
+    uint32_t n0, s1;
+    u3_song(3);
+    frames(400);
+    n0 = uxs_panels;
+    frames(800);
+    ok = uxs_panels == n0;
+    turn(EN_K2, 1); frames(64);
+    ok &= uxs_panels == n0 + 1u;
+    turn(EN_K3, 1); frames(64);
+    ok &= uxs_panels == n0 + 2u;
+    press(B_OCTUP); frames(64);
+    ok &= uxs_panels == n0 + 3u;
+    turn(EN_K4, 1); frames(64);
+    ok &= uxs_panels == n0 + 4u;
+    sv_view_turn(ID_SV_END, 1); frames(64);
+    ok &= uxs_panels == n0 + 5u;
+    frames(800);
+    ok &= uxs_panels == n0 + 5u;
+    if (!ok) printf("  SONG: %u panels\n", (unsigned)(uxs_panels - n0));
+    bad += check("ACID FM 3c-2 task 4 (task 3 review): SONG's picture once a change (ROW, BARS, OCT+, SCENE, END), none idle", ok);
+    u3_song(3);
+    ui.song_row = 1; chain.running = 1; ui.msg_t = 0;
+    turn(EN_K1, 1); frame();
+    ok = song.g[G_SLOT] == 2 && chain_config.row[1].slot == 1u && msg_is("STOP TO EDIT");
+    chain.running = 0;
+    bad += check("  SECTION while the song plays: G_SLOT written, the row untouched, STOP TO EDIT", ok);
+    u3_song(3);
+    project_save_as(1, "DAWN");
+    song.g[G_SLOT] = 2;
+    nav_put(SEC_SAVE, "SONG"); frame();
+    name_key();
+    ok = name_on() && nm.kind == NK_PROJ_RENAME && nm.slot == 1u && str_eq(nm.s, "DAWN");
+    press(B_OCTDN); frame();
+    bad += check("  SAVE + C5 on SONG: the section's rename", ok);
+    u3_song(3);
+    ui.song_row = 2;
+    s1 = uxv_sig(cur_page());
+    ui.song_row = 3;
+    ok = uxv_sig(cur_page()) == s1;
+    bad += check("  SONG's signature: the row drawn (a stale ROW past the last the same)", ok);
     ui_power_on();
     return bad;
 }
@@ -20939,6 +21353,12 @@ int main(void)
     bad += test_u3_add();
     bad += test_u3_more();
     bad += test_u3_layer();
+    bad += test_u4_nav();                               /* (ACID FM 3c-2 task 4) */
+    bad += test_u4_project();
+    bad += test_u4_unsaved();
+    bad += test_u4_tools();
+    bad += test_u4_layer();
+    bad += test_u4_song();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

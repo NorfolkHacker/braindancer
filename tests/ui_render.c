@@ -576,7 +576,7 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
 
 enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HOME_DEMO, S_HOME_T5, S_HOME_TURN, S_HOME_REC,
-       S_HOME_BATT0, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PHRASES, S_PROJECT, S_TOOLS, S_SONG_EMPTY, S_SONG, S_STEP,
+       S_HOME_BATT0, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PHRASES, S_SONG_EMPTY, S_SONG, S_STEP,
        S_PATTERN, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM,
        S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN, S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH,
        S_DLY, S_SCL, S_SHIFT, S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM, S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_SAMPLE,
@@ -599,7 +599,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_REC_LAYER, S_REC_LAYER_SET, S_REC_LAYER_SONG,
        S_MACRO_LAYER, S_MSEQ, S_DIST_PAGE, S_DLY2, S_REVERB2, S_CHORUS, S_MASTER, S_LFO_DEST, S_LFO2, S_LFO2_FREE, S_COUNTIN,
        S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK, S_HEAD_BPM_LOCKED,
-       S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2, S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_SOUND,
+       S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2, S_SAVE_PROJECT, S_SAVE_MORE_END, S_SAVE_SOUND,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_GEN_LEAD, S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_OPERATOR, S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE,
        S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_SCL_MORE, S_SCL_WHITE, S_ARP_CHORD,
@@ -619,10 +619,10 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL, S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS,
        S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM, S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_SEQ_MORE,
        S_SEQ_MORE_END, S_SEQ_MORE_DRUM, S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_GLO_MIX, S_GLO_MORE_END, S_GLO_MIDI, S_GLO_MORE_MIDI,
-       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_SAVE_SONG, S_SAVE_SONG_EMPTY, S_COUNT };
+       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_SAVE_SONG, S_SAVE_SONG_EMPTY, S_DLG_LOAD_PROJ, S_LAYER_SAVE, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo",
-    "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "phrases", "project",
-    "tools", "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image",
+    "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "phrases",
+    "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image",
     "dx_send", "page_flash", "fugue", "motion", "drum", "drum_hand", "drum_cym", "mixer", "mixer_pan", "env_1", "env_2",
     "lfo_1", "lfo_3", "fx_1_eco", "fx_more_eco", "fx_3_quiet", "fx_more_end", "fx_2_free", "scl_1", "shift", "arp_off",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_voice",
@@ -646,7 +646,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "auto_list", "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "lfo_more",
     "fx_1_turn", "fx_2_hold", "fx_2_cloud", "fx_more_chorus", "fx_3_hot", "lfo_2", "lfo_sh", "lfo_free", "countin",
     "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock", "head_bpm_locked",
-    "head_glo_turn", "head_downbeat", "head_beat_2", "save_library", "save_tools",
+    "head_glo_turn", "head_downbeat", "head_beat_2", "save_project", "save_more_end",
     "save_sound", "fx_1", "fx_more", "fx_more_lane", "fx_2", "fx_2_ping", "fx_more_delay", "fx_more_reso", "fx_more_slicer",
     "fx_3", "gen_lead", "ed_filter", "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop",
     "env_first", "lfo_more_end", "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends",
@@ -666,7 +666,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state", "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64",
     "seq_steps_drum", "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end",
     "seq_more_drum", "seq_lock", "seq_extras_echo", "glo_mix", "glo_more_end", "glo_midi", "glo_more_midi", "save_sound_empty",
-    "save_more", "save_song", "save_song_empty"};
+    "save_more", "save_song", "save_song_empty", "dlg_load_proj", "layer_save"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's); (ACID FM 3c-1 task 6)
  * the ux pages: LIVE idle (stopped, nothing live); with tricks (T2 THIN 70 %, T3 x2 RATCH x3, T4 LOOP 8, T5 2/3; black key 3 held:
@@ -1129,8 +1129,6 @@ static void setup(int s)
     case S_MENU_SCREEN2:                                /* (0.9.18) MENU > SCREEN 2: SCREEN SLEEP 15 MIN just turned */
         scr_put(2u); ui.menu = 1; ui.menu_sel = MI_SCROFF; ui.hot_col = 2u; ui.hot_t = 30; break;
     case S_PHRASES: go_page(GR_PATS); break;
-    case S_PROJECT: song.playing = 0; project_save(1); song.g[G_SLOT] = 2; go_page(GR_SLOTS); ui.act = 4; break;
-    case S_TOOLS: go_page(GR_TOOLS); ui.act = 1; break;
     case S_SONG_EMPTY: song.playing = 0; go_page(GR_SVSONG); break;
     case S_SONG:
         song.playing = 0; project_save(0); project_save(1);
@@ -1237,18 +1235,18 @@ static void setup(int s)
     case S_COUNTIN: song.playing = 0; song.rec = 1; cin_total = 4; cin_left = 3; go_home(); break;
     case S_COUNTIN2: song.playing = 0; song.rec = 1; cin_total = 8; cin_left = 8; go_page(GR_ROLL); break;
     case S_MENU_AUDIO: ui.menu = 1; ui.menu_sel = MI_CLICK; rp_put(RP_CLICK, 1u); rp_put(RP_COUNTIN, 1u); break;
-    /* (3c-1 task 7: on SAVE's TOOLS, a JIANT page and its header; GLO > GLOBAL gone) 1.2: the header's three slots (ui_draw.c draw_head): playing with the selected track armed; another track armed;
+    /* (3c-1 task 7: on SAVE's TOOLS, a JIANT page and its header; GLO > GLOBAL gone; 3c-2 task 4: TOOLS gone, on SAVE > MORE) 1.2: the header's three slots (ui_draw.c draw_head): playing with the selected track armed; another track armed;
      * the BPM being turned (the accent's); BPM LOCK ON (the lock right of the BPM), and its message after a turn;
      * GLO with the tempo turned and BPM LOCK ON (the label right of the lock); the metronome on the bar's 1st beat
      * (the accent's) and its 2nd (mirrored) */
-    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_title("TOOLS"); break;
-    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_title("TOOLS"); break;
-    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_title("TOOLS"); break;
-    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_title("TOOLS"); break;
-    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_title("TOOLS"); ui_message("BPM LOCKED"); break;
+    case S_HEAD_PLAY_REC: song.rec = 1u << song.sel; go_title("SAVE MORE"); break;
+    case S_HEAD_REC_OTHER: song.rec = 1u << ((song.sel + 2u) % NTRK); go_title("SAVE MORE"); break;
+    case S_HEAD_BPM_TURN: song.g[G_BPM] = 128; ui.roll_bpm = 128; ui.bpm_t = 40; go_title("SAVE MORE"); break;
+    case S_HEAD_BPM_LOCK: ui_prefs |= PREF_BPM_LOCK; go_title("SAVE MORE"); break;
+    case S_HEAD_BPM_LOCKED: ui_prefs |= PREF_BPM_LOCK; go_title("SAVE MORE"); ui_message("BPM LOCKED"); break;
     case S_HEAD_GLO_TURN: ui_prefs |= PREF_BPM_LOCK; go_home(); ui.layer = LAYER_GLO; ui.bpm_t = 40; break;
-    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_title("TOOLS"); break;
-    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_title("TOOLS"); break;
+    case S_HEAD_DOWNBEAT: clk_step = 1; song.rec = 1u << song.sel; go_title("SAVE MORE"); break;
+    case S_HEAD_BEAT_2: clk_step = 5; song.rec = 1u << song.sel; go_title("SAVE MORE"); break;
     case S_DRUM: drum(0); go_page(GR_ROLL); ui.cursor = 4; ui.lane = 1; trk[3].seq_idx = 9; break;
     case S_DRUM_HAND: drum(1); go_page(GR_ROLL); ui.lane = 5; ui.cursor = 7; break;
     case S_DRUM_CYM: drum(2); go_page(GR_ROLL); ui.lane = 7; break;
@@ -1454,7 +1452,7 @@ static void setup(int s)
         break;
     /* (ACID FM 3c-2 task 1) the dialogs full screen (ux_dialog.c), over the page each opens from; the longest names */
     case S_DLG_CLEAR_SEQ: case S_DLG_CLEAR_TRK:
-        song.sel = 2; go_title("TOOLS");
+        song.sel = 2; go_title("SAVE MORE");
         for (uint32_t i = 0; i < 14u; i++) { trk[2].step[i].time = ST_NOTE; trk[2].step[i].n = 1; trk[2].step[i].note[0] = (uint8_t)(48 + i); }
         (void)motion_set_lock(&trk[2], 1, P_FCUT, 40); (void)motion_set_lock(&trk[2], 5, P_FCUT, 90);
         (void)motion_set_lock(&trk[2], 9, P_FCUT, 70);
@@ -1469,23 +1467,27 @@ static void setup(int s)
     case S_DLG_CLEAR_PFX: fx_more_at(0, UXR_ACTION); ui.confirm = CF_CLEAR_PFX; ui.confirm_trk = song.sel; break;
     case S_DLG_CLEAR_SONG: case S_DLG_DEL_ROW: {
         uint32_t i;
-        song.playing = 0; go_title(s == S_DLG_DEL_ROW ? "SAVE SONG" : "TOOLS");
+        song.playing = 0; go_title(s == S_DLG_DEL_ROW ? "SAVE SONG" : "SAVE MORE");
         chain_config.count = 6;
         for (i = 0; i < 6u; i++) chain_config.row[i] = (chain_row_t){(uint8_t)(i % 3u), (uint8_t)(16u + 4u * (i & 1u))};
         ui.confirm = s == S_DLG_DEL_ROW ? CF_DEL_ROW : CF_CLEAR_SONG; ui.confirm_trk = s == S_DLG_DEL_ROW ? 2 : song.sel;
         break;
     }
     case S_DLG_INIT_SOUND: case S_DLG_INIT_SOUND_DRUM:
-        song.sel = s == S_DLG_INIT_SOUND ? 2 : 0; go_title("TOOLS");
+        song.sel = s == S_DLG_INIT_SOUND ? 2 : 0; go_title("SAVE MORE");
         if (s == S_DLG_INIT_SOUND_DRUM) eng(ENGI_DRUM);
         ui.confirm = CF_INIT_SOUND; ui.confirm_trk = song.sel;
         break;
-    case S_DLG_INIT_SYS: go_title("TOOLS"); ui.confirm = CF_INIT_SYS; ui.confirm_trk = song.sel; break;
-    case S_DLG_CPU_TEST: go_title("TOOLS"); ui.confirm = CF_CPU_TEST; ui.confirm_trk = song.sel; break;
+    case S_DLG_INIT_SYS: go_title("SAVE MORE"); ui.confirm = CF_INIT_SYS; ui.confirm_trk = song.sel; break;
+    case S_DLG_CPU_TEST: go_title("SAVE MORE"); ui.confirm = CF_CPU_TEST; ui.confirm_trk = song.sel; break;
+    case S_DLG_LOAD_PROJ:                        /* (3c-2 task 4) LOAD over unsaved changes, section B */
+        song.playing = 0; project_save_as(1, "DAWN"); go_title("SAVE PROJECT"); song.g[G_SLOT] = 2;
+        ui.confirm = CF_LOAD_PROJ; ui.confirm_trk = 1;
+        break;
     case S_DLG_LIVE_COMMIT: go_title("LIVE"); ui.confirm = CF_LIVE_COMMIT; ui.confirm_trk = 0x3C; break;
     case S_DLG_LOAD_PAT: song.sel = 0; go_title("PATTERN"); ui.confirm = CF_LOAD_PAT; ui.confirm_trk = 0; ui.ppick = 4; break;
     case S_DLG_OVR_PROJ:
-        song.playing = 0; project_save_as(1, "MWMWMWMWMWMW"); go_title("PROJECT");
+        song.playing = 0; project_save_as(1, "MWMWMWMWMWMW"); go_title("SAVE PROJECT");
         ui.confirm = CF_OVR_PROJ; ui.confirm_trk = 1;
         break;
     case S_DLG_OVR_USER: case S_DLG_ERASE_USER:
@@ -1530,11 +1532,11 @@ static void setup(int s)
     }
     case S_UBOOT: ui.uboot = 3; break;
     /* the header's battery at each stock level (raw ADC: under 531, 531.., 561.., 591..) and on USB power */
-    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_title("TOOLS"); break;
-    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_title("TOOLS"); break;
-    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("TOOLS"); break;
-    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("TOOLS"); break;
-    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("TOOLS"); break;
+    case S_BATT0: usb.config = 0; song.batt_raw = 500; go_title("SAVE MORE"); break;
+    case S_BATT1: usb.config = 0; song.batt_raw = 540; go_title("SAVE MORE"); break;
+    case S_BATT2: usb.config = 0; song.batt_raw = 570; go_title("SAVE MORE"); break;
+    case S_BATT3: usb.config = 0; song.batt_raw = 600; go_title("SAVE MORE"); break;
+    case S_BATT_USB: usb.config = 1; usb.suspended = 0; song.batt_raw = 500; go_title("SAVE MORE"); break;
     case S_MOTION_REC: song.rec = 1u << song.sel; seq_more_at(UXR_TRACK, ID_SQ_PLAY); break;    /* recording into the motion */
     case S_MOTION_OFF: song.playing = 0; seq_more_at(UXR_ACTION, UXM_A_CLRAUTO); break;  /* stopped, CLEAR picked */
     case S_MOTION_CARD: {                                          /* #63: EDIT 1 (ACID FM 3a: was HOME), MOTION drives KNOB 1
@@ -1551,7 +1553,7 @@ static void setup(int s)
         song.playing = 0; project_save(0); project_save(1);
         chain_config.count = 2;
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4};
-        go_page(GR_SVSONG); chain_prepare(); events_block(32); go_title("TOOLS"); ui.msg_t = 0;   /* (3a: a lens page's header) */
+        go_page(GR_SVSONG); chain_prepare(); events_block(32); go_title("SAVE MORE"); ui.msg_t = 0;   /* (3a: a lens page's header) */
         break;
     /* the FX layer's map: held alone; REPEAT 1/16 + GLITCH + the CRUSH sweep + a mute playing with the macros turned;
      * at 72 BPM: a REPEAT 1/16 waiting for its 1/16 (shown THEME) beside the FILTER sweep playing, and REPEAT 1/8
@@ -1628,6 +1630,10 @@ static void setup(int s)
     case S_LAYER_LOCK_FX: go_title("ENV"); ui.layer = LAYER_FX; break;
     /* JIANT: the song layer, section B playing, SONG mode, SONG REC on; then a quick chain being tapped */
     case S_LAYER_SONG: go_home(); ui.layer = LAYER_SAVE; live.cur = 1; live.mode = 1; live.srec = 2; live.dirty = 4; break;
+    case S_LAYER_SAVE:                           /* (3c-2 task 4) the SAVE layer in the ACID look: section B playing, SONG REC armed */
+        song.playing = 0; project_save_as(0, "NIGHT RUN"); project_save_as(1, "DAWN");
+        go_home(); ui.layer = LAYER_SAVE; live.cur = 1; live.srec = 1; live.dirty = 1; ui.msg_t = 0;
+        break;
     case S_LAYER_SONG_CHAIN:
         go_home(); ui.layer = LAYER_SAVE; live.cur = 0; live.req = 2;
         lys.nqc = 4; lys.qc[0] = 0; lys.qc[1] = 1; lys.qc[2] = 1; lys.qc[3] = 2;
@@ -1707,10 +1713,10 @@ static void setup(int s)
         str_cpy(nm.s, "SUB BAS", sizeof nm.s); nm.len = 7; nm.cur = 6; nm.key = 9; nm.tap = 1; nm.t = fm1_ms;
         break;
     case S_NAME_123:
-        song.playing = 0; go_page(GR_SLOTS); name_open(NK_PROJ_SAVE, 1);
+        song.playing = 0; go_page(GR_SVPROJ); name_open(NK_PROJ_SAVE, 1);
         str_cpy(nm.s, "LIVE 2026", sizeof nm.s); nm.len = 9; nm.cur = 5; nm.num = 1;
         break;
-    case S_NAME_EMPTY: song.playing = 0; go_page(GR_SLOTS); proj_name[0] = 0; name_open(NK_PROJ_SAVE, 2); break;
+    case S_NAME_EMPTY: song.playing = 0; go_page(GR_SVPROJ); proj_name[0] = 0; name_open(NK_PROJ_SAVE, 2); break;
     case S_NAME_FULL:
         song.playing = 0; up_store(4, "PAD"); go_page(GR_SVSND); name_open(NK_USER_RENAME, 4);
         str_cpy(nm.s, "MWMWMWMWMWMW", sizeof nm.s); nm.len = nm.cur = 12;
@@ -1718,7 +1724,7 @@ static void setup(int s)
     case S_NAME_PLAYING: go_page(GR_SVSND); name_open(NK_USER_SAVE, 6); ui_message("STOP TO SAVE"); break;
     case S_PROJECT_NAMED:
         song.playing = 0; project_save_as(0, "LOFI JAM"); project_save_as(1, "MWMWMWMWMWMW"); project_save_as(2, "");
-        song.g[G_SLOT] = 2; go_page(GR_SLOTS); ui.act = 4; ui.msg_t = 0;
+        song.g[G_SLOT] = 2; go_page(GR_SVPROJ); ui.act = 4; ui.msg_t = 0;
         break;
     case S_SONG_NAMED:
         song.playing = 0; project_save_as(0, "LOFI JAM"); project_save_as(1, "MWMWMWMWMWMW");
@@ -1813,10 +1819,10 @@ static void setup(int s)
      * song B16 C16 A32 D8 C16 A32 (scenes on 2 and 4, END LOOP); seven user sounds. (ACID FM 3c-2 task 2) SOUND on U05 (WOBBLE,
      * used) and on U08 (empty), SAVE armed; MORE with ENGINE picked; (task 3) SONG: the song, section B picked, A playing, ROW 3
      * picked; and with no rows */
-    case S_SAVE_LIB: case S_SAVE_TOOLS: case S_SAVE_SOUND: case S_SAVE_SOUND_EMPTY:
+    case S_SAVE_PROJECT: case S_SAVE_MORE_END: case S_SAVE_SOUND: case S_SAVE_SOUND_EMPTY:
     case S_SAVE_MORE: case S_SAVE_SONG: case S_SAVE_SONG_EMPTY: {
-        static const char *const PN[NSONG] = {"", "ACID 03", "DUB KIT", ""};   /* (ACID FM 0.2: four projects) */
-        static const uint8_t PM[NSONG] = {0, 3, 1, 0};
+        static const char *const PN[NSONG] = {"", "ACID 03", "", ""};   /* (ACID FM 0.2: four projects; 3c-2 task 4: two used) */
+        static const uint8_t PM[NSONG] = {0, 3, 0, 0};
         static const chain_row_t AR[6] = {{1, 16}, {2, 16}, {0, 32}, {3, 8}, {2, 16}, {0, 32}};
         static const char *const UN[7] = {"DEEP SUB", "GLASS", "PAD NUBE", "WOBBLE", "BIRDCALL", "KEYS 2", "GRIT"};
         static const uint8_t UK[7] = {0, 1, 2, 4, 6, 9, 13}, UE[7] = {ENGI_ANALOG, ENGI_FM6, 2, ENGI_ANALOG, ENGI_NOISE_UI, ENGI_FM6, 3};   /* (BIRDCALL: NOISE, ANIMAL retired) */
@@ -1832,8 +1838,13 @@ static void setup(int s)
         for (k = 0; k < 7u; k++) { eng(UE[k]); up_store(UK[k], UN[k]); }
         eng(e0);
         ui.uslot = 0; ui.song_row = 0; ui.msg_t = 0; ui.frame += 7u;   /* (the sections' cache read again) */
-        if (s == S_SAVE_LIB) { nav_scene(SEC_SAVE, "PROJECTS"); ui.act = 4; }
-        else if (s == S_SAVE_TOOLS) { nav_scene(SEC_SAVE, "TOOLS"); ui.act = 1; }
+        lib.gen = lib_gen(); lib.next = NSONG;          /* (3c-2 task 4: the other projects as scanned) */
+        if (s == S_SAVE_PROJECT) { proj_unsaved = 1; nav_scene(SEC_SAVE, "PROJECT"); ui.act = 2; }   /* (the music changed since: */
+        else if (s == S_SAVE_MORE_END) {                /* the dot; LOAD armed) */
+            uxm_at[nav_key(SEC_SAVE)].sel = (uint8_t)(UXM_SAVE.n - 1u);
+            uxm_at[nav_key(SEC_SAVE)].top = (uint8_t)(UXM_SAVE.n - UXM_ROWS);
+            nav_scene(SEC_SAVE, "MORE");
+        }
         else if (s == S_SAVE_SONG || s == S_SAVE_SONG_EMPTY) {
             if (s == S_SAVE_SONG_EMPTY) chain_config.count = 0;
             ui.song_row = s == S_SAVE_SONG ? 2u : 0u;
@@ -2525,7 +2536,7 @@ static void align_sweeps(void)
         ui.layer = 0; ui.hot_t = 0; ui_prefs = 0;
         cur_name = st ? "sweep LINE: full-screen dialogs" : "sweep FLAT: full-screen dialogs";   /* (3c-2 tasks 1, 1b: ux_dialog.c,
                                                          * the dice too; ui_draw.c's draw_confirm gone) */
-        for (i = CF_CLEAR_SEQ; i <= CF_LIVE_COMMIT; i++)
+        for (i = CF_CLEAR_SEQ; i <= CF_LOAD_PROJ; i++)
             for (k = 0; k < 8u && ux_dialog_owns(i); k++) {
                 ui.confirm = (uint8_t)i; ui.confirm_trk = (uint8_t)k; ui.force = 1;
                 ux_dialog_draw();
@@ -2553,7 +2564,7 @@ static void align_sweeps(void)
         for (k = 0; k < 27u * 2u; k++) {
             rp_put(RP_CLICK, k % 3u); rp_put(RP_COUNTIN, k / 3u % 3u); rp_put(RP_LEVEL, k / 9u % 3u);
             song.sel = (uint8_t)(k % NTRK); ui_prefs = k >= 27u ? PREF_LARGE : 0u;
-            ui.force = 1; draw_layer(); ui.force = 0;
+            ui.force = 1; ux_layer_draw(); ui.force = 0;   /* (3c-2 task 4: ui_layer.c draw_layer gone) */
         }
         ui.layer = 0; song.sel = 0; ui_prefs = 0; ui_rec_prefs = 0;
         cur_name = st ? "sweep LINE: count-in" : "sweep FLAT: count-in";
@@ -2795,7 +2806,7 @@ int main(int argc, char **argv)
     {
         static const int COST[] = {S_HOME, S_SAVE_MORE, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_DLG_OVR_PROJ,
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
-                                   S_SAVE_LIB, S_SAVE_SONG, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
+                                   S_SAVE_PROJECT, S_SAVE_SONG, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
                                    S_HOME_VISUAL, S_EDIT_ANALOG, S_ED_FILTER, S_EDIT_ANALOG_MORE, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
                                    S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_EDIT_VOICE_1,
                                    S_EDIT_DRUM_1, S_EDIT_DRUM_2,
@@ -2831,9 +2842,10 @@ int main(int argc, char **argv)
         }
         {   /* the STEP page's piano roll: its panel alone redrawn, and a frame that changes nothing (the signature only) */
             static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP,
-                                    S_SAVE_LIB, S_SAVE_SOUND, S_FXL_BUSES, S_FXL_REVERB, S_FXL_DELAY, S_EDIT_ANALOG,
+                                    S_SAVE_SOUND, S_FXL_BUSES, S_FXL_REVERB, S_FXL_DELAY, S_EDIT_ANALOG,
                                     S_ENV_TRACKS, S_MOD, S_SYSTEM, S_EDIT_VOICE_1, S_EDIT_NOISE_1, S_EDIT_DRUM_2, S_EDIT_FM6_2};   /* (ACID FM 0.2:
-                                                         * NOISE, was ANIMAL; 3b task 5: DRUM-X's and FM6's ux pages) */
+                                                         * NOISE, was ANIMAL; 3b task 5: DRUM-X's and FM6's ux pages; 3c-2 task 4: SAVE's LIBRARY, PROJECT
+                                                         * a ux page, no JIANT panel to time) */
             for (k = 0; k < sizeof G / sizeof G[0]; k++) {
                 clock_t c0;
                 double tg, ti;

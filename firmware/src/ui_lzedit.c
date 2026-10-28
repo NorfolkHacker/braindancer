@@ -11,24 +11,7 @@
  *   VOICE   the track's voices one a row, each as full as its envelope now; VOICE and PRIO (VOICE 2: ALLOC); GLIDE's
  *           curve
  * The others (MORPH, RETRIG, ROTOR, the kit's, the operators') keep their panels. */
-/* (0.8.5) a gauge, as the mock-up's: an arc of 270 degrees (from 7:30, clockwise) round (cx, cy) px, radius r, w px
- * thick, the value f (0..1000) in vc over the track tc; antialiased lines (og_line), 24 a turn (ACID FM 3a: was
- * ui_lzhome.c's, gone with JIANT's HOME) */
-static void lz_arc(int32_t cx, int32_t cy, int32_t r, int32_t w, int32_t f, uint16_t tc, uint16_t vc)
-{
-    int32_t k, i;
-    for (k = 0; k < w; k++) {
-        int32_t rr = (r - k) * 16, px = 0, py = 0;
-        for (i = 0; i <= 18; i++) {                     /* (18 segments over 270 degrees) */
-            uint32_t a = 0x6000u + (uint32_t)i * 0xC000u / 18u;   /* (from 135 degrees, y down) */
-            int32_t x = cx * 16 + (og_cos(a) * rr >> 15), y = cy * 16 + (og_sin(a) * rr >> 15);
-            if (i)
-                og_line(px, py, x, y, i * 1000 <= f * 18 ? vc : tc);
-            px = x;
-            py = y;
-        }
-    }
-}
+/* (0.8.5) lz_arc, a gauge as the mock-up's: (ACID FM 3c-2 task 4) gone with the layers' KNOBS view (ui_layer.c layer_knobs) */
 static void ed_cap(int32_t x, int32_t y, const char *s, uint16_t c)   /* a caption, its capitals from y */
 {
     cv_text(x, y - AF_X_CAP_Y, &AF_X, s, c);
