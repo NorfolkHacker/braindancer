@@ -19,6 +19,16 @@ static int gcheck(const char *what, int ok)
     return ok ? 0 : 1;
 }
 static uint8_t gt_cpt;                                   /* (0.9.14) the CPU TEST result the pieces are made for (gen.c gc_dev) */
+static uint32_t gt_dly_stage(void)                     /* (ACID FM 0.5.2) the rate the piece's delay line runs at (fx.c
+                                                         * fx_buses, dly_rate): 0 full, 1 half, 2 a quarter; the full
+                                                         * rate whatever the line ran at before (dly_stage's hysteresis) */
+{
+    uint32_t g = (uint32_t)song.g[G_DTIME], wd = (uint32_t)song.g[G_WIDTH], dl;
+    int png = song.g[G_DPING] == 1 && !song.g[G_DPIT] && !song.g[G_DSPRY];
+    dl = g < DT_FREE ? div_samples(g) : (uint32_t)DTIME_MS[(g - DT_FREE) % NELEM(DTIME_MS)] * 441u / 10u;
+    dl = dl < 16u ? 16u : dl > DLY_MAX ? DLY_MAX : dl;
+    return dly_stage(png ? dl * 2u : dl + (wd && !png ? div_samples(3) * wd / 127u : 0u), 2u);
+}
 static int form_drop_longest(void)                      /* (0.9.14) the drop (A) rows longer than every other row */
 {
     uint32_t k, a = 0, o = 0;
@@ -1092,6 +1102,53 @@ int main(void)
             }
         printf("gen:   drum rolls on their lanes: %u, steps with RATCH on a kit: %u\n", lrolls, stepr);
         bad += gcheck("GEN drums: rolls as the lanes' x2 / x4, no step RATCH on a kit", !stepr && lrolls > 0u);
+    }
+    {   /* (ACID FM 0.5.2) the delay's line past the full rate (fx.c dly_lo: TIME past ~0.74 s, PING-PONG twice TIME) runs
+         * every block whatever the voices (the load governor cannot shed it): the CPU budget counts it (gen.c GC_DLO).
+         * EXPLORE 3423 at the FM-1's defaults (ENERGY 50, FORM PARTS, COMPLEX 50, HUMAN 30, two cores) made a 2 s grain
+         * delay at a quarter rate, and an FM-1 lost blocks on it; with the CPU TEST unset (x1.6) its estimate with that
+         * delay is over the budget: the delay at the full rate. Then ~1000 pieces (EXPLORE, RANDOM, every genre; the
+         * CPU TEST unset and 74 %, the result the diagnosis used): none over the budget keeps a delay past the full rate;
+         * a delay is shortened only on a piece over the budget with it; under it the long delays stay */
+        static const uint8_t CPT[2] = {0, 74};
+        uint32_t c, g, sd, k, n = 0, over_long = 0, cut_under = 0, cut = 0, kept_long = 0, st3423[2], ov3423[2], e_now, e_long;
+        mc_host_v12 = 1;
+        for (c = 0; c < 2u; c++) {
+            gt_cpt = CPT[c]; gen_reset();
+            gen_with(GEN_EXPLORE, 3423, 50, 1);
+            st3423[c] = gt_dly_stage(); ov3423[c] = gc_cost(1) > gc_budget();
+            k = (uint32_t)song.g[G_DTIME]; e_now = gc_cost(1);
+            song.g[G_DTIME] = gs.g->dtime; e_long = gc_cost(1); song.g[G_DTIME] = (int16_t)k;
+            printf("gen: (0.5.2) EXPLORE 3423, CPU TEST %u: TIME %s -> %s (the line at 1/%u rate), estimate %u with the "
+                   "piece's TIME, %u now, budget %u\n", CPT[c], N_DTIME[gs.g->dtime % NELEM(N_DTIME)], N_DTIME[k % NELEM(N_DTIME)],
+                   1u << st3423[c], e_long, e_now, gc_budget());
+        }
+        bad += gcheck("(0.5.2) EXPLORE 3423 (CPU TEST unset): over the budget, its delay at the full rate", st3423[0] == 0u);
+        bad += gcheck("  EXPLORE 3423 (CPU TEST 74 %): over the budget only with the delay at the full rate", !ov3423[1] || !st3423[1]);
+        for (g = 0; g <= GEN_EXPLORE; g++)
+            for (sd = 0; sd < (g == GEN_EXPLORE ? 400u : g == 0u ? 200u : 10u); sd++, n++) {
+                uint32_t st, over, dt;
+                gt_cpt = CPT[sd & 1u]; gen_reset();
+                gen_with(g, sd * 89u + g * 7u + 5u, 30u + (sd * 17u) % 60u, sd % 3u);
+                st = gt_dly_stage(); over = gc_cost(1) > gc_budget();
+                over_long += over && st;
+                kept_long += !over && st;
+                dt = (uint32_t)song.g[G_DTIME];
+                if (dt != gs.g->dtime) {                /* shortened: over the budget with the genre's TIME */
+                    cut++;
+                    song.g[G_DTIME] = gs.g->dtime;
+                    if (gc_cost(1) <= gc_budget()) {
+                        cut_under++;
+                        if (cut_under < 6u) printf("  %s seed %u: TIME shortened, %u under the budget %u with it\n", gs.g->name, gp.seed, gc_cost(1), gc_budget());
+                    }
+                    song.g[G_DTIME] = (int16_t)dt;
+                }
+                if (over && st && over_long < 6u) printf("  %s seed %u: over the budget (%u of %u), the delay at 1/%u rate\n", gs.g->name, gp.seed, gc_cost(1), gc_budget(), 1u << st);
+            }
+        printf("gen: (0.5.2) %u pieces: %u delays shortened (over the budget), %u past the full rate kept (under it)\n", n, cut, kept_long);
+        bad += gcheck("  ~1000 pieces: none over the CPU budget with a delay past the full rate", !over_long);
+        bad += gcheck("  .. a delay shortened only on a piece over the budget with it; long ones kept under it", !cut_under && kept_long >= 20u);
+        mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;

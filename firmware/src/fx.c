@@ -695,12 +695,12 @@ static inline int32_t dly_rd(uint32_t d, int32_t m) { return dly_rd_of(dly_buf, 
 #define DLY_EDGE 8u
 #define DLY_SPAN(sh) ((DLY_LEN - DLY_EDGE) << (sh))      /* the longest read at FS >> sh, FS samples */
 #define DLY_MAX DLY_SPAN(2u)                             /* .. of all (a quarter rate) */
-static uint32_t delay_samples(void)
+static uint32_t dtime_samples(uint32_t g)                /* TIME g (N_DTIME) in samples (ACID FM 0.5.2: gen.c's too) */
 {
-    uint32_t g = (uint32_t)GFX(GF_DTIME);
     uint32_t s = g < DT_FREE ? div_samples(g) : (uint32_t)DTIME_MS[(g - DT_FREE) % NELEM(DTIME_MS)] * 441u / 10u;   /* (JIANT 0.4: free) */
     return s < 16u ? 16u : s > DLY_MAX ? DLY_MAX : s;
 }
+static uint32_t delay_samples(void) { return dtime_samples((uint32_t)GFX(GF_DTIME)); }
 
 /* (0.9.14) the reverbs' int16 lines (ROOM's combs and allpasses, CLOUD's line) written through a soft knee: linear to -2.5 dBFS (bit for bit as before there), then tanh up to
  * ~-0.1 dB: a hot send (DIST, CLIP, four parts at once) rounds off like tape, never a hard clamp in the loop */
