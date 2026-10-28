@@ -1824,6 +1824,7 @@ static int project_restore_runtime(const project_t *input)
     transport_req = 2;
     panic_req = (1u << NTRK) - 1u;
     fm1_irq_off();                                      /* the audio ISR must not see half a project */
+    safe_clear();                                       /* (ACID FM 0.5.2) the safety net: no GEN part, its levers off */
     seq_stop();
     transport_req = 0;
     chain.ended = 0;                                    /* (a song stopped by this load: the load wins, song_poll keeps out) */
@@ -1928,6 +1929,8 @@ static void system_init(void)
     int16_t kept[5], mr[G_MRSEL + 1 - G_MRIN1];         /* (ACID FM 0.5) and the MIDI routing (G_MRIN1 .. G_MRSEL) */
     uint32_t i;
     demo_end();                                         /* (ACID FM 3b) NEW PROJECT is empty, no demo */
+    safe_clear();                                       /* (ACID FM 0.5.2) the safety net: no GEN part, its levers off
+                                                         * (byte stores: the ISR reads each once a half) */
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     memcpy(mr, &song.g[G_MRIN1], sizeof mr);
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
@@ -2291,7 +2294,6 @@ static void project_load(uint32_t slot)
 #endif
     if (!proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t))) { ui_message("EMPTY SLOT"); return; }
     proj_bound(&proj_scratch);                          /* a retained RAM slot of an older format: as from flash */
-    safe_part[0] = safe_part[1] = NTRK;                 /* (ACID FM 0.5.2) not a GEN piece: no part the safety net hushes */
     if (!project_restore_runtime(&proj_scratch)) {
         proj_cur = (uint8_t)(slot & 3u);
         live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing) */

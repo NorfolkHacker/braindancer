@@ -395,21 +395,26 @@ static void governor(void)
  * status); back in reverse order after 1 s of halves under 80 % each, longer when it comes back within 5 s (no flapping) */
 static void safe_reset(uint32_t cap, uint32_t lite)
 {
+    uint32_t i;
     fresh();
     gov_cap = (uint8_t)cap; gov_lite = (uint8_t)lite; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = gov_floor = 0;
     fx_safe = 0; dly_safety = 0; safe_hush_n[0] = safe_hush_n[1] = 0;
-    dsf_behind = 0; dsf_calm = 0; dsf_since = 0xFFFFu; dsf_rearm = 0; dsf_wait = 0;
+    dsf_behind = 0; dsf_calm = 0; dsf_wait = 0; safe_kills = 0;
+    for (i = 0; i < 3u; i++) { dsf_since[i] = 0xFFFFu; dsf_rearm[i] = 0; }
+    prf.rest_ph = 0;
     safe_part[0] = safe_part[1] = NTRK;
-    fx.dr_sh = 2u;                                      /* (the line at a quarter rate, as a 2 s TIME has it) */
+    song.g[G_BPM] = 120; song.g[G_DTIME] = 8; song.g[G_DMIX] = 127; song.g[G_DFDBK] = 40;   /* 2BAR: 4 s, a quarter rate */
+    trk[0].p[P_VOICE] = V_POLY; trk[0].p[P_DLY] = 127; trk_note_on(&trk[0], 40, 100);   /* (a bass held into it) */
+    fx.primed = 0;
+    for (i = 0; i < 4u; i++) { host_us = (HALF_FRAMES * 1000000u / FS) / 2u; fm1_alnk0_irq(); }   /* (the real delay, rendered) */
+    dsf_behind = 0;
 }
-static int safe_stub = 1;                              /* fx.c's rate stood in for (else the real one, rendered) */
 static uint32_t safe_run(uint32_t n, uint32_t pct, uint32_t *flips)
 {
     uint32_t i, was = fx_safe, f = 0, first = 0;
     for (i = 0; i < n; i++) {
         host_us = (HALF_FRAMES * 1000000u / FS) * pct / 100u;
         fm1_alnk0_irq();
-        if (safe_stub) fx.dr_sh = (fx_safe & SAFE_DLY) ? 0u : 2u;   /* (fx.c's rate follows: a stand-in for dly_rate) */
         if (fx_safe != was) { f++; was = fx_safe; if (!first) first = i + 1u; }
     }
     if (flips) *flips += f;
@@ -437,7 +442,7 @@ static void safety(void)
     for (i = 0; i < 40u; i++) { safe_run(1u, 120u, 0); safe_run(3u, 70u, 0); }
     check("  at the floor, a lone half behind now and then (a spike): untouched", !fx_safe && !dly_safety);
     safe_reset(4u, LOAD_LITE);
-    fx.dr_sh = 0u;
+    song.g[G_DTIME] = 1;                                /* (1/8: the full rate) */
     for (i = 0; i < 400u; i++) { host_us = (HALF_FRAMES * 1000000u / FS) * 125u / 100u; fm1_alnk0_irq(); }
     check("  at the floor and behind, the delay already at the full rate, not a GEN piece: nothing to do, not counted",
           !fx_safe && !dly_safety && !safe_hush_n[0] && !safe_hush_n[1]);
@@ -461,17 +466,13 @@ static void safety(void)
     printf("audio: safety net under the borderline load: %u engaged, %u switches in 20 s\n", dly_safety, fl);
     {   /* the ladder: a GEN piece (texture T6, arp T3), still behind with the delay short: T6 hushed, then T3; back
          * in reverse order */
-        uint32_t v, d0;
+        uint32_t v, d0, st0;
         safe_reset(4u, LOAD_LITE);
         safe_part[0] = 5u; safe_part[1] = 2u;
         trk[5].p[P_VOICE] = V_POLY; trk_note_on(&trk[5], 60, 100);
         trk[2].p[P_VOICE] = V_POLY; trk_note_on(&trk[2], 64, 100);
-        trk[0].p[P_VOICE] = V_POLY; trk_note_on(&trk[0], 40, 100);
-        song.g[G_BPM] = 120; song.g[G_DTIME] = 8; song.g[G_DMIX] = 127; song.g[G_DFDBK] = 40;   /* 2BAR: 4 s */
-        trk[0].p[P_DLY] = 127; fx.primed = 0;
-        safe_stub = 0;                                  /* (the real delay, rendered by the ISR) */
-        safe_run(4u, 50u, 0);
         d0 = fx.dr_sh;
+        st0 = voices_stolen();
         {   /* the half each lever comes on / goes off */
             uint32_t on[3] = {0, 0, 0}, off[3] = {0, 0, 0}, was = 0, h, full = 0, back = 0;
             for (h = 1; h <= 600u; h++) {
@@ -492,6 +493,8 @@ static void safety(void)
                   "the bass plays", on[0] <= 2u && on[1] == on[0] + DSF_STEP && on[2] == on[1] + DSF_STEP &&
                   fx_safe == (SAFE_DLY | SAFE_TEX | SAFE_ARP) && !v && held(&trk[0], 43) &&
                   dly_safety == 1u && safe_hush_n[0] == 1u && safe_hush_n[1] == 1u);
+            check("  the hush's faded voices are not counted as stolen (the console's voices_stolen)",
+                  safe_kills == 2u && voices_stolen() == st0);
             for (h = 1; h <= 1200u; h++) {
                 safe_run(1u, 60u, 0);
                 if (!back && fx.dr_sh == 2u) back = h;
@@ -503,12 +506,48 @@ static void safety(void)
                   off[2] == 344u && off[1] == 688u && off[0] == 1032u && !fx_safe);
             check("  .. and the delay's line at a quarter rate again within 3 halves of its lever off", back >= 1032u && back <= 1035u);
         }
-        safe_stub = 1;
         trk_note_on(&trk[5], 67, 100);
         check("  the texture plays again", held(&trk[5], 67) != 0);
     }
+    {   /* (review M2) the delay bus at rest (fx_rest: nothing sent, its rate a stale one): its lever not on */
+        uint32_t sh;
+        safe_reset(4u, LOAD_LITE);
+        trk_note_off(&trk[0], 40); trk[0].p[P_DLY] = 0; song.g[G_DFDBK] = 0;
+        safe_run(3440u, 50u, 0);                        /* (10 s: the echoes gone, the buses at rest) */
+        sh = fx.dr_sh;
+        safe_run(100u, 125u, 0);
+        printf("audio: the buses at rest (fx_rest's phase %u), the line's rate a quarter's (%u)\n", prf.rest_ph, sh);
+        check("  the delay's bus at rest, its line a quarter rate's: the delay lever not on (it would save nothing)",
+              prf.rest_ph && sh == 2u && !fx_safe && !dly_safety);
+    }
+    {   /* (review I3) each lever its own back-off: a load the texture's lever takes from 105 % to 75 % (the delay lever
+         * on and staying on), 20 s; then the delay alone, from 105 % to 75 % */
+        uint32_t h, was = 0, tex_on = 0, dly_on = 0;
+        safe_reset(4u, LOAD_LITE);
+        safe_part[0] = 5u;
+        for (h = 0; h < 6880u; h++) {
+            safe_run(1u, (fx_safe & SAFE_TEX) ? 75u : (fx_safe & SAFE_DLY) ? 105u : 125u, 0);
+            tex_on += (fx_safe & SAFE_TEX) && !(was & SAFE_TEX);
+            dly_on += (fx_safe & SAFE_DLY) && !(was & SAFE_DLY);
+            was = fx_safe;
+        }
+        printf("audio: 20 s, the texture's lever taking 105 %% to 75 %%: on %u times (its calm x%u), the delay's %u\n",
+               tex_on, 1u << dsf_rearm[1], dly_on);
+        check("  a lever under a load at its edge (the texture, 105 % -> 75 %, 20 s): on 4 times at most (1, 4, 8, 8 s of "
+              "calm), its own calm 8 s; the delay's lever on once", tex_on <= 4u && dsf_rearm[1] == 3u && dly_on == 1u);
+        safe_reset(4u, LOAD_LITE);
+        was = 0; dly_on = 0;
+        for (h = 0; h < 6880u; h++) {
+            safe_run(1u, (fx_safe & SAFE_DLY) ? 75u : 105u, 0);
+            dly_on += (fx_safe & SAFE_DLY) && !(was & SAFE_DLY);
+            was = fx_safe;
+        }
+        printf("audio: 20 s, the delay's lever taking 105 %% to 75 %%: on %u times\n", dly_on);
+        check("  .. the delay's the same (105 % -> 75 %, 20 s): on 4 times at most", dly_on <= 4u && dsf_rearm[0] == 3u);
+    }
     safe_reset(16u, 0u);
-    fx.dr_sh = 0u;
+    trk_note_off(&trk[0], 40);
+    song.g[G_DTIME] = 1;
 }
 
 int main(void)

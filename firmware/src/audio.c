@@ -170,48 +170,59 @@ static void gov_tick(int over, int hot, int under, int shed)
  *      whatever the voices (EXPLORE 3423, a 2 s delay: 2 halves lost a second; its TIME shortened: none);
  *   2. a GEN piece's texture part hushed (gen.c safe_part: no new notes, its voices faded over ~6 ms), 3. its arp.
  * The chorus and the SLICER are not levers: the chorus is ~1-2 % of a GEN piece's load on the host at the floor, and
- * GEN never turns the SLICER on. Back a lever at a time in reverse order, each after 1 s of halves in a row under 80 %
- * (DSF_CALM); on again within 5 s of all off, the calm it takes doubles (up to 8 s): a load at the edge settles, never
- * flaps. dly_safety, safe_hush_n: the times each came on (the console's status) */
+ * GEN never turns the SLICER on. The delay's lever only while its bus runs (not at rest, fx_rest: then its line costs
+ * nothing, its rate a stale one). Back a lever at a time in reverse order, each after 1 s of halves in a row under 80 %
+ * (DSF_CALM); a lever on again within 5 s of its own release takes 4 s of calm to go, then 8 s, each lever its own:
+ * a load at the edge settles on it, never flaps. dly_safety, safe_hush_n: the times each came on (the console's
+ * status); safe_kills: the voices the hush faded (not stolen ones) */
 #define DSF_HALF ((HALF_FRAMES * 1000000u / FS) * FM1_TICKS_PER_US)
 #define DSF_CALM ((HALF_FRAMES * 1000000u / FS) * 80u / 100u * FM1_TICKS_PER_US)
 #define DSF_STEP 172u                                  /* halves between two levers (0.5 s: the last one's effect seen) */
-static uint8_t dsf_behind, dsf_rearm;                  /* bit k: the half k halves ago behind; the calm's doublings */
-static uint16_t dsf_calm, dsf_since = 0xFFFFu, dsf_wait;   /* halves in a row under 80 %; since all off; to the next lever */
-static uint32_t dly_safety, safe_hush_n[2];
+#define DSF_REARM 1720u                                /* .. a lever on again within 5 s of its release: a longer calm */
+static uint8_t dsf_behind, dsf_rearm[3];               /* bit k: the half k halves ago behind; each lever's calm, 1 s << it */
+static uint16_t dsf_calm, dsf_wait, dsf_since[3] = {0xFFFFu, 0xFFFFu, 0xFFFFu};   /* halves in a row under 80 %; to the
+                                                         * next lever; since each lever's release */
+static uint32_t dly_safety, safe_hush_n[2], safe_kills;
+static uint32_t voices_stolen(void)                    /* (the console) taken for a new note, the budget of voices full */
+{
+    return voice_kills - voice_trims - shed_count - safe_kills;
+}
 static __attribute__((noinline)) void fx_safety_tick(uint32_t r, int late)
 {
-    uint32_t up = 0, k, i;
+    uint32_t up = 0, k, i, l, on = fx_safe, tex = safe_part[0], arp = safe_part[1];
     dsf_behind = (uint8_t)(dsf_behind << 1 | (late || r > DSF_HALF));
-    if (dsf_since < 0xFFFFu)
-        dsf_since++;
+    for (l = 0; l < 3u; l++)
+        if (dsf_since[l] < 0xFFFFu)
+            dsf_since[l]++;
     if (dsf_wait)
         dsf_wait--;
     if ((dsf_behind & 3u) == 3u && !dsf_wait && gov_cap <= 4u && LOAD_EFF())
-        up = !(fx_safe & SAFE_DLY) && fx.dr_sh ? SAFE_DLY : !(fx_safe & SAFE_TEX) && safe_part[0] < NTRK ? SAFE_TEX :
-             !(fx_safe & SAFE_ARP) && safe_part[1] < NTRK ? SAFE_ARP : 0u;
+        up = !(on & SAFE_DLY) && fx.dr_sh && !prf.rest_ph ? SAFE_DLY : !(on & SAFE_TEX) && tex < NTRK ? SAFE_TEX :
+             !(on & SAFE_ARP) && arp < NTRK ? SAFE_ARP : 0u;
     if (up) {
-        if (!fx_safe)
-            dsf_rearm = dsf_since < 1720u ? (uint8_t)(dsf_rearm < 3u ? dsf_rearm + 1u : 3u) : 0u;
-        fx_safe = (uint8_t)(fx_safe | up);
+        l = up >> 1;                                   /* (the lever: 0 the delay, 1 the texture, 2 the arp) */
+        dsf_rearm[l] = dsf_since[l] < DSF_REARM ? (uint8_t)(dsf_rearm[l] ? 3u : 2u) : 0u;   /* (1 s, 4 s, 8 s) */
+        fx_safe = (uint8_t)(on | up);
         dsf_calm = 0;
         dsf_wait = DSF_STEP;
         if (up == SAFE_DLY) {
             dly_safety++;
         } else {
-            k = safe_part[up == SAFE_ARP];
+            k = up == SAFE_ARP ? arp : tex;
             safe_hush_n[up == SAFE_ARP]++;
             for (i = 0; i < NVOICE; i++)
-                if (trk[k].v[i].active && trk[k].v[i].stage != 4u)
+                if (trk[k].v[i].active && trk[k].v[i].stage != 4u) {
                     voice_kill(&trk[k].v[i]);
+                    safe_kills++;
+                }
         }
-    } else if (fx_safe) {
+    } else if (on) {
         if (r < DSF_CALM && !late) {
-            if (++dsf_calm >= (344u << dsf_rearm)) {
-                fx_safe = (uint8_t)(fx_safe & (fx_safe & SAFE_ARP ? ~SAFE_ARP : fx_safe & SAFE_TEX ? ~SAFE_TEX : ~SAFE_DLY));
+            l = on & SAFE_ARP ? 2u : on & SAFE_TEX ? 1u : 0u;   /* (the last one on goes first) */
+            if (++dsf_calm >= (344u << dsf_rearm[l])) {
+                fx_safe = (uint8_t)(on & ~(1u << l));
                 dsf_calm = 0;
-                if (!fx_safe)
-                    dsf_since = 0;
+                dsf_since[l] = 0;
             }
         } else
             dsf_calm = 0;

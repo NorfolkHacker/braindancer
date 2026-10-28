@@ -311,6 +311,14 @@ static uint32_t safe_hushed(uint32_t k)                 /* track k hushed by the
 {
     return ((fx_safe & SAFE_TEX) && k == safe_part[0]) || ((fx_safe & SAFE_ARP) && k == safe_part[1]);
 }
+/* other music in (a project, a section, UNDO, NEW PROJECT, the editor's restore): no part of it the net may hush (they
+ * are the user's), the levers off (the new music starts as it is; the net comes on again if it must). The audio ISR
+ * off or not running */
+static void safe_clear(void)
+{
+    safe_part[0] = safe_part[1] = NTRK;
+    fx_safe = 0;
+}
 #define LITE_FM6_POLY 2u
 #define ECO_POLY 4u
 #define ECO_VOICES 6u            /* (0.6.70) LOAD ECO: the voices all parts share (NVOICE else) */

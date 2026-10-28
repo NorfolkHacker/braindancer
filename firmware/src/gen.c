@@ -2630,8 +2630,10 @@ static void gen_go(void)
     char b[8];
     undo_mark();
     gen_make();
-    safe_part[0] = gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) the parts the */
-    safe_part[1] = gs.trk_of[RL_ARP] < trk_live ? gs.trk_of[RL_ARP] : (uint8_t)NTRK;   /* .. safety net hushes (audio.c) */
+    safe_part[0] = gs.act[RL_TEX] && gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) */
+    safe_part[1] = gs.act[RL_ARP] && gs.trk_of[RL_ARP] < trk_live ? gs.trk_of[RL_ARP] : (uint8_t)NTRK;   /* the parts the
+                                                         * safety net hushes (audio.c): the piece's texture and arp, if
+                                                         * it plays them (after gen_make: its section_load cleared them) */
     k = gs.gi < NGENRE && gs.g->name == GENRE[gs.gi].name ? gen_shown_index(gs.gi + 1u) : 255u;   /* (3b) a shown genre by its screen name */
     str_cpy(gp.last, k != 255u ? GEN_SHOWN_NAME[k] : gs.g->name, sizeof gp.last);
     k = str_len(gp.last);
@@ -2730,6 +2732,8 @@ static const char *dice_seq(track_t *t)
     if (gmut.lead == LD_NONE) gmut.lead = LD_HOOK;      /* (asked for: a lead) */
     for (i = 0; i < GP_N; i++) if (!gs.amt[i]) gs.amt[i] = 60;
     gs.role[k] = (uint8_t)r; gs.act[r] = 1; gs.trk_of[r] = (uint8_t)k;
+    if (safe_part[0] == k || safe_part[1] == k)         /* (ACID FM 0.5.2) a part diced on it: the safety net's no more */
+        safe_part[safe_part[1] == k] = NTRK;
     len = (uint32_t)t->p[P_SLEN];
     if (len < 8u || len > NSTEP) len = gs.len < 16u ? 16u : gs.len;
     load_begin(t, LOAD_PAT);
