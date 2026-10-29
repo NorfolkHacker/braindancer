@@ -124,6 +124,11 @@ def main(out):
             # the engines' .edit[] / mode relabels {"LABEL", F_..}; those ux_section.c UXS_LABEL renames are never drawn)
             for t in re.finditer(r'\bP[DE]\(\s*"((?:[^"\\\n]|\\.)*)"|\{\s*"((?:[^"\\\n]|\\.)*)"\s*,\s*F_[A-Z]+\b', s):
                 labels.append(t.group(1) if t.group(1) is not None else t.group(2))
+            t = re.search(r'\bN_PLAYS\s*\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S)
+            if t:                                     # (3c-2 task 6: PLAYS's and STEP EXTRAS' CONDITION words, moved from
+                tables += 1                           # ux_seq.c UXQ_COND: a MORE row, the knob row, the status line)
+                hdr.extend(LIT.findall(t.group(1)))
+                lbl.extend(LIT.findall(t.group(1)))
     sx = open(SRC / "ux_section.c", encoding="latin-1").read()
     t = re.search(r'UXS_LABEL\[\]\s*=\s*\{(.*?)\};', sx, flags=re.S)
     renamed = set(re.findall(r'\{\s*"((?:[^"\\\n]|\\.)*)"\s*,', t.group(1))) if t else set()

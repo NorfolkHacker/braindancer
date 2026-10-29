@@ -21408,7 +21408,7 @@ static int test_u5_about(void)
 }
 /* (ACID FM 3c-2 task 6, spec 5.1) SEQ > MORE's PLAYS: TRACK's row after REC Q, the selected track's G_PLAYS1 + k (ALWAYS, then
  * CONDITION's words, params.c N_PLAYS); KNOB 2 steps it 0..12 (clamped); the status line names the track (as GLO > MIDI's
- * "T3 IN . OFF"); while a song plays STOP TO EDIT, as TRACK's other rows */
+ * "T3 IN . OFF"); (fix round 1) it turns while a song plays too: a live job, read at each step */
 static int test_u6_row(void)
 {
     int bad = 0, ok;
@@ -21437,11 +21437,15 @@ static int test_u6_row(void)
     bad += check("  KNOB 2 steps it ALWAYS .. NOT 1ST (clamped), T5's alone; the status line T5 PLAYS . 1ST OF 2", ok);
     track_select(1); frame();
     ok = uxq_t_is("T2's PLAYS", seqm_val(ID_SQ_PLAYS), "ALWAYS");
-    chain.running = 1;
-    seqm(ID_SQ_PLAYS, 1); frames(4);
-    ok &= !song.g[G_PLAYS1 + 1] && msg_is("STOP TO EDIT");
+    chain.running = 1;                                  /* (fix round 1, ruling: a live job, turned while a song plays) */
+    seqm(ID_SQ_PLAYS, 2); frame();
+    ok &= chain_busy() && song.g[G_PLAYS1 + 1] == 2 && !msg_is("STOP TO EDIT") &&
+          uxq_t_is("T2 PLAYS playing", uxq_t_say(), "T2 PLAYS \xB7 EVERY 2ND") && uxq_t_is("its row", seqm_val(ID_SQ_PLAYS), "EVERY 2ND");
+    seqm(ID_SQ_PLAYS, -1); frame();
+    ok &= song.g[G_PLAYS1 + 1] == 1 && uxq_t_is("T2 PLAYS back", uxq_t_say(), "T2 PLAYS \xB7 1ST OF 2");
     chain.running = 0;
-    bad += check("  the selected track's (T2: ALWAYS); while a song plays: STOP TO EDIT, as TRACK's other rows", ok);
+    bad += check("  the selected track's (T2: ALWAYS); while a song plays it turns too (EVERY 2ND, then 1ST OF 2), said in the "
+                 "status line", ok);
     trks_put(0);
     ui_power_on();
     return bad;

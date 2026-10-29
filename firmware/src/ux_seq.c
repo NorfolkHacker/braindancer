@@ -688,7 +688,8 @@ static uint32_t uxq_more_kind(void)
 static int uxq_more_busy(void)
 {
     const ux_row_t *r = uxq_more_row();
-    return r && uxm_head_of(&UXM_SEQ, (uint32_t)(r - UXM_SEQ.rows)) == UXM_H_TRACK;
+    return r && uxm_head_of(&UXM_SEQ, (uint32_t)(r - UXM_SEQ.rows)) == UXM_H_TRACK &&
+           !(r->kind == UXR_TRACK && r->id == ID_SQ_PLAYS);   /* (3c-2 task 6 fix round 1: PLAYS, a live job, turns) */
 }
 static const char *const UXQ_MSAY[] = {"OCT+ ADD A LOCK", "OCT+ LOCK OR AUTO", "OCT+ KEEP  GLO+A4 FREEZE", "REC + PLAY THEN TURN A KNOB"};
 static const char *uxq_more_say(void)                   /* the status line on SEQ > MORE: what OCT+ does there (the pages' hints) */

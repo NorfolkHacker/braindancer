@@ -1054,7 +1054,7 @@ static void fugue_knob(uint32_t slot, int32_t steps)
 /* (ACID FM 3c-1 task 4) SEQ > MORE's view id (params.c ID_SQ_*) turned steps detents: the inherited SEQ page's handler, as its
  * knob turned it (STRETCH's shape_knob, PLAYHEADS' fugue_knob, COMP's and COMP 2's comp_knob on the step picked, NOTE's
  * note_edit, AUTOMATION's PLAY, AUTO LIST's ev_knob); the step's ones not while a song plays (STOP TO EDIT), as there; (3c-2
- * task 6) TRACK's PLAYS, the selected track's G_PLAYS1 + k (not while a song plays either, as TRACK's other rows) */
+ * task 6) TRACK's PLAYS, the selected track's G_PLAYS1 + k, also while a song plays (a live job: seq.c reads it each step) */
 static void seq_view_turn(uint32_t id, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor % NSTEP];
@@ -1075,14 +1075,18 @@ static void seq_view_turn(uint32_t id, int32_t steps)
         ui_message("ROW PICKS ONE BELOW");
         return;
     }
+    if (id == ID_SQ_PLAYS) {                            /* (3c-2 task 6) the track's PLAYS: ALWAYS .. NOT 1ST (params.c N_PLAYS);
+                                                         * a song playing too: one halfword store, seq.c trk_plays_on reads it
+                                                         * at the next step (no step, pattern or motion touched) */
+        int16_t *v = &song.g[G_PLAYS1 + song.sel % NTRK];
+        *v = (int16_t)clamp(*v + steps, 0, (int32_t)CP_NTRIG);
+        return;
+    }
     if (chain_busy()) {
         ui_message("STOP TO EDIT");
         return;
     }
-    if (id == ID_SQ_PLAYS) {                            /* (3c-2 task 6) the track's PLAYS: ALWAYS .. NOT 1ST (params.c N_PLAYS) */
-        int16_t *v = &song.g[G_PLAYS1 + song.sel % NTRK];
-        *v = (int16_t)clamp(*v + steps, 0, (int32_t)CP_NTRIG);
-    } else if (id == ID_SQ_PLAY)
+    if (id == ID_SQ_PLAY)
         motion_set_enabled(TSEL, steps > 0);
     else if (id == ID_SQ_EVERY)
         every_turn(st, e);
