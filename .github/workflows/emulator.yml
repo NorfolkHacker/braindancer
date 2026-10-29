@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# ACID FM's site on GitHub Pages: the landing page (web/landing) at the root, the installer, the editor, the browser emulator under emu/ and the manual.
+# Braindancer's site on GitHub Pages: the landing page (web/landing) at the root, the installer, the editor, the browser emulator under emu/ and the manual.
 # Portions Copyright (C) 2026 NorfolkHacker
 # Runs on every push to main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
 # installer (webapp/installer) and the editor (webapp/editor) need the package, built with JieLi's toolchain (downloaded).

@@ -231,6 +231,18 @@ def installs():
     dev = FakeFM1(image, identity="ota-FM-1_900", name="ACID FM Update", after_name="ACID FM")
     rc, out, err = cli(["--info"], dev)
     ok(rc == 0 and "update loader" in out, "--info: 'ACID FM Update' (ota-FM-1_900) is the update loader")
+    # (Braindancer 0.7) "BRAINDANCER" / "BRAINDANCER UPD"
+    for name in ("BRAINDANCER", "2- BRAINDANCER", "MIDIIN2 (BRAINDANCER)", "BRAINDANCER MIDI 1"):
+        dev = FakeFM1(image, identity="FM-1_900", name=name, loader_name="BRAINDANCER UPD", after_name="BRAINDANCER")
+        rc, out, err = cli([p, "--yes"], dev)
+        ok(rc == 0 and dev.bad == 0 and dev.upgrades == 2 and "done: the FM-1 runs FM-1_900" in out,
+           f"install: a port named {name!r} -> 'BRAINDANCER UPD' -> 'BRAINDANCER'")
+    dev = FakeFM1(image, identity="ota-FM-1_900", name="BRAINDANCER UPD", after_name="BRAINDANCER")
+    rc, out, err = cli(["--info"], dev)
+    ok(rc == 0 and "update loader" in out, "--info: 'BRAINDANCER UPD' (ota-FM-1_900) is the update loader")
+    ok(all(I.PORT_RE.search(n) for n in ("BRAINDANCER", "BRAINDANCER UPD", "ACID FM", "JIANT", "Felucca")), "PORT_RE: Braindancer and the old names")
+    import build as B
+    ok(B.release_names("0.7") == ("braindancer-0.7.fwsc", "braindancer-0.7-app.bin"), "build: a release is braindancer-X.Y.fwsc / -app.bin")
     dev = FakeFM1(image, identity="FM-1_900", name="Acidlab Bassline")
     rc, out, err = cli(["--info"], dev)
     ok(rc != 0, "--info: other gear with 'acid' in its name is never probed")

@@ -27,7 +27,7 @@ export const UPDATE_TIMES = {
 };
 /* the ports worth asking for an identity: the FM-1 (official: its own name or the USB composite's), JIANT, Felucca and
  * its forks, the update loaders. Other gear is not probed, except a port that appears while we wait for the loader */
-export const PORT_RE = /fm-?1|felucca|jiant|acid ?fm|skiff|ota|composite|sinco|usb-midi|m-?vave|cuvave/i;
+export const PORT_RE = /fm-?1|felucca|jiant|acid ?fm|braindancer|skiff|ota|composite|sinco|usb-midi|m-?vave|cuvave/i;
 /* Windows names one device's ports "FM-1", "2- FM-1", "MIDIIN2 (FM-1)" / "MIDIOUT2 (FM-1)", "FM-1 1": the device's name */
 export const portBase = (name) => String(name || "").trim().replace(/^\d+\s*-\s*/, "")
   .replace(/^MIDI(?:IN|OUT)\d*\s*\((.*)\)$/i, "$1").replace(/\s+\d+$/, "").trim().toLowerCase();

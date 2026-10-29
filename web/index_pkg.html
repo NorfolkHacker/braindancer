@@ -650,7 +650,7 @@ $("stock-file").addEventListener("change", async () => {
 });
 function saveArchive(archive, fw) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(archive)], {type:"application/json"}));
-  const who = fw && fw.kind !== "jiant" ? `FM-1-${fw.kind}` : /^ACID/i.test((fw && fw.version) || "") ? "ACID-FM" : "JIANT";
+  const who = fw && fw.kind !== "jiant" ? `FM-1-${fw.kind}` : /^BRAINDANCER/i.test((fw && fw.version) || "") ? "Braindancer" : /^ACID/i.test((fw && fw.version) || "") ? "ACID-FM" : "JIANT";
   const name = `${who}-backup-${new Date().toISOString().slice(0,10)}.json`;
   const a = document.createElement("a"); a.href = url; a.download = name;
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);

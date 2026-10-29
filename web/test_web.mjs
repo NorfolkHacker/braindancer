@@ -44,6 +44,8 @@ function installerCheck() {
   ok(isJiantInfo(info("FELUCCA v0.6.40", 6, [0x56, 1, 32])), "installer: an older JIANT (six tracks, v0.x) too");
   ok(!isJiantInfo(info("FELUCCA 1.5.1", 4, [0x56, 1, 32])), "installer: Felucca 1.x (four tracks) is not");
   ok(!isJiantInfo(info("FELUCCA v1.3.2", 6, [0x56, 1, 32])), "installer: Skiff (six tracks, v1.x) is not");
+  ok(isJiantInfo(info("BRAINDANCER v0.7", 6, [0x56, 1, 32, 0x4A, 1, 1])) && isJiantInfo(info("ACID FM v0.6", 6, [0x56, 1, 32, 0x4A, 1, 1])),
+    "installer: BRAINDANCER v0.7 and ACID FM v0.6 are supported alike");
   ok(!isJiantInfo(info("BAUDGIRL 2.0", 4, [])), "installer: another firmware is not");
   /* (0.8.5) the release notice: before 0.8.5 is written, on the preview installer only, in every language it has */
   const ns = html.slice(html.indexOf("function releaseNotice"), html.indexOf("const noticeOf"));
@@ -1689,6 +1691,7 @@ const PROFILES = {
   jiant: { identity: "FM-1_900", name: "JIANT", info: infoOf("JIANT v0.9.12", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (0.9.12) USB name "JIANT" */
   jiantFm: { identity: "FM-1_900", name: "JIANT FM", info: infoOf("JIANT v0.9.11", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* 0.7.0..0.9.11 */
   acidFm: { identity: "FM-1_900", name: "ACID FM", info: infoOf("ACID FM v0.2", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (ACID FM 0.2) */
+  braindancer: { identity: "FM-1_900", name: "BRAINDANCER", loaderName: "BRAINDANCER UPD", info: infoOf("BRAINDANCER v0.7", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (0.7) */
   felucca: { identity: "FM-1_961", name: "Felucca", info: infoOf("FELUCCA v1.6.1", 4), objs: FELUCCA_OBJS, after: "FM-1_015" },
   felucca10: { identity: "FM-1_910", name: "Felucca", info: infoOf("FELUCCA v1.0", 4, { backup: false }), after: "FM-1_015" },
   skiff: { identity: "FM-1_732", name: "Skiff", info: infoOf("FELUCCA v1.3.2", 6), objs: SKIFF_OBJS, after: "FM-1_015" },
@@ -1720,6 +1723,11 @@ async function installerFlows() {
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.11", "installer: Install over JIANT 0.9.11 (USB name 'JIANT FM'): written");
   x = await run("acidFm");
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "ACID FM v0.2", "installer: Install over ACID FM (USB name 'ACID FM'): written");
+  x = await run("braindancer");
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "BRAINDANCER v0.7", "installer: Install over Braindancer (USB name 'BRAINDANCER'): written");
+  for (const n of ["BRAINDANCER", "BRAINDANCER UPD", "2- BRAINDANCER", "MIDIIN2 (BRAINDANCER)", "ACID FM", "ACID FM Update", "JIANT", "Felucca"])
+    ok(PORT_RE.test(n), `installer: PORT_RE finds '${n}'`);
+  ok(!PORT_RE.test("Acidlab Bassline"), "installer: PORT_RE leaves other gear alone");
   x = await run("jiant", { name: "Felucca" });
   ok(x.r === "ok" && x.c.state.fw.kind === "jiant", "installer: JIANT under the name Windows cached ('Felucca'): known by INFO, written");
   for (const name of ["2- JIANT", "JIANT 1", "JIANT MIDI 1"]) {
@@ -1855,6 +1863,7 @@ async function installerBrowsers() {
   const c = flowCtx(dev); await codeOf(D.runInstall(c));
   const rep = D.makeReport({ env: D.envOf({ userAgent: UA.chrome, requestMIDIAccess() {} }), page: "https://x/JIANT/webapp/installer/", installer: "v0.9.11",
     state: c.state, scan: c.up.lastScan, permission: "granted", error: { code: "oldstock", message: "nothing was written" }, log: "a\nb" });
+  ok(rep.split("\n")[0] === "Braindancer installer report", "installer: the report heading is 'Braindancer installer report'");
   ok(/identity: FM-1_014/.test(rep) && /- FM-1 \[fake\] connected: FM-1_014/.test(rep) && /error: oldstock/.test(rep) && /webmidi: yes/.test(rep),
     "installer: the report: identity, every port probed, the error");
 }

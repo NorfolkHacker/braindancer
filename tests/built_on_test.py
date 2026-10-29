@@ -6,7 +6,7 @@ visible text of the web pages (the installer, the 404, the editor, the emulator,
 installer's scripts' messages, the landing page: comments left out, they may keep JIANT's version notes; whitespace, line
 breaks, &nbsp; and HTML tags between the words do not hide a match). (fix 1) The installer's scripts' messages and report
 name no JIANT at all ("JIANT" in capitals in a string; the lower-case "jiant" is the firmware kind they detect), the report
-says "ACID FM installer report". The licence record stays as it is: LICENSING.md and every page's copyright lines (checked
+says "Braindancer installer report". The licence record stays as it is: LICENSING.md and every page's copyright lines (checked
 present).
 (Task 10b) The manual is English only and ACID FM's own: the web manual (its page, scripts, generated nav.js, service
 worker), docs/MANUAL.md, the navigation map and the cheat sheets (their generators' output and the generators' strings)
@@ -94,8 +94,8 @@ for f in SCRIPTS:
         if "JIANT" in m.group(2):
             line = text[:m.start()].count("\n") + 1
             bad.append(f"{f}: a message names JIANT (line {line}): {m.group(2)[:60]!r}")
-if "ACID FM installer report" not in visible((ROOT / "web/fm1diag.js").read_text(encoding="utf-8")):
-    bad.append('web/fm1diag.js: the report does not open with "ACID FM installer report"')
+if "Braindancer installer report" not in visible((ROOT / "web/fm1diag.js").read_text(encoding="utf-8")):
+    bad.append('web/fm1diag.js: the report does not open with "Braindancer installer report"')
 for f, lines in KEEP.items():
     src = (ROOT / f).read_text(encoding="utf-8")
     for s in lines:
