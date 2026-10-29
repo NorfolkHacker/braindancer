@@ -24,7 +24,7 @@
   sha256 226283d774d398764d1776a95c1f4eef28a575a7ff8b3cfbd6379815086db771, both reads identical (device on ACID FM 0.1)
 - Installed build/acid-fm-vc12.fwsc (T 12, NVOICE 8; dev identity FM-1_900): `done: the FM-1 runs FM-1_900`
 - CPU TEST after a power cycle: PEAK 100 %, LATE 113, no clicks heard. T stays 12; 14 and 16 not run
-  (docs/acid-fm/voices.md)
+  (docs/braindancer/voices.md)
 
 ## 2026-10-24 — piece 2, ACID FM 0.2 (Task 6)
 

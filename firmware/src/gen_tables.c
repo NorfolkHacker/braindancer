@@ -600,7 +600,7 @@ static const ggenre_t GENRE[] = {
 static const uint8_t GEN_SHOWN[GEN_NSHOWN] = {41 /* IDM */, 42 /* BROKEN */, 30 /* BREAKS */, 31 /* DRUM & BASS */, 4 /* ACID HOUSE */,
                                               11 /* ELECTRO */, 2 /* MICRO HOUSE */, 26 /* BOOM BAP */, 37 /* AMBIENT */,
                                               7 /* DUB TECHNO */};
-/* (ACID FM 0.5.1) names, tempos and swing from docs/acid-fm/genre-research.md: BROKEN BEAT (80..100 swung is glitch-hop,
+/* (ACID FM 0.5.1) names, tempos and swing from docs/braindancer/genre-research.md: BROKEN BEAT (80..100 swung is glitch-hop,
  * not West London broken beat) is GLITCH HOP; DRIFT (a second AMBIENT) is AMB TECHNO (the Warp ambient-techno lane, on
  * DUB TECHNO's template); RETROBOC is the user's name for the Boards of Canada style (68..100) */
 static const char *const GEN_SHOWN_NAME[GEN_NSHOWN] = {"IDM", "GLITCH HOP", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO",

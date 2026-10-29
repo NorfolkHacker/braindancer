@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
-  - name: ACID FM manual
-    url: https://norfolkhacker.github.io/acid-fm/manual/
-    about: How ACID FM works, page by page (the manual still describes JIANT FM's features, which 0.1 keeps; it is rewritten as ACID FM's features land).
+  - name: Braindancer manual
+    url: https://norfolkhacker.github.io/braindancer/manual/
+    about: How Braindancer works, page by page (the manual still describes JIANT FM's features, which 0.1 keeps; it is rewritten as Braindancer's features land).

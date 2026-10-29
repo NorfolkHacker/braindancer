@@ -351,7 +351,7 @@ static struct { volatile uint32_t peak, late, shed; } load_diag;
  * crackled on ECO: the peaks are the voices, a tail ringing on each part as the next hits come). (0.9.12, after Skiff
  * by illuminus5) VOICES_2CORE while the second core takes parts (fx.c mc_two: CORES 2, not REC at power-on, not given
  * up): the room its render gives. (ACID FM 0.2) FELUCCA_VOICES_2CORE sets it at build time (default 12, up to 16: gov_cap is
- * a byte starting at 16; audio.c gov_tick's ceiling GOV_MAX follows it); docs/acid-fm/voices.md. A part still has NVOICE of
+ * a byte starting at 16; audio.c gov_tick's ceiling GOV_MAX follows it); docs/braindancer/voices.md. A part still has NVOICE of
  * its own (track_t.v; the budget may not exceed NPART * NVOICE); the load budget
  * (load_tight) and the overload guard (audio.c) measure core 0's half with core 1's wait in it, so they hold the
  * render in its time either way; a core 1 given up mid-session: NVOICE again from the next note */

@@ -1,4 +1,4 @@
-# ACID FM GEN: genre research for the IDM / braindance space
+# Braindancer GEN: genre research for the IDM / braindance space
 
 Status: research notes for retuning the GEN genre knob. No code was changed.
 Date: 2026-10-27.

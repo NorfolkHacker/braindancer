@@ -11,12 +11,12 @@ and its modifications. A file's header says which: "Copyright (C) 2026 Juan Igna
 file is mostly JIANT's, "Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)" where it is mostly Felucca's
 and JIANT changed it; Felucca's line stays wherever it was. The licence is the same: GPL-3.0-only.
 
-## ACID FM
+## Braindancer (formerly ACID FM)
 
-ACID FM is a fork of JIANT FM (above), by NorfolkHacker: "Copyright (C) 2026 NorfolkHacker" where a file is mostly
-ACID FM's, "Portions Copyright (C) 2026 NorfolkHacker" where ACID FM changed it; every earlier copyright line stays.
-The licence is the same: GPL-3.0-only. ACID FM's own files so far: `tools/gen_about_qr.py`, `tests/about_qr_test.py`,
-`tools/host-cc`, `requirements-dev.txt`, `README.md`, `web/landing/index.html`, `docs/acid-fm/`, `docs/superpowers/`. The ABOUT QR
+Braindancer is a fork of JIANT FM (above), by NorfolkHacker: "Copyright (C) 2026 NorfolkHacker" where a file is mostly
+Braindancer's, "Portions Copyright (C) 2026 NorfolkHacker" where Braindancer changed it; every earlier copyright line stays.
+The licence is the same: GPL-3.0-only. Braindancer's own files so far: `tools/gen_about_qr.py`, `tests/about_qr_test.py`,
+`tools/host-cc`, `requirements-dev.txt`, `README.md`, `web/landing/index.html`, `docs/braindancer/`, `docs/superpowers/`. The ABOUT QR
 code is made with segno (BSD-3-Clause) at build time; segno is not part of the firmware.
 
 ## What is GPL-3.0-only
@@ -57,7 +57,7 @@ All by Hügelton Instruments (Leo Kuroshita), in this tree:
 | --- | --- | --- |
 | IBM Plex Mono (SemiBold) by IBM Corp. and Michroma by The Michroma Project Authors: the UI's values and big titles since JIANT 0.6.56, rasterised into the firmware at build time (`tools/gen_aa_font.py --preset jiant-lab`; the generated tables are not offered as a font) | SIL OFL 1.1 | `assets/fonts/IBMPlexMono-SemiBold.ttf`, `assets/fonts/Michroma-Regular.ttf`, `LICENSES/OFL-IBMPlexMono.txt`, `LICENSES/OFL-Michroma.txt` |
 | Chakra Petch font by The Chakra Petch Project Authors: the UI text since JIANT 0.5 (the labels since 0.6.56), rasterised into the firmware at build time (`tools/gen_aa_font.py --preset chakra-petch`; the generated tables are not offered as a font) | SIL OFL 1.1 | `assets/fonts/ChakraPetch-*.ttf`, `LICENSES/OFL-ChakraPetch.txt` (also `assets/fonts/OFL-ChakraPetch.txt`) |
-| Inter Tight font by The Inter Project Authors: the UI text up to JIANT 0.4, and again in ACID FM's screens (`UF_*` in `build/gen/ux_fonts.h`, `--preset acid`; also kept for the `inter-tight` preset; the font declares no Reserved Font Name) | SIL OFL 1.1 | `assets/fonts/InterTight[wght].ttf`, `LICENSES/OFL-InterTight.txt` (also `assets/fonts/OFL.txt`) |
+| Inter Tight font by The Inter Project Authors: the UI text up to JIANT 0.4, and again in Braindancer's screens (`UF_*` in `build/gen/ux_fonts.h`, `--preset acid`; also kept for the `inter-tight` preset; the font declares no Reserved Font Name) | SIL OFL 1.1 | `assets/fonts/InterTight[wght].ttf`, `LICENSES/OFL-InterTight.txt` (also `assets/fonts/OFL.txt`) |
 | msfa by Google Inc. and Pascal Gauthier, from Dexed (<https://github.com/asb2m10/dexed>): the FM6 engine's synthesis, ported to integer C (Dexed itself is GPL-3.0; only msfa is used; the FM6 factory patches are Felucca's own) | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | klattsch by Tony Gies (<https://github.com/tgies/klattsch>): design reference for the VOICE engine; no code copied. Formant data from Klatt (1980) / Hillenbrand et al. (1995) | MIT (klattsch) | credit only |
 | The CMU Pronouncing Dictionary (cmudict 0.7b, <https://github.com/cmusphinx/cmudict>) by Carnegie Mellon University: VOICE's English words (JIANT 0.8.5), a subset of ~2100 common words with their pronunciations, packed into the firmware at build time (`tools/gen_lyrics.py`) | BSD-2-Clause | `tools/lyrics/en_dict.txt` (the notice in its header), `LICENSES/BSD-2-Clause-CMUdict.txt` |

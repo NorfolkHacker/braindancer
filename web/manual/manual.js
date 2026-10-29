@@ -109,7 +109,7 @@ function allShots() {
 const UI = {
   nav_panel: "The panel", nav_ref: "How do I…?", nav_rec: "Recipes", nav_map: "Map", nav_new: "What's new", nav_emu: "Emulator",
   kicker: "interactive manual · firmware", h1a: "Interactive", h1b: "manual",
-  lede: "All of ACID FM on one page: touch any control of the FM-1 to see what it does alone, held and in combination, with the real screen it leads to. Search any command, follow a recipe or try it live in the emulator.",
+  lede: "All of Braindancer on one page: touch any control of the FM-1 to see what it does alone, held and in combination, with the real screen it leads to. Search any command, follow a recipe or try it live in the emulator.",
   p_eb: "The panel", p_h2: "Touch a control", p_in: "Hover or tap any knob, button or key. Pick a layer to see what each key does while you hold that button (like the firmware's MAP).",
   layer: "Layer on the keys:", none: "none", pick: "Pick a control…",
   alone: "Alone", held: "Held", combos: "Combinations", layers_k: "In each layer", screen: "The screen", showlayer: "Show this layer on the keys",
@@ -119,7 +119,7 @@ const UI = {
   rc_eb: "Step by step", rc_h2: "Recipes", rc_in: "The usual tasks, in order.",
   m_eb: "Find your way", m_h2: "Navigation map", m_in: "Every section, its groups (the tabs) and its pages in the order SELECT walks them, read from the firmware's own tables. Touch a page to see its screen and its four knobs.",
   m_full: "Open the full map (SVG)", m_on: "orange: the page at power-on", m_cond: "dashed: only on some engines or LOADs", m_rules: "The six rules", m_hold: "hold", m_sel: "+ SELECT", m_none: "no layer", knobs4: "The four knobs", noshot: "(no capture of this page)",
-  n_eb: "For returning users", n_h2: "What's new, by version", n_in: "What matters in each ACID FM version. The full details are in the README.", n_more: "Earlier versions",
+  n_eb: "For returning users", n_h2: "What's new, by version", n_in: "What matters in each Braindancer version. The full details are in the README.", n_more: "Earlier versions",
   e_eb: "Live", e_h2: "Try it in the emulator", e_in: "The whole firmware running in the browser. Every command in this manual shows which computer keys to use.", e_go: "Switch the emulator on here", e_tab: "Open in a new tab",
   e_keys: "Keyboard: Z–' and Q–O the keys · 1 … = the buttons FX … REC · [ ] OCT · ↑ ↓ SELECT · ← → ALGORITHM · Shift-click holds a button · knobs: mouse wheel.",
   close: "Close", ver: "firmware", recipe_steps: "steps", try: "Try", emu_note: "(needs a connection)",
@@ -366,7 +366,7 @@ function init() {
     if (q) { $("#q").value = q; sec = "all"; renderRef(); $("#ref").scrollIntoView({ behavior: "smooth" }); return; }
     if (t.id === "emugo") {
       const f = document.createElement("iframe");
-      f.src = "../emu/"; f.title = "ACID FM emulator"; f.allow = "autoplay"; f.loading = "lazy";
+      f.src = "../emu/"; f.title = "Braindancer emulator"; f.allow = "autoplay"; f.loading = "lazy";
       $("#emubox").replaceChildren(f);
     }
   });

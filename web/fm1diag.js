@@ -205,7 +205,7 @@ export function stockFileProblem(name, bytes, v15size) {
   if (/\.(rar|7z|exe|dmg|pkg|apk)$/i.test(n)) return { code: "stockZip", detail: n };
   let product = "";
   try { product = bytes.length > 960 ? productOf(bytes) : ""; } catch (_) {}
-  if (/^FM-1_9\d\d$|^FM-1_7\d\d$/.test(product) || /^(felucca|jiant|skiff)/i.test(n)) return { code: "stockCustom", detail: `${n} ${product}`.trim() };
+  if (/^FM-1_9\d\d$|^FM-1_7\d\d$/.test(product) || /^(felucca|jiant|skiff|braindancer|acid[-_ ]?fm)/i.test(n)) return { code: "stockCustom", detail: `${n} ${product}`.trim() };
   if (/^FM-1_0\d\d$/.test(product) && product !== "FM-1_015") return { code: "stockOtherVer", detail: `${n}: ${product}` };
   if (bytes.length !== v15size) return { code: "stockNotV15", detail: `${n}: ${bytes.length} B` };
   return null;

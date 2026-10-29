@@ -8,9 +8,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ACID FM emulator</title>
+<title>Braindancer emulator</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22/%3E%3Crect x=%224%22 y=%224%22 width=%228%22 height=%228%22 fill=%22%23fff%22/%3E%3C/svg%3E">
-<meta name="description" content="ACID FM, live firmware for the M-VAVE FM-1, running in your browser: the same code the instrument runs.">
+<meta name="description" content="Braindancer, live firmware for the M-VAVE FM-1, running in your browser: the same code the instrument runs.">
 <style>
 /* DotGothic16 (SIL OFL 1.1, fonts/OFL.txt), cut to printable ASCII, for the knob labels */
 @font-face { font-family: "DotGothic16"; src: url("fonts/DotGothic16-subset.woff") format("woff"); font-display: swap; }
@@ -91,13 +91,13 @@ footer small { font-size: 11px; opacity: .8; }
 </p>
 
 
-<p class="small">ACID FM builds on open firmware for the FM-1: JIANT FM by Juan Jiant (<a href="https://juanjiant-bit.github.io/JIANT/" target="_blank" rel="noopener" style="color:inherit">juanjiant-bit.github.io/JIANT</a>) and Felucca by Hügelton Instruments. To support JIANT's author: <a href="https://ko-fi.com/juanjiant" target="_blank" rel="noopener" style="color:inherit">Ko-fi</a> (in Argentina: <a href="https://cafecito.app/juanjiant" target="_blank" rel="noopener" style="color:inherit">Cafecito</a>).</p>
+<p class="small">Braindancer builds on open firmware for the FM-1: JIANT FM by Juan Jiant (<a href="https://juanjiant-bit.github.io/JIANT/" target="_blank" rel="noopener" style="color:inherit">juanjiant-bit.github.io/JIANT</a>) and Felucca by Hügelton Instruments. To support JIANT's author: <a href="https://ko-fi.com/juanjiant" target="_blank" rel="noopener" style="color:inherit">Ko-fi</a> (in Argentina: <a href="https://cafecito.app/juanjiant" target="_blank" rel="noopener" style="color:inherit">Cafecito</a>).</p>
 <footer>
   <small class="version">@VERSION@@PREVIEW@</small><br>
-  ACID FM, built on JIANT FM and Felucca · <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0</a> · browser build after charlesvestal's <a href="https://github.com/charlesvestal/fm1-x0x">X0X</a> · DotGothic16 font, <a href="fonts/OFL.txt">SIL OFL 1.1</a><br>
-  <nav><a href="../">ACID FM home</a> · <a href="https://github.com/NorfolkHacker/acid-fm">Source</a> · <a href="../webapp/installer/">Installer (approved version)</a> ·
+  Braindancer, built on JIANT FM and Felucca · <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0</a> · browser build after charlesvestal's <a href="https://github.com/charlesvestal/fm1-x0x">X0X</a> · DotGothic16 font, <a href="fonts/OFL.txt">SIL OFL 1.1</a><br>
+  <nav><a href="../">Braindancer home</a> · <a href="https://github.com/NorfolkHacker/braindancer">Source</a> · <a href="../webapp/installer/">Installer (approved version)</a> ·
     <a href="../webapp/editor/">Editor</a></nav>
-  <small>M-VAVE and FM-1 are trademarks of their respective owners. ACID FM is not affiliated with or endorsed by them, nor with Hügelton Instruments.</small>
+  <small>M-VAVE and FM-1 are trademarks of their respective owners. Braindancer is not affiliated with or endorsed by them, nor with Hügelton Instruments.</small>
 </footer>
 </main>
 
@@ -471,7 +471,7 @@ async function switchOn() {
           if (m.leds) drawLights(lastLeds = m.leds, m.anim);
           if (m.sectors && !saveFlash(m.sectors) && !warned) {
             warned = true;
-            console.warn("ACID FM: this browser does not keep the saves; they last until the page closes.");
+            console.warn("Braindancer: this browser does not keep the saves; they last until the page closes.");
           }
         }
       };
@@ -480,7 +480,7 @@ async function switchOn() {
     await ac.resume();
     document.getElementById("start").hidden = true;
     go.textContent = "On";
-    if (ac.sampleRate !== 44100) console.warn(`ACID FM: the browser plays at ${ac.sampleRate} Hz, the pitch is off by ${(1200 * Math.log2(ac.sampleRate / 44100)).toFixed(0)} cents.`);
+    if (ac.sampleRate !== 44100) console.warn(`Braindancer: the browser plays at ${ac.sampleRate} Hz, the pitch is off by ${(1200 * Math.log2(ac.sampleRate / 44100)).toFixed(0)} cents.`);
     syncButtons();
     syncKeys();
     send({ type: "visible", on: !document.hidden });

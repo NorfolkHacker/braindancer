@@ -1,8 +1,10 @@
-# ACID FM — User Manual
+# Braindancer — User Manual
 
-**For the M-VAVE FM-1** · the interactive manual: <https://norfolkhacker.github.io/acid-fm/manual/>
+*(Braindancer, formerly ACID FM: the name up to 0.6.)*
 
-This manual is for musicians who have just installed ACID FM and want to know how to play it, build songs with it
+**For the M-VAVE FM-1** · the interactive manual: <https://norfolkhacker.github.io/braindancer/manual/>
+
+This manual is for musicians who have just installed Braindancer and want to know how to play it, build songs with it
 and, above all, **save their work without losing anything**. Every button, knob and message is named exactly as the
 device shows it.
 
@@ -35,20 +37,20 @@ If you only read one chapter, read [12. Saving and loading](#12-saving-and-loadi
 
 ### Install
 
-1. Open the **web installer** in Chrome or Edge: <https://norfolkhacker.github.io/acid-fm/webapp/installer/>
+1. Open the **web installer** in Chrome or Edge: <https://norfolkhacker.github.io/braindancer/webapp/installer/>
 2. Connect the FM-1 **directly** to the computer with a USB data cable.
 3. **Coming from another custom firmware (Felucca, baudgirl or any other)?** Return to the official V15 firmware
    first, with the installer's **Return to official V15 first** button (it also saves a complete backup). Writing
-   ACID FM straight over another custom firmware can leave an FM-1 unable to start.
-4. Press **Install**. It first checks the FM-1's firmware and writes only over official V15 or ACID FM (anything else:
+   Braindancer straight over another custom firmware can leave an FM-1 unable to start.
+4. Press **Install**. It first checks the FM-1's firmware and writes only over official V15, Braindancer or the earlier ACID FM (anything else:
    it sends you to Return to official V15 first). Don't unplug the cable while it writes.
 
-ACID FM has no user samples yet: if you come from Felucca, its user samples (USR1–3) are lost on install. Keep your WAV
+Braindancer has no user samples yet: if you come from Felucca, its user samples (USR1–3) are lost on install. Keep your WAV
 files.
 
 ### Your first sound (1 minute)
 
-1. Power on. The ACID FM wordmark shows, then you land on **HOME › TRACKS**: a ridgeline per track. The tracks
+1. Power on. The Braindancer wordmark shows, then you land on **HOME › TRACKS**: a ridgeline per track. The tracks
    start as **T1 DRUM-X** (the factory kit), **T2 VOICE** (SINGER EN: it sings words), **T3 PHASE** (BRASS),
    **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (ACID) and **T6 FM6** (PAD), each its preset's sound, dry. With nothing to restore, T1, T5 and T6 also carry a short demo at 124 BPM (beat, acid line, pad): press PLAY; the status line says DEMO until your first edit or a PLAY→STOP. NEW PROJECT starts empty.
 2. Turn **ALGORITHM** to pick a track (T1–T6). With **TRACKS 4** (a setting; the default is 6 since the power-on demo, and 0.4 sets it to 6 once on its first start; a 4 picked after that stays) it stops at T4: T5 and T6 appear only with TRACKS 6 (see
@@ -140,7 +142,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ## 2. The screen
 
-ACID FM has **one look, ACID**: a black screen, one palette, Inter Tight lettering with a gradient and glow. Every page
+Braindancer has **one look, ACID**: a black screen, one palette, Inter Tight lettering with a gradient and glow. Every page
 is built the same way:
 
 - **Header** (top): the section and the track (**SEQ · T1**), and at the right where the music is: the octave when
@@ -241,7 +243,7 @@ SELECT goes down each row from left to right; the button goes to the next page.
   in the selected one's group (T1–T3 or T4–T6), **KNOB 4**: the BPM.
 - **HOME › VISUAL**: six rings (T1 outside, T6 at the centre) of the blend, turning with the bar, each as bright as its
   track sounds; the song's name and where it is over them. **KNOB 1–4**: **MACRO 1–4** (as LFO held).
-- **ENV, LFO, FX, SCL, ARP and EDIT**: every page in the ACID look: a picture of what the page sets (the
+- **ENV, LFO, FX, SCL, ARP and EDIT**: every page in the Braindancer look: a picture of what the page sets (the
   envelope, the LFO's wave, the sends, the key on a keyboard, the engine's sound …), the four knobs in their colours,
   the status line and the footer ("2 / 4 · NEXT DEST"). **MORE** is a list of the section's other settings in groups:
   KNOB 1 picks a row, KNOB 2 sets it. The web manual describes each page.
@@ -845,7 +847,7 @@ recorded as **automation**. MENU › AUDIO › CLICK has the **CLICK** (OFF / RE
 
 On **SEQ › STEPS**, **hold a step** (a grid key, or the note being entered on the roll) and turn a knob: that step gets
 its own value of the setting that knob edits on the sound page you visited last (at power-on: HOME's four knobs).
-The knob row and the status line show the lock in the ACID look: **LOCK · CUTOFF · 1.2K**.
+The knob row and the status line show the lock in the Braindancer look: **LOCK · CUTOFF · 1.2K**.
 
 **Choosing the page while you hold.** Still holding the step, turn **SELECT**: the knobs move to the next of the
 track's **EDIT pages** (SOUND → TONE → VOICE or FILTER → MORE; DRUM-X: KIT → SOUND → MORE), without leaving STEPS; the
@@ -1511,7 +1513,7 @@ The SAVE layer (section jumps on the bar, quick chains, store, recall, SONG REC)
 
 ## 12. Saving and loading
 
-This is the chapter to read carefully. ACID FM keeps several kinds of data in different places, saved in different ways.
+This is the chapter to read carefully. Braindancer keeps several kinds of data in different places, saved in different ways.
 
 ### The big picture
 
@@ -1768,7 +1770,7 @@ core idle, waiting for the second); FX LAYER..CLIP; MASTER; USB+OUTPUT; CORE 1 B
 interrupt inside the render) and **WHOLE HALF** (the same as AUDIO LOAD); then TIMER5 ALL, IRQ LATE US (how late the
 audio interrupt started at worst: the screen or a flash write held it), LATE HALVES, FX REST % (the time the effects
 rested: stopped they cost nothing) and UI FRAMES (a second). Below: the voices sounding and the cap,
-the LOAD the sound plays, the cores and the CPU TEST. **To help tune ACID FM on real
+the LOAD the sound plays, the cores and the CPU TEST. **To help tune Braindancer on real
 hardware, photograph it** (two or three screens) while your song plays, and again a few seconds after STOP.
 
 **CPU TEST.** SAVE › MORE › CPU TEST builds the heaviest reference song (TRACKS 6); press PLAY, let it play
@@ -1830,7 +1832,7 @@ MENU › MIDI keeps one row, **MIDI IS ON GLO**: OCT+ opens GLO › MIDI.
   so); programs **16–19** load project **1–4** with its section A (stopped only, as SAVE › PROJECT). A foot
   controller or a DAW can run a set.
 - **Not possible**: MIDI OUT on the **TRS** jack (the FM-1's jack is an input only: no output line goes to it) and
-  **Bluetooth MIDI** (the chip has a radio, but its Bluetooth software is JieLi's closed SDK, which ACID FM does not
+  **Bluetooth MIDI** (the chip has a radio, but its Bluetooth software is JieLi's closed SDK, which Braindancer does not
   use).
 - **Controllers** (on the tracks listening on the channel): CC5 glide, CC7 level, CC10 pan, CC71 resonance and CC74
   cutoff (the engine's own, where it has them), CC72 release, CC73 attack, CC75 decay, CC91 reverb send, CC93 chorus
@@ -1838,7 +1840,7 @@ MENU › MIDI keeps one row, **MIDI IS ON GLO**: OCT+ opens GLO › MIDI.
   engine), **CC102 / CC103** the post filter's cutoff / resonance, **CC104** drive, **CC105** sustain. CC1 (mod wheel),
   CC11 (expression) and channel aftertouch are sources in the MOD MATRIX (WHEEL, EXPR, PRESSURE). Pitch bend, sustain
   (CC64), All Sound Off (CC120) and All Notes Off (CC123) work. A CC is recorded as automation like a knob move.
-- USB MIDI and audio name: **"ACID FM"**. If macOS still shows an old name, open Audio MIDI Setup › MIDI Studio with
+- USB MIDI and audio name: **"BRAINDANCER"**. If macOS still shows an old name, open Audio MIDI Setup › MIDI Studio with
   the FM-1 unplugged, delete its old entry, and plug it in again.
 
 ### MIDI LEARN
@@ -1859,7 +1861,7 @@ Any knob of a track's sound to any CC of your controller, on the device (from Fe
   standard map above (CC5 7 10 16–23 71–75 91 93 94 102–105). So a learned CC and the map never meet.
 - **Kept with the settings** (not in a project; a settings backup carries it); **GLO › MORE › LEARN CLEAR** forgets
   them all.
-- Bluetooth MIDI does not exist on the FM-1 with ACID FM (see above), so learning works on USB and TRS.
+- Bluetooth MIDI does not exist on the FM-1 with Braindancer (see above), so learning works on USB and TRS.
 
 ### Stems
 
@@ -1886,7 +1888,7 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
 ### USB audio in (test version)
 
 **MENU › MORE › USB AUDIO IN+OUT** makes the FM-1 a USB audio output of the computer or the phone as well as an input:
-the device re-enumerates (as with STEMS, the serial console is off), and the host now lists "ACID FM" as a speaker,
+the device re-enumerates (as with STEMS, the serial console is off), and the host now lists "BRAINDANCER" as a speaker,
 stereo, 16 bit, 44.1 kHz. Whatever the host plays to it comes into the **last track** (T6, or T4 with TRACKS 4) and is
 mixed like that track's sound:
 
@@ -1919,24 +1921,24 @@ only some of a USB device's channels to apps). Test version: the phone app is a 
 
 All three run in the browser and update themselves with every change to the firmware.
 
-### Emulator — <https://norfolkhacker.github.io/acid-fm/emu/>
+### Emulator — <https://norfolkhacker.github.io/braindancer/emu/>
 
 The same code as the FM-1, with sound, in the browser. Play it with the mouse or the computer keyboard: **Z–'** and
 **Q–O** rows are the keys, **1** to **=** the buttons from FX to REC, **[ ]** OCT− / OCT+, **↑ ↓** SELECT, **← →**
 ALGORITHM; **Shift-click** holds a button. Great for learning the layers without the device.
 
-### Installer — <https://norfolkhacker.github.io/acid-fm/webapp/installer/>
+### Installer — <https://norfolkhacker.github.io/braindancer/webapp/installer/>
 
 Chrome or Edge, the FM-1 connected straight to the computer.
 
-- **Install** ACID FM (it checks the FM-1 first: official V15 or ACID FM only).
+- **Install** Braindancer (it checks the FM-1 first: official V15, Braindancer or the earlier ACID FM only).
 - **Return to official V15**: give it M-VAVE's unmodified **FM-1.fwsc** (checked locally in the browser). It first
   saves a complete backup (current music, saved music, sound banks and settings; not user samples). Use this before
-  installing ACID FM if your FM-1 runs **another custom firmware** (Felucca, baudgirl…), and whenever you want to go
-  back to stock. Official V15 cannot open ACID FM music; to restore the backup later, reinstall ACID FM and use the
+  installing Braindancer if your FM-1 runs **another custom firmware** (Felucca, baudgirl…), and whenever you want to go
+  back to stock. Official V15 cannot open Braindancer music; to restore the backup later, reinstall Braindancer and use the
   editor.
 
-### Editor — <https://norfolkhacker.github.io/acid-fm/webapp/editor/>
+### Editor — <https://norfolkhacker.github.io/braindancer/webapp/editor/>
 
 Every setting from the computer, over USB. Tabs: Sound, 6-OP FM, Sequencer, Tracks, Library, Projects, Settings.
 
@@ -1959,7 +1961,7 @@ Back up before updating, before returning to stock, and whenever you finish some
 
 ### The installer does not install: what to do
 
-Installer: <https://norfolkhacker.github.io/acid-fm/webapp/installer/>. When something fails it shows a **What to do**
+Installer: <https://norfolkhacker.github.io/braindancer/webapp/installer/>. When something fails it shows a **What to do**
 box with the steps for that error; if that is not enough, press **COPY REPORT** and paste it into your message (the
 browser, the MIDI ports it saw, the FM-1's firmware, the step it stopped at).
 
@@ -1970,7 +1972,7 @@ browser, the MIDI ports it saw, the FM-1's firmware, the step it stopped at).
 - **FM-1 not found**: switch it on; a USB **data** cable (many only charge); straight into the computer, no hub. Then
   try **Is it in boot mode (WL80UBOOT)?**.
 - **Another program is using its MIDI port** (Windows: one program per port): close the M-VAVE app, the DAW, MIDI-OX
-  and other tabs with the ACID FM editor; replug, reload, press Install.
+  and other tabs with the Braindancer editor; replug, reload, press Install.
 - **An older official firmware (V14, V13…)**: Return to official V15 (no backup needed), then Install.
 - **Felucca, Skiff or another custom firmware**: Return to official V15 first. It saves that firmware's backup first
   (Felucca's with its samples; Skiff's in its own format, for Skiff's editor) or, when it cannot make one, asks before
@@ -2004,7 +2006,7 @@ CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU › MORE › CORES); ABOUT then r
 With both cores running the tracks share **12 voices** instead of 8 (each track still at most 8); on one core (1 CORE
 set, after a crash, REC held) it is 8, and a second core that stops brings the budget back to 8 from the next note.
 
-**It crashes: a red screen "ACID FM CRASH" with numbers.** Take a photo of it and
+**It crashes: a red screen "BRAINDANCER CRASH" with numbers.** Take a photo of it and
 tell us the version (MENU › MORE › ABOUT). How to read it:
 
 - The version, **CORE 0 OF 2** (the core that faulted, of how many were running), **CODE xx-nn** (the cause and the
@@ -2058,15 +2060,15 @@ deliberately from a running device, hold **OCT− + OCT+** for 5 seconds. If tha
 M-VAVE's own updater.
 
 **I came from baudgirl / Felucca. Can I install directly?** No: return to official V15 first with the installer, then
-install ACID FM. Going straight from another custom firmware has bricked an FM-1.
+install Braindancer. Going straight from another custom firmware has bricked an FM-1.
 
-**Where did my Felucca samples go?** ACID FM has no user samples yet; that flash holds the songs.
+**Where did my Felucca samples go?** Braindancer has no user samples yet; that flash holds the songs.
 
 ---
 
 ## 17. Credits and licence
 
-ACID FM is its own firmware for the M-VAVE FM-1. Built on JIANT FM (Juan Jiant) and Felucca (Hügelton Instruments).
-The song system comes from SLOOP. ACID FM is free software under the GNU GPL-3.0-only; every third-party part and its
+Braindancer is its own firmware for the M-VAVE FM-1. Built on JIANT FM (Juan Jiant) and Felucca (Hügelton Instruments).
+The song system comes from SLOOP. Braindancer is free software under the GNU GPL-3.0-only; every third-party part and its
 licence is listed in [LICENSING.md](../LICENSING.md).
 

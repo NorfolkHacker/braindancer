@@ -4,7 +4,7 @@
 # (JIANT 0.6.7) the two cheat sheets: docs/cheatsheet/controls.html and sound.html (black, Chakra Petch, the thermal
 # palette), then tools/render_cheatsheets.mjs makes the PNGs and PDFs:
 #   python3 tools/gen_cheatsheets.py && node tools/render_cheatsheets.mjs
-# (3c-1 task 10b) English only, ACID FM's own pages (the ux_*.c pages, their knob labels and MORE rows; docs/MANUAL.md,
+# (3c-1 task 10b) English only, Braindancer's own pages (the ux_*.c pages, their knob labels and MORE rows; docs/MANUAL.md,
 # web/manual/data.js); JIANT named only on the credits line. Update them together.
 import html, os, re
 
@@ -105,15 +105,15 @@ def knobs(*labels):
 
 
 def page(title, sub, body, name):
-    doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>ACID FM · {e(title)}</title>
+    doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Braindancer · {e(title)}</title>
 <style>{CSS}</style></head><body>
 <header><div>
-<h1>ACID FM · {e(title)}</h1><h2>{e(sub)}</h2>
-<div class="ver">firmware {VERSION} · M-VAVE FM-1 · norfolkhacker.github.io/acid-fm</div></div></header>
+<h1>BRAINDANCER · {e(title)}</h1><h2>{e(sub)}</h2>
+<div class="ver">firmware {VERSION} · M-VAVE FM-1 · norfolkhacker.github.io/braindancer</div></div></header>
 <div class="rule"></div>
 {body}
 <footer><span>GPL-3.0 · {e(CREDITS)} · song mode from SLOOP</span>
-<span>ACID FM {VERSION}</span></footer>
+<span>Braindancer {VERSION}</span></footer>
 </body></html>"""
     with open(os.path.join(OUT, name), 'w') as f:
         f.write(doc)

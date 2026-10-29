@@ -1857,6 +1857,8 @@ async function installerBrowsers() {
   ok(D.stockFileProblem("FM-1_V15.zip", zip, 699956)?.code === "stockZip", "installer: the ZIP picked instead of FM-1.fwsc: 'stockZip'");
   ok(D.stockFileProblem("FM-1.fwsc", new Uint8Array(1234), 699956)?.code === "stockNotV15", "installer: a .fwsc of another size: 'stockNotV15'");
   ok(D.stockFileProblem("felucca-v0.9.11.fwsc", new Uint8Array(2000), 699956)?.code === "stockCustom", "installer: a JIANT package picked: 'stockCustom'");
+  ok(["braindancer-0.7.fwsc", "acid-fm-0.6.fwsc", "ACID FM.fwsc"].every((n) => D.stockFileProblem(n, new Uint8Array(2000), 699956)?.code === "stockCustom"),
+    "installer: a Braindancer or ACID FM package picked: 'stockCustom'");
   ok(D.stockFileProblem("FM-1.fwsc", new Uint8Array(699956), 699956) === null, "installer: V15's size: on to the SHA-256 check");
   /* the report */
   const dev = new FakeFM1(IMG, { ...PROFILES.v14, name: "FM-1" });
@@ -1928,7 +1930,7 @@ async function installerPage() {
   };
   const status = () => els.get("status").textContent, tip = () => els.get("tiptext").children.map((c) => c.textContent).join(" | ");
   let p = await run({ ...PROFILES.v14 });
-  ok(els.get("go").disabled === false && /ACID FM v0\.9\.11/.test(status()), "installer page: the package loads, Install enabled");
+  ok(els.get("go").disabled === false && /Braindancer v0\.9\.11/.test(status()), "installer page: the package loads, Install enabled");
   await p.click("go");
   ok(/firmware oficial más viejo.*FM-1_014/.test(status()) && els.get("tip").hidden === false && /Volver al V15 oficial/.test(tip()) && els.get("stock").open,
     "installer page: V14 (Spanish): its message, its box, Return opened");
@@ -1950,15 +1952,16 @@ function siteRedirects() {
   const src = html.slice(html.indexOf("/*REDIRECT-BEGIN*/"), html.indexOf("/*REDIRECT-END*/"));
   const go = vm.runInNewContext(src + "\nacidTarget");
   const cases = [
-    ["/acid-fm/installer/", "/acid-fm/webapp/installer/"], ["/acid-fm/installer", "/acid-fm/webapp/installer/"],
-    ["/acid-fm/webapp/", "/acid-fm/webapp/installer/"], ["/acid-fm/webapp", "/acid-fm/webapp/installer/"],
-    ["/acid-fm/webapp/installer/:1:1", "/acid-fm/webapp/installer/"], ["/acid-fm/webapp/installer/index.html:302:15", "/acid-fm/webapp/installer/"],
-    ["/acid-fm/webapp/installer/)", "/acid-fm/webapp/installer/"], ["/acid-fm/webapp/installer/%20", "/acid-fm/webapp/installer/"],
-    ["/acid-fm/webapp/installer/foo/bar", "/acid-fm/webapp/installer/"], ["/ACID-FM/webapp/installer/", "/acid-fm/webapp/installer/"],
-    ["/acid-fm/instalador", "/acid-fm/webapp/installer/"], ["/acid-fm/editor", "/acid-fm/webapp/editor/"], ["/acid-fm/webapp/editor/x", "/acid-fm/webapp/editor/"],
-    ["/acid-fm/emulator", "/acid-fm/emu/"], ["/acid-fm/emu/index.html:1:1", "/acid-fm/emu/"], ["/acid-fm/preview/", "/acid-fm/preview/webapp/installer/"],
-    ["/acid-fm/preview/webapp/editor/z", "/acid-fm/preview/webapp/editor/"], ["/acid-fm/firmware/felucca-v0.6.40.fwsc", "/acid-fm/webapp/installer/"],
-    ["/acid-fm/manual/x", "/acid-fm/manual/"], ["/acid-fm/nothing-here", "/acid-fm/"], ["/acid-fm/webapp/installer/", null], ["/acid-fm/", null],
+    ["/acid-fm/installer/", "/braindancer/webapp/installer/"], ["/acid-fm/installer", "/braindancer/webapp/installer/"],
+    ["/acid-fm/webapp/", "/braindancer/webapp/installer/"], ["/acid-fm/webapp", "/braindancer/webapp/installer/"],
+    ["/acid-fm/webapp/installer/:1:1", "/braindancer/webapp/installer/"], ["/acid-fm/webapp/installer/index.html:302:15", "/braindancer/webapp/installer/"],
+    ["/acid-fm/webapp/installer/)", "/braindancer/webapp/installer/"], ["/acid-fm/webapp/installer/%20", "/braindancer/webapp/installer/"],
+    ["/acid-fm/webapp/installer/foo/bar", "/braindancer/webapp/installer/"], ["/ACID-FM/webapp/installer/", "/braindancer/webapp/installer/"],
+    ["/acid-fm/instalador", "/braindancer/webapp/installer/"], ["/acid-fm/editor", "/braindancer/webapp/editor/"], ["/acid-fm/webapp/editor/x", "/braindancer/webapp/editor/"],
+    ["/acid-fm/emulator", "/braindancer/emu/"], ["/acid-fm/emu/index.html:1:1", "/braindancer/emu/"], ["/acid-fm/preview/", "/braindancer/preview/webapp/installer/"],
+    ["/acid-fm/preview/webapp/editor/z", "/braindancer/preview/webapp/editor/"], ["/acid-fm/firmware/felucca-v0.6.40.fwsc", "/braindancer/webapp/installer/"],
+    ["/acid-fm/manual/x", "/braindancer/manual/"], ["/acid-fm/nothing-here", "/braindancer/"], ["/acid-fm/webapp/installer/", "/braindancer/webapp/installer/"], ["/acid-fm/", "/braindancer/"],
+    ["/braindancer/installer", "/braindancer/webapp/installer/"], ["/Braindancer/manual/x", "/braindancer/manual/"], ["/braindancer/webapp/installer/", null], ["/braindancer/", null],
   ];
   const bad = cases.filter(([from, to]) => go(from) !== to);
   ok(!bad.length, `site: 404.html sends old links where they meant${bad.length ? " (" + bad.map(([f]) => f + " -> " + go(f)).join(", ") + ")" : ""}`);

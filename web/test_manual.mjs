@@ -94,7 +94,7 @@ ok(!/<script[^>]+src="https?:/.test(html) && (html.match(/https:\/\/fonts\.googl
    "manual: no external script, only the landing's Google Fonts");
 ok(!/JIANT Stems|Probe|probe/.test(readFileSync(join(DIR, "data.js"), "utf8") + html), "manual: no word of the Stems app beyond 'separate product'");
 ok(readFileSync(join(HERE, "landing/index.html"), "utf8").includes('href="manual/"'), "manual: the landing page links it");
-ok(readFileSync(join(ROOT, "README.md"), "utf8").includes("norfolkhacker.github.io/acid-fm/manual/"), "manual: the README links it");
+ok(readFileSync(join(ROOT, "README.md"), "utf8").includes("norfolkhacker.github.io/braindancer/manual/"), "manual: the README links it");
 ok(/make_site\.py manual build\/pages/.test(readFileSync(join(ROOT, ".github/workflows/emulator.yml"), "utf8")), "manual: the workflow publishes it");
 
 /* the search */

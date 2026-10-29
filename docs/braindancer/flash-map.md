@@ -1,4 +1,4 @@
-# ACID FM flash map (M-VAVE FM-1, 1 MiB, JEDEC 0x856014)
+# Braindancer flash map (M-VAVE FM-1, 1 MiB, JEDEC 0x856014)
 
 Measured on 2026-10-24 against this tree (branch `piece2-trim`) and the piece 1 full-flash backup
 `~/fm1-backups/2026-10-24-jiant/fm1-recovery-20261024-130125/full-flash-before.bin` (1 MiB, sha256 `8531fc3a...c5349`,
@@ -53,7 +53,7 @@ Census check: gap 1 0/4, gap 2 0/2, 0xE8000..0xFBFFF 12/20 used (E8, E9, EA..F1,
 So the three "gaps" are not unowned in the vendor layout. Gaps 1 and 2 and the whole of Felucca's store lie inside the
 SDK's `VM` area (the SDK's non-volatile config store); gap 3 is its tail (`E8000`), `BTIF` and `USR`. JIANT already
 uses most of `VM` (0x97000..0xE7FFF) as its own store, so using more of it adds no new kind of exposure. The table lives
-in the encrypted app area; ACID FM is freestanding (`tools/build.py` takes only the SPL, cfg_tool.bin and eq_cfg_hw.bin
+in the encrypted app area; Braindancer is freestanding (`tools/build.py` takes only the SPL, cfg_tool.bin and eq_cfg_hw.bin
 from the SDK) and nothing in `firmware/` reads or acts on the table. Whether the boot ROM / SPL parses it is not
 documented in this tree. kagaimiq/jl-uboot-tool (https://github.com/kagaimiq/jl-uboot-tool) does not document the VM
 area or update records on its front page; its docs/ folder was not read.
@@ -131,7 +131,7 @@ Per the backup, 12 of 20 sectors are in use, by data nothing we ship reads:
 - **0xEA000..0xF1FFF** (8 sectors): two byte-identical 16 KiB copies (sector hashes EA..ED equal EE..F1). Content is
   FM patch records of 128 B with ASCII names ("PIANO 1", "ORGAN 1", "SYN LEAD 1", ... "BASS 8", "BRASS 1", "WOODWIND 1",
   "STRING 1", "VOICE 1", "SAW EM UP", "KALIMBA", "TIMPANI", ..., "WHAT IF"): the official firmware's factory tone
-  bank, duplicated for safety. Nothing in ACID FM reads it (ACID FM has its own presets and FM6 banks).
+  bank, duplicated for safety. Nothing in Braindancer reads it (Braindancer has its own presets and FM6 banks).
   Not free: erasing it destroys stock V15's factory sounds, which a user going back to stock needs; the user's backup
   is the only copy.
 - **0xF2000..0xF9FFF** (8 sectors, 32 KiB): erased. Inside the stock `USR` region (0xEA000, 0x12000). Whether V15 uses it
@@ -174,12 +174,12 @@ cheaper one. Whether the SPL ignores 0x97000..0xE0000 is unknown and should not 
 ## JIANT and Felucca
 
 JIANT 0.9.x and Felucca store songs 5..8 at 0xB8000..0xD7FFF (`storage.c` flash-map comment, "songs 2..4 ... at
-0xA0000..0xB7FFF", the other four in the sectors above) and ACID FM now reserves that range as the sample area.
-- A device that has samples from ACID FM and goes back to JIANT: JIANT's songs 5..8 read those sectors as song objects
+0xA0000..0xB7FFF", the other four in the sectors above) and Braindancer now reserves that range as the sample area.
+- A device that has samples from Braindancer and goes back to JIANT: JIANT's songs 5..8 read those sectors as song objects
   (commit-record magic and CRCs fail, so they read as empty); the first time JIANT saves song 5..8 it erases and
   overwrites the sample sectors, so the breaks there are lost. Gap 2 is not used by JIANT, so samples stored only there
   survive a JIANT visit.
-- An ACID FM installed over a JIANT that had songs 5..8: those songs' sectors are the sample area and contain valid
+- A Braindancer installed over a JIANT that had songs 5..8: those songs' sectors are the sample area and contain valid
   JIANT song objects (`FELU` commit records). Piece 4's sample directory must treat foreign data there as empty/invalid
   (validate its own magic and CRC, never trust or crash on anything else), and the user should be told songs 5..8 are
   gone/ignored. The installer does not erase the range (the loader writes only the app area).

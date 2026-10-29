@@ -1,15 +1,15 @@
 name: Bug report
-description: Something in ACID FM doesn't work as it should (one bug per issue)
+description: Something in Braindancer doesn't work as it should (one bug per issue)
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        One bug per issue. Ideas are welcome too: open a blank issue with "idea" in the title. This is ACID FM (a fork of JIANT FM, based on Felucca): report here, not to JIANT or Felucca.
+        One bug per issue. Ideas are welcome too: open a blank issue with "idea" in the title. This is Braindancer (a fork of JIANT FM, based on Felucca): report here, not to JIANT or Felucca.
   - type: input
     id: version
     attributes:
-      label: ACID FM version
+      label: Braindancer version
       description: Hold HOME > ABOUT on the FM-1
       placeholder: "v0.4"
     validations:

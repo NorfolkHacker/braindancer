@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 // Portions Copyright (C) 2026 NorfolkHacker
-// The interactive manual's content (web/manual/index.html), in English (3c-1 task 10b: English only, ACID FM's own words).
+// The interactive manual's content (web/manual/index.html), in English (3c-1 task 10b: English only, Braindancer's own words).
 // Kept with docs/MANUAL.md and the firmware's pages (firmware/src/ux_*.c); the layer maps from the firmware's
 // own MAP screens (tests/ui_render.c). A shot is a render in shots/ (tools/gen_manual.py copies them).
 // A combo k: "A+B" = hold A and press / turn B; "A" alone = press it. Tokens: the panel's names (SELECT, KNOB 1, OCT+ ...)
@@ -511,7 +511,7 @@ commands: [
   {s: "menu", k: "HOME", shot: 'about', t: "ABOUT: version, load, last crash",
    d: "MENU › MORE › ABOUT (KNOB 1 to ABOUT, OCT+): version, AUDIO LOAD (NOW, PEAK, LATE, SHED), CORES and CPU, LAST CRASH. With clicks, look at LATE and SHED and take a photo."},
   {s: "menu", k: "HOME", shot: 'about_profile', t: "PROFILE: where the CPU goes",
-   d: "MENU › MORE › ABOUT, OCT+: PROFILE (OCT− back). Every part of the audio (sequencer, T1–T6 with their engine, effect buses, reverb, the wait between cores, master, USB…) in % of a block: the mean and the worst of the last second playing, and greyed stopped. It measures from when it is opened. Photograph it playing and after STOP: that is how ACID FM gets tuned to the real FM-1."},
+   d: "MENU › MORE › ABOUT, OCT+: PROFILE (OCT− back). Every part of the audio (sequencer, T1–T6 with their engine, effect buses, reverb, the wait between cores, master, USB…) in % of a block: the mean and the worst of the last second playing, and greyed stopped. It measures from when it is opened. Photograph it playing and after STOP: that is how Braindancer gets tuned to the real FM-1."},
   {s: "menu", k: "HOME", shot: 'about', t: "CPU TEST measured",
    d: "SAVE › MORE › CPU TEST, PLAY 10 s or more, STOP: the mean load is kept in the settings (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE sizes its pieces by it; unmeasured, it assumes an FM-1 1.6 times heavier than the estimate."},
   {s: "menu", k: "HOME", t: "NEW PROJECT: start from zero",
@@ -521,7 +521,7 @@ commands: [
 // ------------------------------------------------------------------------------------------- task recipes
 recipes: [
   {id: "first", s: "basic", shots: ['home', 'dlg_dice_sound'], t: "Your first sound (1 minute)", steps: [
-    "Power on: the ACID FM wordmark, then HOME › TRACKS, a ridgeline per track (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI…). HOME again: VISUAL (rings), then GEN. With nothing to restore, PLAY plays a short demo at 124 BPM (beat, acid line, pad): the status line says DEMO until your first edit. NEW PROJECT starts empty.",
+    "Power on: the BRAINDANCER wordmark, then HOME › TRACKS, a ridgeline per track (T1 DRUM-X, T2 VOICE, T3 PHASE, T4 LOFI…). HOME again: VISUAL (rings), then GEN. With nothing to restore, PLAY plays a short demo at 124 BPM (beat, acid line, pad): the status line says DEMO until your first edit. NEW PROJECT starts empty.",
     "ALGORITHM picks the track; PRESETS browses sounds; play the keys.",
     "KNOB 1–4 on EDIT: the engine's controls (on HOME › TRACKS: three track levels and the BPM).",
     "Don't like it? EDIT held + SELECT: the sound dice. OCT+ keeps it, OCT− goes back."]},
@@ -588,10 +588,10 @@ recipes: [
     "LEARN OFF when done. Works over USB and TRS, any channel; LEARN CLEAR forgets all. Some CCs are reserved (CC7 RESERVED)."]},
   {id: "usb", s: "menu", shots: ['menu_more'], t: "USB modes and the DAW", steps: [
     "MENU › MORE › USB AUDIO. The device re-enumerates ~1 s after the menu closes.",
-    "Record the mix: CONSOLE or STEREO (on macOS, if the input doesn't show, STEREO). DAW input: “ACID FM”, 44.1 kHz.",
+    "Record the mix: CONSOLE or STEREO (on macOS, if the input doesn't show, STEREO). DAW input: “BRAINDANCER”, 44.1 kHz.",
     "Stems: STEMS = an 8-channel input (1–6 the tracks, 7–8 the FX return), before the master. Pick 8 channels in the DAW; USB LEVEL −6 dB gives headroom; record at LOAD FULL.",
     "IN+OUT: the FM-1 is also the computer's output and that audio comes into the last track (T4 with TRACKS 4, else T6). STEMS+IN: stems + input (10 channels), made for the phone app (a separate product, coming soon).",
-    "MIDI: the port is “ACID FM”. NOTES OUT and CLOCK OUT in GLO › MORE › MIDI; to follow the DAW, GLO › MIDI › KNOB 4 CLOCK USB."]},
+    "MIDI: the port is “BRAINDANCER”. NOTES OUT and CLOCK OUT in GLO › MORE › MIDI; to follow the DAW, GLO › MIDI › KNOB 4 CLOCK USB."]},
   {id: "backup", s: "save", shots: ['save_project'], t: "Save, back up and restore", steps: [
     "Save into sections (SAVE › PROJECT), stopped: the autosave is not a save and never happens at power-off.",
     "Stop and wait a moment before switching off (SAVE-layer stores reach flash when you stop).",
@@ -600,7 +600,7 @@ recipes: [
   {id: "cpu", s: "menu", shots: ['menu_more', 'about'], t: "1 core, 320 MHz and the crash screen", steps: [
     "If it crashes now and then: MENU › MORE › CPU CORES 1 CORE (it goes there by itself after a crash with both cores). A few hours like that.",
     "If it goes on: CPU CLOCK 320 MHZ (from the next power-on; ABOUT shows CPU 320 MHZ). ~11 % less CPU: LOAD LITE helps.",
-    "The red ACID FM CRASH screen shows the version, CORE x OF y, CODE (IL, MA, DZ, ST, PC, WR, MM, BU, WD) and VEC PC EMU DBG RETS. It restarts by itself after 4 s.",
+    "The red BRAINDANCER CRASH screen shows the version, CORE x OF y, CODE (IL, MA, DZ, ST, PC, WR, MM, BU, WD) and VEC PC EMU DBG RETS. It restarts by itself after 4 s.",
     "Take a photo and send it with the version and MENU › MORE › ABOUT › LAST CRASH."]},
   {id: "trouble", s: "basic", shots: ['system'], t: "Troubleshooting: crackle, silence, install", steps: [
     "Crackle or clicks: TRACKS 4, LOAD LITE or ECO, fewer voices (MONO, fewer FM6), light reverbs (CLOUD and SHIMMER are heavy). Check ABOUT › LATE / SHED.",

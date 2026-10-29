@@ -11,7 +11,7 @@
 
 /* ------------------------------------------------------------ sizes --- */
 #ifndef FELUCCA_NVOICE
-#define FELUCCA_NVOICE 8         /* (ACID FM 0.2) the voice budget; tools/build.py FELUCCA_NVOICE; docs/acid-fm/voices.md */
+#define FELUCCA_NVOICE 8         /* (ACID FM 0.2) the voice budget; tools/build.py FELUCCA_NVOICE; docs/braindancer/voices.md */
 #endif
 #define NVOICE FELUCCA_NVOICE    /* voices per part, and the budget shared by all parts */
 _Static_assert(NVOICE >= 1 && NVOICE <= 16, "FELUCCA_NVOICE: 1..16");

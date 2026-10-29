@@ -1,16 +1,18 @@
-# ACID FM
+# Braindancer
 
-**IDM / braindance firmware for the M-VAVE FM-1**. ACID FM is becoming a firmware with virtual analog, FM, chopped
+*Formerly ACID FM.*
+
+**IDM / braindance firmware for the M-VAVE FM-1**. Braindancer is becoming a firmware with virtual analog, FM, chopped
 breakbeats you load yourself, and a generator that writes whole songs on the device (planned, see Status). Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and
 the Rephlex catalogue.
 
-**[Install](https://norfolkhacker.github.io/acid-fm/webapp/installer/)** (Chrome or Edge, over USB) ·
-**[Try it in the browser](https://norfolkhacker.github.io/acid-fm/emu/)** ·
-**[Manual](https://norfolkhacker.github.io/acid-fm/manual/)**
+**[Install](https://norfolkhacker.github.io/braindancer/webapp/installer/)** (Chrome or Edge, over USB) ·
+**[Try it in the browser](https://norfolkhacker.github.io/braindancer/emu/)** ·
+**[Manual](https://norfolkhacker.github.io/braindancer/manual/)**
 
 ## Status: 0.6
 
-0.6 is SAVE, the MENU and the dialogs in the ACID look (piece 3c-2), on top of 0.5.2:
+0.6 is SAVE, the MENU and the dialogs in the Braindancer look (piece 3c-2), on top of 0.5.2:
 
 - SAVE is SOUND, SONG, PROJECT and MORE. SOUND lists the 32 user slots; SONG puts the sections on top and the song's
   rows under them as chips; PROJECT shows four cards, a dot on the one with changes not stored, and warns on LOAD only
@@ -30,11 +32,11 @@ the sound engine falls back step by step (the long delay to its short mode, then
 arp) instead of skipping, and comes back once the load eases.
 
 
-0.5.1 retunes GEN's genres (names, tempo ranges and swing, from [research into the real styles](docs/acid-fm/genre-research.md):
+0.5.1 retunes GEN's genres (names, tempo ranges and swing, from [research into the real styles](docs/braindancer/genre-research.md):
 GLITCH HOP and AMB TECHNO replace BROKEN BEAT and DRIFT; DRILL'N'BASS 155–172, ELECTRO 124–138, RETROBOC 68–100) and makes
 an external clock (USB or TRS) hold a steady tempo.
 
-0.5 is SEQ, GLO and MIDI in the ACID look (piece 3c-1), on top of 0.4:
+0.5 is SEQ, GLO and MIDI in the Braindancer look (piece 3c-1), on top of 0.4:
 
 - SEQ is STEPS, STEP EXTRAS, PATTERN and MORE. STEP EXTRAS holds the chance, ratchet, condition and micro-timing of the
   picked step; with a step held, MORE's rows lock on it (the ACID lock card).
@@ -42,13 +44,13 @@ an external clock (USB or TRS) hold a steady tempo.
   the six tracks' levels, pan and sends; MORE holds the rest (rails, tempo, system, undo).
 - The MIDI page: per track MIDI in, out and channel; the clock INT, USB or TRS; clock out over USB; the keyboard plays
   the selected track. Older settings and projects load as before.
-- SEQ TOOLS, REC and GLO layers (the held layers) in the ACID look, with the keys' names and states on the keys.
+- SEQ TOOLS, REC and GLO layers (the held layers) in the Braindancer look, with the keys' names and states on the keys.
 - Level bars in dB on LIVE, MIX and HOME.
-- The manual is English only and ACID FM's own.
+- The manual is English only and Braindancer's own.
 
-Before that, 0.4 was the sound sections in the ACID look (piece 3b), on top of 0.3:
+Before that, 0.4 was the sound sections in the Braindancer look (piece 3b), on top of 0.3:
 
-- EDIT, ENV, ARP, SCL, LFO and FX in the ACID look: a picture of the sound, four knobs, and MORE for the rest, with
+- EDIT, ENV, ARP, SCL, LFO and FX in the Braindancer look: a picture of the sound, four knobs, and MORE for the rest, with
   names in plain words. The old creatures are removed.
 - The held layers (EDIT, MACRO, FX, SCL) in the same look; with a step held, MORE's rows lock on that step too.
 - GEN shows ten IDM genres (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT),
@@ -72,7 +74,7 @@ Before that, 0.2 was the trim, on top of 0.1 (the build, install and rollback pi
 - 4 songs; 128 KiB of flash reserved for breaks (an 8 KiB gap may join later), for breakbeats coming in a later version.
 - The voice budget is measured on the FM-1: 12 voices at once on two cores, 8 per track.
 
-The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-acid-fm-design.md`):
+The Braindancer features arrive in steps (see `docs/superpowers/specs/2026-10-24-acid-fm-design.md`, written when it was still ACID FM):
 
 1. Pipeline (0.1)
 2. Trim (0.2): engines for IDM, the voice ceiling measured, room made for samples
@@ -81,11 +83,11 @@ The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-aci
 5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
 6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, RETROBOC, AMBIENT, GLITCH
 
-The manual is ACID FM's own; it grows as ACID FM's features land.
+The manual is Braindancer's own; it grows as Braindancer's features land.
 
 ## Built on
 
-ACID FM builds on open firmware for the FM-1: **[JIANT FM](https://github.com/juanjiant-bit/JIANT)** by Juan Jiant
+Braindancer builds on open firmware for the FM-1: **[JIANT FM](https://github.com/juanjiant-bit/JIANT)** by Juan Jiant
 and **[Felucca](https://github.com/hugelton/Felucca)** by Hügelton Instruments, with SLOOP's song system. The
 upstream README is kept in [docs/JIANT-README.md](docs/JIANT-README.md). Every third-party part and its licence is listed in
 [LICENSING.md](LICENSING.md).

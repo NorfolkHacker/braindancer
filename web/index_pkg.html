@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ACID FM installer</title>
+<title>Braindancer installer</title>
 <style>
   :root { --bg: #fff; --fg: #000; --dim: #777; }
   @media (prefers-color-scheme: dark) {
@@ -40,7 +40,7 @@
 <body>
 <main>
   <nav class="lang" id="lang" aria-label="Language"><button data-lang="es" lang="es">Español</button><button data-lang="en" lang="en">English</button><button data-lang="ja" lang="ja">日本語</button></nav>
-  <h1>ACID FM installer</h1>
+  <h1>Braindancer installer</h1>
   <p data-t="intro"></p>
   <p data-t="warn"></p>
   <p data-t="samples" style="color:#ec6e50"></p>
@@ -88,13 +88,13 @@
   <p class="small" id="channel"></p>
   <p><a href="../editor/" style="color:inherit" data-t="editor"></a></p>
   <p><span data-t="manual"></span>
-    <a href="../manual/" style="color:inherit">ACID FM manual</a></p>
-  <p class="small">ACID FM builds on open firmware for the FM-1: JIANT FM by Juan Jiant (<a href="https://juanjiant-bit.github.io/JIANT/" target="_blank" rel="noopener" style="color:inherit">juanjiant-bit.github.io/JIANT</a>) and Felucca by Hügelton Instruments. To support JIANT's author: <a href="https://ko-fi.com/juanjiant" target="_blank" rel="noopener" style="color:inherit">Ko-fi</a> (in Argentina: <a href="https://cafecito.app/juanjiant" target="_blank" rel="noopener" style="color:inherit">Cafecito</a>).</p>
+    <a href="../manual/" style="color:inherit">Braindancer manual</a></p>
+  <p class="small">Braindancer builds on open firmware for the FM-1: JIANT FM by Juan Jiant (<a href="https://juanjiant-bit.github.io/JIANT/" target="_blank" rel="noopener" style="color:inherit">juanjiant-bit.github.io/JIANT</a>) and Felucca by Hügelton Instruments. To support JIANT's author: <a href="https://ko-fi.com/juanjiant" target="_blank" rel="noopener" style="color:inherit">Ko-fi</a> (in Argentina: <a href="https://cafecito.app/juanjiant" target="_blank" rel="noopener" style="color:inherit">Cafecito</a>).</p>
   <p class="small">Credits: Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments</a>, with its CrispyZebra waveforms and Fukiai icons (MIT); the song system after SLOOP by isod89.<br>
     Font: Inter Tight (The Inter Project Authors, SIL OFL 1.1).<br>
     FM6 engine: msfa from Dexed (Google Inc., Pascal Gauthier, Apache-2.0). The package also holds three JieLi AC79 SDK files, uboot.boot, cfg_tool.bin and eq_cfg_hw.bin (JieLi Technology, Apache-2.0). <a href="../../firmware/LICENSING.md" style="color:inherit">Licences</a>: <a href="../../firmware/LICENSE" style="color:inherit">GPL-3.0</a>, <a href="../../firmware/LICENSES/Apache-2.0.txt" style="color:inherit">Apache-2.0</a>, <a href="../../firmware/LICENSES/" style="color:inherit">all</a>.<br>
     M-VAVE and FM-1 are trademarks of their respective owners.<br>
-    <span data-t="license"></span> <a href="https://github.com/NorfolkHacker/acid-fm" target="_blank" rel="noopener" style="color:inherit">github.com/NorfolkHacker/acid-fm</a></p>
+    <span data-t="license"></span> <a href="https://github.com/NorfolkHacker/braindancer" target="_blank" rel="noopener" style="color:inherit">github.com/NorfolkHacker/braindancer</a></p>
 </main>
 <script type="module">
 /*LIB*/
@@ -103,27 +103,27 @@ const TEXT = {
   ja: {
     intro: "FM-1 を USB で接続してください。（Chrome か Edge で使えます）",
     warn: "書き込み中は USB を抜かないでください。",
-    samples: "注意: ACID FM にはユーザーサンプルがありません。Felucca のユーザーサンプル (USR1–3) はインストールで失われます（その領域は曲の保存に使われます）。元の WAV ファイルは手元に残しておいてください。",
-    dual: "0.6.71 から ACID FM は FM-1 の2つのコアを使います（実験的）。すべての仮想テストには合格していますが、まだ実機では試されていません。FM-1 が固まる・再起動する・以前より音が途切れる場合は、REC を押しながら電源を入れると1コアで動きます。MENU > ABOUT の表示（CORES 2 / CORES 1 と理由）を GitHub で知らせてください。",
+    samples: "注意: Braindancer にはユーザーサンプルがありません。Felucca のユーザーサンプル (USR1–3) はインストールで失われます（その領域は曲の保存に使われます）。元の WAV ファイルは手元に残しておいてください。",
+    dual: "0.6.71 から Braindancer は FM-1 の2つのコアを使います（実験的）。すべての仮想テストには合格していますが、まだ実機では試されていません。FM-1 が固まる・再起動する・以前より音が途切れる場合は、REC を押しながら電源を入れると1コアで動きます。MENU > ABOUT の表示（CORES 2 / CORES 1 と理由）を GitHub で知らせてください。",
     install: "インストール",
     firstTitle: "他のカスタムファームウェアから入れる場合は、先に公式V15へ戻してください",
-    firstText: "Felucca・baudgirl などの別のカスタムファームウェアが入った FM-1 に直接 ACID FM を書き込むと、起動しなくなることがあります。まず下のボタンで公式V15に戻し（全体バックアップも取れます）、それから ACID FM をインストールしてください。公式V15 か JIANT/ACID FM がすでに入っている場合はそのままで大丈夫です。",
+    firstText: "Felucca・baudgirl などの別のカスタムファームウェアが入った FM-1 に直接 Braindancer を書き込むと、起動しなくなることがあります。まず下のボタンで公式V15に戻し（全体バックアップも取れます）、それから Braindancer をインストールしてください。公式V15 か JIANT/Braindancer/ACID FM がすでに入っている場合はそのままで大丈夫です。",
     firstStock: "先に公式V15へ戻す",
-    firstOk: "インストールの前に、接続された FM-1 のファームウェアを自動で確認します。公式V15 か JIANT/ACID FM のときだけ書き込みます。",
+    firstOk: "インストールの前に、接続された FM-1 のファームウェアを自動で確認します。公式V15 か JIANT/Braindancer/ACID FM のときだけ書き込みます。",
     checking: "FM-1 のファームウェアを確認中…",
     oldstock: "この FM-1 には古い公式ファームウェアが入っています。書き込みませんでした。下のボタンで先に公式V15に更新してから（公式ファームウェアではバックアップは不要です）、もう一度インストールしてください。検出: ",
     officialConfirm: "この FM-1 は公式ファームウェアです。公式V15に更新します（このページでは公式ファームウェアの曲はバックアップできません）。続けますか？",
-    otherfw: "この FM-1 には公式V15 でも JIANT/ACID FM でもないファームウェアが入っています。書き込みませんでした。下のボタンで先に公式V15に戻してから、もう一度インストールしてください。 ",
+    otherfw: "この FM-1 には公式V15 でも JIANT/Braindancer/ACID FM でもないファームウェアが入っています。書き込みませんでした。下のボタンで先に公式V15に戻してから、もう一度インストールしてください。 ",
     editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
     verLabel: "バージョン:", verOld: "以前のバージョンにも戻せます（最新が一番上）。新しい版で保存したプロジェクトは古い版で正しく開けないことがあります。先にエディタでバックアップしてください。", latest: "最新", manual: "マニュアル:",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
     brick: "万一インストールに失敗して起動しなくなった場合は、復旧に Transporter が必要です:",
-    beta: "ACID FM は開発中のテスト版です。不具合は GitHub で知らせてください。このカスタムファームウェアを使ったことで FM-1 が壊れたり不具合が起きたりしても、作者は一切の責任を負いません。自己責任でお使いください。",
+    beta: "Braindancer は開発中のテスト版です。不具合は GitHub で知らせてください。このカスタムファームウェアを使ったことで FM-1 が壊れたり不具合が起きたりしても、作者は一切の責任を負いません。自己責任でお使いください。",
     back: "M-VAVEから公式FM-1 V15を取得し、未変更のFM-1.fwscを選んでください。ファイルはこのブラウザ内で検証し、サーバーへ送りません。",
     stockTitle: "公式V15に戻す", stockFile: "公式FM-1.fwsc", stockGo: "バックアップして公式V15へ戻す",
-    stockBackup: "現在の曲・保存曲・音色バンク・設定を先に保存します（ユーザーサンプルは含まれません）。全体バックアップ非対応版は、ACID FM を更新してから行ってください。復元は ACID FM を再インストールしてエディタから行います。",
+    stockBackup: "現在の曲・保存曲・音色バンク・設定を先に保存します（ユーザーサンプルは含まれません）。全体バックアップ非対応版は、Braindancer を更新してから行ってください。復元は Braindancer を再インストールしてエディタから行います。",
     stockRecovery: "更新中断の再開：全体バックアップはすでにパソコンへ保存済み",
-    stockValid: "公式V15を確認しました", stockConfirm: "全体バックアップファイルをパソコンに保存できましたか？ 続けると公式V15へ戻します。ACID FM の曲は公式V15では開けません。",
+    stockValid: "公式V15を確認しました", stockConfirm: "全体バックアップファイルをパソコンに保存できましたか？ 続けると公式V15へ戻します。Braindancer の曲は公式V15では開けません。",
     stockNeedBackup: "書き込みモードからはバックアップできません。保存済みバックアップがある場合だけ、更新中断の再開にチェックしてください。",
     stockUnsupported: "このファームウェアは全体バックアップに未対応です。先に最新版をインストールしてください。",
     backup: "全体バックアップ保存中 ", stockError: "公式ファイルを確認できません: ",
@@ -151,29 +151,29 @@ const TEXT = {
   en: {
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
     warn: "Do not unplug the USB cable while writing.",
-    samples: "Note: ACID FM has no user samples. Felucca's user samples (USR1–3) are lost when you install it (that flash holds the songs now). Keep your original WAV files.",
-    dual: "Since 0.6.71 ACID FM uses both of the FM-1's cores (experimental). It has passed every virtual test but has not been tried on a real unit yet. If your FM-1 freezes, restarts or clicks more than before, hold REC while switching it on to play on one core, and tell us on GitHub what MENU > ABOUT says (CORES 2, or CORES 1 and why).",
+    samples: "Note: Braindancer has no user samples. Felucca's user samples (USR1–3) are lost when you install it (that flash holds the songs now). Keep your original WAV files.",
+    dual: "Since 0.6.71 Braindancer uses both of the FM-1's cores (experimental). It has passed every virtual test but has not been tried on a real unit yet. If your FM-1 freezes, restarts or clicks more than before, hold REC while switching it on to play on one core, and tell us on GitHub what MENU > ABOUT says (CORES 2, or CORES 1 and why).",
     install: "Install",
     firstTitle: "Coming from another custom firmware? Return to official V15 first",
-    firstText: "Writing ACID FM straight over another custom firmware (Felucca, baudgirl or any other) can leave the FM-1 unable to start. First return to official V15 with the button below (it also saves a complete backup), then install ACID FM. If the FM-1 already runs official V15 or JIANT/ACID FM, go ahead.",
+    firstText: "Writing Braindancer straight over another custom firmware (Felucca, baudgirl or any other) can leave the FM-1 unable to start. First return to official V15 with the button below (it also saves a complete backup), then install Braindancer. If the FM-1 already runs official V15 or JIANT/Braindancer/ACID FM, go ahead.",
     firstStock: "Return to official V15 first",
-    firstOk: "Before installing, the installer checks the connected FM-1's firmware by itself: it writes only over official V15 or JIANT/ACID FM.",
+    firstOk: "Before installing, the installer checks the connected FM-1's firmware by itself: it writes only over official V15 or JIANT/Braindancer/ACID FM.",
     checking: "Checking the FM-1's firmware…",
     oldstock: "This FM-1 runs an older official firmware: nothing was written. Update it to official V15 first with the button below (no backup is needed from an official firmware), then press Install again. Found: ",
     officialConfirm: "This FM-1 runs official firmware: it is updated to official V15 (this page cannot back up an official firmware's songs). Continue?",
-    otherfw: "This FM-1 runs a firmware that is neither official V15 nor JIANT/ACID FM: nothing was written. Return to official V15 first with the button below, then install again. Found: ",
+    otherfw: "This FM-1 runs a firmware that is neither official V15 nor JIANT/Braindancer/ACID FM: nothing was written. Return to official V15 first with the button below, then install again. Found: ",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
     verLabel: "Version:", verOld: "You can go back to an earlier version too (newest on top). Projects saved by a newer version may not open right in an older one: back them up with the editor first.", latest: "latest", manual: "Manual:",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
     brick: "If an install fails and the FM-1 no longer starts, recovering it needs a Transporter:",
-    beta: "ACID FM is a development release; please report problems on GitHub. The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
+    beta: "Braindancer is a development release; please report problems on GitHub. The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
     back: "Get official FM-1 V15 from M-VAVE and select the unmodified FM-1.fwsc. The browser validates it locally; it is not sent to a server.",
     stockTitle: "Return to official V15", stockFile: "Official FM-1.fwsc", stockGo: "Back up and return to official V15",
-    stockBackup: "Current music, saved music, sound banks and settings are saved first (not user samples). Older firmware needs an update for complete backups. To restore an archive later, reinstall ACID FM and use the editor.",
+    stockBackup: "Current music, saved music, sound banks and settings are saved first (not user samples). Older firmware needs an update for complete backups. To restore an archive later, reinstall Braindancer and use the editor.",
     stockRecovery: "Resume an interrupted update: I already saved a complete backup to this computer",
-    stockValid: "Official V15 verified", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official V15. Official V15 cannot open ACID FM music.",
+    stockValid: "Official V15 verified", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official V15. Official V15 cannot open Braindancer music.",
     stockNeedBackup: "An update loader cannot export a backup. Only select resume if you already saved a complete backup.",
-    stockUnsupported: "This firmware does not support complete backups. Install the current ACID FM first.",
+    stockUnsupported: "This firmware does not support complete backups. Install the current Braindancer first.",
     backup: "Saving complete backup ", stockError: "Cannot validate official firmware: ",
     nomidi: "This browser cannot do it. Open the page in Chrome or Edge.", loadfail: "Could not load: ",
     start: "Starting", verify: "Verifying", loader: "Switching to update mode", write: "Writing",
@@ -214,7 +214,7 @@ Object.assign(TEXT.en, {
   noupdate: "The FM-1 did not start the update: nothing was written. Found: ",
   newstock: "This FM-1 runs an official firmware newer than V15, which this installer does not know yet: nothing was written. Return to official V15 first with the button below, then install again. Found: ",
   skiff: "This FM-1 runs Skiff (another custom firmware, a Felucca fork): nothing was written. Return to official V15 first with the button below (it saves Skiff's songs to a file first), then install. Found: ",
-  felucca: "This FM-1 runs Felucca: nothing was written. Return to official V15 first with the button below (it saves a complete backup, user samples included), then install ACID FM. Found: ",
+  felucca: "This FM-1 runs Felucca: nothing was written. Return to official V15 first with the button below (it saves a complete backup, user samples included), then install Braindancer. Found: ",
   resuming: "The FM-1 is in update mode: the write goes on. ",
   stockAgainConfirm: "This FM-1 already runs official V15. Write official V15 again? ",
   backupFailConfirm: "The backup could not be completed. OK = continue to official V15 WITHOUT a backup (the songs on the FM-1 are lost). Cancel = stop here, nothing is written. Error: ",
@@ -223,7 +223,7 @@ Object.assign(TEXT.en, {
   bktimeout: "The FM-1 stopped answering. ",
   saved: "Backup saved (your Downloads folder): ",
   stockZip: "That is the downloaded archive, not the firmware: unzip it first and select FM-1.fwsc inside. Selected: ",
-  stockCustom: "That is a custom firmware package (ACID FM, JIANT, Felucca, Skiff), not the official one: select M-VAVE's FM-1.fwsc of V15. Selected: ",
+  stockCustom: "That is a custom firmware package (Braindancer, ACID FM, JIANT, Felucca, Skiff), not the official one: select M-VAVE's FM-1.fwsc of V15. Selected: ",
   stockOtherVer: "That is another official version: this page needs V15 exactly. Selected: ",
   stockNotV15: "That file is not official V15's FM-1.fwsc (V15's is 699,956 bytes). Selected: ",
   stockModified: "The file has V15's size but not its contents (modified or damaged): download it again from M-VAVE. ",
@@ -236,20 +236,20 @@ Object.assign(TEXT.en, {
   bootCheck: "Is it in boot mode (WL80UBOOT)?",
   bootFound: "The FM-1 is in the chip's boot mode (WL80UBOOT): its firmware does not start. Replug it with a good data cable straight into the computer and press Install again. If it stays like that, recovering it needs FM-1 Transporter (link above).",
   bootNone: "No FM-1 in boot mode (WL80UBOOT) was found or chosen.",
-  editorOpen: "The ACID FM editor was open in another tab: it was disconnected for the install.",
+  editorOpen: "The Braindancer editor was open in another tab: it was disconnected for the install.",
   tip_nomidi: "Install Chrome (google.com/chrome) or use Edge, and open this same page there.|Android: Chrome with the FM-1 on a USB-C OTG cable may work, but a computer is safer.|Brave or Opera: allow MIDI devices for this site, or use Chrome.",
   tip_nomidiIos: "Use a computer with Chrome or Edge (Windows, Mac, Linux or a Chromebook).|The emulator and the manual do work on the iPhone; the installer and the editor need USB MIDI.",
   tip_denied: "Click the icon left of the address (sliders or padlock) → Site settings → MIDI devices → Allow.|Reload the page and press the button again.|Firefox: accept the 'site permission add-on' it offers. Brave: turn Shields off for this site.",
   tip_midifail: "Close the M-VAVE app, DAWs and MIDI tools.|Unplug and replug the FM-1, then reload the page.|Restart the browser (on Windows, after sleep, MIDI sometimes needs it).",
-  tip_busy: "Close the M-VAVE app, your DAW (Ableton, FL Studio, Reaper…), MIDI-OX and other tabs with the ACID FM editor or another MIDI page.|On Windows only one program at a time can use a MIDI port.|Unplug and replug the FM-1, reload this page and press the button again.",
+  tip_busy: "Close the M-VAVE app, your DAW (Ableton, FL Studio, Reaper…), MIDI-OX and other tabs with the Braindancer editor or another MIDI page.|On Windows only one program at a time can use a MIDI port.|Unplug and replug the FM-1, reload this page and press the button again.",
   tip_notfound: "Switch the FM-1 on (its screen showing).|Use a USB cable that carries data: many cables only charge. Try another one.|Plug it straight into the computer, no hub or dock.|Close the M-VAVE app, DAWs and the editor.|Still nothing? Press 'Is it in boot mode?' and COPY REPORT.",
   tip_noanswer: "Unplug the FM-1, switch it off and on, plug it in again and retry.|Close programs that may be talking to it (M-VAVE app, DAW, editor).|A very old official firmware may not answer the web updater: update it to V15 with M-VAVE's updater first.",
   tip_noupdate: "Stop playback, switch the FM-1 off and on, and retry.|USB straight into the computer, no hub.|If it repeats, update it with M-VAVE's official updater, then come back.",
   tip_model: "Unplug other USB MIDI devices and keep only the FM-1.",
   tip_oldstock: "Open 'Return to official V15' below, select M-VAVE's FM-1.fwsc of V15 and press its button (an official firmware needs no backup).|When it says Done, press Install.",
   tip_newstock: "Open 'Return to official V15' below, select FM-1.fwsc of V15 and press its button.|When it says Done, press Install.|Tell us which version it is (COPY REPORT).",
-  tip_skiff: "Open 'Return to official V15' below, select FM-1.fwsc and press its button: it saves Skiff's backup file first (only Skiff's editor can restore it), then writes V15.|When it says Done, press Install.|ACID FM cannot open Skiff's songs.",
-  tip_felucca: "Open 'Return to official V15' below, select FM-1.fwsc and press its button: it saves a complete Felucca backup (samples included), then writes V15.|When it says Done, press Install.|ACID FM has no user samples: keep your WAVs. The ACID FM editor can restore the songs and presets of that backup.",
+  tip_skiff: "Open 'Return to official V15' below, select FM-1.fwsc and press its button: it saves Skiff's backup file first (only Skiff's editor can restore it), then writes V15.|When it says Done, press Install.|Braindancer cannot open Skiff's songs.",
+  tip_felucca: "Open 'Return to official V15' below, select FM-1.fwsc and press its button: it saves a complete Felucca backup (samples included), then writes V15.|When it says Done, press Install.|Braindancer has no user samples: keep your WAVs. The Braindancer editor can restore the songs and presets of that backup.",
   tip_otherfw: "Open 'Return to official V15' below and follow it. If that firmware cannot make a backup the page asks before going on without one.|When it says Done, press Install.",
   tip_noloader: "Do not switch the FM-1 off. Replug the USB cable (another USB port if you can) and press Install again: it goes on where it was.|Windows: the first time, installing the driver for the update mode can take a minute. Wait, then press Install again.|Still nothing? Press 'Is it in boot mode?' and COPY REPORT.",
   tip_stopped: "Replug the USB cable straight into the computer and press the same button again: it resumes.|Do not switch the FM-1 off while it is in update mode.",
@@ -257,8 +257,8 @@ Object.assign(TEXT.en, {
   tip_noreturn: "Switch the FM-1 off and on. If it starts, it is done (MENU > ABOUT shows the version).|If the screen stays black, connect it and press Install again; also try 'Is it in boot mode?'.",
   tip_mismatch: "Switch it off and on and look at MENU > ABOUT. Press COPY REPORT and tell us.",
   tip_loadfail: "Reload the page (Ctrl+F5), or pick the latest version.|Check the connection; an ad blocker may block the download.",
-  tip_stockNeedBackup: "If you already saved the backup, tick 'Resume an interrupted update' and press again.|If not, press Install to finish putting ACID FM back, back up, then return.",
-  tip_stockUnsupported: "Install the current ACID FM first (Install), then press Return to official V15 again: it then saves your songs.",
+  tip_stockNeedBackup: "If you already saved the backup, tick 'Resume an interrupted update' and press again.|If not, press Install to finish putting Braindancer back, back up, then return.",
+  tip_stockUnsupported: "Install the current Braindancer first (Install), then press Return to official V15 again: it then saves your songs.",
   tip_backupfail: "Stop playback (no backup while it plays), keep the cable still and try again.|Close the editor and other MIDI programs.",
   tip_stock: "On M-VAVE's download page, FM-1: download firmware V15.|Unzip it (right click → Extract all).|Select the FM-1.fwsc inside (699,956 bytes).",
   tip_error: "Press COPY REPORT and send it to us (GitHub issues, or where you found the link).",
@@ -277,7 +277,7 @@ Object.assign(TEXT.ja, {
   noupdate: "FM-1 が更新を始めませんでした。何も書き込んでいません。検出: ",
   newstock: "この FM-1 には V15 より新しい公式ファームウェアが入っています（このインストーラーは未対応）。書き込みませんでした。下のボタンで先に公式V15に戻してから、もう一度インストールしてください。検出: ",
   skiff: "この FM-1 には Skiff（Felucca から派生した別のカスタムファームウェア）が入っています。書き込みませんでした。下のボタンで先に公式V15に戻してください（先に Skiff の曲をファイルに保存します）。それからインストールしてください。検出: ",
-  felucca: "この FM-1 には Felucca が入っています。書き込みませんでした。下のボタンで先に公式V15に戻してください（ユーザーサンプルを含む全体バックアップを保存します）。それから ACID FM をインストールしてください。検出: ",
+  felucca: "この FM-1 には Felucca が入っています。書き込みませんでした。下のボタンで先に公式V15に戻してください（ユーザーサンプルを含む全体バックアップを保存します）。それから Braindancer をインストールしてください。検出: ",
   resuming: "FM-1 は書き込みモードです。書き込みを続けます。",
   stockAgainConfirm: "この FM-1 にはすでに公式V15が入っています。もう一度公式V15を書き込みますか？ ",
   backupFailConfirm: "バックアップを完了できませんでした。OK = バックアップなしで公式V15へ進む（FM-1 の曲は失われます）。キャンセル = ここで中止（何も書き込みません）。エラー: ",
@@ -286,7 +286,7 @@ Object.assign(TEXT.ja, {
   bktimeout: "FM-1 が応答しなくなりました。",
   saved: "バックアップを保存しました（ダウンロードフォルダ）: ",
   stockZip: "それはダウンロードした圧縮ファイルです。先に展開して中の FM-1.fwsc を選んでください。選択: ",
-  stockCustom: "それはカスタムファームウェア（ACID FM、JIANT、Felucca、Skiff）のファイルです。M-VAVE の V15 の FM-1.fwsc を選んでください。選択: ",
+  stockCustom: "それはカスタムファームウェア（Braindancer、ACID FM、JIANT、Felucca、Skiff）のファイルです。M-VAVE の V15 の FM-1.fwsc を選んでください。選択: ",
   stockOtherVer: "それは別の公式バージョンです。このページには V15 が必要です。選択: ",
   stockNotV15: "そのファイルは公式V15の FM-1.fwsc ではありません（V15 は 699,956 バイト）。選択: ",
   stockModified: "V15 と同じサイズですが内容が違います（変更または破損）。M-VAVE からもう一度ダウンロードしてください。",
@@ -299,20 +299,20 @@ Object.assign(TEXT.ja, {
   bootCheck: "ブートモード（WL80UBOOT）？",
   bootFound: "FM-1 はチップのブートモード（WL80UBOOT）です。ファームウェアが起動していません。良いデータ用ケーブルでパソコンに直接つなぎ直し、もう一度インストールを押してください。それでも変わらない場合は、復旧に FM-1 Transporter が必要です（上のリンク）。",
   bootNone: "ブートモード（WL80UBOOT）の FM-1 は見つからないか、選ばれませんでした。",
-  editorOpen: "別のタブで ACID FM エディタが開いていました。インストールのため切断しました。",
+  editorOpen: "別のタブで Braindancer エディタが開いていました。インストールのため切断しました。",
   tip_nomidi: "Chrome（google.com/chrome）をインストールするか Edge を使い、このページを開いてください。|Android: USB-C OTG ケーブルでつないだ Chrome で動く場合がありますが、パソコンのほうが安全です。|Brave・Opera: このサイトで MIDI デバイスを許可するか、Chrome を使ってください。",
   tip_nomidiIos: "Chrome か Edge の入ったパソコン（Windows、Mac、Linux、Chromebook）を使ってください。|エミュレーターとマニュアルは iPhone でも使えます。インストーラーとエディタには USB MIDI が必要です。",
   tip_denied: "アドレスバー左のアイコン → サイトの設定 → MIDI デバイス → 許可。|ページを再読み込みして、もう一度ボタンを押してください。|Firefox: 表示される「サイト権限アドオン」を許可してください。Brave: このサイトの Shields をオフにしてください。",
   tip_midifail: "M-VAVE アプリ、DAW、MIDI ツールを閉じてください。|FM-1 を挿し直して、ページを再読み込みしてください。|ブラウザを再起動してください（Windows ではスリープ後に必要なことがあります）。",
-  tip_busy: "M-VAVE アプリ、DAW（Ableton、FL Studio、Reaper など）、MIDI-OX、ACID FM エディタなど MIDI を使う他のタブを閉じてください。|Windows では 1 つの MIDI ポートを同時に使えるのは 1 つのプログラムだけです。|FM-1 を挿し直し、このページを再読み込みして、もう一度押してください。",
+  tip_busy: "M-VAVE アプリ、DAW（Ableton、FL Studio、Reaper など）、MIDI-OX、Braindancer エディタなど MIDI を使う他のタブを閉じてください。|Windows では 1 つの MIDI ポートを同時に使えるのは 1 つのプログラムだけです。|FM-1 を挿し直し、このページを再読み込みして、もう一度押してください。",
   tip_notfound: "FM-1 の電源を入れてください（画面が表示された状態）。|データ通信用の USB ケーブルを使ってください（充電専用のケーブルが多いです）。別のケーブルも試してください。|ハブやドックを使わず、パソコンに直接つないでください。|M-VAVE アプリ、DAW、エディタを閉じてください。|それでも見つからないときは「ブートモード？」と「レポートをコピー」を押してください。",
   tip_noanswer: "FM-1 を外して電源を入れ直し、もう一度つないでやり直してください。|FM-1 と通信している可能性のあるプログラム（M-VAVE アプリ、DAW、エディタ）を閉じてください。|とても古い公式ファームウェアはウェブ更新に応答しないことがあります。先に M-VAVE のアップデーターで V15 にしてください。",
   tip_noupdate: "再生を止め、FM-1 の電源を入れ直してやり直してください。|ハブを使わずパソコンに直接つないでください。|繰り返す場合は M-VAVE の公式アップデーターで更新してから、ここに戻ってください。",
   tip_model: "他の USB MIDI 機器を外し、FM-1 だけをつないでください。",
   tip_oldstock: "下の「公式V15に戻す」を開き、M-VAVE の V15 の FM-1.fwsc を選んでボタンを押してください（公式ファームウェアにはバックアップ不要）。|「完了しました」と出たら、インストールを押してください。",
   tip_newstock: "下の「公式V15に戻す」を開き、V15 の FM-1.fwsc を選んでボタンを押してください。|「完了しました」と出たら、インストールを押してください。|どのバージョンだったか知らせてください（レポートをコピー）。",
-  tip_skiff: "下の「公式V15に戻す」を開き、FM-1.fwsc を選んでボタンを押してください。先に Skiff のバックアップファイルを保存し（復元は Skiff のエディタのみ）、それから V15 を書き込みます。|「完了しました」と出たら、インストールを押してください。|ACID FM では Skiff の曲は開けません。",
-  tip_felucca: "下の「公式V15に戻す」を開き、FM-1.fwsc を選んでボタンを押してください。Felucca の全体バックアップ（サンプルを含む）を保存してから V15 を書き込みます。|「完了しました」と出たら、インストールを押してください。|ACID FM にはユーザーサンプルがありません。WAV は手元に残してください。曲とプリセットは ACID FM エディタで復元できます。",
+  tip_skiff: "下の「公式V15に戻す」を開き、FM-1.fwsc を選んでボタンを押してください。先に Skiff のバックアップファイルを保存し（復元は Skiff のエディタのみ）、それから V15 を書き込みます。|「完了しました」と出たら、インストールを押してください。|Braindancer では Skiff の曲は開けません。",
+  tip_felucca: "下の「公式V15に戻す」を開き、FM-1.fwsc を選んでボタンを押してください。Felucca の全体バックアップ（サンプルを含む）を保存してから V15 を書き込みます。|「完了しました」と出たら、インストールを押してください。|Braindancer にはユーザーサンプルがありません。WAV は手元に残してください。曲とプリセットは Braindancer エディタで復元できます。",
   tip_otherfw: "下の「公式V15に戻す」を開いて進めてください。そのファームウェアがバックアップを取れない場合は、バックアップなしで続けるか確認します。|「完了しました」と出たら、インストールを押してください。",
   tip_noloader: "FM-1 の電源を切らないでください。USB を挿し直し（できれば別のポート）、もう一度インストールを押すと続きから書き込みます。|Windows: 初回は書き込みモード用のドライバーのインストールに 1 分ほどかかることがあります。待ってからもう一度押してください。|それでも見つからないときは「ブートモード？」と「レポートをコピー」を押してください。",
   tip_stopped: "USB をパソコンに直接挿し直し、同じボタンをもう一度押すと再開します。|書き込みモードの間は FM-1 の電源を切らないでください。",
@@ -320,8 +320,8 @@ Object.assign(TEXT.ja, {
   tip_noreturn: "FM-1 の電源を入れ直してください。起動すれば完了です（MENU > ABOUT にバージョン）。|画面が黒いままなら、つないでもう一度インストールを押してください。「ブートモード？」も試してください。",
   tip_mismatch: "電源を入れ直し、MENU > ABOUT を確認してください。「レポートをコピー」を押して知らせてください。",
   tip_loadfail: "ページを再読み込み（Ctrl+F5）するか、最新のバージョンを選んでください。|接続を確認してください。広告ブロッカーがダウンロードを止めることがあります。",
-  tip_stockNeedBackup: "バックアップを保存済みなら「更新中断の再開」にチェックして、もう一度押してください。|まだなら、インストールを押して ACID FM に戻し、バックアップしてから戻してください。",
-  tip_stockUnsupported: "先に最新の ACID FM をインストールし（インストール）、もう一度「公式V15に戻す」を押してください。曲を保存できるようになります。",
+  tip_stockNeedBackup: "バックアップを保存済みなら「更新中断の再開」にチェックして、もう一度押してください。|まだなら、インストールを押して Braindancer に戻し、バックアップしてから戻してください。",
+  tip_stockUnsupported: "先に最新の Braindancer をインストールし（インストール）、もう一度「公式V15に戻す」を押してください。曲を保存できるようになります。",
   tip_backupfail: "再生を止め（再生中はバックアップできません）、ケーブルを動かさずにやり直してください。|エディタや他の MIDI プログラムを閉じてください。",
   tip_stock: "M-VAVE のダウンロードページの FM-1 から、ファームウェア V15 をダウンロードします。|展開します（右クリック → すべて展開）。|中の FM-1.fwsc（699,956 バイト）を選びます。",
   tip_error: "「レポートをコピー」を押して送ってください（GitHub の Issues、またはリンクを見つけた場所）。",
@@ -329,30 +329,30 @@ Object.assign(TEXT.ja, {
 TEXT.es = {
   intro: "Conectá el FM-1 por USB. (Funciona en Chrome o Edge en una computadora; en Android con Chrome puede funcionar. En iPhone/iPad no.)",
   warn: "No desconectes el cable USB mientras escribe.",
-  samples: "Atención: ACID FM no tiene samples de usuario. Los samples de usuario de Felucca (USR1–3) se pierden al instalar (esa memoria ahora guarda los temas). Guardá tus WAV originales.",
-  dual: "Desde 0.6.71 ACID FM usa los dos núcleos del FM-1 (experimental). Pasó todas las pruebas virtuales pero todavía no se probó en un equipo real. Si tu FM-1 se cuelga, se reinicia o hace más clicks que antes, mantené REC al prenderlo para tocar con un núcleo, y contanos en GitHub qué dice MENU > ABOUT (CORES 2, o CORES 1 y por qué).",
+  samples: "Atención: Braindancer no tiene samples de usuario. Los samples de usuario de Felucca (USR1–3) se pierden al instalar (esa memoria ahora guarda los temas). Guardá tus WAV originales.",
+  dual: "Desde 0.6.71 Braindancer usa los dos núcleos del FM-1 (experimental). Pasó todas las pruebas virtuales pero todavía no se probó en un equipo real. Si tu FM-1 se cuelga, se reinicia o hace más clicks que antes, mantené REC al prenderlo para tocar con un núcleo, y contanos en GitHub qué dice MENU > ABOUT (CORES 2, o CORES 1 y por qué).",
   install: "Instalar",
   firstTitle: "¿Venís de otro firmware custom? Primero volvé al V15 oficial",
-  firstText: "Escribir ACID FM directamente sobre otro firmware custom (Felucca, Skiff, baudgirl o cualquier otro) puede dejar el FM-1 sin arrancar. Primero volvé al V15 oficial con el botón de abajo (también guarda un backup completo) y después instalá ACID FM. Si el FM-1 ya tiene el V15 oficial o JIANT/ACID FM, seguí directo.",
+  firstText: "Escribir Braindancer directamente sobre otro firmware custom (Felucca, Skiff, baudgirl o cualquier otro) puede dejar el FM-1 sin arrancar. Primero volvé al V15 oficial con el botón de abajo (también guarda un backup completo) y después instalá Braindancer. Si el FM-1 ya tiene el V15 oficial o JIANT/Braindancer/ACID FM, seguí directo.",
   firstStock: "Primero volver al V15 oficial",
-  firstOk: "Antes de instalar, el instalador revisa solo el firmware del FM-1 conectado: escribe únicamente sobre el V15 oficial o JIANT/ACID FM.",
+  firstOk: "Antes de instalar, el instalador revisa solo el firmware del FM-1 conectado: escribe únicamente sobre el V15 oficial o JIANT/Braindancer/ACID FM.",
   checking: "Revisando el firmware del FM-1…",
   oldstock: "Este FM-1 tiene un firmware oficial más viejo: no se escribió nada. Primero actualizalo al V15 oficial con el botón de abajo (desde un firmware oficial no hace falta backup) y después apretá Instalar de nuevo. Encontrado: ",
   officialConfirm: "Este FM-1 tiene firmware oficial: se actualiza al V15 oficial (esta página no puede hacer backup de los temas de un firmware oficial). ¿Seguir? ",
-  otherfw: "Este FM-1 tiene un firmware que no es ni el V15 oficial ni JIANT/ACID FM: no se escribió nada. Primero volvé al V15 oficial con el botón de abajo y después instalá de nuevo. Encontrado: ",
+  otherfw: "Este FM-1 tiene un firmware que no es ni el V15 oficial ni JIANT/Braindancer/ACID FM: no se escribió nada. Primero volvé al V15 oficial con el botón de abajo y después instalá de nuevo. Encontrado: ",
   editor: "Editor (después de instalar: editá sonidos y secuencias desde la computadora)",
   verLabel: "Versión:", verOld: "También podés volver a una versión anterior (la más nueva arriba). Un proyecto guardado por una versión más nueva puede no abrir bien en una anterior: hacé backup con el editor antes.", latest: "la última", manual: "Manual:",
   direct: "Conectá el cable USB directo a la computadora. No hace falta probe ni Transporter.",
   brick: "Si una instalación falla y el FM-1 ya no arranca, recuperarlo necesita un Transporter:",
-  beta: "ACID FM es una versión en desarrollo; contanos los problemas en GitHub. El autor no se hace responsable si tu FM-1 se daña o funciona mal por este firmware custom. Usalo bajo tu propio riesgo.",
+  beta: "Braindancer es una versión en desarrollo; contanos los problemas en GitHub. El autor no se hace responsable si tu FM-1 se daña o funciona mal por este firmware custom. Usalo bajo tu propio riesgo.",
   back: "Conseguí el FM-1 V15 oficial de M-VAVE y elegí el FM-1.fwsc sin modificar. El navegador lo verifica localmente; no se envía a ningún servidor.",
   stockWhere: "En la página de descargas de M-VAVE buscá el FM-1, bajá el firmware V15, descomprimilo y elegí el archivo FM-1.fwsc (699.956 bytes). Esta página no puede bajarlo por vos: el firmware oficial es de M-VAVE y no podemos redistribuirlo.",
   stockTitle: "Volver al V15 oficial", stockFile: "FM-1.fwsc oficial", stockGo: "Hacer backup y volver al V15 oficial",
-  stockBackup: "Primero se guardan la música actual, la música guardada, los bancos de sonido y la configuración (sin los samples de usuario). Un firmware viejo necesita actualizarse para hacer backups completos. Para restaurar un archivo después, reinstalá ACID FM y usá el editor.",
+  stockBackup: "Primero se guardan la música actual, la música guardada, los bancos de sonido y la configuración (sin los samples de usuario). Un firmware viejo necesita actualizarse para hacer backups completos. Para restaurar un archivo después, reinstalá Braindancer y usá el editor.",
   stockRecovery: "Retomar una actualización interrumpida: ya guardé un backup completo en esta computadora",
-  stockValid: "V15 oficial verificado", stockConfirm: "¿Se guardó el archivo de backup completo en esta computadora? Seguí para volver al V15 oficial. El V15 oficial no puede abrir la música de ACID FM.",
+  stockValid: "V15 oficial verificado", stockConfirm: "¿Se guardó el archivo de backup completo en esta computadora? Seguí para volver al V15 oficial. El V15 oficial no puede abrir la música de Braindancer.",
   stockNeedBackup: "Desde el modo de actualización no se puede exportar un backup. Marcá «retomar» solo si ya guardaste un backup completo.",
-  stockUnsupported: "Este firmware no hace backups completos. Primero instalá el ACID FM actual.",
+  stockUnsupported: "Este firmware no hace backups completos. Primero instalá el Braindancer actual.",
   backup: "Guardando el backup completo ", stockError: "No se puede validar el firmware oficial: ",
   nomidi: "Este navegador no tiene WebMIDI. Abrí la página en Chrome o Edge.", loadfail: "No se pudo cargar: ",
   nomidiIos: "En iPhone y iPad no se puede: ningún navegador ahí tiene WebMIDI (Apple no lo permite). Usá una computadora (Windows, Mac, Linux, Chromebook) con Chrome o Edge.",
@@ -378,7 +378,7 @@ TEXT.es = {
   license: "GPL-3.0, sin garantía. Código:",
   newstock: "Este FM-1 tiene un firmware oficial más nuevo que el V15, que este instalador todavía no conoce: no se escribió nada. Primero volvé al V15 oficial con el botón de abajo y después instalá de nuevo. Encontrado: ",
   skiff: "Este FM-1 tiene Skiff (otro firmware custom, derivado de Felucca): no se escribió nada. Primero volvé al V15 oficial con el botón de abajo (antes guarda los temas de Skiff en un archivo) y después instalá. Encontrado: ",
-  felucca: "Este FM-1 tiene Felucca: no se escribió nada. Primero volvé al V15 oficial con el botón de abajo (guarda un backup completo, samples de usuario incluidos) y después instalá ACID FM. Encontrado: ",
+  felucca: "Este FM-1 tiene Felucca: no se escribió nada. Primero volvé al V15 oficial con el botón de abajo (guarda un backup completo, samples de usuario incluidos) y después instalá Braindancer. Encontrado: ",
   resuming: "El FM-1 está en modo de actualización: sigue la escritura. ",
   stockAgainConfirm: "Este FM-1 ya tiene el V15 oficial. ¿Escribir el V15 oficial otra vez? ",
   backupFailConfirm: "No se pudo completar el backup. Aceptar = seguir al V15 oficial SIN backup (se pierden los temas del FM-1). Cancelar = parar acá, no se escribe nada. Error: ",
@@ -387,7 +387,7 @@ TEXT.es = {
   bktimeout: "El FM-1 dejó de responder. ",
   saved: "Backup guardado (tu carpeta de Descargas): ",
   stockZip: "Ese es el archivo comprimido que bajaste, no el firmware: primero descomprimilo y elegí el FM-1.fwsc de adentro. Elegido: ",
-  stockCustom: "Ese es el paquete de un firmware custom (ACID FM, JIANT, Felucca, Skiff), no el oficial: elegí el FM-1.fwsc del V15 de M-VAVE. Elegido: ",
+  stockCustom: "Ese es el paquete de un firmware custom (Braindancer, ACID FM, JIANT, Felucca, Skiff), no el oficial: elegí el FM-1.fwsc del V15 de M-VAVE. Elegido: ",
   stockOtherVer: "Esa es otra versión oficial: esta página necesita exactamente el V15. Elegido: ",
   stockNotV15: "Ese archivo no es el FM-1.fwsc del V15 oficial (el del V15 pesa 699.956 bytes). Elegido: ",
   stockModified: "El archivo tiene el tamaño del V15 pero no su contenido (modificado o dañado): bajalo de nuevo de M-VAVE. ",
@@ -400,20 +400,20 @@ TEXT.es = {
   bootCheck: "¿Está en modo boot (WL80UBOOT)?",
   bootFound: "El FM-1 está en el modo boot del chip (WL80UBOOT): su firmware no arranca. Volvé a conectarlo con un buen cable de datos directo a la computadora y apretá Instalar de nuevo. Si sigue así, recuperarlo necesita FM-1 Transporter (el enlace de arriba).",
   bootNone: "No se encontró (ni se eligió) ningún FM-1 en modo boot (WL80UBOOT).",
-  editorOpen: "El editor de ACID FM estaba abierto en otra pestaña: se desconectó para la instalación.",
+  editorOpen: "El editor de Braindancer estaba abierto en otra pestaña: se desconectó para la instalación.",
   tip_nomidi: "Instalá Chrome (google.com/chrome) o usá Edge, y abrí ahí esta misma página.|Android: Chrome con el FM-1 en un cable OTG USB-C puede funcionar, pero una computadora es más segura.|Brave u Opera: permití los dispositivos MIDI para este sitio, o usá Chrome.",
   tip_nomidiIos: "Usá una computadora con Chrome o Edge (Windows, Mac, Linux o una Chromebook).|El emulador y el manual sí andan en el iPhone; el instalador y el editor necesitan MIDI por USB.",
   tip_denied: "Hacé clic en el ícono a la izquierda de la dirección (los controles o el candado) → Configuración del sitio → Dispositivos MIDI → Permitir.|Recargá la página y apretá el botón de nuevo.|Firefox: aceptá el «complemento de permisos del sitio» que ofrece. Brave: desactivá los Shields para este sitio.",
   tip_midifail: "Cerrá la app de M-VAVE, los DAW y las herramientas MIDI.|Desconectá y volvé a conectar el FM-1, y recargá la página.|Reiniciá el navegador (en Windows, después de suspender, a veces MIDI lo necesita).",
-  tip_busy: "Cerrá la app de M-VAVE, tu DAW (Ableton, FL Studio, Reaper…), MIDI-OX y otras pestañas con el editor de ACID FM u otra página MIDI.|En Windows solo un programa a la vez puede usar un puerto MIDI.|Desconectá y volvé a conectar el FM-1, recargá esta página y apretá el botón de nuevo.",
+  tip_busy: "Cerrá la app de M-VAVE, tu DAW (Ableton, FL Studio, Reaper…), MIDI-OX y otras pestañas con el editor de Braindancer u otra página MIDI.|En Windows solo un programa a la vez puede usar un puerto MIDI.|Desconectá y volvé a conectar el FM-1, recargá esta página y apretá el botón de nuevo.",
   tip_notfound: "Prendé el FM-1 (con la pantalla encendida).|Usá un cable USB de datos: muchos cables solo cargan. Probá con otro.|Conectalo directo a la computadora, sin hub ni dock.|Cerrá la app de M-VAVE, los DAW y el editor.|¿Nada? Apretá «¿Está en modo boot?» y COPIAR INFORME.",
   tip_noanswer: "Desconectá el FM-1, apagalo y prendelo, conectalo de nuevo y reintentá.|Cerrá los programas que puedan estar hablándole (app de M-VAVE, DAW, editor).|Un firmware oficial muy viejo puede no responder al actualizador web: primero actualizalo al V15 con el actualizador de M-VAVE.",
   tip_noupdate: "Pará la reproducción, apagá y prendé el FM-1, y reintentá.|USB directo a la computadora, sin hub.|Si se repite, actualizalo con el actualizador oficial de M-VAVE y después volvé acá.",
   tip_model: "Desconectá los otros equipos MIDI USB y dejá solo el FM-1.",
   tip_oldstock: "Abrí «Volver al V15 oficial» abajo, elegí el FM-1.fwsc del V15 de M-VAVE y apretá su botón (un firmware oficial no necesita backup).|Cuando diga Listo, apretá Instalar.",
   tip_newstock: "Abrí «Volver al V15 oficial» abajo, elegí el FM-1.fwsc del V15 y apretá su botón.|Cuando diga Listo, apretá Instalar.|Contanos qué versión era (COPIAR INFORME).",
-  tip_skiff: "Abrí «Volver al V15 oficial» abajo, elegí el FM-1.fwsc y apretá su botón: primero guarda el archivo de backup de Skiff (solo el editor de Skiff lo restaura) y después escribe el V15.|Cuando diga Listo, apretá Instalar.|ACID FM no puede abrir los temas de Skiff.",
-  tip_felucca: "Abrí «Volver al V15 oficial» abajo, elegí el FM-1.fwsc y apretá su botón: guarda un backup completo de Felucca (con los samples) y después escribe el V15.|Cuando diga Listo, apretá Instalar.|ACID FM no tiene samples de usuario: guardá tus WAV. El editor de ACID FM puede restaurar los temas y presets de ese backup.",
+  tip_skiff: "Abrí «Volver al V15 oficial» abajo, elegí el FM-1.fwsc y apretá su botón: primero guarda el archivo de backup de Skiff (solo el editor de Skiff lo restaura) y después escribe el V15.|Cuando diga Listo, apretá Instalar.|Braindancer no puede abrir los temas de Skiff.",
+  tip_felucca: "Abrí «Volver al V15 oficial» abajo, elegí el FM-1.fwsc y apretá su botón: guarda un backup completo de Felucca (con los samples) y después escribe el V15.|Cuando diga Listo, apretá Instalar.|Braindancer no tiene samples de usuario: guardá tus WAV. El editor de Braindancer puede restaurar los temas y presets de ese backup.",
   tip_otherfw: "Abrí «Volver al V15 oficial» abajo y seguilo. Si ese firmware no puede hacer backup, la página pregunta antes de seguir sin él.|Cuando diga Listo, apretá Instalar.",
   tip_noloader: "No apagues el FM-1. Volvé a conectar el cable USB (en otro puerto si podés) y apretá Instalar de nuevo: sigue donde estaba.|Windows: la primera vez, instalar el driver del modo de actualización puede tardar un minuto. Esperá y apretá Instalar de nuevo.|¿Nada? Apretá «¿Está en modo boot?» y COPIAR INFORME.",
   tip_stopped: "Volvé a conectar el cable USB directo a la computadora y apretá el mismo botón de nuevo: retoma.|No apagues el FM-1 mientras está en modo de actualización.",
@@ -421,8 +421,8 @@ TEXT.es = {
   tip_noreturn: "Apagá y prendé el FM-1. Si arranca, ya está (MENU > ABOUT muestra la versión).|Si la pantalla queda negra, conectalo y apretá Instalar de nuevo; probá también «¿Está en modo boot?».",
   tip_mismatch: "Apagalo y prendelo y mirá MENU > ABOUT. Apretá COPIAR INFORME y contanos.",
   tip_loadfail: "Recargá la página (Ctrl+F5), o elegí la última versión.|Revisá la conexión; un bloqueador de anuncios puede frenar la descarga.",
-  tip_stockNeedBackup: "Si ya guardaste el backup, marcá «Retomar una actualización interrumpida» y apretá de nuevo.|Si no, apretá Instalar para terminar de volver a ACID FM, hacé el backup y después volvé.",
-  tip_stockUnsupported: "Primero instalá el ACID FM actual (Instalar) y después apretá «Volver al V15 oficial» de nuevo: ahí sí guarda tus temas.",
+  tip_stockNeedBackup: "Si ya guardaste el backup, marcá «Retomar una actualización interrumpida» y apretá de nuevo.|Si no, apretá Instalar para terminar de volver a Braindancer, hacé el backup y después volvé.",
+  tip_stockUnsupported: "Primero instalá el Braindancer actual (Instalar) y después apretá «Volver al V15 oficial» de nuevo: ahí sí guarda tus temas.",
   tip_backupfail: "Pará la reproducción (no hay backup mientras suena), no muevas el cable y reintentá.|Cerrá el editor y otros programas MIDI.",
   tip_stock: "En la página de descargas de M-VAVE, FM-1: bajá el firmware V15.|Descomprimilo (clic derecho → Extraer todo).|Elegí el FM-1.fwsc de adentro (699.956 bytes).",
   tip_error: "Apretá COPIAR INFORME y mandánoslo (GitHub issues, o donde encontraste el enlace).",
@@ -530,7 +530,7 @@ async function loadVersion(i) {
       if (epoch !== loadEpoch) return;
       if (productOf(pkg) !== productOfVersion(v)) { sayK("badpkg"); showTip("badpkg"); log(`package ${v.pkg}: ${productOf(pkg)}`); return; }
       image = logicalImage(pkg); product = productOfVersion(v);
-      say(`ACID FM ${v.version}`); showTip(null);
+      say(`Braindancer ${v.version}`); showTip(null);
       $("go").disabled = writing;
       return;
     } catch (e) {
@@ -650,7 +650,7 @@ $("stock-file").addEventListener("change", async () => {
 });
 function saveArchive(archive, fw) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(archive)], {type:"application/json"}));
-  const who = fw && fw.kind !== "jiant" ? `FM-1-${fw.kind}` : /^BRAINDANCER/i.test((fw && fw.version) || "") ? "Braindancer" : /^ACID/i.test((fw && fw.version) || "") ? "ACID-FM" : "JIANT";
+  const who = fw && fw.kind !== "jiant" ? `FM-1-${fw.kind}` : /^(BRAINDANCER|ACID)/i.test((fw && fw.version) || "") ? "Braindancer" : "JIANT";
   const name = `${who}-backup-${new Date().toISOString().slice(0,10)}.json`;
   const a = document.createElement("a"); a.href = url; a.download = name;
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);

@@ -268,6 +268,54 @@ for f in [str(c.relative_to(ROOT)) for c in sorted((ROOT / "firmware/src").glob(
             bad.append(f"{f}: a Spanish word {w.group(0)!r} in a string (line {text[:m.start()].count(chr(10)) + 1}): "
                        f"{m.group(1)[:60]!r}")
 
+# ---- (Braindancer 0.7, Task 3) the documents and web pages say Braindancer: no "ACID FM" / "Acid FM" / "acid-fm" in the visible
+# text of a user-facing file, except (spec 5) its history: the past news (0.1 .. 0.6) of the manual, a version of the old name
+# ("ACID FM 0.6", "ACID FM 3b"), the old name beside the new one ("formerly ACID FM", "Braindancer / ACID FM": a device or a
+# package still on ACID FM is found), and the one page that forwards the old site path (web/404.html)
+OLD = re.compile(r"ACID[ -]FM|acid[ -]fm|ACID_FM|AcidFM", re.I)
+OLD_OK = re.compile(r"superpowers/(specs|plans)/[\w.-]*acid-fm[\w.-]*|ACID FM (v?\d|3[abc])|(?<![A-Za-z])(formerly|Formerly) ACID FM|written when it was still ACID FM|(formerly|previously|earlier|old|was|and|or|not) (the )?ACID FM|ACID FM (is|was) now|"
+                    r"(Braindancer|BRAINDANCER)\)?[,/、 ]+(\(?or )?(an earlier )?ACID FM|ACID FM[,/ ]+(Braindancer|JIANT)")
+USER_FACING = ["README.md", "BUILDING.md", "LICENSING.md", "docs/MANUAL.md", "docs/cheatsheet/controls.html",
+               "docs/cheatsheet/sound.html", "docs/navigation-map.svg", ".github/ISSUE_TEMPLATE/bug_report.yml",
+               ".github/ISSUE_TEMPLATE/config.yml", "web/landing/index.html", "web/index_pkg.html", "web/editor.html",
+               "web/emu/index.html", "web/manual/index.html", "web/manual/manual.js", "web/manual/data.js", "web/manual/sw.js",
+               "web/404.html", "tools/gen_cheatsheets.py", "tools/gen_nav_map.py", "tools/gen_manual.py"] + SCRIPTS
+OLD_PATH_OK = {"web/404.html"}   # (redirects /acid-fm/ paths: the forwarding site's)
+for f in USER_FACING:
+    src = (ROOT / f).read_text(encoding="utf-8")
+    if f == "web/manual/data.js":                       # (the past news, 0.1 .. 0.6, keep the old name)
+        src = src[:src.index('{v: "0.6"')]
+    if f.endswith(".py"):
+        src = py_strings(src)
+    elif f.endswith(".js"):
+        src = js_strings(src)
+    elif f.endswith((".html", ".svg")):
+        src = plain(src, True)
+    for n, line in enumerate(src.splitlines(), 1):
+        rest = OLD_OK.sub("", line)
+        if f in OLD_PATH_OK:
+            rest = re.sub(r"acid-fm", "", rest, flags=re.I)
+        m = OLD.search(rest)
+        if m:
+            bad.append(f"{f}: says {m.group(0)!r} (line {n}): {line.strip()[:90]!r}")
+if not (ROOT / "docs/braindancer/device-log.md").exists() or (ROOT / "docs/acid-fm").exists():
+    bad.append("docs/acid-fm/ is not moved to docs/braindancer/")
+for f in ["README.md", "docs/MANUAL.md", "LICENSING.md", "web/manual/index.html"]:
+    if "docs/acid-fm" in (ROOT / f).read_text(encoding="utf-8"):
+        bad.append(f"{f}: links docs/acid-fm (now docs/braindancer)")
+_bld = (ROOT / "BUILDING.md").read_text(encoding="utf-8")
+if "braindancer-1.0.fwsc" not in _bld or "braindancer-1.0-app.bin" not in _bld:
+    bad.append("BUILDING.md: the package is not named braindancer-1.0.fwsc / braindancer-1.0-app.bin")
+for f, s in (("README.md", "# Braindancer"), ("web/landing/index.html", "<title>Braindancer</title>"),
+             ("web/index_pkg.html", "<title>Braindancer installer</title>"), ("web/404.html", "<title>Braindancer</title>"),
+             ("web/editor.html", "<title>Braindancer Editor</title>"), ("web/emu/index.html", "<title>Braindancer emulator</title>"),
+             ("web/manual/index.html", "<title>Braindancer manual</title>")):
+    if s not in (ROOT / f).read_text(encoding="utf-8"):
+        bad.append(f"{f}: lacks {s!r}")
+# the installer's stock-file test (fm1diag.js) names a mistaken Braindancer / ACID FM package as such
+if not re.search(r"braindancer\|acid", (ROOT / "web/fm1diag.js").read_text(encoding="utf-8"), re.I):
+    bad.append("web/fm1diag.js: the stock-file filename test does not know braindancer and acid-fm")
+
 if bad:
     print("\n".join("FAIL: " + b for b in bad))
     sys.exit(1)

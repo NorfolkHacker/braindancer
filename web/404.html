@@ -1,14 +1,14 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only
      Portions Copyright (C) 2026 NorfolkHacker
-     (JIANT 0.9.11; ACID FM: base /acid-fm/) GitHub Pages serves this for any path of the site that does not exist:
+     (JIANT 0.9.11; Braindancer: base /braindancer/, and the old /acid-fm/ paths it forwards) GitHub Pages serves this for any path of the site that does not exist:
      an old or mistyped link (/acid-fm/installer/, /acid-fm/webapp/, /acid-fm/editor, a link pasted with ":1:1" or a
      ")" stuck to it) goes to the page it meant. web/make_site.py and the site's workflow put it at the root. -->
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ACID FM</title>
+<title>Braindancer</title>
 <style>
   :root { --bg: #fff; --fg: #000; --dim: #777; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #000; --fg: #fff; --dim: #888; } }
@@ -27,7 +27,7 @@ function acidTarget(pathname) {
   const asked = p;
   const junk = /[\s"'<>()[\]{}.,;:!?*|]+$/;
   for (let k = 0; k < 3; k++) p = p.replace(junk, "").replace(/(:\d+)+$/, "");
-  const m = /^\/acid-fm(?:\/|$)(.*)$/i.exec(p);
+  const m = /^\/(?:braindancer|acid-fm)(?:\/|$)(.*)$/i.exec(p);   // (acid-fm: the site's old name, forwarded)
   const rest = (m ? m[1] : p.replace(/^\/+/, "")).toLowerCase();
   const pre = /(^|\/)preview(\/|$)/.test(rest) ? "preview/" : "";
   let to = "";
@@ -35,7 +35,7 @@ function acidTarget(pathname) {
   else if (/emu|emulat|simul/.test(rest)) to = "emu/";
   else if (/instal|updat|actualiz|flash|upgrad|webapp|firmware|fwsc|^preview/.test(rest)) to = pre + "webapp/installer/";
   else if (/manual/.test(rest)) to = "manual/";
-  const target = "/acid-fm/" + to;
+  const target = "/braindancer/" + to;
   const here = asked.replace(/\/index\.html$/i, "/").replace(/\/?$/, "/");
   return here === target.replace(/\/?$/, "/") ? null : target;   // the target itself missing: no loop
 }
@@ -46,15 +46,15 @@ if (to) location.replace(to + location.search + location.hash);
 </head>
 <body>
 <main>
-  <h1 style="font-size:24px;font-weight:600">ACID FM</h1>
+  <h1 style="font-size:24px;font-weight:600">Braindancer</h1>
   <p>Esta página no existe; probá con: · This page does not exist; try:</p>
   <ul>
-    <li><a href="/acid-fm/webapp/installer/">Instalador · Installer</a></li>
-    <li><a href="/acid-fm/webapp/editor/">Editor</a></li>
-    <li><a href="/acid-fm/emu/">Emulador · Emulator</a></li>
-    <li><a href="/acid-fm/">Inicio · Home</a></li>
+    <li><a href="/braindancer/webapp/installer/">Instalador · Installer</a></li>
+    <li><a href="/braindancer/webapp/editor/">Editor</a></li>
+    <li><a href="/braindancer/emu/">Emulador · Emulator</a></li>
+    <li><a href="/braindancer/">Inicio · Home</a></li>
   </ul>
-  <p class="small"><a href="https://github.com/NorfolkHacker/acid-fm">github.com/NorfolkHacker/acid-fm</a></p>
+  <p class="small"><a href="https://github.com/NorfolkHacker/braindancer">github.com/NorfolkHacker/braindancer</a></p>
 </main>
 </body>
 </html>

@@ -1015,7 +1015,7 @@ int main(void)
             bad += gcheck("  (3b) ... and its name shows as JIANT's", !strcmp(v, "HOUSE"));
             gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF;
         }
-        {   /* (0.5.1) each shown genre plays its own tempo range and swing (docs/acid-fm/genre-research.md): RETROBOC 68..100,
+        {   /* (0.5.1) each shown genre plays its own tempo range and swing (docs/braindancer/genre-research.md): RETROBOC 68..100,
              * DRILL'N'BASS 155..172, ELECTRO 124..138 ...; a hidden genre keeps its template's */
             uint32_t i, sd, ok = 1, sw = 1;
             for (i = 0; i < GEN_NSHOWN; i++)
