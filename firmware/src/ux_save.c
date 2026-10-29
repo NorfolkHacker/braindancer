@@ -199,6 +199,7 @@ static __attribute__((noinline)) void uxv_sound_picture(void)
 #define UXV_BH 44
 #define UXV_BP 57
 #define UXV_BW 53
+#define UXV_NAME_W (UXV_BW - 9)   /* (3c-2 task 9 fix) a project card's name: the width it is shown in full (longer: cut) */
 #define UXV_AY 56                /* ARRANGE's word (its caps' top) */
 #define UXV_CY 66                /* the chips: the first row's top, the rows' pitch, a chip's height, pitch, width; 8 a row */
 #define UXV_CP 24
@@ -452,7 +453,7 @@ static void uxv_card(uint32_t n)
         cv_rect(x + UXV_BW - 10, y + 10, 5, 5, UX_ACCENT);
     if (!nm[0])
         nm = m ? UXV_SWORD[UXV_S_USED] : UXV_WORD[UXV_W_EMPTY];
-    cv_clip_text(x + 6, y + 34 - UF_LBL_CAP_Y, &UF_LBL, nm, m ? (on ? UX_TEXT : UX_MID) : UX_DIM(UX_MID, 55), bg, UXV_BW - 9);
+    cv_clip_text(x + 6, y + 34 - UF_LBL_CAP_Y, &UF_LBL, nm, m ? (on ? UX_TEXT : UX_MID) : UX_DIM(UX_MID, 55), bg, UXV_NAME_W);
     if (bars) {
         fmt_int(b, (int32_t)bars);
         cv_text_on(x + 6, y + 50 - UF_HDR_CAP_Y, &UF_HDR, b, on ? UX_TEXT : UX_MID, bg);
