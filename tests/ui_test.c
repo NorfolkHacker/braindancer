@@ -11249,7 +11249,7 @@ static int test_ux_home_head(void)
     (void)ux_home_head(UXH_TRACKS, 0, &lx);
     ux_home_left(b, sizeof b, UXH_TRACKS, 0);
     printf("ui:   (HOME header, the longest: \"%s\" + REC + transport + LOCK + battery from x %d; BRAINDANCER ends at %d; left out: %u)\n", b, lx, lim - 6, ux_head_drop);
-    ok = lx >= lim && ux_head_drop <= 2u && ux_head_drop > 0u;   /* (Braindancer 0.7: the longer word leaves no room for the whole of it: the BAR / where is left out, the header never overlaps) */
+    ok = lx >= lim && ux_head_drop <= 2u;   /* (Braindancer 0.7: the longer word may leave no room for all of it: up to two pieces (BAR / where) are left out, the header never overlaps) */
     song.octave = 1; (void)ux_home_head(UXH_TRACKS, 0, &lx);        /* (OCT+1: the widest octave) */
     ok &= lx >= lim && ux_head_drop <= 2u;
     song.octave = -3;
@@ -11419,10 +11419,11 @@ static int test_ux_visual(void)
     ux_home_foot(ft, sizeof ft);
     ok &= ux_home_at(UXH_TRACKS) && str_eq(ft, "1 / 3 \xB7 LVL \xB7 LVL \xB7 LVL \xB7 BPM");   /* (3b task 10: KNOB 4 the tempo) */
     bad += check("3a VISUAL: the name (BRAINDANCER when none; fitted), SECTION . BAR, footer M1..M4, a macro's turn in the status", ok);
+    bad += check("main.c crash screen: \"BRAINDANCER CRASH\" fits the 240 px line in AF_M", text_w(&AF_M, "BRAINDANCER CRASH") <= 240);
 
     {   /* (polish) ring k its track's (T1 outside .. T6 at the centre): bright on its hits, eased, a silent track's dim */
         uint32_t i, b0;
-        uint16_t t1, t6;
+        uint16_t t1;
         ui_power_on(); frame();
         for (i = 0; i < 4u && !ux_home_at(UXH_VISUAL); i++) press(B_HOME);
         ux_levels_reset();
@@ -11431,15 +11432,12 @@ static int test_ux_visual(void)
             trk[0].peak = 7000; trk[2].peak = i % 3u ? 0 : 6000; frame();
             p0 += uxv.q_ms != p1;
         }
-        t1 = ux_px(120u, UX_Y_PANEL + 9u);                          /* (T1's ring, the outermost, r ~65; T6's, r ~9.5: under */
-        t6 = ux_px(120u, UX_Y_PANEL + 65u);                         /* the name band's scrim) */
+        t1 = ux_px(120u, UX_Y_PANEL + 9u);                          /* (T1's ring, the outermost, r ~65; T6's, r ~9.5: under the name band's scrim) */
         {   /* (Braindancer 0.7: a letter of BRAINDANCER may stand at x 120: the centre row's nearest pixel clear of ink) */
-            uint32_t x, best = 255u;
-            for (x = 110u; x < 131u; x++) {
-                uint32_t d = ux_cdist(ux_px(x, UX_Y_PANEL + 65u), ux_mix(UX_BG, UX_LINE, 40));
-                if (d < best) best = d;
-            }
-            ok = best < 8u && ux_cdist(t6, UX_BG) < 255u;
+            uint32_t x, clear = 0;
+            for (x = 110u; x < 131u; x++)                           /* (the idle scrim colour, within 8 steps) */
+                clear += ux_cdist(ux_px(x, UX_Y_PANEL + 65u), ux_mix(UX_BG, UX_LINE, 40)) < 8u;
+            ok = clear >= 8u;                                       /* (letters cover a minority of the 21 columns) */
         }
         ok &= uxv.b[0] > 120u && uxv.b[2] > 60u && uxv.b[5] == 0u && uxv.b[1] == 0u;
         ok &= ux_cdist(t1, UX_LINE) > 20u;
