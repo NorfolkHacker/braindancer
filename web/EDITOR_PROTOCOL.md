@@ -115,7 +115,7 @@ ALWAYS; a project without it loads every PLAYS ALWAYS. NEW PROJECT resets them.
 **ACID FM 0.5: 90 globals**: G 71..76 each track's MIDI IN (OFF / ON, ON), 77..82 its OUT (OFF / ON, ON), 83..88 its
 CHANNEL (1..16, T1..T6: 1..6), 89 KEYBOARD PLAYS SELECTED (OFF / ON: a channel no track takes plays the selected track).
 They replace ROUTE (G 14, still answered and stored, no longer read but by a project's load: SEL = KEYBOARD PLAYS SELECTED
-ON). The editor does not offer ROUTE (replaced by GLO > MIDI on the device) nor the per-track settings (deferred). Saved in FUNC's 'M' 'R' block (after every other) when a track's differs from its default. **(0.6.86 .. 0.6.99:
+ON). The editor does not offer ROUTE (replaced by GLO > MIDI on the device); its MIDI section (0.6, with 90+ globals) offers the per-track settings, one page per track (T1..T6: IN, OUT, CHANNEL) and KEYBOARD (PLAYS SELECTED), 71..89 above and PLAYS (90..95) written with the existing PARAM_SET (ED_SET on a global: scope 1, id, value; CHANNEL is stored 1..16). Saved in FUNC's 'M' 'R' block (after every other) when a track's differs from its default. **(0.6.86 .. 0.6.99:
 G 66..70 the delay's MOD, TYPE, PING-PONG, the punch-in lane's LEN, RES: 71 globals.)**
 
 **JIANT 0.6.3: 66 globals**: G 37..65 the SLICER bus (37 SLCR, 38 PAT, 39 RATE, 40 DEPTH, 41..46 T1..T6 and 47 FX ON/OFF, 48 LEN, 49 QNT, 50..65 the pitch steps, -24..24); the track parameters P_SLCR..P_SLDEPTH stay, unused. **JIANT 0.4: 37 globals** (G 36 STRN, stored behind a 3). **JIANT 0.3: 36 globals.** G_COUNT 36 (G 32..35 above). DRUM's E6 (id P_E0 + 5) is FM, 0..127 (once ACC): its sounds through

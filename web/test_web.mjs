@@ -65,7 +65,12 @@ const html = readFileSync(join(HERE, "editor.html"), "utf8");
 const proto = html.slice(html.indexOf("/*PROTO-BEGIN*/"), html.indexOf("/*PROTO-END*/"));
 /* (ACID FM 0.6) the editor's knownLayout (outside the protocol's part): 96 globals (PLAYS) one of the layouts it knows */
 const knownLayout96 = () => vm.runInNewContext(html.slice(html.indexOf("const EXPECT = {"), html.indexOf("const P = { LEVEL")) +
-  ";knownLayout({ gcount: 96, pcount: 120, pe0: 112 })");
+  ";knownLayout({ gcount: 96, pcount: 123, pe0: 115 })");
+/* (ACID FM 0.6) LAYOUT for a device of g globals, then an expression over it */
+const layoutEval = (g, expr) => vm.runInNewContext("var dev = { info: { gcount: " + g + " }, gdesc: [], dump: { engine: 0 } }; var P_SHIFT = [0], P_LANES = [0, 0, 0, 0, 0, 0, 0, 0]; " +
+  html.slice(html.indexOf("const EXPECT = {"), html.indexOf("const P = { LEVEL")) +
+  html.slice(html.indexOf("const P = { LEVEL"), html.indexOf("/* globals that are actions or placeholders")) +
+  "const engName = () => ''; " + expr);
 const E = vm.runInNewContext(proto + `
 ;({ frame, unframe, parse, req, Link, makeMockDevice, CMD,
    UP, bank, capturePatch, auditionPatch, startWatch, libraryFile, readLibraryFile, paramKeys, legacyKeys, remapParams, patternFromSteps, stepsFromPattern, upName,
@@ -395,6 +400,18 @@ async function editorMock() {
     ok(p1.label === "PLAYS" && p1.def === 0 && p1.min === 0 && p1.max === 12 && eq(p1.names, words) && p6.label === "PLAYS" &&
        ps.value === 12 && p0.value === 0 && info.gcount === 96 && dump.g.length === 96 && knownLayout96(),
       "editor: PLAYS per track (globals 90..95, ALWAYS .. NOT 1ST), 96 globals in DUMP, a known layout");
+  }
+  {
+    /* (ACID FM 0.6) the editor's MIDI section: T1..T6 IN OUT CHANNEL, KEYBOARD PLAYS SELECTED; none on 0.4 firmware; ROUTE shown nowhere */
+    const m = layoutEval(96, "LAYOUT(115).filter((x) => x.t === 'MIDI')"), old = layoutEval(71, "LAYOUT(115).filter((x) => x.t === 'MIDI')");
+    const pg = m.length === 1 && m[0].tab === "setgroups" ? m[0].pages : [];
+    const want = [...[0, 1, 2, 3, 4, 5].map((k) => ["T" + (k + 1), 1, [71 + k, 77 + k, 83 + k]]), ["KEYBOARD", 1, [89]]];
+    const lab = await Promise.all([71, 77, 83, 89].map(async (id) => E.parse[E.CMD.DESC](await rq(E.req.desc(1, id))).label));
+    const v = E.parse[E.CMD.SET](await rq(E.req.set(1, 85, 9)));
+    const all = layoutEval(96, "LAYOUT(115).flatMap((x) => x.pages || []).filter((p) => p[1] === 1).flatMap((p) => p[2])");
+    ok(JSON.stringify(pg) === JSON.stringify(want) && eq(lab, ["IN", "OUT", "CHANNEL", "SELECTED"]) && v.value === 9 &&
+       !all.includes(14) && old.length === 0,
+      "editor: MIDI page (T1..T6 IN OUT CHANNEL, KEYBOARD; ED_SET 85; no ROUTE; none under 90 globals)");
   }
   {
     /* FX > REVERB TYPE (G_RTYPE 24, the old drum channel's id): ROOM (0, the default) / SPRING (1) / SHIMR RESO CLOUD (JIANT 0.5); G_COUNT unchanged */
