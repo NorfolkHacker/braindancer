@@ -116,7 +116,7 @@ Still pending:
 - Test build on the device: EXPLORE 9641 -> lost 0, late 0, CPU 49-52 %, max 2.2 ms; EXPLORE 3423 with the delay forced
   long -> lost 0, 4 late in 9.6 s, dly_safety 1. The user: "sounds clean".
 
-## 2026-10-xx — piece 3c-2, ACID FM 0.6 (SAVE, MENU, dialogs, PLAYS)
+## 2026-10-29 — piece 3c-2, ACID FM 0.6 (SAVE, MENU, dialogs, PLAYS)
 
 - Backup before: ~/fm1-backups/2026-10-29-acid-fm-0.5.2/fm1-recovery-20261029-204515/full-flash-before.bin, sha256
   da69493722b3f50d578f926ba55413dc29234dd4ffccb4ebdf8665293660f09b (1 MiB, 0 of 143 firmware sectors blank).
