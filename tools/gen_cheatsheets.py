@@ -150,7 +150,7 @@ def controls():
                    'HOME <b>GEN</b>; EDIT · SEQ · LFO · FX their <b>dice</b> (OCT+ keeps, OCT− back); GLO the tempo; ENV · SCL · ARP · SAVE their chain.'),
         ('PRESETS', '<b>Always presets</b>: the sounds (factory and user) on every page; SEQ: the patterns (PHRASES); GEN: the genre. '
                     'Nothing in the MENU or with a button held.'),
-        ('ALGORITHM', 'Selects the track from any page: T1–T6 (T1–T4 with TRACKS 4). MENU: the tabs. A layer held: MAP · KNOBS · STATE.'),
+        ('ALGORITHM', 'Selects the track from any page: T1–T6 (T1–T4 with TRACKS 4). MENU: nothing. A layer held: MAP · KNOBS · STATE.'),
         ('KNOB 1–4', 'The four knobs on screen, in their colours; KNOB 1 picks (step, slot, row). Fast sweeps the whole range, slow fine-tunes. '
                      'With a layer held: the layer\'s. A step held: a lock on that step.'),
         ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0); on DRUM the kit stays put: +1/+2/+3 REPEAT 1/2, REPEAT, RATCHET X2; −1 SHORT, −2 GHOST, −3 FLAM. On action rows and dialogs: back / confirm.'),
@@ -171,7 +171,7 @@ def controls():
         ('LFO', 'LFO · DEST · MOD MATRIX · MORE (PHASE · STEPS)', 'MACROS M1–M4 (stay latched)'),
         ('SCL', 'KEY · CHORD · MORE', 'ROOT by key'),
         ('ARP', 'ARP · ARP 2', '—'),
-        ('SAVE', 'USER · PRESETS · SECTIONS · ARRANGE · PROJECTS · TOOLS (from outside, USER / SECTIONS come armed)', 'SONG layer · C5 NAME'),
+        ('SAVE', 'SOUND · SONG · PROJECT · MORE (from outside, SOUND comes with SAVE picked)', 'SONG layer · C5 NAME'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]
     t2 = ('<table class="pages"><tr><th>BUTTON</th><th>PAGES (A TAP: THE NEXT · SELECT WALKS THEM)</th><th>HOLD</th></tr>' +
@@ -220,7 +220,7 @@ def controls():
                   '<h4>KNOBS</h4>' + knobs('RATE', 'LOOP', 'THIN', 'DJ FILTER')))
     b.append(card('SAVE · SONG', HEAT[6], keyboard(sv_w, {}) +
                   '<p>PLAY A–D on the next bar (several in one hold: a quick chain), STORE the section into A–D. '
-                  'OCT+ stores the playing section, OCT− recalls it. C5 renames (USER, SECTIONS, PROJECTS). On ARRANGE KNOB 4 stores a scene.</p>'
+                  'OCT+ stores the playing section, OCT− recalls it. C5 renames (SOUND, SONG, PROJECT). On SONG KNOB 4 stores a scene.</p>'
                   '<h4>KNOBS</h4>' + knobs('PROJECT', '-', '-', '-')))
     b.append(card('EDIT · SOUND', HEAT[3], keyboard(ed_w, ed_b) +
                   '<p>INIT: the engine\'s own sound, dry (DRUM-X: the factory kit too). RECALL: the sound stored in the section. On a DRUM '
@@ -252,7 +252,7 @@ def controls():
         (k('GLO') + ' + ' + k('PLAY'), 'Restart from the top.'),
         (k('GLO') + ' + ' + k('SELECT'), 'Tempo (from any page; under CLOCK USB or TRS the clock\'s).'),
         (k('STEP HELD', cls='a') + ' + ' + k('KNOB'), 'A lock on that step (LOCK · SETTING · VALUE); + ' + k('SELECT', cls='v') + ' the EDIT page they lock; + ' + k('EDIT') + ' clears its locks.'),
-        (k('HOME', cls='a') + ' held', 'MENU: SCREEN · AUDIO · MIDI · USB · SYSTEM (LED glow, click and count-in, USB audio, hold time, knob speedup, FX latch, CPU cores and clock, ABOUT).'),
+        (k('HOME', cls='a') + ' held', 'MENU: AUDIO · CLICK · CONTROLS · MORE (speaker EQ, tracks, load, BPM lock; click and count-in; hold time, knob speedup, FX latch, calibration; MORE: screen, LEDs, USB audio, CPU cores and clock, ABOUT).'),
     ]
     t3 = '<table>' + ''.join(f'<tr><td style="white-space:nowrap;width:1%;padding-right:18px">{a}</td><td>{d}</td></tr>'
                              for a, d in combos) + '</table>'
@@ -276,17 +276,17 @@ def controls():
                                 ('ARP 2', 'SWING CHANCE HOLD ORDER')]),
         ('SEQ', HEAT[4], [('STEPS', 'STEP NOTE ACC/SLD GATE'), ('STEPS · DRUM', 'STEP LANE HIT ACC'),
                           ('STEP EXTRAS', 'RATCHET CHANCE CONDITION MICRO'), ('PATTERN', 'LENGTH DIVISION SWING GATE'),
-                          ('MORE', 'TRACK (SEQ PITCH, CHANCE, HUMAN, REC SNAP) · STEP (TYPE, TYPE 2, EVERY, FOCUS, PITCH, MOVE) · MUTATE '
+                          ('MORE', 'TRACK (SEQ PITCH, CHANCE, HUMAN, REC SNAP, PLAYS) · STEP (TYPE, TYPE 2, EVERY, FOCUS, PITCH, MOVE) · MUTATE '
                                    '(SOUND, PATTERN, AMOUNT, MODE) · SHAPE (STRETCH, REPEAT, NUDGE, ROTATE) · PLAYHEADS (HEAD, RATE, '
                                    'DIRECTION, INTERVAL) · AUTOMATION (PLAY, EVENTS, LOCKS, CLEAR, the records): K1 picks, K2 sets')]),
-        ('GLO · SAVE', HEAT[6], [('LIVE', 'RATE LOOP THIN DJ FILTER'), ('MIX', 'LEVEL PAN SWING TUNE'),
+        ('GLO · SAVE · MENU', HEAT[6], [('LIVE', 'RATE LOOP THIN DJ FILTER'), ('MIX', 'LEVEL PAN SWING TUNE'),
                                  ('MIDI', 'IN OUT CHANNEL CLOCK'),
                                  ('MORE', 'LIVE (TRACKS, RATE, CUT, DENSITY) · SYSTEM (TRACKS, LOAD, CPU) · TEMPO (BPM) · MIDI (KEYBOARD PLAYS '
                                           'SELECTED, CLOCK OUT, NOTES OUT, LEARN, LEARN CLEAR) · UNDO: K1 picks, K2 sets'),
-                                 ('PRESETS', 'No. ENG FAV LIST'),
-                                 ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECTS', 'PROJECT SECT LOAD SAVE'), ('SECTIONS', 'SECT NAME LOAD SAVE'),
-                                 ('ARRANGE', 'ROW SECT BARS SCENE'),
-                                 ('TOOLS', 'CLEAR SEQ · INIT SOUND · DEL ROW · CLEAR SONG · NEW PROJECT · CPU TEST: K1 picks, OCT+')]),
+                                 ('SAVE · SOUND', 'SLOT PRESET NAME SAVE'), ('SAVE · SONG', 'SECTION ROW BARS SCENE'),
+                                 ('SAVE · PROJECT', 'PROJECT LOAD SAVE NAME'),
+                                 ('SAVE · MORE', 'SONG (END, DELETE ROW, CLEAR SONG) · TOOLS (CLEAR SEQ, INIT SOUND, ERASE USER SLOT, NEW PROJECT, CPU TEST) · SOUND (LOAD SLOT, ENGINE, FAVORITE, LIST): K1 picks, K2 sets'),
+                                 ('MENU', 'AUDIO (SPEAKER EQ TRACKS LOAD BPM LOCK) · CLICK · CONTROLS (HOLD TIME KNOB SPEEDUP FX LATCH CALIBRATION) · MORE')]),
     ]
 
     def ptable(rows):
@@ -302,7 +302,7 @@ def controls():
     cards = {n: card(n, c, ptable(r)) for n, c, r in fams}
     b.append('<div class="grid g3"><div class="col">' + cards['ENV'] + cards['LFO'] + cards['SCL · ARP'] + '</div>' +
              cards['FX'] + cards['EDIT'] + '</div>')
-    b.append('<div class="grid g2" style="margin-top:22px">' + cards['SEQ'] + cards['GLO · SAVE'] + '</div>')
+    b.append('<div class="grid g2" style="margin-top:22px">' + cards['SEQ'] + cards['GLO · SAVE · MENU'] + '</div>')
     b.append(sec('GLO › MIDI'))
     b.append(card('MIDI PER TRACK · THE CLOCK', HEAT[1],
                   '<p>KNOB 1 <b>IN</b>, KNOB 2 <b>OUT</b>, KNOB 3 <b>CHANNEL</b> (1–16) of the selected track (ALGORITHM picks it; its row lit '
@@ -404,7 +404,7 @@ def sound():
                   '<h4>ARP MODES</h4><p class="dim">OFF UP DOWN UP-DOWN RANDOM REPEAT DOWN-UP UP+OCTAVE CONVERGE DIVERGE PINKY THUMB '
                   'WALK CHORD <b style="color:#f4f1ea">TRNS</b> (the keys move the sequence)</p>'))
     b.append(card('SONGS', HEAT[6],
-                  '<p><b>4 projects × 4 sections (A–D)</b>, a song of up to 16 rows by bars (SAVE › ARRANGE, OCT+ adds a row, PLAY '
+                  '<p><b>4 projects × 4 sections (A–D)</b>, a song of up to 16 rows by bars (SAVE › SONG, OCT+ adds a row, PLAY '
                   'plays; END: STOP, x2–x8, LOOP), SLOOP style. Each row can hold a <b>scene</b>: mutes, DRUM-X group mutes, macros '
                   'and punch-ins. SAVE held plays sections live on the next bar, stores them, records the song (SONG REC). Each '
                   'section keeps its sounds, steps, automation, kit and its SLICER.</p>'))

@@ -88,9 +88,9 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | Control | What it does |
 | --- | --- |
 | **SELECT** (encoder) | Alone: **walks the section's pages**, one page a detent, as one chain, stopping at its first and last page (no levels, no zoom; see [How navigation works](#how-navigation-works-six-rules)). In the MENU: its pages. With a button held: **HOME** + SELECT **GEN**, **EDIT / SEQ / LFO / FX** + SELECT that part's **dice**, **GLO** + SELECT the **tempo**, **ENV / SCL / ARP / SAVE** + SELECT walk that section's chain from wherever you are. |
-| **ALGORITHM** (encoder) | Selects the track from any page: T1–T6 (T1–T4 if TRACKS is set to 4; the default is 6). The track is always ALGORITHM's. In the MENU: the next / previous tab. With a layer held: its view, MAP ↔ KNOBS ↔ STATE. |
+| **ALGORITHM** (encoder) | Selects the track from any page: T1–T6 (T1–T4 if TRACKS is set to 4; the default is 6). The track is always ALGORITHM's. In the MENU: nothing. With a layer held: its view, MAP ↔ KNOBS ↔ STATE. |
 | **PRESETS** (encoder) | **Always presets**: the selected track's sounds (every engine's factory presets, then your user presets) on every page; on the **SEQ** pages the **patterns** (it opens the PHRASES loader with the next pattern picked: OCT+ loads it, OCT− back to the SEQ page); on **GEN** the GENRE. In the MENU and with a button held it does nothing. It never changes page, track, module or row. |
-| **KNOB 1–4** | The four cards (columns) on screen. A page that picks something picks it with **KNOB 1** (the step, the bar, the slot, the stage, the operator, the kit's sound, the row). With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU › SYSTEM › KNOB SPEEDUP turns this off). In the MENU: KNOB n the setting on card n. |
+| **KNOB 1–4** | The four cards (columns) on screen. A page that picks something picks it with **KNOB 1** (the step, the bar, the slot, the stage, the operator, the kit's sound, the row). With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU › CONTROLS › KNOB SPEEDUP turns this off). In the MENU: KNOB n the setting on card n. |
 | **MASTER** | The output volume. |
 
 ### Buttons
@@ -161,7 +161,10 @@ is built the same way:
 **Colours**: ACID (acid green) is notes and KNOB 1, ACCENT is accents and KNOB 4, SLIDE is slides and KNOB 2, VIOLET is
 KNOB 3 and what is picked.
 
-**Dialogs** ask before anything destructive: **OCT− NO**, **OCT+ YES**. A part's dice (EDIT, SEQ, LFO, FX + SELECT)
+**Dialogs** (0.6): every confirmation is one full-screen dialog in one look. It asks the question in plain words, says
+**what is lost** (the music with changes not stored, a slot's sound, a song's rows…) and **how to get it back** (UNDO, a
+saved section, or nothing), and names the keys: **OCT+** does it, **OCT−** keeps things as they are. Loading a project
+asks only when the music has changes not stored (the dot on its card). A part's dice (EDIT, SEQ, LFO, FX + SELECT)
 shows **BEFORE** and **NOW**; SELECT throws again, OCT+ keeps, OCT− goes back. The **NAME** screen types with the keys.
 
 **Messages** show on the status line; the page keeps drawing behind them. A page's **hint** comes only once you stay on
@@ -192,7 +195,7 @@ Every section is driven the same way: learn it once and every section is known.
 4. **KNOB 1 picks.** When a page picks something (a step, a bar, a slot, a stage, an operator, the kit's sound, a
    row) KNOB 1 is the one that picks it. The track is always **ALGORITHM**'s. SEQ › STEPS: KNOB 1 walks all 64 steps;
    on MORE, KNOB 1 the row.
-5. **Hold = the layer.** Holding a button opens its layer of shortcuts, as before (past the HOLD time, MENU › SYSTEM › HOLD TIME,
+5. **Hold = the layer.** Holding a button opens its layer of shortcuts, as before (past the HOLD time, MENU › CONTROLS › HOLD TIME,
    0.4 s by default: the keys and knobs change function while you hold it, a map shows what each key does; a key or a
    knob opens it at once; let go and you are back). Held + SELECT: **HOME** GEN, **EDIT / SEQ / LFO / FX** their dice,
    **GLO** the tempo, **ENV / SCL / ARP / SAVE** walk their chain.
@@ -208,8 +211,8 @@ Every section is driven the same way: learn it once and every section is known.
   OCT+, OCT+ still stores the sound.
 - **EDIT is always EDIT**: clearing a step is the SEQ layer's (**SEQ + G5**, CLR STEP; on the AUTOMATION list it
   deletes the record; GATE turned to REST clears a note too) and renaming the SAVE layer's (**SAVE + C5**, NAME).
-- **The MENU** (hold HOME): the same rules: SELECT walks its eight pages (SCREEN → AUDIO → MIDI → USB →
-  SYSTEM), ALGORITHM jumps tabs, KNOB 1–4 the settings on the cards, HOME closes it.
+- **The MENU** (hold HOME): the same rules: SELECT walks its pages (AUDIO → CLICK → CONTROLS → MORE), KNOB 1–4 the
+  settings on the cards, HOME closes it. ALGORITHM and PRESETS do nothing there.
 - Some pages only appear when they apply: FM6's operator pages on an FM6 track, DRUM-X's pages on a DRUM track,
   RETRIG on LOFI BYTE/FLOAT, and with **LOAD ECO** the SLICER and CHORUS rows are hidden; the chain skips them.
 
@@ -565,7 +568,7 @@ ENV › ENV TO FILTER.
 
 **VOICE** POLY, MONO, LEGATO, UNISON; **GLIDE**; **GLIDE MODE** RATE or TIME (how glide is measured); **PRIORITY**
 LAST, LOW, HIGH; **SPREAD** (unison's detune). ANALOG's page 3, MORE on the others. The six tracks share a budget of 8
-voices (**12 while the second core plays**: MENU › SYSTEM › ABOUT says CORES 2); FM6 plays at most four per track, any
+voices (**12 while the second core plays**: MENU › MORE › ABOUT says CORES 2); FM6 plays at most four per track, any
 track at most 8. VOICE glides as a singer: an S-curve in pitch over the same time (the other engines: a straight line).
 
 ---
@@ -657,7 +660,7 @@ The sequencer is four pages, **STEPS → STEP EXTRAS → PATTERN → MORE**: SEL
 | **STEPS** | STEP · NOTE · ACC/SLD · GATE (DRUM: STEP · LANE · HIT · ACC) | The roll of the current 16 steps: notes in ACID, accents in ACCENT, slides as joined bars, the edited step outlined, the playing step a light column. Under it the strip of 16 cells, the picked step spelled out (**5 · G2 · ACC**). On a DRUM track: eight lanes × 16 steps, hits in the lane's colour. |
 | **STEP EXTRAS** | RATCHET · CHANCE · CONDITION · MICRO | The strip, each cell's chance as its height, ratchets as ticks; the picked step's condition spelled out (**EVERY 2ND**, **1ST OF 4**) and its micro timing as a small offset. |
 | **PATTERN** | LENGTH · DIVISION · SWING · GATE | The pattern's length as cells, swing as the offbeats shifted late, the gate as the cells' width. |
-| **MORE** | KNOB 1 the row, KNOB 2 its value | The rest, in groups: **TRACK** (SEQ PITCH, CHANCE, HUMAN, REC SNAP), **STEP** (the picked step: TYPE and TYPE 2 with their values, EVERY, FOCUS, PITCH, MOVE), **MUTATE** (SOUND, PATTERN, AMOUNT, MODE), **SHAPE** (STRETCH, REPEAT, NUDGE, ROTATE), **PLAYHEADS** (HEAD, RATE, DIRECTION, INTERVAL), **AUTOMATION** (PLAY, EVENTS, LOCKS, CLEAR, and the list of records). |
+| **MORE** | KNOB 1 the row, KNOB 2 its value | The rest, in groups: **TRACK** (SEQ PITCH, CHANCE, HUMAN, REC SNAP, PLAYS), **STEP** (the picked step: TYPE and TYPE 2 with their values, EVERY, FOCUS, PITCH, MOVE), **MUTATE** (SOUND, PATTERN, AMOUNT, MODE), **SHAPE** (STRETCH, REPEAT, NUDGE, ROTATE), **PLAYHEADS** (HEAD, RATE, DIRECTION, INTERVAL), **AUTOMATION** (PLAY, EVENTS, LOCKS, CLEAR, and the list of records). |
 
 - **SEQ from another page** comes back to the page you left; at power-on STEPS.
 - **32 or 64 steps**: KNOB 1 walks all of them (a fast turn several); SELECT on the strip's last cell pages to the next
@@ -802,6 +805,11 @@ recorded as **automation**. MENU › AUDIO › CLICK has the **CLICK** (OFF / RE
   spacing), its length longer or shorter (up to ±40 %), and its envelope's DECAY and RELEASE a little longer or shorter
   (up to ±20). 0 % plays exactly as written (the default). Kept when you change the sound; automatable. **REC SNAP**:
   see MICRO.
+  **PLAYS** (0.6): the track plays only on some loops of its pattern: **ALWAYS** (the default), **1ST OF 2**, **EVERY
+  2ND**, **1ST OF 3**, **2ND OF 3**, **EVERY 3RD**, **1ST / 2ND / 3RD OF 4**, **EVERY 4TH**, **1ST OF 8**, **1ST ONLY**
+  or **NOT 1ST**. The loops are counted from the top of the song or pattern. It is read at every step, so you can change
+  it while the music plays ("make T5 play every other bar" is one turn of the knob). Each track has its own, stored with
+  the project; a 0.5 project loads with ALWAYS, and 0.5 ignores it. NEW PROJECT resets it.
 - **AUTOMATION** (SEQ › MORE): **PLAY** turns the track's automation on or off, **EVENTS** and **LOCKS** count the
   records, **CLEAR** erases them (OCT+, with a dialog). The automation is what you record by turning a knob while REC is
   on and the track plays (a value that moves along the pattern), and the locks (a value a step, see below). Under them
@@ -1051,7 +1059,7 @@ range narrows towards the middle. COMPLEX 100 is the full chaos again.
 **The CPU budget**. An EXPLORE piece is made to fit the FM-1's CPU: the generator estimates what the piece
 will cost to play (each part by its engine and how many voices it keeps sounding — its chords, how long its notes and
 releases ring at the piece's tempo —, the reverb type, the delay's grain, the PLAYHEADS) and keeps it under **65 % of
-the audio's time with two cores** (MENU › SYSTEM › ABOUT: CORES 2), **55 % with one** (with the margin of the estimate's error).
+the audio's time with two cores** (MENU › MORE › ABOUT: CORES 2), **55 % with one** (with the margin of the estimate's error).
 When a piece would cost more it gets lighter, a step at a time, until it fits: the heaviest engine swapped for LOFI or
 ANALOG, CLOUD / SHIMMER played as ROOM / SPRING, the texture left out, then the arp, then the lead (one core: drums,
 bass and chords at least); the delay's grain off, a PLAYHEAD less, a note less in each chord (two at least), the
@@ -1484,7 +1492,7 @@ LOCKED**), as the macros do with LFO; the keys play the effects (momentary: held
 macros and OCT− is ALL OFF, with both hands free. Press **FX** again to unlock (latched effects you left on stay on). Held with keys or knobs, FX
 works as before and closes when let go.
 
-**FX LATCH** (MENU › SYSTEM › CONTROLS › FX LATCH, **OFF by default**): ON, a key pressed
+**FX LATCH** (MENU › CONTROLS › FX LATCH, **OFF by default**): ON, a key pressed
 with FX toggles its effect on and off, **FX + OCT−** turns everything off, the macros too (FX ALL OFF). Latched effects are not recorded into the lane.
 
 ### Mutes and solos
@@ -1538,7 +1546,7 @@ This is the chapter to read carefully. ACID FM keeps several kinds of data in di
   line, T6 FM6's first PAD with the PAD pattern, 124 BPM; T2 VOICE, T3 PHASE and T4 LOFI keep their sounds with no steps (each
   its preset's sound, dry). **NEW PROJECT** starts empty (no steps, 120 BPM). The status line says DEMO until your first edit
   or a PLAY→STOP. Settings new to the device start at TRACKS 6.
-  With **MENU › SYSTEM › RESTORE LAST ON** the autosave becomes the music instead (the screen says
+  With **MENU › MORE › RESTORE LAST ON** the autosave becomes the music instead (the screen says
   **RESTORED**). RESTORE LAST is **OFF** by default: no autosave at all.
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
   crashed).
@@ -1697,47 +1705,54 @@ part of a project.
 **BPM** (40–240) is HOME › TRACKS' KNOB 4, GLO + SELECT, GLO + F4 (TAP) and GLO › MORE › TEMPO; **SWING** and
 **TUNE** (±50 cents) are GLO › MIX's KNOB 3 and 4; the **CLOCK** (INT, USB, TRS) is GLO › MIDI's KNOB 4
 ([14](#14-midi-and-usb)). Under an external clock every way of writing the tempo changes nothing and says **CLOCK: USB**
-or **CLOCK: TRS**.
+or **CLOCK: TRS**. **The clock rule (0.6)**: that holds for everything that would write the tempo: GEN (its header shows
+USB or TRS where the BPM goes), the power-on demo and the web editor leave the tempo alone. **CPU TEST** is the one
+exception on purpose: it needs a steady tempo, so it runs on the internal clock (the dialog says so) and puts CLOCK back
+to USB or TRS when you leave the test (a project you load meanwhile brings its own CLOCK).
 
 ### The MENU (hold HOME)
 
-The MENU is driven like every section: **nine pages of up to four settings** in five tabs, **SCREEN · AUDIO · MIDI
-· USB · SYSTEM** (a dot a page under each tab). **SELECT** walks the pages (stopping at the first and the last),
-**ALGORITHM** jumps to the next / previous tab's first page, **KNOB 1–4** change the settings on the cards, and
-**OCT− / OCT+** step the setting you turned last (its row is framed; the LEDs breathe the way it can go). PRESETS does
-nothing here. HOME closes it (the settings are saved then) and opens it again on the page you left. The header says
-**MENU · AUDIO**, the footer **MENU · AUDIO · CLICK  5/9** (a page named as its tab is not said twice: **MENU · SCREEN 2**, **MENU · SYSTEM**).
+The MENU is a section like the others (0.6): **three pages of four settings and MORE**, **AUDIO → CLICK → CONTROLS →
+MORE**. **SELECT** walks the pages (stopping at the first and the last) and scrolls MORE, **KNOB 1–4** change the
+settings on the cards, and **OCT− / OCT+** step the setting you turned last. **ALGORITHM and PRESETS do nothing** here
+(there are no tabs). HOME closes it (the settings are saved then) and opens it again on the page you left. The header
+is the usual one (track, sound, transport); the footer says **MENU · AUDIO  1 / 4 · NEXT CLICK**, counting all four
+pages. Under the cards, a row for each setting: its knob's number, its full name, its value and a plain line on what it
+does. **CALIBRATION, MIDI IS ON GLO and ABOUT** are actions: turn their knob to the right and the card says **OCT+**
+(armed); OCT+ does it; turning left lets go.
 
-Under the cards, a row for each setting: its knob's number, its full name, its value (in its heat colour, like the
-card's) and a plain line on what it does (for some, on what the chosen value does). **CALIBRATION, ABOUT and LEARN
-CLEAR** are actions: turn their knob to the right and the card says **OCT+** (armed); OCT+ does it; turning left lets go.
-
-| Tab › page | KNOB | Setting | Values |
+| Page | KNOB | Setting | Values |
 | --- | --- | --- | --- |
-| SCREEN › SCREEN | 1 | LARGE | OFF, ON (big labels and values) |
-| | 2 | ANIMATION | ON, OFF (values snap) — was ANIM |
-| | 3 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
-| | | (COLOR, SKIN, STYLE; SCOPE) | gone: one look, ACID; kept as inert ids for the editor |
-| SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow |
-| | 2 | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
-| AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
+| AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
 | | 2 | TRACKS | 4, **6** (default) — the same as GLO › MORE › SYSTEM › TRACKS |
 | | 3 | LOAD | ECO, LITE, **FULL** (default) — the same as GLO › MORE › SYSTEM › LOAD |
 | | 4 | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLO › MORE › TEMPO) |
-| AUDIO › CLICK | 1 | CLICK | OFF, REC (while a track is armed and playing), ON |
+| CLICK | 1 | CLICK | OFF, REC (while a track is armed and playing), ON |
 | | 2 | CLICK LEVEL | LOW, MID, HIGH |
 | | 3 | COUNT-IN | OFF, 1 BAR, 2 BARS |
-| MIDI › MIDI | — | MIDI IS ON GLO | OCT+ opens GLO › MIDI: every MIDI setting is there (see [14](#14-midi-and-usb)) |
-| USB › USB | 1 | USB AUDIO | CONSOLE (the serial console with stereo USB audio, the default), STEREO (audio + MIDI only, class 0: helps macOS 13–15 see the USB audio input), STEMS (an 8-channel audio input, see "Stems" below), IN+OUT (stereo audio both ways, see "USB audio in" below), STEMS+IN (the stems with the audio output too, see "Stems with a voice" below) — applied when the MENU closes |
-| | 2 | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level), −6 / −12 / −18 / −24 dB (USB fixed and attenuated: for a phone or a computer whose input clips at the full level) |
-| SYSTEM › CONTROLS | 1 | HOLD TIME | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer |
+| CONTROLS | 1 | HOLD TIME | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer |
 | | 2 | KNOB SPEEDUP | **ON** (default), OFF — fast turns take bigger steps |
 | | 3 | FX LATCH | **OFF** (default), ON |
 | | 4 | CALIBRATION | an action: OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
-| SYSTEM › SYSTEM | 1 | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
-| | 2 | CPU CORES | 1 CORE, **2 CORES** (default) — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)) |
-| | 3 | CPU CLOCK | **360 MHZ** (default), 320 MHZ — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)) |
-| | 4 | ABOUT | an action: OCT+ opens version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on), CPU TEST, and credits (scroll with SELECT, OCT− back); there OCT+ opens PROFILE |
+
+**MORE** is a list (KNOB 1 picks a row, KNOB 2 sets it; an action row runs on KNOB 2 to the right or OCT+), in groups:
+
+| Group | Row | Values |
+| --- | --- | --- |
+| SCREEN | LARGE | OFF, ON (big labels and values) |
+| | ANIMATION | ON, OFF (values snap) |
+| | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch |
+| LEDS | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow |
+| | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
+| USB | USB AUDIO | CONSOLE (the serial console with stereo USB audio, the default), STEREO (audio + MIDI only, class 0: helps macOS 13–15 see the USB audio input), STEMS (an 8-channel audio input, see "Stems" below), IN+OUT (stereo audio both ways, see "USB audio in" below), STEMS+IN (the stems with the audio output too, see "Stems with a voice" below) — applied when the MENU closes |
+| | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level), −6 / −12 / −18 / −24 dB (USB fixed and attenuated: for a phone or a computer whose input clips at the full level) |
+| SYSTEM | CPU CORES | 1 CORE, **2 CORES** (default) — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)) |
+| | CPU CLOCK | **360 MHZ** (default), 320 MHZ — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)) |
+| | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
+| MIDI | MIDI IS ON GLO | an action: OCT+ opens GLO › MIDI: every MIDI setting is there (see [14](#14-midi-and-usb)) |
+| ABOUT | ABOUT | an action: OCT+ opens version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on), CPU TEST and credits (scroll with SELECT, OCT− back); there OCT+ opens PROFILE (OCT− back) |
+
+COLOR, SKIN, STYLE and SCOPE are gone (one look, ACID); the editor keeps their ids inert.
 
 To start from zero: **SAVE › MORE › NEW PROJECT** (asks first; UNDO brings the music back).
 
@@ -1850,7 +1865,7 @@ Any knob of a track's sound to any CC of your controller, on the device (from Fe
 
 Two ways to get each track on its own, to post-process them one by one in a DAW:
 
-- **Over USB, live: MENU › USB › USB AUDIO STEMS.** The device re-enumerates as an 8-channel USB audio input at 44.1 kHz,
+- **Over USB, live: MENU › MORE › USB AUDIO STEMS.** The device re-enumerates as an 8-channel USB audio input at 44.1 kHz,
   16 bit (set the DAW's input to the device, 8 channels): channels 1–6 are the six tracks, each mono with its LEVEL,
   DIST, SLICER routing and mutes in and its PAN left out (what it adds to the mix, L + R halved); channels 7–8 are the
   FX return in stereo (the DELAY, REVERB and CHORUS buses, the SLICER's when it is on). All before the master: no
@@ -1870,7 +1885,7 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
 
 ### USB audio in (test version)
 
-**MENU › USB › USB AUDIO IN+OUT** makes the FM-1 a USB audio output of the computer or the phone as well as an input:
+**MENU › MORE › USB AUDIO IN+OUT** makes the FM-1 a USB audio output of the computer or the phone as well as an input:
 the device re-enumerates (as with STEMS, the serial console is off), and the host now lists "ACID FM" as a speaker,
 stereo, 16 bit, 44.1 kHz. Whatever the host plays to it comes into the **last track** (T6, or T4 with TRACKS 4) and is
 mixed like that track's sound:
@@ -1888,7 +1903,7 @@ with your computer or phone.
 
 ### Stems with a voice (test version)
 
-**MENU › USB › USB AUDIO STEMS+IN** is STEMS and IN+OUT together, for the phone app: the phone's microphone goes out to
+**MENU › MORE › USB AUDIO STEMS+IN** is STEMS and IN+OUT together, for the phone app: the phone's microphone goes out to
 the FM-1, comes into the **last track** as IN+OUT's input does (its LEVEL, PAN, MUTE and its CHORUS, DELAY and REVERB
 sends: your voice through that track's effects), and **10 channels** come back: T1–T6, the FX return L R, then **the
 voice as the track mixed it** and **the voice as it came**. The voice has a channel of its own (not in the track's
@@ -1980,17 +1995,17 @@ track with no steps gets no ARP fill, and a section jump or quick chain waiting 
 something still plays after a clear, it may be the **punch-in lane**: hold
 **REC and press FX** to erase it (or **SEQ + REC** to clear everything).
 
-**Two cores and MENU › SYSTEM › CPU CORES.** The second core renders some synth tracks; MENU › SYSTEM › ABOUT
-says **CORES 2**, or **CORES 1** and why. **MENU › SYSTEM › CPU CORES** chooses **2 CORES** (the default) or
+**Two cores and MENU › MORE › CPU CORES.** The second core renders some synth tracks; MENU › MORE › ABOUT
+says **CORES 2**, or **CORES 1** and why. **MENU › MORE › CPU CORES** chooses **2 CORES** (the default) or
 **1 CORE**, kept with the settings, from the next start. If the FM-1 crashes or hangs while both cores work, or the
 second core misreads, stops answering or faults, it **turns 2 CORES off for good** and says so (**2 CORES OFF AFTER A
-CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU › SYSTEM › CORES); ABOUT then reads **CORES 1 (AFTER A CRASH)**. Set
+CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU › MORE › CORES); ABOUT then reads **CORES 1 (AFTER A CRASH)**. Set
 2 CORES again only if you want to test it. Hold **REC** while powering on for one core that session only.
 With both cores running the tracks share **12 voices** instead of 8 (each track still at most 8); on one core (1 CORE
 set, after a crash, REC held) it is 8, and a second core that stops brings the budget back to 8 from the next note.
 
 **It crashes: a red screen "ACID FM CRASH" with numbers.** Take a photo of it and
-tell us the version (MENU › SYSTEM › ABOUT). How to read it:
+tell us the version (MENU › MORE › ABOUT). How to read it:
 
 - The version, **CORE 0 OF 2** (the core that faulted, of how many were running), **CODE xx-nn** (the cause and the
   vector, below), then **VEC, PC, EMU, DBG, RETS**.
@@ -2004,14 +2019,14 @@ tell us the version (MENU › SYSTEM › ABOUT). How to read it:
   crashed.
 
 **What to try when it crashes now and then (even idle).** In this order, a few hours each:
-1. **MENU › SYSTEM › CPU CORES 1 CORE** (it goes there by itself after the first crash with both cores).
-2. **MENU › SYSTEM › CPU CLOCK 320 MHZ**: the chip at JieLi's rated clock instead of the 360 MHz the FM-1's boot
+1. **MENU › MORE › CPU CORES 1 CORE** (it goes there by itself after the first crash with both cores).
+2. **MENU › MORE › CPU CLOCK 320 MHZ**: the chip at JieLi's rated clock instead of the 360 MHz the FM-1's boot
    sets (switched at the next power-on; ABOUT shows **CPU 320 MHZ**). About 11 % less CPU: a heavy song may shed
    voices sooner (LOAD LITE helps). If the FM-1 refuses (its clock is set up differently), ABOUT keeps **CPU 360 MHZ**.
 3. If it still crashes: the photo, the version and LAST CRASH, please.
 
 **Clicks, stutters, the load meter full.** Keep TRACKS on 4, try **LOAD LITE** or **ECO**, use fewer voices (MONO,
-fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU › SYSTEM › ABOUT › AUDIO LOAD.
+fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU › MORE › ABOUT › AUDIO LOAD.
 
 **SELECT doesn't change the tempo.** SELECT alone walks the pages; the tempo is **GLO held + SELECT** (or GLO's F4
 TAP, HOME's KNOB 4, or GLO › MORE › TEMPO). Under CLOCK USB or TRS the tempo is the clock's.
@@ -2024,9 +2039,9 @@ Save music into that section, or change the row.
 **It says STOP TO EDIT.** A song (arrangement) or quick chain is playing; stop it to edit steps, use tools or UNDO.
 
 **The keys feel inverted / a button does the wrong thing.** Run HARDWARE CALIBRATION: hold OCT− and OCT+ while powering
-on (or MENU › SYSTEM › CONTROLS › CALIBRATION, KNOB 4 then OCT+) and teach each button and knob. A piano key cancels.
+on (or MENU › CONTROLS › CALIBRATION, KNOB 4 then OCT+) and teach each button and knob. A piano key cancels.
 
-**USB audio input doesn't appear on macOS.** MENU › USB › USB AUDIO **STEREO** (or STEMS).
+**USB audio input doesn't appear on macOS.** MENU › MORE › USB AUDIO **STEREO** (or STEMS).
 
 **A new USB mode doesn't show up on the phone or computer.** The FM-1 leaves the bus for half a second when MENU ›
 USB › USB AUDIO changes; it appears about a second after the menu closes. If not: switch again, or unplug.

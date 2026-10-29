@@ -115,3 +115,17 @@ Still pending:
   safety_arp.
 - Test build on the device: EXPLORE 9641 -> lost 0, late 0, CPU 49-52 %, max 2.2 ms; EXPLORE 3423 with the delay forced
   long -> lost 0, 4 late in 9.6 s, dly_safety 1. The user: "sounds clean".
+
+## 2026-10-xx — piece 3c-2, ACID FM 0.6 (SAVE, MENU, dialogs, PLAYS)
+
+Pending (Step 2, run with the user; nothing below has been done yet):
+
+- Backup before (`softkey --port "ACID FM" --yes`, then `fm1_unbrick.py backup`): pending
+- Release build `./build.sh --release 0.6` on the clean HEAD, then `tools/fm1_install.py build/acid-fm-0.6.fwsc --port "ACID FM" --yes`: pending
+- Serial `status` (version v0.6, cpu_pct, audio_late): pending
+- No-manual checks (spec section 7): save T3's sound to a user slot; make a song A-B-B-C; start a new project and get the
+  old one back; make T5 play every other bar; turn the click on with a count-in: pending
+- CPU TEST song, late audio blocks per second on SAVE SONG, MENU MORE and a dialog over a playing song; CLOCK back after
+  leaving CPU TEST (and under a USB or TRS clock, GEN, the demo and the editor leave the tempo alone): pending
+- The web editor's per-track MIDI page against the device: pending
+- Merge ff to main and push, on the user's go-ahead: pending

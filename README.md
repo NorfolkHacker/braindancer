@@ -8,9 +8,22 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/acid-fm/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/acid-fm/manual/)**
 
-## Status: 0.5.2
+## Status: 0.6
 
-0.5.2 fixes harsh glitches on some generated songs. A few EXPLORE pieces asked for more than the FM-1's processor can
+0.6 is SAVE, the MENU and the dialogs in the ACID look (piece 3c-2), on top of 0.5.2:
+
+- SAVE is SOUND, SONG, PROJECT and MORE. SOUND lists the 32 user slots; SONG puts the sections on top and the song's
+  rows under them as chips; PROJECT shows four cards, a dot on the one with changes not stored, and warns on LOAD only
+  when there are some; the tools are in MORE.
+- The MENU is AUDIO, CLICK, CONTROLS and MORE; ABOUT and PROFILE are restyled.
+- One full-screen dialog for every confirmation: it says what is lost and how to get it back.
+- PLAYS (SEQ › MORE › TRACK): a track plays only on some loops; you can change it while the music plays.
+- The clock rule: under a USB or TRS clock, GEN, the demo and the web editor leave the tempo alone; CPU TEST uses the
+  internal clock and puts CLOCK back.
+- The web editor has a per-track MIDI page. The example names are in English. Projects, presets and settings from 0.5
+  load as before.
+
+Before that, 0.5.2 fixes harsh glitches on some generated songs. A few EXPLORE pieces asked for more than the FM-1's processor can
 render (a 2-second delay over a busy six-track piece, for one), and the audio skipped. GEN now keeps EXPLORE pieces within
 a CPU budget measured on the device, and the long delay is only used where there is room for it; under a sudden overload
 the sound engine falls back step by step (the long delay to its short mode, then a generated piece's texture, then its
@@ -44,7 +57,7 @@ Before that, 0.4 was the sound sections in the ACID look (piece 3b), on top of 0
 - The first time 0.4 starts, MENU › TRACKS switches to 6 once (the demo uses T5 and T6); a 4 picked after that stays.
 - HOME TRACKS: KNOB 1-3 are three tracks' levels, KNOB 4 the BPM.
 - Steadier timing: the screen draws more slowly when the audio is busy.
-- SAVE, the MENU and the dialogs keep their inherited layouts in ACID colours until 3c-2.
+- SAVE, the MENU and the dialogs keep their inherited layouts in ACID colours until 0.6.
 
 Before that, 0.3 was the new look (piece 3a, UI foundations), on top of 0.2:
 
@@ -63,7 +76,7 @@ The ACID FM features arrive in steps (see `docs/superpowers/specs/2026-10-24-aci
 
 1. Pipeline (0.1)
 2. Trim (0.2): engines for IDM, the voice ceiling measured, room made for samples
-3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c-1 in 0.5: SEQ, GLO, MIDI; 3c-2 next)
+3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c-1 in 0.5: SEQ, GLO, MIDI; 3c-2 in 0.6: SAVE, MENU, dialogs, PLAYS)
 4. BREAK: load breakbeats from the web page, chop and rearrange them
 5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
 6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, RETROBOC, AMBIENT, GLITCH

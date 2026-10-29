@@ -1,0 +1,68 @@
+ACID FM piece 3c-2 (SAVE, MENU, dialogs, PLAYS) — deferred items, each tagged with the piece that should pick it up.
+Read this when writing the plan for that piece. [rename] the rename to BRAINDANCER (the next release), [piece N] the
+numbered ACID FM feature steps (README), [device] the device check, [later] when convenient.
+
+Decisions by the user (2026-10-28):
+[piece 4]  BREAK (the sampler: breakbeats from the web page, chop and rearrange) is dropped. The README roadmap and the
+           landing page still list it; take it out when the next roadmap is written.
+[rename]   The rename of ACID FM to BRAINDANCER is the next release (name, splash, USB strings, manual, site, repo).
+[piece 6]  GEN becomes one generate button (the genre list, RANDOM and EXPLORE give way to a single RANDOMISE / COMBINATOR).
+           The 0.5.2 leftovers below go in that rewrite.
+
+0.5.2 leftovers (GEN safety net):
+[piece 6]  GEN texture / arp levers are disarmed after a section change (the safety net's fallback for a generated
+           piece's texture and arp does not re-arm in a later section); the delay lever and the GEN budget still apply,
+           so the cost is one skipped block before the delay lever catches it.
+[piece 6]  User edits on a GEN texture / arp track do not clear safe_part.
+[piece 6]  A cleared lever has no release stamp (it can flap once on the next overload).
+[piece 6]  GC_GEN_X100 150 (the CPU budget factor) is kept pending more device data.
+
+3c-2 (SAVE, MENU, dialogs):
+[later]    KIT dice: the BEFORE / NOW bars on a DRUM track show the track's four HOME knobs, which the kit dice does not
+           move (it moves dx_kit), so NOW equals BEFORE. Showing the kit's lane values is new design work (Task 1b).
+[later]    SEQ dice: OCT- puts back the steps and LEN but not the level dlevel() set (pre-existing, Task 1b).
+[later]    Dice dialogs carry their lost line on the status line, not in the panel (it holds the question, BEFORE / NOW and
+           the keys only); ux_dialog_draw reads UXD_LOST_HDR directly for it, so a '%' added there would break; NM_TAB_H
+           duplicates the old DLG_TAB_H (Task 1b minors). NAME keeps its NOTICE / DICE / NAME tabs in ui_name.c.
+[later]    REDO (UNDO twice, forward) into the CPU TEST state restores the test song with CLOCK on INT and cpt_clk 0, so
+           leaving it does not bring USB / TRS back (Task 7).
+[later]    GEN's header under USB / TRS shows the short USB / TRS where the BPM goes; the message after it is still
+           crowded (ellipsis on a long "GEN: EXPLORE 43..") (Task 7 concern 1).
+[later]    Pool spare is 9,888 B, 32 B under the 9,920 of 0.5 (project_t holds g[G_COUNT]; G_COUNT 90 -> 96 for PLAYS); no
+           new .pool object (Task 6). Image 556,196 B at Task 9; the 16 KiB floor holds.
+[later]    web editor knownLayout lacks the current P layout (P_COUNT 123 / P_E0 115); the web test checks a known pair
+           (120 / 112) (Task 6 #3).
+[later]    tests/ux_msg_scan.py scans params.c's PD / PE labels only, not enum word tables: N_PLAYS (ALWAYS, 1ST OF 2 ..)
+           is scanned only through the UXQ_EVERY words (Task 6 #2); "MORE PLAYS" is on the UXC_WIDE allowlist in
+           tests/ux_cover_test.c (ALWAYS is 56 px in a 48 px column, falls back to a smaller face), as "MORE EVERY".
+[later]    The PLAYS turn of a section load restores the section's stored PLAYS (as the MIDI routing); PLAYS belongs to the
+           section / project (Task 6 #4).
+[later]    The MORE panel's signature hashes every P_* mark, not only the rows shown: one extra redraw when a lock on a
+           hidden setting changes (Task 9 #5).
+[later]    SAVE > MORE panels: the LOAD SLOT / ERASE USER SLOT refusals while a song plays say STOP TO EDIT, before the
+           inherited EMPTY SLOT / STOP TO SAVE (Task 4 #3, by the brief).
+[later]    MENU: the status line repeats the hint the panel shows for the row turned last; a page's action armed by a knob
+           turn is let go when the MENU reopens (Task 5 concerns 2, 3).
+[later]    Knob labels shortened to fit a column: CALIBRATE, USB, GLOW (MENU), DELETE / CLEAR (SAVE > MORE), the SAVE layer's
+           status line (Task 3, 4, 5).
+[later]    The web editor's MIDI tab is a heading group in the Settings tab (gcount >= 90); not rendered in a browser here
+           (Task 8).
+[later]    The SAVE layer's old JIANT overlay (MAP / KNOBS / STATE cards) is gone with ui_lzsave.c; the layer maps live in
+           ux_layer.c (Task 4 #5).
+[later]    tools/gen_readme_hero.py still builds the inherited JIANT README images (docs/jiant-hero.png, jiant-screens.png)
+           from renders that no longer exist; docs/JIANT-README.md links them and tests/built_on_test.py checks its
+           wording, so it stays (not fixed in 0.6). tools/video still has JIANT's captions.
+[later]    docs/MANUAL.md: long technical passages from earlier releases (delay, reverb, GEN internals, stems) may still use
+           older page words; the MENU, SAVE, dialog, PLAYS and clock-rule passages are 0.6's.
+[later]    From the 3c-1 list, still open: lt_mch per track not per note; midi_forget_track checks current claims; the bend
+           kept under KEYBOARD PLAYS SELECTED; two TRIGs on one step; thin STEP EXTRAS / pace / layer tests;
+           N_MONOTES "K+SEQ" short form; layer hints no longer drawn; mark rule for knobs outside the generic path;
+           "NO RESTART" under an external clock; a 0.4 project within ~9 bytes of full gets SECTION FULL after a MIDI
+           routing change.
+[device]   The no-manual checks (spec 7): save T3's sound to a user slot; make a song A-B-B-C; start a new project and get
+           the old one back; make T5 play every other bar; turn the click on with a count-in. CPU TEST late blocks/s on
+           SAVE SONG, MENU MORE and a dialog over a playing song; CLOCK back after CPU TEST; the editor's MIDI page.
+[later]    No Playwright here: the navigation-map and cheat-sheet PNG / PDF renders come from the system Chromium (or are not
+           re-rendered: docs/cheatsheet has the HTML only); re-render with tools/render_cheatsheets.mjs and gen_nav_map's
+           Playwright path, and run the Chromium part of web/test_manual.mjs, where Playwright is installed (CI).
+[later]    No emcc here: the browser-emulator build and its tests are skipped; run them in CI.

@@ -23,7 +23,7 @@ sections: [
   {id: "mod", t: "ENV · LFO · MOD"},
   {id: "save", t: "SAVE · PROJECT"},
   {id: "song", t: "SONG"},
-  {id: "menu", t: "MENU · USB · MIDI"}
+  {id: "menu", t: "MENU"}
 ],
 
 // ------------------------------------------------------------------------------------------- the panel's controls
@@ -31,7 +31,7 @@ controls: {
   "MASTER": {kind: "knob", sec: "basic",
     alone: "The output volume."},
   "SELECT": {kind: "knob", sec: "basic", shot: 'lente_bar',
-    alone: "Walks the section's pages, one a detent, as one chain; stops at the first and the last. In the MENU, its pages.",
+    alone: "Walks the section's pages, one a detent, as one chain; stops at the first and the last. In the MENU: AUDIO, CLICK, CONTROLS, MORE.",
     combos: [
       {k: "HOME+SELECT", t: "GEN, the song generator (opens on EXPLORE)"},
       {k: "EDIT+SELECT", t: "the track's sound dice"},
@@ -45,7 +45,7 @@ controls: {
   "PRESETS": {kind: "knob", sec: "basic", shot: 'save_sound',
     alone: "Always loads presets: the track's sounds (factory, then yours); on the SEQ pages the patterns (PHRASES, OCT+ loads); on GEN the genre. Never changes page or track."},
   "ALGORITHM": {kind: "knob", sec: "basic", shot: 'home',
-    alone: "Picks the track T1–T6 from any page (T1–T4 with TRACKS 4; the default is 6). In the MENU, the tab.",
+    alone: "Picks the track T1–T6 from any page (T1–T4 with TRACKS 4; the default is 6). Does nothing in the MENU.",
     held: "With a layer held: its view, MAP · KNOBS · STATE."},
   "KNOB 1": {kind: "knob", sec: "basic",
     alone: "The page's first card. When the page picks something (the step, the bar, the slot, the stage, the operator, the kit's sound, the row), KNOB 1 picks it. On HOME with DRUM-X: MORPH.",
@@ -253,7 +253,7 @@ commands: [
   {s: "basic", k: "GLO+G4", shot: 'layer_glo_active', t: "Undo and redo",
    d: "GLO held + G4: takes back the last big change (dice, GEN, a clear, INIT, RECALL, loading a section, a REVERT). Again: redo. One step, in RAM; not knob turns or saves."},
   {s: "basic", k: "OCT-+OCT+", shot: 'calibration', t: "Calibrate buttons and knobs",
-   d: "Hold OCT− and OCT+ while powering on (or MENU › SYSTEM › CONTROLS › CALIBRATION, KNOB 4 then OCT+): HARDWARE CALIBRATION asks for each button and knob. A key cancels."},
+   d: "Hold OCT− and OCT+ while powering on (or MENU › CONTROLS › CALIBRATION, KNOB 4 then OCT+): HARDWARE CALIBRATION asks for each button and knob. A key cancels."},
   {s: "basic", k: "OCT-+OCT+", shot: 'uboot', t: "Enter update mode",
    d: "While running, OCT− + OCT+ held 5 s: update mode (UBOOT), with a countdown from 2 s; let go to cancel."},
 
@@ -263,7 +263,7 @@ commands: [
   {s: "home", k: "HOME", shot: 'home_visual', t: "VISUAL: the macros",
    d: "HOME › VISUAL: KNOB 1–4 are MACRO 1–4 (M1–M4, as LFO held)."},
   {s: "home", k: "HOME", shot: 'menu', t: "Open the MENU",
-   d: "Hold HOME ~0.7 s. SELECT walks the rows, ALGORITHM the tabs, a knob or OCT± changes the value; HOME closes (and saves)."},
+   d: "Hold HOME ~0.7 s. SELECT walks AUDIO, CLICK, CONTROLS and MORE, a knob changes the setting under it, OCT± step the one turned last; HOME closes (and saves)."},
 
   // GEN
   {s: "gen", k: "HOME+SELECT", shot: 'gen_explore', t: "Generate a whole song (GEN)",
@@ -354,6 +354,8 @@ commands: [
    d: "SEQ › MORE › SHAPE: STRETCH /8 … x8, REPEAT x2 … x8 or TO 64, NUDGE a step, ROTATE −32 … +32 (as you turn; ROTATE automatable). UNDO brings it back."},
   {s: "seq", k: "SEQ", shot: 'shift', t: "Transpose, thin, humanize (TRACK)",
    d: "SEQ › MORE › TRACK: SEQ PITCH ±24 semitones, the whole track's CHANCE, HUMAN (velocity, start, length and envelope vary each pass), REC SNAP."},
+  {s: "seq", k: "SEQ", shot: 'shift', t: "PLAYS: a track on some loops only",
+   d: "SEQ › MORE › TRACK › PLAYS: the track plays only on some loops of the song or pattern: ALWAYS, 1ST OF 2, EVERY 2ND, 1ST OF 3, 2ND OF 3, EVERY 3RD, 1ST / 2ND / 3RD OF 4, EVERY 4TH, 1ST OF 8, 1ST ONLY or NOT 1ST. It counts the loops from the top and can be set while the music plays (\"make T5 play every other bar\" is one turn). Each track has its own; it is stored with the project, and a 0.5 project loads as ALWAYS."},
   {s: "seq", k: "SEQ", shot: 'fugue', t: "PLAYHEADS: more playheads",
    d: "SEQ › MORE › PLAYHEADS: three more heads read the same steps: HEAD, RATE, DIRECTION (FORWARD REVERSE PING-PONG RANDOM), INTERVAL in scale degrees. Canons and counterpoint."},
   {s: "seq", k: "SEQ", shot: 'lente_step_comp', t: "Step components (TYPE, TYPE 2)",
@@ -382,6 +384,8 @@ commands: [
    d: "GLO held: black keys 1–6 mute T1–T6 (latched), F3–D4 solo while held, E4 unmutes all, black keys 7–10 the DRUM-X groups. Knobs: level T1–T4 (with T5/T6 selected: T3–T6)."},
   {s: "glo", k: "GLO+SELECT", t: "Tempo and tap tempo",
    d: "GLO + SELECT: tempo from any page. GLO + F4: tap (from the third tap). GLO › MORE › TEMPO: BPM (40–240); SWING and TUNE on GLO › MIX; the clock on GLO › MIDI › KNOB 4. Under CLOCK USB or TRS the tempo is the clock's: GLO + SELECT, TAP, HOME's KNOB 4 and the BPM row change nothing and say CLOCK: USB / CLOCK: TRS. MENU › AUDIO › BPM LOCK keeps it for the dice."},
+  {s: "menu", k: "HOME", t: "The clock rule: who sets the tempo",
+   d: "With GLO › MIDI › CLOCK on USB or TRS the tempo is the clock's. GEN, the power-on demo and the web editor leave it alone (they say CLOCK: USB / CLOCK: TRS); the header shows USB or TRS where the BPM goes. CPU TEST runs on the internal clock, so its measure is true, and puts CLOCK back when you leave it."},
   {s: "glo", k: "GLO", shot: 'glo_midi', t: "MIDI per track and the clock",
    d: "GLO › MIDI: KNOB 1 IN, KNOB 2 OUT, KNOB 3 CHANNEL (1–16) of the selected track (ALGORITHM picks it; its row is lit in the table), KNOB 4 CLOCK (INT, USB, TRS). A track plays the notes and CCs of its channel while IN is on, and sends its notes on its channel over USB while OUT and NOTES OUT are on. Channel 16's Program Change always picks a section or project. Following USB or TRS, the header shows a diamond and the clock line's diamond blinks on each beat."},
   {s: "glo", k: "GLO", shot: 'glo_more_midi', t: "GLO › MORE › MIDI",
@@ -425,7 +429,7 @@ commands: [
   {s: "punch", k: "FX", shot: 'layer_lock_fx', t: "Keep the FX layer open (LOCK)",
    d: "Hold FX until its map opens and let go without touching anything: [FX] LOCKED, both hands free; OCT− = ALL OFF. FX again unlocks."},
   {s: "punch", k: "FX+OCT-", t: "FX LATCH: effects that stay on",
-   d: "MENU › SYSTEM › FX LATCH ON (OFF by default): a key with FX toggles its effect; FX + OCT− turns everything off. Latched effects are not recorded into the lane."},
+   d: "MENU › CONTROLS › FX LATCH ON (OFF by default): a key with FX toggles its effect; FX + OCT− turns everything off. Latched effects are not recorded into the lane."},
 
   // SCL / CHORD / ARP
   {s: "scl", k: "SCL", shot: 'scl_1', t: "The global scale (ROOT, SCALE, SNAP)",
@@ -476,8 +480,10 @@ commands: [
    d: "SAVE › MORE › TOOLS: CLEAR SEQ, INIT SOUND, ERASE USER SLOT, NEW PROJECT (everything to zero; UNDO brings it back), CPU TEST (a heavy song to measure). KNOB 1 picks the row, KNOB 2 right asks; OCT+ does it."},
   {s: "save", k: "SAVE", shot: 'save_more', t: "Presets by type and favourites",
    d: "SAVE › MORE › SONG: END (STOP, X2–X8, LOOP), DELETE ROW (the row SONG picks), CLEAR SONG (both ask first). SOUND: LOAD SLOT (the slot SOUND picks), ENGINE, FAVORITE (mark a favourite), LIST: ALL, FAV or a type (BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX); PRESETS browses that type over every engine. TOOLS: CLEAR SEQ, INIT SOUND, ERASE USER SLOT, NEW PROJECT, CPU TEST (each asks first)."},
+  {s: "save", k: "SAVE", shot: 'dlg_clear_all', t: "One dialog for every question",
+   d: "Whatever would lose something (loading over changes not stored, a new project, clear all, a dice, a REVERT, CPU TEST, erase a slot) asks on one full screen: the question, what is lost and how to get it back (UNDO, or nothing), and the keys: OCT+ does it, OCT− keeps things as they are. Dice show BEFORE and NOW. Nothing asks twice: loading a project asks only when the music has changes not stored (the dot on its card)."},
   {s: "save", k: "HOME", t: "Autosave and RESTORE LAST",
-   d: "The autosave copies the music 10 s after the last change, stopped, at most once a minute; never at power-off. With nothing to restore, power-on loads the demo (beat, acid line, pad at 124 BPM; NEW PROJECT starts empty), unless MENU › SYSTEM › RESTORE LAST ON. Save into a section."},
+   d: "The autosave copies the music 10 s after the last change, stopped, at most once a minute; never at power-off. With nothing to restore, power-on loads the demo (beat, acid line, pad at 124 BPM; NEW PROJECT starts empty), unless MENU › MORE › RESTORE LAST ON. Save into a section."},
 
   // SONG
   {s: "song", k: "SAVE", shot: 'save_song', t: "Build the song (SONG)",
@@ -490,22 +496,22 @@ commands: [
    d: "On SAVE › SONG, KNOB 4 right stores a scene in the row (mutes, DRUM-X group mutes, macros, punch-ins), left clears it. It holds until the next row with one."},
 
   // MENU / USB / MIDI
-  {s: "menu", k: "HOME", shot: 'menu', t: "The MENU: eight pages, five tabs",
-   d: "Like any section: SELECT the pages, ALGORITHM the tabs, KNOB 1–4 the page's settings, OCT−/OCT+ the one turned last. SCREEN (LARGE, ANIMATION, SCREEN SLEEP · LEDS: LED GLOW, SCALE LEDS) · AUDIO (SPEAKER EQ, TRACKS, LOAD, BPM LOCK · CLICK, CLICK LEVEL, COUNT-IN) · MIDI (MIDI IS ON GLO: OCT+ opens GLO › MIDI) · USB (USB AUDIO, USB LEVEL) · SYSTEM (CONTROLS: HOLD TIME, KNOB SPEEDUP, FX LATCH, CALIBRATION · SYSTEM: RESTORE LAST, CPU CORES, CPU CLOCK, ABOUT). Actions: turn their knob, then OCT+."},
-  {s: "menu", k: "HOME", shot: 'menu_more', t: "One look: ACID",
-   d: "One ACID look; COLOR, SKIN and STYLE are gone (kept as inert ids for the editor). SCOPE is gone too (no more creatures)."},
+  {s: "menu", k: "HOME", shot: 'menu', t: "The MENU: AUDIO, CLICK, CONTROLS, MORE",
+   d: "Held HOME opens it, like any section: three pages of four knobs and MORE. SELECT walks AUDIO → CLICK → CONTROLS → MORE (and scrolls MORE), KNOB 1–4 set the page's settings, OCT−/OCT+ step the one turned last. AUDIO: SPEAKER EQ, TRACKS, LOAD, BPM LOCK. CLICK: CLICK, CLICK LEVEL, COUNT-IN. CONTROLS: HOLD TIME, KNOB SPEEDUP, FX LATCH, CALIBRATION (an action: turn its knob, then OCT+). ALGORITHM and PRESETS do nothing here; HOME closes it. The footer counts the four pages."},
+  {s: "menu", k: "HOME", shot: 'menu_more', t: "MENU › MORE: the rest",
+   d: "A list: KNOB 1 picks a row, KNOB 2 sets it. SCREEN (LARGE, ANIMATION, SCREEN SLEEP), LEDS (LED GLOW, SCALE LEDS), USB (USB AUDIO, USB LEVEL), SYSTEM (CPU CORES, CPU CLOCK, RESTORE LAST), MIDI (MIDI IS ON GLO: OCT+ opens GLO › MIDI) and ABOUT (OCT+ opens it). There is one look, ACID: COLOR, SKIN, STYLE and SCOPE are gone."},
   {s: "menu", k: "HOME", shot: 'menu_more', t: "USB modes",
-   d: "MENU › USB › USB AUDIO: CONSOLE (serial console + stereo audio, the default), STEREO (audio + MIDI: helps macOS), STEMS (an 8-channel input: T1–T6 + FX L/R), IN+OUT (stereo audio both ways: what the computer plays comes into the last track), STEMS+IN (stems + input, 10 channels)."},
+   d: "MENU › MORE › USB AUDIO: CONSOLE (serial console + stereo audio, the default), STEREO (audio + MIDI: helps macOS), STEMS (an 8-channel input: T1–T6 + FX L/R), IN+OUT (stereo audio both ways: what the computer plays comes into the last track), STEMS+IN (stems + input, 10 channels)."},
   {s: "menu", k: "HOME", t: "MIDI LEARN",
    d: "GLO › MORE › MIDI › LEARN ON. Turn a knob (LEARN T2 CUT: SEND A CC), move the controller's (CC21 > T2 CUT). Up to ten, over USB and TRS, kept with the settings; LEARN CLEAR forgets them."},
   {s: "menu", k: "HOME", t: "MIDI out, clock and PROGRAM CHANGE",
    d: "GLO › MORE › MIDI: NOTES OUT (OFF, KEYS, KEYS+SEQ) and CLOCK OUT (over USB; each track on its GLO › MIDI channel, T1 = channel 1 at first). GLO › MIDI › KNOB 4 CLOCK USB / TRS follows an external clock. PROGRAM CHANGE n loads PRESETS' sound n+1 on the tracks of that channel; channel 16 jumps sections (0–3) and projects (16–19). CC16–23: E1–E8."},
   {s: "menu", k: "HOME", shot: 'menu_more', t: "1 CORE / 2 CORES and CPU CLOCK 320 MHZ",
-   d: "MENU › SYSTEM › CPU CORES: 2 CORES (default, 12 voices) or 1 CORE (8 voices), from the next start; after a crash with both cores it goes to 1 CORE by itself. MENU › SYSTEM › CPU CLOCK 320 MHZ: the chip's rated clock (~11 % less CPU). REC held at power-on: one core that session."},
+   d: "MENU › MORE › CPU CORES: 2 CORES (default, 12 voices) or 1 CORE (8 voices), from the next start; after a crash with both cores it goes to 1 CORE by itself. MENU › MORE › CPU CLOCK 320 MHZ: the chip's rated clock (~11 % less CPU). REC held at power-on: one core that session."},
   {s: "menu", k: "HOME", shot: 'about', t: "ABOUT: version, load, last crash",
-   d: "MENU › SYSTEM › ABOUT (KNOB 4, OCT+): version, AUDIO LOAD (NOW, PEAK, LATE, SHED), CORES and CPU, LAST CRASH. With clicks, look at LATE and SHED and take a photo."},
+   d: "MENU › MORE › ABOUT (KNOB 1 to ABOUT, OCT+): version, AUDIO LOAD (NOW, PEAK, LATE, SHED), CORES and CPU, LAST CRASH. With clicks, look at LATE and SHED and take a photo."},
   {s: "menu", k: "HOME", shot: 'about_profile', t: "PROFILE: where the CPU goes",
-   d: "MENU › SYSTEM › ABOUT, OCT+: PROFILE. Every part of the audio (sequencer, T1–T6 with their engine, effect buses, reverb, the wait between cores, master, USB…) in % of a block: the mean and the worst of the last second playing, and greyed stopped. It measures from when it is opened. Photograph it playing and after STOP: that is how ACID FM gets tuned to the real FM-1."},
+   d: "MENU › MORE › ABOUT, OCT+: PROFILE (OCT− back). Every part of the audio (sequencer, T1–T6 with their engine, effect buses, reverb, the wait between cores, master, USB…) in % of a block: the mean and the worst of the last second playing, and greyed stopped. It measures from when it is opened. Photograph it playing and after STOP: that is how ACID FM gets tuned to the real FM-1."},
   {s: "menu", k: "HOME", shot: 'about', t: "CPU TEST measured",
    d: "SAVE › MORE › CPU TEST, PLAY 10 s or more, STOP: the mean load is kept in the settings (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE sizes its pieces by it; unmeasured, it assumes an FM-1 1.6 times heavier than the estimate."},
   {s: "menu", k: "HOME", t: "NEW PROJECT: start from zero",
@@ -569,7 +575,7 @@ recipes: [
     "Knobs with FX: STEP LOOP, INTERVAL, MUTATE, DJ FILTER, to the right; turn any back and everything snaps back to the original.",
     "Record: REC armed and playing, FX + D4–F5, B3, C4, C#5 or a sweep. They are written into the section's lane (FX › MORE › PUNCH LANE). FX + G5 erases.",
     "Hands free: hold FX until the map shows and let go without touching anything ([FX] LOCKED). FX again closes it.",
-    "To keep them on: MENU › SYSTEM › FX LATCH ON; FX + OCT− turns all off."]},
+    "To keep them on: MENU › CONTROLS › FX LATCH ON; FX + OCT− turns all off."]},
   {id: "liveP", s: "glo", shots: ['glo_live_tricks', 'glo_more'], t: "LIVE and its RAILS", steps: [
     "GLO: it opens on LIVE (GLO taps: LIVE → MIX → MIDI → MORE).",
     "LIVE: hold black keys 1–6 to pick tracks and white keys for the tricks (/2, X2, LOOP, REVERSE, RATCHET, THIN, OCT±). G#4 LATCH.",
@@ -581,7 +587,7 @@ recipes: [
     "Move the controller's knob: CC21 > T2 CUT. Go on with the next (up to 10).",
     "LEARN OFF when done. Works over USB and TRS, any channel; LEARN CLEAR forgets all. Some CCs are reserved (CC7 RESERVED)."]},
   {id: "usb", s: "menu", shots: ['menu_more'], t: "USB modes and the DAW", steps: [
-    "MENU › USB › USB AUDIO. The device re-enumerates ~1 s after the menu closes.",
+    "MENU › MORE › USB AUDIO. The device re-enumerates ~1 s after the menu closes.",
     "Record the mix: CONSOLE or STEREO (on macOS, if the input doesn't show, STEREO). DAW input: “ACID FM”, 44.1 kHz.",
     "Stems: STEMS = an 8-channel input (1–6 the tracks, 7–8 the FX return), before the master. Pick 8 channels in the DAW; USB LEVEL −6 dB gives headroom; record at LOAD FULL.",
     "IN+OUT: the FM-1 is also the computer's output and that audio comes into the last track (T4 with TRACKS 4, else T6). STEMS+IN: stems + input (10 channels), made for the phone app (a separate product, coming soon).",
@@ -592,10 +598,10 @@ recipes: [
     "Backup: web editor (Chrome/Edge, USB) › Projects › Save backup: all 4 projects, arrangements, user presets and settings. Not the FM6 bank: keep the .syx.",
     "Restore: the same place, Restore backup, USB connected. Back up before updating or returning to stock."]},
   {id: "cpu", s: "menu", shots: ['menu_more', 'about'], t: "1 core, 320 MHz and the crash screen", steps: [
-    "If it crashes now and then: MENU › SYSTEM › CPU CORES 1 CORE (it goes there by itself after a crash with both cores). A few hours like that.",
+    "If it crashes now and then: MENU › MORE › CPU CORES 1 CORE (it goes there by itself after a crash with both cores). A few hours like that.",
     "If it goes on: CPU CLOCK 320 MHZ (from the next power-on; ABOUT shows CPU 320 MHZ). ~11 % less CPU: LOAD LITE helps.",
     "The red ACID FM CRASH screen shows the version, CORE x OF y, CODE (IL, MA, DZ, ST, PC, WR, MM, BU, WD) and VEC PC EMU DBG RETS. It restarts by itself after 4 s.",
-    "Take a photo and send it with the version and MENU › SYSTEM › ABOUT › LAST CRASH."]},
+    "Take a photo and send it with the version and MENU › MORE › ABOUT › LAST CRASH."]},
   {id: "trouble", s: "basic", shots: ['system'], t: "Troubleshooting: crackle, silence, install", steps: [
     "Crackle or clicks: TRACKS 4, LOAD LITE or ECO, fewer voices (MONO, fewer FM6), light reverbs (CLOUD and SHIMMER are heavy). Check ABOUT › LATE / SHED.",
     "T5 or T6 silent: TRACKS 4. GLO › MORE › SYSTEM › TRACKS 6. Knobs move M1–M4: macros latched, press LFO. SELECT doesn't change tempo: it's GLO + SELECT.",
@@ -605,6 +611,14 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.6", items: [
+    "0.6: SAVE is SOUND → SONG → PROJECT → MORE. SOUND lists the 32 user slots; SONG puts the sections on top and the song's rows under them as chips; PROJECT shows four cards, a dot on the one with changes not stored, and warns on LOAD only when there are some; the tools are in MORE.",
+    "The MENU is AUDIO → CLICK → CONTROLS → MORE, in the same look; ABOUT and PROFILE are restyled. ALGORITHM and PRESETS do nothing in it.",
+    "One full-screen dialog for every confirmation: it says what is lost and how to get it back.",
+    "PLAYS (SEQ › MORE › TRACK): a track plays only on some loops, and you can change it while the music plays.",
+    "The clock rule: under USB or TRS clock, GEN, the demo and the web editor leave the tempo alone; CPU TEST uses the internal clock and puts CLOCK back.",
+    "The web editor has a per-track MIDI page (IN, OUT, CHANNEL, KEYBOARD PLAYS SELECTED).",
+    "Example project and section names are in English."]},
   {v: "0.5.2", items: [
     "0.5.2: no more harsh glitches on heavy generated songs.",
     "EXPLORE pieces stay within a CPU budget measured on the FM-1, and the long delay (over about 0.74 s, its costly mode) is only used where there is room.",
