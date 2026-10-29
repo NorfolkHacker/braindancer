@@ -11216,7 +11216,7 @@ static uint32_t head_px(uint16_t c, uint32_t x0, uint32_t x1)   /* pixels of col
 static int test_ux_home_head(void)
 {
     int bad = 0, ok;
-    int32_t lx, lim = 8 + text_w(&UF_HDR, "ACID FM") + 6;
+    int32_t lx, lim = 8 + text_w(&UF_HDR, "BRAINDANCER") + 6;
     char b[40];
     uint16_t bc;
     ui_power_on(); frame();
@@ -11248,10 +11248,10 @@ static int test_ux_home_head(void)
     chain.running = 1; chain.row = 0; chain.config.row[0].slot = 0; chain.config.row[0].bars = 64; chain.remaining = 2;
     (void)ux_home_head(UXH_TRACKS, 0, &lx);
     ux_home_left(b, sizeof b, UXH_TRACKS, 0);
-    printf("ui:   (HOME header, the longest: \"%s\" + REC + transport + LOCK + battery from x %d; ACID FM ends at %d; left out: %u)\n", b, lx, lim - 6, ux_head_drop);
-    ok = lx >= lim && ux_head_drop == 0u && strstr(b, "63/64") != 0;   /* (all of it: nothing left out) */
+    printf("ui:   (HOME header, the longest: \"%s\" + REC + transport + LOCK + battery from x %d; BRAINDANCER ends at %d; left out: %u)\n", b, lx, lim - 6, ux_head_drop);
+    ok = lx >= lim && ux_head_drop <= 2u && ux_head_drop > 0u;   /* (Braindancer 0.7: the longer word leaves no room for the whole of it: the BAR / where is left out, the header never overlaps) */
     song.octave = 1; (void)ux_home_head(UXH_TRACKS, 0, &lx);        /* (OCT+1: the widest octave) */
-    ok &= lx >= lim && ux_head_drop == 0u;
+    ok &= lx >= lim && ux_head_drop <= 2u;
     song.octave = -3;
     ui.force = 1; frame();
     ok &= ux_home_at(UXH_TRACKS) && head_px(UX_ACCENT, 217u, 220u) > 0u && head_px(UX_LINE, 221u, 232u) > 0u &&   /* (low: */
@@ -11263,7 +11263,7 @@ static int test_ux_home_head(void)
     ok &= ux_home_at(UXH_VISUAL) && head_px(UX_ACCENT, 120u, 200u) > 6u;   /* (another track armed: the ring) */
     (void)ux_home_head(UXH_VISUAL, 0, &lx);
     ok &= lx >= lim && ux_head_drop == 0u;
-    bad += check("I3 HOME header: REC (dot / ring), LOCK, low battery drawn on TRACKS and VISUAL; the longest fits beside ACID FM", ok);
+    bad += check("I3 HOME header: REC (dot / ring), LOCK, low battery drawn on TRACKS and VISUAL; the longest fits beside BRAINDANCER", ok);
     chain.running = 0; song.playing = 0; song.rec = 0; song.octave = 0; song.g[G_BPM] = 120;
     ui_power_on();
     return bad;
@@ -11379,7 +11379,7 @@ static int test_ux_visual(void)
 
     ui_power_on(); frame(); press(B_HOME); frame();
     f = ux_vis_name(b);
-    ok = str_eq(b, "ACID FM") && f == &UF_TTL;                      /* no name: ACID FM */
+    ok = str_eq(b, "BRAINDANCER") && f == &UF_TTL;                      /* no name: BRAINDANCER */
     str_cpy(proj_name, "VELVET PYLON", sizeof proj_name);
     f = ux_vis_name(b);
     ok &= str_eq(b, "VELVET PYLON") && text_w(f, b) <= 200;       /* (a long name: no title edge to edge) */
@@ -11418,7 +11418,7 @@ static int test_ux_visual(void)
     press(B_HOME); press(B_HOME); frame();                          /* (GEN, then TRACKS: its footer as before) */
     ux_home_foot(ft, sizeof ft);
     ok &= ux_home_at(UXH_TRACKS) && str_eq(ft, "1 / 3 \xB7 LVL \xB7 LVL \xB7 LVL \xB7 BPM");   /* (3b task 10: KNOB 4 the tempo) */
-    bad += check("3a VISUAL: the name (ACID FM when none; fitted), SECTION . BAR, footer M1..M4, a macro's turn in the status", ok);
+    bad += check("3a VISUAL: the name (BRAINDANCER when none; fitted), SECTION . BAR, footer M1..M4, a macro's turn in the status", ok);
 
     {   /* (polish) ring k its track's (T1 outside .. T6 at the centre): bright on its hits, eased, a silent track's dim */
         uint32_t i, b0;
@@ -11433,8 +11433,16 @@ static int test_ux_visual(void)
         }
         t1 = ux_px(120u, UX_Y_PANEL + 9u);                          /* (T1's ring, the outermost, r ~65; T6's, r ~9.5: under */
         t6 = ux_px(120u, UX_Y_PANEL + 65u);                         /* the name band's scrim) */
-        ok = uxv.b[0] > 120u && uxv.b[2] > 60u && uxv.b[5] == 0u && uxv.b[1] == 0u;
-        ok &= ux_cdist(t6, ux_mix(UX_BG, UX_LINE, 40)) < 8u && ux_cdist(t1, UX_LINE) > 20u;
+        {   /* (Braindancer 0.7: a letter of BRAINDANCER may stand at x 120: the centre row's nearest pixel clear of ink) */
+            uint32_t x, best = 255u;
+            for (x = 110u; x < 131u; x++) {
+                uint32_t d = ux_cdist(ux_px(x, UX_Y_PANEL + 65u), ux_mix(UX_BG, UX_LINE, 40));
+                if (d < best) best = d;
+            }
+            ok = best < 8u && ux_cdist(t6, UX_BG) < 255u;
+        }
+        ok &= uxv.b[0] > 120u && uxv.b[2] > 60u && uxv.b[5] == 0u && uxv.b[1] == 0u;
+        ok &= ux_cdist(t1, UX_LINE) > 20u;
         ok &= ux_px(2u, UX_Y_PANEL + 1u) == UX_BG && ux_px(237u, UX_Y_PANEL + 148u) == UX_BG;   /* (the corners: dark) */
         for (i = 0; i < 6u; i++) {                                  /* each track its own colour, neighbours clearly apart */
             uint32_t c;
@@ -21449,7 +21457,7 @@ static int test_u5_about(void)
     for (r = 0; r < 74; r++)
         for (c = ABOUT_QR_X; c < ABOUT_QR_X + 74; c++)
             ok &= cv_px[r * 240 + c] == host_screen[(UX_Y_KNOBS + ABOUT_Y_QR + r) * 240 + c];
-    bad += check("ACID FM 3c-2 task 5: ABOUT's first screen: the ACID FM wordmark, version, built on JIANT FM and Felucca, AUDIO LOAD, CPU TEST, the QR", ok);
+    bad += check("ACID FM 3c-2 task 5: ABOUT's first screen: the BRAINDANCER wordmark, version, built on JIANT FM and Felucca, AUDIO LOAD, CPU TEST, the QR", ok);
     for (r = 0; r < 20; r++)
         turn(EN_SELECT, 5);
     frame();
@@ -21745,6 +21753,41 @@ static int test_u9_menu(void)
     return bad;
 }
 
+/* (Braindancer 0.7, Task 1) the name on the device: the splash draws BRAINDANCER, its ink inside x 8..231; HOME's header word is
+ * BRAINDANCER (the battery keeps its room: test_ux_home_head's lim); the typed-on frames never leave ink to the right of the
+ * letters typed */
+static int test_r1_name(void)
+{
+    int bad = 0, ok = 1;
+    int32_t r, c, lo = 240, hi = -1;
+    ok &= sizeof SPL_MARK - 1 == 11u && !memcmp(SPL_MARK, "BRAINDANCER", 11);
+    ui_prefs |= PREF_ANIM_OFF;
+    draw_splash();
+    ui_prefs &= ~PREF_ANIM_OFF;
+    for (r = 0; r < SPL_CH; r++)                        /* the wordmark's rows: the strip's 10 .. 10 + UF_MARK.h + 10 */
+        for (c = 0; c < 240; c++)
+            if (r >= 6 && r < 66 && swap16(host_screen[(SPL_Y + r) * 240 + c]) != UX_BG) {
+                if (c < lo) lo = c;
+                if (c > hi) hi = c;
+            }
+    printf("ui:   (splash wordmark ink x %d..%d)\n", lo, hi);
+    ok &= lo >= 8 && hi <= 231 && hi - lo > 150;
+    bad += check("R1 the splash draws BRAINDANCER, its ink inside x 8..231", ok);
+    {
+        int32_t lx, x0 = 8 + text_w(&UF_HDR, "ACID FM") + 2, x1 = 8 + text_w(&UF_HDR, "BRAINDANCER") - 2, ink = 0;
+        ui_power_on(); frame();
+        ui.force = 1; frame();
+        for (r = 3; r < 14; r++)                        /* HOME's header: the word runs on past where ACID FM ended */
+            for (c = x0; c < x1; c++)
+                ink += swap16(host_screen[r * 240 + c]) != UX_BG;
+        (void)ux_home_head(UXH_TRACKS, 0, &lx);
+        ok = ux_home_at(UXH_TRACKS) && ink > 40 && x1 > x0 + 20 && lx >= x1 + 8 && 8 + text_w(&UF_HDR, "BRAINDANCER") <= 232 - UXH_BAT_W - 4 - 40;
+    }
+    bad += check("R1 HOME's header word is BRAINDANCER and leaves its room (the battery, the transport)", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -21985,6 +22028,7 @@ int main(void)
     bad += test_u5_knobs();
     bad += test_u5_more();
     bad += test_u5_about();
+    bad += test_r1_name();
     bad += test_u6_row();                               /* (ACID FM 3c-2 task 6) */
     bad += test_u7_gen();                               /* (ACID FM 3c-2 task 7) */
     bad += test_u7_demo();

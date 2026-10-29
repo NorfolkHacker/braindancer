@@ -8,7 +8,7 @@ tools/build.py generate() with --preset inter-tight).
 
   gen_aa_font.py OUT.h --preset standin|inter-tight|chakra-petch [--tracking EM] [--gamma G] [--kern-min N]
   gen_aa_font.py ux_fonts.h --preset acid   (ACID FM: UF_LBL 8 px @600, UF_HDR 10 @500, UF_VAL 14 @500, UF_TTL 32 @700,
-                UF_MARK 52 @700 of Inter Tight; code 0x86 = the arrow U+2192, 0x87 / 0x88 = play U+25B6 / stop U+25A0
+                UF_MARK 30 @700 of Inter Tight; code 0x86 = the arrow U+2192, 0x87 / 0x88 = play U+25B6 / stop U+25A0
                 (UF_HDR, with ' ( ) , = > [ ] and the ellipsis 0x85 of the status line's messages); the ASCII range
                 of LBL / TTL / MARK is the space only, their characters are extras)
   gen_aa_font.py OUT.h --face NAME=FONT[#index]:PX:FIRST-LAST[+0xNN,...] ...   (explicit faces)
@@ -74,7 +74,7 @@ UF_HDR = UF_TEXT + "\u25b6\u25a0\u25cf\u25cb\u25c6" + "(),=>[]\u2192\u2026?;"   
                                    # (code 0x88), (3c-1 task 8) the dots and the outside clock's diamond (0x89 0x8A 0x8B: ux_widgets.h); the status line's messages: ' ( ) , = > [ ], the arrow (0x86), the ellipsis
                                    # (0x85, ui_say's cut) (tests/ux_msg_scan.py: every message literal drawn there has its glyphs)
 UF_TTL = " -./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-UF_MARK = " ACDFIM"                # the wordmark's letters only
+UF_MARK = " ABCDEINR"              # the wordmark's letters only (Braindancer 0.7: BRAINDANCER)
 L_CHARS = " #+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXY"
 
 
@@ -111,7 +111,7 @@ def preset(name):
                 ("HDR", v + "@500", 10, (32, 32), sparse(UF_HDR), 0.0, 1),
                 ("VAL", v + "@500", 14, (32, 32), sparse(UF_TEXT), 0.0, 1),
                 ("TTL", v + "@700", 32, (32, 32), sparse(UF_TTL), 0.0, 1),
-                ("MARK", v + "@700", 52, (32, 32), sparse(UF_MARK), 0.0, 1)]
+                ("MARK", v + "@700", 30, (32, 32), sparse(UF_MARK), 0.0, 1)]
     raise SystemExit(f"unknown preset {name}")
 
 

@@ -255,7 +255,7 @@ static void about_top(int32_t y)
 {
     char b[40];
     uint32_t k;
-    (void)spl_mark(y);                                  /* ACID FM, UF_MARK in the blend (as the splash draws it) */
+    (void)spl_mark(y);                                  /* BRAINDANCER, UF_MARK in the blend (as the splash draws it) */
     cv_text_on(MENU_DOC_X, y + ABOUT_Y_VER, &UF_HDR, FELUCCA_VERSION, UX_TEXT, UX_BG);
     cv_text_r(232, y + ABOUT_Y_VER, &UF_HDR, "BY NORFOLKHACKER", UX_MID, UX_BG);
     cv_text_on(MENU_DOC_X, y + ABOUT_Y_BUILT, &UF_HDR, "Built on JIANT FM and Felucca", UX_TEXT, UX_BG);   /* (3c-1 task 10, spec 5) */
@@ -277,10 +277,10 @@ static int32_t menu_document(int32_t y, int draw)
     if (draw && y + MENU_DOC_H > 0)
         about_top(y);
     y = menu_text("THE PROJECT", y + MENU_DOC_H, UX_VIOLET, draw);
-    y = menu_text("ACID FM, IDM firmware for the MVAVE FM-1, by NorfolkHacker. Built " __DATE__ ".", y, UX_TEXT, draw);
+    y = menu_text("Braindancer, IDM firmware for the MVAVE FM-1, by NorfolkHacker. Built " __DATE__ ".", y, UX_TEXT, draw);
     y = menu_text("Copyright (C) 2026 NorfolkHacker", y, UX_TEXT, draw);
     y = menu_text("Free, GPL-3.0-only, no warranty.", y, UX_TEXT, draw);
-    y = menu_text("ACID FM builds on open firmware for the FM-1: JIANT FM by Juan Jiant "
+    y = menu_text("Braindancer builds on open firmware for the FM-1: JIANT FM by Juan Jiant "
                   "(Copyright (C) 2026 Juan Ignacio Antonucci) and Felucca by Hugelton Instruments.", y, UX_TEXT, draw);
     y = menu_text("Installer, emulator, manual:", y + 4, UX_TEXT, draw);
     y = menu_text("norfolkhacker.github.io/acid-fm", y, UX_MID, draw);

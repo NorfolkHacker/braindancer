@@ -127,16 +127,16 @@ int main(void)
               le16(dev + 2) == 0x0200 && !dev[4] && !dev[5] && dev[6] == (T_LAYOUT == 2));
     check("VID 1209 PID 0001, strings 1 4 (iProduct off Felucca's index 2), one configuration",
           le16(dev + 8) == 0x1209 && le16(dev + 10) == 1 && dev[14] == 1 && dev[15] == 4 && dev[17] == 1);
-    {   /* (ACID FM 0.1) the names a host reads: manufacturer "NorfolkHacker", product "ACID FM" (UTF-16LE), nothing at
+    {   /* (ACID FM 0.1) the names a host reads: manufacturer "NorfolkHacker", product "BRAINDANCER" (UTF-16LE), nothing at
          * index 2 (Windows keeps older names under index 2's name GUID), no serial */
-        static const uint8_t PROD[16] = {16, 3, 'A', 0, 'C', 0, 'I', 0, 'D', 0, ' ', 0, 'F', 0, 'M', 0};
+        static const uint8_t PROD[24] = {24, 3, 'B', 0, 'R', 0, 'A', 0, 'I', 0, 'N', 0, 'D', 0, 'A', 0, 'N', 0, 'C', 0, 'E', 0, 'R', 0};
         static const uint8_t MANU[28] = {28, 3, 'N', 0, 'o', 0, 'r', 0, 'f', 0, 'o', 0, 'l', 0, 'k', 0, 'H', 0, 'a', 0,
                                          'c', 0, 'k', 0, 'e', 0, 'r', 0};
         const uint8_t *s;
         uint16_t sl;
         check("string 0: US English", get_desc(0x0300, &s, &sl) && sl == 4 && s[2] == 0x09 && s[3] == 0x04);
         check("string 1 (manufacturer): \"NorfolkHacker\"", get_desc(0x0301, &s, &sl) && sl == 28 && !memcmp(s, MANU, 28));
-        check("string 4 (product): \"ACID FM\"", get_desc(0x0304, &s, &sl) && sl == 16 && !memcmp(s, PROD, 16));
+        check("string 4 (product): \"BRAINDANCER\"", get_desc(0x0304, &s, &sl) && sl == 24 && !memcmp(s, PROD, 24));
         check("strings 2 (the old product) and 3: none", !get_desc(0x0302, &s, &sl) && !get_desc(0x0303, &s, &sl));
         check("no serial number (iSerial 0)", dev[16] == 0);
     }

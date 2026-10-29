@@ -64,6 +64,25 @@ for m in BAD.finditer(about):
 for who in ("Juan Jiant", "Hugelton Instruments", "NorfolkHacker"):   # (the credits keep every name)
     if who not in about:
         bad.append(f"ui_menu.c: ABOUT no longer names {who}")
+# (Braindancer 0.7, Task 1) the firmware's own name: no string literal of the device says "ACID FM" (comments keep their history);
+# ABOUT names Braindancer
+for c in sorted((ROOT / "firmware/src").glob("*.c")):
+    for m in re.finditer(r'"((?:[^"\\\n]|\\.)*)"', visible(c.read_text(encoding="utf-8", errors="replace"))):
+        if "ACID FM" in m.group(1):
+            bad.append(f'{c.name}: a string literal says "ACID FM": {m.group(1)[:60]!r}')
+# the USB product strings (usb.c STR_PROD, the app's and the loader's): UTF-16LE, the length byte right
+_usb = (ROOT / "firmware/src/usb.c").read_text(encoding="utf-8")
+_prods = re.findall(r"STR_PROD\[\] = \{([^}]*)\};", _usb, re.S)   # (the loader's first, then the app's)
+if len(_prods) != 2:
+    bad.append("usb.c: STR_PROD is not defined twice (loader, app)")
+for _want, _name, _body in zip(("BRAINDANCER UPD", "BRAINDANCER"), ("loader", "app"), _prods):
+    _m = re.match(r"(.*)", _body, re.S)
+    _b = [x.strip() for x in _m.group(1).split(",")]
+    _txt = "".join(x.strip("'") for x in _b[2::2])
+    if _txt != _want or int(_b[0]) != 2 + 2 * len(_want) or int(_b[1]) != 3 or any(x != "0" for x in _b[3::2]):
+        bad.append(f"usb.c: the {_name} product string is {_txt!r} (length byte {_b[0]}), not {_want!r}")
+if "Braindancer" not in about:
+    bad.append('ui_menu.c: ABOUT does not name Braindancer')
 for f in WEB:
     text = plain((ROOT / f).read_text(encoding="utf-8"), f.endswith(".html"))
     for m in BAD.finditer(text):

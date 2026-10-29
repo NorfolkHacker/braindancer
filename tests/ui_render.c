@@ -1104,7 +1104,7 @@ static void setup(int s)
     case S_HOME_IDLE: song.playing = 0; song.batt_raw = 570; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_HOME_VISUAL:                          /* (ACID FM 3a) HOME's second page (HOME again), M1..M4, M2 just turned; */
     case S_HOME_VISUAL_IDLE: {                   /* (task 7) playing mid-bar, a song chain at B bar 3/8, a named project,
-                                                  * the tracks sounding; _IDLE: stopped, no name (ACID FM), silent */
+                                                  * the tracks sounding; _IDLE: stopped, no name (BRAINDANCER), silent */
         uint32_t i;
         macro_v[0] = 40; macro_v[1] = 90; macro_v[2] = 20; macro_v[3] = 64;
         nav_go(SEC_HOME, UXH_VISUAL, 0);
@@ -2239,8 +2239,8 @@ static void draw(int s)
     }
     if (s == S_SPLASH || s == S_SPLASH_MID) {     /* the power-on splash (main.c, before the UI): the wordmark (ux_splash.c); the version
                                                    * shown FELUCCA_VERSION (run_tests.sh: src/felucca.c's). S_SPLASH: whole (spl_anim 0);
-                                                   * S_SPLASH_MID: 450 ms in, the line three quarters across and "ACI" typed */
-        static const char WANT[] = "ACID FM|" FELUCCA_VERSION "|BY NORFOLKHACKER";
+                                                   * S_SPLASH_MID: 450 ms in, the line three quarters across and "BRAIN" typed */
+        static const char WANT[] = "BRAINDANCER|" FELUCCA_VERSION "|BY NORFOLKHACKER";
         uint16_t bg;
         uint32_t x, y, wm = 0, wmr = 0, lbl = 0, ln_l = 0, ln_r = 0, ln_end = 0, row4 = 0;
         splash_seen[0] = 0;

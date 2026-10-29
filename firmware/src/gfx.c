@@ -28,7 +28,7 @@ typedef struct {
 typedef struct { const char *name; uint16_t bg, surf, text, theme, accent; } ui_pal_t;
 typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #include "ui_fonts.h"                   /* AF_S 12 px / 400, AF_M 15 px / 500, AF_L 28 px / 600 */
-#include "ux_fonts.h"                   /* UF_LBL 8 / UF_HDR 10 / UF_VAL 14 / UF_TTL 32 / UF_MARK 52 px: Inter Tight (ACID FM) */
+#include "ux_fonts.h"                   /* UF_LBL 8 / UF_HDR 10 / UF_VAL 14 / UF_TTL 32 / UF_MARK 30 px: Inter Tight (ACID FM) */
 #include "ui_font_x.h"                  /* (0.8.5) AF_X: the 5 x 7 mono pixel face (tools/gen_px_font.py) */
 #include "ui_palettes.h"
 #include "ui_keycaps.h"                 /* KC_*: the keycaps / badges (tools/gen_aa_keycaps.py), KNOB_* arcs */

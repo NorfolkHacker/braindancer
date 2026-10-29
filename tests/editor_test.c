@@ -166,8 +166,8 @@ static int preferences(void)
         host_wire[n0 - 4] == 0x4A && host_wire[n0 - 3] == 1 && host_wire[n0 - 2] == 1 &&   /* (0.6.62) JIANT: the installer */
         host_wire[n - 7] == 0x4F && host_wire[n - 6] == 1 && host_wire[n - 5] == LM_N &&   /* (0.8.5) DRUM lane modes */
         host_wire[n - 4] == 0x59 && host_wire[n - 3] == 1 && host_wire[n - 2] == LYR_LEN - 1u);   /* (0.8.5) LYRIC, 63 */
-    bad += check("INFO names the firmware \"ACID FM \" + version (the web tools key on the prefix)",
-        !memcmp(&host_wire[5], "ACID FM TEST", 12) && !host_wire[17]);   /* (this harness defines FELUCCA_VERSION "TEST") */
+    bad += check("INFO names the firmware \"BRAINDANCER \" + version (the web tools key on the prefix)",
+        !memcmp(&host_wire[5], "BRAINDANCER TEST", 16) && !host_wire[21]);   /* (this harness defines FELUCCA_VERSION "TEST") */
     request(ED_UI_SET, a, 2);
     bad += check("UI_SET sets the palette (ACID, the only one) and reports RAM-only saving",
         host_wire[5] == 3 && settings.palette == UI_ACID_INDEX && T_BG == UI_PALETTES[UI_ACID_INDEX].bg);

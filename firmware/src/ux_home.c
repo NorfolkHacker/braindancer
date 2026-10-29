@@ -238,7 +238,7 @@ static uint32_t ux_home_head(uint32_t p, int draw, int32_t *left)
     char tr[16], lf[40];
     uint16_t bc;
     uint32_t k, segs = ux_bat_segs(&bc), drop, rec = (song.rec >> song.sel) & 1u ? 2u : song.rec != 0u;
-    int32_t ty = 3, y0 = ty + UF_HDR_CAP_Y, x = 232 - UXH_BAT_W - 4, lim = 8 + text_w(&UF_HDR, "ACID FM") + 6, xt, xl;
+    int32_t ty = 3, y0 = ty + UF_HDR_CAP_Y, x = 232 - UXH_BAT_W - 4, lim = 8 + text_w(&UF_HDR, "BRAINDANCER") + 6, xt, xl;
     int lock = (ui_prefs & PREF_BPM_LOCK) != 0;
     ux_transport(tr, sizeof tr);
     if (lock) x -= UXH_LOCK_W + 2;
@@ -255,7 +255,7 @@ static uint32_t ux_home_head(uint32_t p, int draw, int32_t *left)
         cv_begin(240, UX_H_LINE + UX_H_HEAD, UX_BG);
         ux_topline();
         GFX_HOOK_ALIGN(0, UX_H_LINE, 0, UX_H_LINE + UX_H_HEAD, AL_V, "header left");
-        ux_text_grad(8, ty, &UF_HDR, "ACID FM", UX_BG);
+        ux_text_grad(8, ty, &UF_HDR, "BRAINDANCER", UX_BG);
         for (k = 0; k < 4u; k++)                        /* the battery */
             cv_rect(sx + (int32_t)k * 4, y0, 3, UF_HDR_CAP_H, k < segs ? bc : UX_LINE);
         if (lock) {                                     /* BPM LOCK: a shackle over a body, 7 x 8 */
@@ -503,7 +503,7 @@ static uint32_t ux_since_shed(void)
 #define UXV_SWELL 160u                                  /* a ring this bright (a hit) is a px wider each side */
 #define UXV_INTRO "RINGS: T1 OUTSIDE \x86 T6 CENTRE"     /* (UF_HDR's arrow, 0x86) */
 #define UXV_INTRO_MS 4000u
-#define UXV_TTL_W 200                                   /* the name in UF_TTL up to 200 px (20 px each side), else UF_VAL */
+#define UXV_TTL_W 224                                   /* the name in UF_TTL up to 224 px (8 px each side; Braindancer 0.7: the default name BRAINDANCER is 221), else UF_VAL */
 static const char *ux_vis_legend(void)                  /* the ring legend while it shows (UXV_INTRO_MS, once), else NULL */
 {
     if (!uxv.intro) {
@@ -561,7 +561,7 @@ static const aafont_t *ux_vis_name(char *b)
     uint32_t i;
     project_cur_name(s);
     if (!s[0])
-        str_cpy(s, "ACID FM", sizeof s);
+        str_cpy(s, "BRAINDANCER", sizeof s);
     for (i = 0; s[i]; i++) {
         char c = s[i];
         b[i] = (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ' || c == '-' || c == '.' || c == '/' ? c : ' ';

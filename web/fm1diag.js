@@ -38,7 +38,7 @@ export function infoVersion(a) {
 export function isJiantInfo(a) {
   const z = a.indexOf(0); if (z < 0) return false;
   const version = String.fromCharCode(...a.slice(0, z));
-  if (!/^(FELUCCA|JIANT|ACID FM) /i.test(version)) return false;
+  if (!/^(FELUCCA|JIANT|ACID FM|BRAINDANCER) /i.test(version)) return false;
   let pos = z + 1; const engines = a[pos]; pos += 5;
   for (let i = 0; i < engines; i++) { const end = a.indexOf(0, pos); if (end < 0) return false; pos = end + 1; }
   const ntrk = a[pos], ext = a.slice(pos + 1);
@@ -52,7 +52,7 @@ export function archiveInfo(a) {
   const engines = a[pos]; pos += 5;
   for (let i = 0; i < engines; i++) { const end = a.indexOf(0, pos); if (end < 0) throw new Error("Invalid INFO"); pos = end + 1; }
   const ext = a.slice(pos + 1);
-  const supported = /^(FELUCCA|JIANT|ACID FM) /i.test(version) && ext[0] === 16 && ext[1] === 0x55 && ext[2] === 1 &&
+  const supported = /^(FELUCCA|JIANT|ACID FM|BRAINDANCER) /i.test(version) && ext[0] === 16 && ext[1] === 0x55 && ext[2] === 1 &&
     ext[4] === 0x4d && ext[5] === 1 && ext[8] === 0x42 && ext[9] === 1 && !!(ext[10] & 1);
   return { version, supported };
 }

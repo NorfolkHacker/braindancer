@@ -104,7 +104,7 @@ static void fm1_fault(const fm1_crash_t *c)
     fm1_audio_stop();
     scr_wake_now();                                   /* (MENU > SCREEN OFF: the panel on first) */
     lcd_fill(0, 0, 240, 240, UI_CRASH_BG);            /* fixed, outside the palettes */
-    draw_text_line(0, 8, 240, &AF_M, "ACID FM CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
+    draw_text_line(0, 8, 240, &AF_M, "BRAINDANCER CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
     str_cpy(b, FELUCCA_VERSION "  CORE ", 20);
     i = str_len(b);
     b[i] = (char)('0' + (fm1_cnum() & 1u));

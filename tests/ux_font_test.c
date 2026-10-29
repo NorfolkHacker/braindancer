@@ -46,7 +46,7 @@ int main(void)
     const char *all = " #%+-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\xB7";
     CHECK(text_w(&UF_VAL, "128") > 0);
     CHECK(text_w(&UF_TTL, "A1") > 0);
-    has(&UF_MARK, "MARK", "ACID FM");
+    has(&UF_MARK, "MARK", "BRAINDANCER");
     has(&UF_LBL, "LBL", " #%+-./0123456789:<>ABCDEFGHIJKLMNOPQRSTUVWXYZ\xB7\x86\x89\x8A\x8B");   /* (3c-1 task 8: GLO > MIDI's dots, diamond) */
     has(&UF_HDR, "HDR", all);
     has(&UF_HDR, "HDR", "'(),=>[]\x85\x86\x87\x88\x89\x8A\x8B");   /* (the status line's messages, the transport) */
@@ -60,7 +60,7 @@ int main(void)
     CHECK(UF_LBL_CAP_H < UF_HDR_CAP_H);
     CHECK(UF_HDR_CAP_H < UF_VAL_CAP_H);
     CHECK(UF_VAL_CAP_H < UF_TTL_CAP_H);
-    CHECK(UF_TTL_CAP_H < UF_MARK_CAP_H);
+    CHECK(UF_VAL_CAP_H < UF_MARK_CAP_H);   /* (Braindancer 0.7: BRAINDANCER fits the screen at 30 px, under UF_TTL) */
     printf("cap heights %d %d %d %d %d\n", UF_LBL_CAP_H, UF_HDR_CAP_H, UF_VAL_CAP_H, UF_TTL_CAP_H, UF_MARK_CAP_H);
     puts(bad ? "ux font: FAILED" : "ux font: ok");
     return bad != 0;
