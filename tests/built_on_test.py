@@ -222,6 +222,33 @@ for f, text in (("docs/MANUAL.md", (ROOT / "docs/MANUAL.md").read_text(encoding=
                 if cell and not known(cell.split(), ALLPAGES):
                     bad.append(f"{f}: knob table page {cell!r} is no firmware page (line {n})")
 
+# ---- (ACID FM 3c-2 task 9, spec 5.4) no device string or example name is Spanish: the string literals of firmware/src/*.c
+# and of the render scenes behind the manual's screens (tests/ui_render.c) name none of the inherited Spanish words (whole
+# words, any case). The ES lyrics are a feature and stay: the generated bank (felucca_lyrics.h, no .c), sing.c's ES tables
+# and the WORDS scene's ES lyric (where the ES bank is shown and tested) are left out by name
+ES_WORDS = re.compile(r"\b(LENTE|NOCHE|NUBE|BOSQUE|MANO|RIELES|PISTAS|CORTE|CARRERA)\b", re.I)
+ES_TABLES = {"firmware/src/sing.c": ["SCAT_ES", "TPL_ES", "VOCABLE"], "tests/ui_render.c": ["W"]}   # (the WORDS scene's: ES,
+                                                                                                   # EN, JA and an edit)
+
+
+def es_free(f: str, src: str) -> str:
+    """src with the named ES tables' initialisers taken out (the lines kept)"""
+    for name in ES_TABLES.get(f, []):
+        if not re.search(r"\bstatic const char \*const " + name + r"\[", src):
+            bad.append(f"{f}: no table {name} (ES_TABLES names one that is gone)")
+        src = re.sub(r"\bstatic const char \*const " + name + r"\[[^=;]*=\s*\{.*?\};",
+                     lambda m: "\n" * m.group(0).count("\n"), src, flags=re.S)
+    return src
+
+
+for f in [str(c.relative_to(ROOT)) for c in sorted((ROOT / "firmware/src").glob("*.c"))] + ["tests/ui_render.c"]:
+    text = es_free(f, visible((ROOT / f).read_text(encoding="latin-1")))
+    for m in re.finditer(r'"((?:[^"\\\n]|\\.)*)"', text):
+        w = ES_WORDS.search(m.group(1))
+        if w:
+            bad.append(f"{f}: a Spanish word {w.group(0)!r} in a string (line {text[:m.start()].count(chr(10)) + 1}): "
+                       f"{m.group(1)[:60]!r}")
+
 if bad:
     print("\n".join("FAIL: " + b for b in bad))
     sys.exit(1)

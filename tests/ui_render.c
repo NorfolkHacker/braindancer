@@ -1813,7 +1813,7 @@ static void setup(int s)
     case S_FXL_DELAY2: fx_more_at(G_DMIX, UXR_GLOBAL); break;
     case S_FXL_REVERB: fx_more_at(G_RPRE, UXR_GLOBAL); song.g[G_RTYPE] = 3; song.g[G_RPRE] = 4; song.g[G_RDAMP] = 2; break;
     case S_FXL_SLICER: fx_more_at(G_SLPAT, UXR_GLOBAL); break;
-    /* (0.8.5) SAVE's lens as the mock-up's data: projects NOCHE LARGA (A B C), ACID 03, DUB KIT, BOSQUE, TRANCE A; the
+    /* (0.8.5) SAVE's lens as the mock-up's data (3c-2 task 9: its names in English): projects LONG NIGHT (A B C), ACID 03; the
      * song B16 C16 A32 D8 C16 A32 (scenes on 2 and 4, END LOOP); seven user sounds. (ACID FM 3c-2 task 2) SOUND on U05 (WOBBLE,
      * used) and on U08 (empty), SAVE armed; MORE with ENGINE picked; (task 3) SONG: the song, section B picked, A playing, ROW 3
      * picked; and with no rows */
@@ -1822,11 +1822,11 @@ static void setup(int s)
         static const char *const PN[NSONG] = {"", "ACID 03", "", ""};   /* (ACID FM 0.2: four projects; 3c-2 task 4: two used) */
         static const uint8_t PM[NSONG] = {0, 3, 0, 0};
         static const chain_row_t AR[6] = {{1, 16}, {2, 16}, {0, 32}, {3, 8}, {2, 16}, {0, 32}};
-        static const char *const UN[7] = {"DEEP SUB", "GLASS", "PAD NUBE", "WOBBLE", "BIRDCALL", "KEYS 2", "GRIT"};
+        static const char *const UN[7] = {"DEEP SUB", "GLASS", "CLOUD PAD", "WOBBLE", "BIRDCALL", "KEYS 2", "GRIT"};
         static const uint8_t UK[7] = {0, 1, 2, 4, 6, 9, 13}, UE[7] = {ENGI_ANALOG, ENGI_FM6, 2, ENGI_ANALOG, ENGI_NOISE_UI, ENGI_FM6, 3};   /* (BIRDCALL: NOISE, ANIMAL retired) */
         uint32_t k, e0 = TSEL->eng_req;
         song.playing = 0;
-        project_save_as(0, "NOCHE LARGA"); project_save_as(1, "NOCHE B"); project_save_as(2, "NOCHE C");
+        project_save_as(0, "LONG NIGHT"); project_save_as(1, "NIGHT B"); project_save_as(2, "NIGHT C");
         for (k = 0; k < NSONG; k++) { str_cpy(lib.name[k], PN[k], sizeof lib.name[k]); lib.mask[k] = PM[k]; }
         chain_config.count = 6;
         for (k = 0; k < 6u; k++) chain_config.row[k] = AR[k];
@@ -1890,7 +1890,7 @@ static void setup(int s)
     }
     case S_WORDS_OFF: eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = 0; nav_scene(SEC_EDIT, "MORE"); break;
     case S_NAME_LYRIC:
-        eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = LG_ES; lyr_set(song.sel, "LA NOCHE");
+        eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = LG_EN; lyr_set(song.sel, "THE NIGHT");   /* (3c-2 task 9: English) */
         nav_scene(SEC_EDIT, "MORE"); name_open(NK_LYRIC, song.sel);
         break;
     case S_NAME_LYRIC_LONG:

@@ -2333,14 +2333,11 @@ static void ui_input_frame(void)
         } else {
             ui.menu = 1;                                /* (at the page and setting it was left at) */
             ui.hot_t = 0;                               /* (0.9.18: no card lit from the page before) */
-            if (!menu_valued(ui.menu_sel) || menu_hidden(ui.menu_sel)) {   /* (an action armed or picked before it closed is
-                                                         * let go: OCT+ on opening never opens a screen; ACID FM 0.3: COLOR,
-                                                         * power-on's 0, is on no page: the page's first; 3c-2 task 5: MORE's
-                                                         * pick kept, nothing armed) */
+            if (!menu_valued(ui.menu_sel) || menu_hidden(ui.menu_sel))   /* (an action a page's knob armed before it closed
+                                                         * is let go: the page's first setting; ACID FM 0.3: COLOR, power-on's
+                                                         * 0, is on no page: the page's first; 3c-2 task 9: on MORE the row
+                                                         * picked, an action there armed as the pick shows it: OCT+ does it) */
                 uxn_go(ui.mn_page);
-                if (!menu_valued(ui.menu_sel))
-                    ui.menu_sel = MI_NONE;
-            }
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();
             ui.force = 1;

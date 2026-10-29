@@ -2638,9 +2638,10 @@ static int test_menu_tabs(void)
     press(B_OCTUP); ok &= ui.menu == 2;
     press(B_HOME);
     ok &= !ui.menu && ui.home;
-    hold(B_HOME); ok &= ui.menu == 1 && ui.mn_page == MN_MORE && ui.menu_sel == MI_NONE && !oct_leds();   /* (its page; ABOUT
-                                                         * let go: an action does not outlive the MENU) */
-    press(B_OCTUP); ok &= ui.menu == 1;
+    hold(B_HOME); ok &= ui.menu == 1 && ui.mn_page == MN_MORE && ui.menu_sel == MI_ABOUT && oct_leds() == OCT_BREATH;   /* (its
+                                                         * page; 3c-2 task 9: MORE's pick, ABOUT, armed: OCT+ does it) */
+    press(B_OCTUP); ok &= ui.menu == 2;
+    press(B_OCTDN); ok &= ui.menu == 1;
     menu_at(MI_HOLD); frame();
     {   /* a value row: OCT- and OCT+ both breathe, each while that way has a value to go to; none lit */
         menu_put(MI_HOLD, 0u);                          /* HOLD at its first value: OCT- dark, OCT+ breathing */
@@ -2649,7 +2650,7 @@ static int test_menu_tabs(void)
         ok &= oct_leds() == (OCT_BREATH | OCT_BREATH_DN);
     }
     menu_close();
-    bad += check("MENU: ABOUT from MORE (OCT- back); HOME closes it; reopened on MORE, the action let go; the setting turned last breathes OCT- / OCT+ where they can go", ok);
+    bad += check("MENU: ABOUT from MORE (OCT- back); HOME closes it; reopened on MORE, the action picked armed; the setting turned last breathes OCT- / OCT+ where they can go", ok);
     return bad;
 }
 
@@ -21329,8 +21330,8 @@ static int test_u5_more(void)
     ok &= !ui.menu && str_eq(cur_page()->title, "MIDI");
     bad += check("  MIDI IS ON GLO: KNOB 2 right opens GLO > MIDI; KNOB 3 says what the knobs do", ok);
     hold(B_HOME); frame();
-    ok = ui.menu == 1 && ui.mn_page == MN_MORE && ui.menu_sel == MI_NONE && !oct_leds();   /* (the action let go) */
-    press(B_OCTUP); ok &= ui.menu == 1;
+    ok = ui.menu == 1 && ui.mn_page == MN_MORE && ui.menu_sel == MI_GLOMIDI && oct_leds() == OCT_BREATH;   /* (3c-2 task 9: the
+                                                         * action picked armed) */
     turn(EN_K1, 1); frame();
     ok &= ui.menu_sel == MI_ABOUT;
     turn(EN_K2, 1); frame();
@@ -21338,7 +21339,7 @@ static int test_u5_more(void)
     press(B_OCTDN); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT;
     press(B_OCTUP); ok &= ui.menu == 2;
     press(B_HOME);
-    bad += check("  ABOUT: KNOB 2 right or OCT+ opens it; reopened, the action let go (OCT+ nothing)", ok && !ui.menu);
+    bad += check("  ABOUT: KNOB 2 right or OCT+ opens it; reopened, the action picked armed", ok && !ui.menu);
     ui_power_on();
     return bad;
 }
@@ -21569,6 +21570,119 @@ static int test_u7_cpu_test(void)
     return bad;
 }
 
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * ACID FM 3c-2 task 9: the leftovers: the automation / lock mark on MIX's LEVEL / PAN and on a MORE row (its KNOB 2 and the
+ * list); the GLO layer's NO RESTART only while playing; ABOUT's live figures paced by time alone; PROFILE's heading on one
+ * line; the MENU reopened on MORE with an action picked: that action armed
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static int u9_row_marked(void)                          /* the MORE list's row picked: its top right end lit (UX_TEXT) */
+{
+    const ux_more_t *m = cur_page()->more;
+    uint64_t sh = uxm_mask(m);
+    uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, r;
+    uxm_fix(m, sh, &s, &t);
+    r = uxm_vis(sh, s) - uxm_vis(sh, t);
+    return ux_px(228u - 2u, UX_Y_PANEL + 3u + r * UXM_PITCH + 1u) == UX_TEXT;
+}
+static int test_u9_marks(void)
+{
+    int bad = 0, ok;
+    uint32_t r;
+    ui_power_on(); frame();
+    song.sel = 1; song.playing = 0;                     /* T2 picked, GLO > MIX */
+    motion_clear(TSEL); motion_set_enabled(TSEL, 1);
+    go_home(); frame();
+    nav_put(SEC_GLO, "MIX"); frames(64);
+    ok = str_eq(cur_page()->title, "MIX") && !c10_marked(0) && !c10_marked(1);
+    motion_set_event(TSEL, 3, P_LEVEL, 90);             /* T2's LEVEL recorded, PLAY ON */
+    frames(64);
+    ok &= c10_marked(0) && !c10_marked(1);
+    if (!ok) printf("  MIX: marks %d %d\n", c10_marked(0), c10_marked(1));
+    motion_clear(TSEL); frames(64);
+    ok &= !c10_marked(0) && !c10_marked(1);
+    ui.cursor = 4;
+    motion_set_lock(TSEL, 4, P_PAN, 20); frames(64);    /* PAN locked on the step picked */
+    ok &= !c10_marked(0) && c10_marked(1);
+    bad += check("ACID FM 3c-2 task 9: GLO > MIX's LEVEL and PAN marked when the selected track's automation or a lock on the "
+                 "step moves them, none without", ok);
+    motion_clear(TSEL);
+    uxe_on(ENGI_FM6); song.sel = 0;                     /* EDIT > MORE on FM6: its CUTOFF row picked */
+    motion_clear(TSEL); motion_set_enabled(TSEL, 1);
+    ok = nav_put(SEC_EDIT, "MORE") && cur_page()->more == &UXM_FM6;
+    for (r = 0; r < UXM_FM6.n && !(UXM_FM6.rows[r].kind == UXR_TRACK && UXM_FM6.rows[r].id == P_FCUT); r++)
+        ;
+    uxm_at[uxm_key()].sel = (uint8_t)r; uxm_at[uxm_key()].top = 0;
+    ui.cursor = 2; ui.force = 1; frames(64);
+    ok &= r < UXM_FM6.n && !c10_marked(1) && !u9_row_marked();
+    motion_set_lock(TSEL, 2, P_FCUT, 30); frames(64);   /* CUTOFF locked on the step picked */
+    ok &= c10_marked(1) && u9_row_marked() && !c10_marked(0);
+    if (!ok) printf("  MORE: knob %d row %d\n", c10_marked(1), u9_row_marked());
+    ui.cursor = 6; frames(64);                          /* (another step: the lock not on it) */
+    ok &= !c10_marked(1) && !u9_row_marked();
+    bad += check("  a MORE row (EDIT > MORE's CUTOFF) marked on its KNOB 2 and in the list by a lock on the step picked", ok);
+    motion_clear(TSEL);
+    ui_power_on();
+    return bad;
+}
+static int test_u9_glo_restart(void)
+{
+    int bad = 0, ok;
+    ux_knob_t k[4];
+    uint16_t sc;
+    ui_power_on(); frame();
+    song.playing = 0;
+    btn_down(B_GLO); frames(800);
+    ok = ui.layer == LAYER_GLO;
+    uxl_knobs(LAYER_GLO, k);
+    song.g[G_CLOCK] = 1; frames(64);                    /* CLOCK USB, stopped: PLAY starts, no NO RESTART */
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "CLOCK: USB") && !strstr(uxl_status(LAYER_GLO, k, &sc), "NO RESTART");
+    song.playing = 1; frames(64);                       /* playing: PLAY cannot restart, it says so */
+    ok &= strstr(uxl_status(LAYER_GLO, k, &sc), "NO RESTART") != 0;
+    ui.msg_t = 0; ok &= layer_play() && msg_is("RESTART: CLK IS EXT");
+    song.playing = 0; frames(64);                       /* stopped again: gone */
+    ok &= !strstr(uxl_status(LAYER_GLO, k, &sc), "NO RESTART");
+    if (!ok) printf("  GLO: \"%s\"\n", uxl_status(LAYER_GLO, k, &sc));
+    btn_up(B_GLO); frames(64);
+    song.g[G_CLOCK] = 0;
+    bad += check("ACID FM 3c-2 task 9: the GLO layer under CLOCK USB says NO RESTART only while playing", ok);
+    ui_power_on();
+    return bad;
+}
+static int test_u9_menu(void)
+{
+    int bad = 0, ok;
+    uint32_t n0, i, g0 = gov_lite;
+    ui_power_on(); frame();
+    ok = menu_text("% OF A BLOCK: PLAY AVG MAX, STOP AVG MAX", 0, UX_VIOLET, 0) == 18;
+    bad += check("ACID FM 3c-2 task 9: PROFILE's heading on one line", ok);
+    menu_at(MI_ABOUT); frame(); press(B_OCTUP); frames(200);
+    ok = ui.menu == 2;
+    gov_lite = LOAD_LITE;                               /* an overload: LOAD LITE on, the guard shedding all along */
+    n0 = uxn_panels;
+    for (i = 0; i < 2500u / 16u; i++) {
+        load_diag.shed++;
+        frame();
+    }
+    ok &= uxn_panels >= n0 + 2u && uxn_panels <= n0 + 3u;
+    if (!ok) printf("  ABOUT under overload: %u panels\n", (unsigned)(uxn_panels - n0));
+    gov_lite = g0;
+    bad += check("  ABOUT's live figures move under an overload (LOAD LITE, a shed every frame): paced by time alone", ok);
+    press(B_HOME); frame();
+    ok = !ui.menu;
+    hold(B_HOME); frame();                              /* reopened on MORE, ABOUT picked: armed, OCT+ opens it */
+    ok &= ui.menu == 1 && ui.mn_page == MN_MORE && ui.menu_sel == MI_ABOUT && oct_leds() == OCT_BREATH;
+    press(B_OCTUP); ok &= ui.menu == 2;
+    press(B_HOME); frame();
+    menu_at(MI_PANEL); frame(); turn(EN_K4, 1); frame();   /* a page's action armed by a turn: let go on reopen */
+    ok &= ui.menu_sel == MI_PANEL;
+    menu_close(); hold(B_HOME); frame();
+    ok &= ui.menu == 1 && ui.menu_sel != MI_PANEL && menu_valued(ui.menu_sel);
+    menu_close();
+    bad += check("  MENU reopened on MORE with an action picked: that action armed (OCT+ does it); a page's armed action let go", ok);
+    ui_power_on();
+    return bad;
+}
 
 int main(void)
 {
@@ -21813,6 +21927,9 @@ int main(void)
     bad += test_u7_gen();                               /* (ACID FM 3c-2 task 7) */
     bad += test_u7_demo();
     bad += test_u7_cpu_test();
+    bad += test_u9_marks();                             /* (ACID FM 3c-2 task 9) */
+    bad += test_u9_glo_restart();
+    bad += test_u9_menu();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

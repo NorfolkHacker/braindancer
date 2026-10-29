@@ -1026,7 +1026,7 @@ static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16
         GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
     if (cw)
         cv_text_r(234, y, f, cnt, f == &AF_X ? T_TEXT : fg, T_BG);   /* (0.8.9, the skins' mock-up: the count TEXT) */
-    if (f == &AF_X && k) {                              /* (0.8.9) "LENTE" DIM, the level THEME, the set TEXT (as `last` if
+    if (f == &AF_X && k) {                              /* (0.8.9) the first part DIM, the level THEME, the set TEXT (as `last` if
                                                          * that is not DIM) */
         uint32_t j = 0;
         char c;

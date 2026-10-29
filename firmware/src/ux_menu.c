@@ -11,12 +11,12 @@
  * ui.mn_sel / mn_top (MORE's pick and scroll), ui.menu_sel (the setting turned or picked last), ui.menu_scroll. Included after
  * ux_dialog.c (ux_section.c's uxs_foot). */
 
-static const char *const UXN_WORD[] = {"MENU \xB7 ", "OCT+", "GO", " / ", "ABOUT", "PROFILE", "SELECT SCROLLS \xB7 OCT+ PROFILE",
+static const char *const UXN_WORD[] = {"MENU \xB7 ", "OCT+", " / ", "ABOUT", "PROFILE", "SELECT SCROLLS \xB7 OCT+ PROFILE",
                                        "SELECT SCROLLS \xB7 OCT- ABOUT"};
 #define UXN_ROW_P 37             /* a page's rows on the panel: pitch, height, the name's and the hint's lines */
 #define UXN_ROW_H 34
 #define UXN_BAND (MENU_DOC_H / 2)   /* ABOUT / PROFILE drawn in two bands of the document's rows */
-#define UXN_LIVE_MS 500u         /* .. their live figures (the load, PROFILE's second) redrawn at most this often */
+#define UXN_LIVE_MS 1000u        /* .. their live figures (the load, PROFILE's second) redrawn at most this often */
 static uint32_t uxn_panels;      /* the panels drawn (tests/ui_test.c: one a change, none idle) */
 
 static uint32_t uxn_page(void) { return ui.mn_page < MN_N ? ui.mn_page : MN_AUDIO; }
@@ -132,7 +132,7 @@ static const char *uxn_where(void)
 {
     static char b[24];
     str_cpy(b, UXN_WORD[0], sizeof b);
-    str_cpy(b + str_len(b), ui.menu == 2 ? UXN_WORD[4] : ui.menu == 3 ? UXN_WORD[5] : MN_NAME[uxn_page()], sizeof b - str_len(b));
+    str_cpy(b + str_len(b), ui.menu == 2 ? UXN_WORD[3] : ui.menu == 3 ? UXN_WORD[4] : MN_NAME[uxn_page()], sizeof b - str_len(b));
     return b;
 }
 /* the knob row: a page's four settings (its knob label, its value, its place), an action's "GO" / "OCT+" armed; MORE's as a
@@ -156,7 +156,7 @@ static void uxn_knobs(ux_knob_t k[4])
             continue;
         k[c].label = mi_short(r);
         if (!menu_valued(r)) {
-            str_cpy(k[c].value, r == ui.menu_sel ? UXN_WORD[1] : UXN_WORD[2], sizeof k[c].value);
+            str_cpy(k[c].value, r == ui.menu_sel ? UXN_WORD[1] : UXM_GO_K, sizeof k[c].value);
             continue;
         }
         str_cpy(k[c].value, menu_vname(r, menu_get(r)), sizeof k[c].value);
@@ -170,11 +170,11 @@ static void uxn_foot(const ux_knob_t k[4], char *b, uint32_t nb)
     char cnt[12];
     uint32_t p = uxn_page();
     if (ui.menu >= 2) {
-        str_cpy(b, UXN_WORD[ui.menu == 2 ? 6 : 7], nb);
+        str_cpy(b, UXN_WORD[ui.menu == 2 ? 5 : 6], nb);
         return;
     }
     fmt_int(cnt, (int32_t)p + 1);
-    str_cpy(cnt + str_len(cnt), UXN_WORD[3], sizeof cnt - str_len(cnt));
+    str_cpy(cnt + str_len(cnt), UXN_WORD[2], sizeof cnt - str_len(cnt));
     fmt_int(cnt + str_len(cnt), MN_N);
     uxs_foot(uxn_where(), k, cnt, p + 1u < MN_N ? MN_NAME[p + 1u] : 0, b, nb);
 }
@@ -280,8 +280,8 @@ static void ux_menu_draw(void)
         sig = ui.menu * 7u + ui.menu_scroll * 48611u + 1u;
         live = ui.menu == 3 ? prf_seq * 2971u + prf_have : (song.cpu_q8 >> 3) * 7741u + load_diag.peak * 3329u +
                load_diag.late * 1931u + load_diag.shed * 2671u + cpt_res * 13u;
-        if (all || sig != panel_sig || (live != live_sig && ux_pace_at(fm1_ms, live_ms, load_tight, ux_since_shed(), gov_lite,
-                                                                      sys_load, 0, UXN_LIVE_MS, 2u * UXN_LIVE_MS).draw)) {
+        if (all || sig != panel_sig || (live != live_sig && fm1_ms - live_ms >= UXN_LIVE_MS)) {   /* (3c-2 task 9: by time
+                                                         * alone, never frozen by LOAD LITE or a shed: the overload they show) */
             panel_sig = sig;
             live_sig = live;
             live_ms = fm1_ms;

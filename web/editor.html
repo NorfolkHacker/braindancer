@@ -2781,10 +2781,10 @@ const LAYOUT = (pe0) => [
   { t: "SEQ PATTERN", tab: "seqgroups", pages: [["PATTERN", 0, [29, 30, 31, 32]], ...(pe0 >= 83 ? [["STRETCH · TRACK", 0, P_SHIFT]] : [])] },   /* ROTATE PITCH 81, 82 (SHIFT until 0.6.91) */
   { t: "GLOBAL", tab: "setgroups", pages: [["GLOBAL", 1, [0, 1, 2, 3]]] },
   /* (ACID FM 0.6) MIDI per track: G 71..76 IN, 77..82 OUT, 83..88 CHANNEL, 89 KEYBOARD PLAYS SELECTED (firmware with 90+ globals) */
-  ...(dev && dev.info && dev.info.gcount >= 90 ? [{ t: "MIDI", tab: "setgroups", pages: [...[0, 1, 2, 3, 4, 5].map((k) => ["T" + (k + 1), 1, [71 + k, 77 + k, 83 + k]]), ["KEYBOARD", 1, [89]]] }] : []),   /* (G_ROUTE 14 is no setting on 0.5: per-track MIDI routing, G 71..89, replaced it; replaced by GLO > MIDI on the device) */
+  ...(dev && dev.info && dev.info.gcount >= 90 ? [{ t: "MIDI", tab: "setgroups", pages: [...[0, 1, 2, 3, 4, 5].map((k) => ["T" + (k + 1), 1, [71 + k, 77 + k, 83 + k]]), ["KEYBOARD", 1, [89]]] }] : []),
 ];
 /* globals that are actions or placeholders on the device: buttons instead, or hidden */
-const G_SKIP = new Set(["SLOT", "NAME", "LOAD", "SAVE", "ENG", "SET", "CLRSQ", "INIT", "MIDI", "SYNC", "CPU", "CLK", "ROUTE"]);
+const G_SKIP = new Set(["SLOT", "NAME", "LOAD", "SAVE", "ENG", "SET", "CLRSQ", "INIT", "MIDI", "SYNC", "CPU", "CLK", "ROUTE"]);   /* (ROUTE, G 14: no setting since 0.5, the per-track MIDI settings G 71..89 replaced it: GLO > MIDI on the device, the MIDI section here) */
 const key = (s, id) => s + ":" + id;
 const engName = () => (dev && dev.info && dev.dump ? dev.info.engines[dev.dump.engine] : "");
 const gEng = () => { const i = dev.gdesc.findIndex((d) => d && d.label === "ENG"); return i >= 0 ? i : 20; };

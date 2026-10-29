@@ -115,7 +115,10 @@ ALWAYS; a project without it loads every PLAYS ALWAYS. NEW PROJECT resets them.
 **ACID FM 0.5: 90 globals**: G 71..76 each track's MIDI IN (OFF / ON, ON), 77..82 its OUT (OFF / ON, ON), 83..88 its
 CHANNEL (1..16, T1..T6: 1..6), 89 KEYBOARD PLAYS SELECTED (OFF / ON: a channel no track takes plays the selected track).
 They replace ROUTE (G 14, still answered and stored, no longer read but by a project's load: SEL = KEYBOARD PLAYS SELECTED
-ON). The editor does not offer ROUTE (replaced by GLO > MIDI on the device); its MIDI section (0.6, with 90+ globals) offers the per-track settings, one page per track (T1..T6: IN, OUT, CHANNEL) and KEYBOARD (PLAYS SELECTED), 71..89 above and PLAYS (90..95) written with the existing PARAM_SET (ED_SET on a global: scope 1, id, value; CHANNEL is stored 1..16). Saved in FUNC's 'M' 'R' block (after every other) when a track's differs from its default. **(0.6.86 .. 0.6.99:
+ON). They are saved in FUNC's 'M' 'R' block (after every other) when a track's differs from its default. The editor does
+not offer ROUTE (GLO > MIDI replaced it on the device). Its MIDI section (0.6, firmware with 90+ globals) offers the
+per-track settings: one page per track (T1..T6: IN, OUT, CHANNEL) and KEYBOARD (PLAYS SELECTED). It writes them, and PLAYS
+(90..95), with the existing PARAM_SET (ED_SET on a global: scope 1, id, value; CHANNEL is stored 1..16). **(0.6.86 .. 0.6.99:
 G 66..70 the delay's MOD, TYPE, PING-PONG, the punch-in lane's LEN, RES: 71 globals.)**
 
 **JIANT 0.6.3: 66 globals**: G 37..65 the SLICER bus (37 SLCR, 38 PAT, 39 RATE, 40 DEPTH, 41..46 T1..T6 and 47 FX ON/OFF, 48 LEN, 49 QNT, 50..65 the pitch steps, -24..24); the track parameters P_SLCR..P_SLDEPTH stay, unused. **JIANT 0.4: 37 globals** (G 36 STRN, stored behind a 3). **JIANT 0.3: 36 globals.** G_COUNT 36 (G 32..35 above). DRUM's E6 (id P_E0 + 5) is FM, 0..127 (once ACC): its sounds through
@@ -867,7 +870,8 @@ is told: no list of settings is fixed in the editor. INFO advertises `4E 01 coun
   Firmware 1.0.4 ends the reply after the names: no tab (show the items as one list). An editor written for 1.0.4
   reads exactly the names and ignores what follows, so the tab changes nothing for it. Tab indexes are not ids: an
   item may move to another tab in a later firmware, and tabs may be added (appended); remember settings by id.
-  A tab may hold items with no value that are not offered (this firmware: SYSTEM also holds CALIBRATION and ABOUT).
+  A tab may hold items with no value that are not offered (this firmware: CONTROLS holds CALIBRATION, MORE holds MIDI IS ON
+  GLO and ABOUT).
   For a kind it does not know, an editor cannot find the tab (it does not know that kind's bytes).
 
 This firmware (count 18; tabs 0 DISPLAY, 1 CONTROL, 2 AUDIO, 3 SYSTEM; 1.0.5 had the first 12, 1.1 the first 15, 1.2
@@ -926,7 +930,7 @@ once from MIDI OUT's byte (`[15][24]`, kept as saved): KEYS → KEYS, off; CLOCK
 off. A MENU_SET of id 20 sets the two the same way; MENU_DESC reads them back as the nearest of the four (KEYS+SEQUENCE: ALL;
 CLOCK OUT on: CLOCK; OFF: OFF; else KEYS). LEARN and LEARN CLEAR are GLO > MORE > MIDI's rows; MENU > MIDI is a pointer to
 GLO > MIDI.
-The device's SYSTEM tab also holds CALIBRATION and ABOUT (not offered); INIT SYSTEM left the MENU (SAVE > TOOLS > NEW
+In 0.5 the device's SYSTEM tab also held CALIBRATION and ABOUT (not offered; 0.6: below); INIT SYSTEM left the MENU (SAVE > TOOLS > NEW
 PROJECT). An editor that groups by tab name follows by itself; remember settings by id.
 
 (ACID FM 0.6) The MENU is a section of the device: three pages of four knobs and MORE (a list). The tab is now the item's

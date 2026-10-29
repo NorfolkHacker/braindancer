@@ -908,12 +908,16 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
     if (pg->fam == FAM_SEQ && pg->graph != GR_MORE && uxq_knobs(pg, k))   /* (3c-1 task 2) SEQ's: ux_seq.c (STEPS: STEP NOTE
                                                          * ACC/SLD GATE, the grid's; task 3: STEP EXTRAS'; PATTERN its settings', below) */
         return;
-    if (pg->graph == GR_MORE) {                         /* (MORE: its pick, the row picked; ux_more.c) */
-        if (pg->more)
-            uxm_knobs(pg->more, uxm_at[uxm_key()].sel, uxm_at[uxm_key()].top, k);
+    uxs_marks(mm);                                      /* (3c-1 task 10: what moves on its own, once a row) */
+    if (pg->graph == GR_MORE) {                         /* (MORE: its pick, the row picked; ux_more.c; 3c-2 task 9: KNOB 2 */
+        if (pg->more) {                                 /* marked as the row is in the list) */
+            uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
+            uxm_knobs(pg->more, s, t, k);
+            uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
+            k[1].mark = (uint8_t)(s < uxm_n(pg->more) && uxm_marked(&pg->more->rows[s], mm));
+        }
         return;
     }
-    uxs_marks(mm);                                      /* (3c-1 task 10: what moves on its own, once a row) */
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(pg, c, &vp);
@@ -928,8 +932,11 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
             k[c].bar = (uint8_t)(d->fmt == F_PCTINV ? 255 - b : b);
         }
     }
-    if (pg->graph == GR_MIX)                            /* (3c-1 task 7) GLO > MIX: LEVEL PAN the selected track's (ux_glo.c) */
-        uxg_mix_knobs(k);
+    if (pg->graph == GR_MIX) {                          /* (3c-1 task 7) GLO > MIX: LEVEL PAN the selected track's (ux_glo.c); */
+        uxg_mix_knobs(k);                               /* (3c-2 task 9) marked as any track setting */
+        k[0].mark = (uint8_t)((mm[P_LEVEL / 32u] >> (P_LEVEL % 32u)) & 1u);
+        k[1].mark = (uint8_t)((mm[P_PAN / 32u] >> (P_PAN % 32u)) & 1u);
+    }
 }
 
 /* the page the section's button goes to from here, by its name in the chain ("OPERATOR"); 0: none (ui_lens.c nav_next) */
@@ -2994,6 +3001,12 @@ static void ux_section_draw(void)
                 if (param_ref(pg->more->rows[i].kind == UXR_GLOBAL ? 0 : TSEL, pg->more->rows[i].id, &vp) && vp)
                     sig = sig * 33u + (uint16_t)*vp;
             }
+        {
+            uint32_t mm[(P_COUNT + 31u) / 32u];
+            uxs_marks(mm);                              /* (3c-2 task 9: the rows marked) */
+            for (c = 0; c < (P_COUNT + 31u) / 32u; c++)
+                sig = sig * 131u + mm[c];
+        }
     }
     if (pg->more == &UXM_GLO && uxg_cpu_shown())        /* (3c-1 task 7) GLO > MORE's CPU on the panel: the readout as last taken */
         sig = sig * 31u + uxg_cpu_pct();                /* (ux_glo.c: at most once a second, a panel then; scrolled off, none) */

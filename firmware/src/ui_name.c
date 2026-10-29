@@ -429,8 +429,8 @@ static void nm_draw_panel(void)
 static void nm_draw_foot(void)
 {
     cv_begin(240, LZ_FOOT_H, T_BG);
-    cv_text(6, CRUMB_Y, &AF_X, nm.kind == NK_LYRIC ? "LENTE \xB7 LYRIC \xB7 K3 DICE \xB7 OCT- CANCEL" :   /* (0.8.5: playing too) */
-            transport_busy() ? "LENTE \xB7 NAME \xB7 STOP TO SAVE" : "LENTE \xB7 NAME \xB7 OCT- CANCEL", T_DIM);
+    cv_text(6, CRUMB_Y, &AF_X, nm.kind == NK_LYRIC ? "LYRIC \xB7 K3 DICE \xB7 OCT- CANCEL" :   /* (0.8.5: playing too; 3c-2 */
+            transport_busy() ? "NAME \xB7 STOP TO SAVE" : "NAME \xB7 OCT- CANCEL", T_DIM);   /* task 9: no LENTE) */
     cv_blit(0, LZ_FOOT_Y);
 }
 /* NAME's tabs (NOTICE . DICE . NAME, NAME lit; 0.8.5: the dialogs' tabs, ui_draw.c's until ACID FM 3c-2 task 1b drew the other

@@ -69,6 +69,7 @@ static uint32_t uxm_act_arg(uint32_t a)
     return g == UXA_USLOT ? ui.uslot : g == UXA_ROW ? ui.song_row : song.sel;
 }
 #define UXM_GO "\x86"                                   /* (an action's value in the list: UF_HDR's arrow) */
+#define UXM_GO_K "GO"                                   /* (.. on the knob row: the word; 3c-2 task 9: MENU's too, one source) */
 #define UXM_CPU_SAY "CPU: A READOUT"                    /* (3c-1 task 7) KNOB 2 on GLO > MORE's CPU */
 static int uxm_act_ok(uint32_t a) { return a == UXM_A_LYRIC ? trk_engp(TSEL) == &ENG_FORMANT : a < UXM_A_N; }
 static void uxm_act_do(uint32_t a)
@@ -369,6 +370,18 @@ static int ux_more_knob(uint32_t knob, int32_t steps)
 /* MORE's knob row (3b; 3c-2 task 5: MENU's too): KNOB 1 the pick, "3/12" (SETTING), KNOB 2 the row picked and its value (an action:
  * GO); the rest blank */
 static const char *uxm_row_text(const ux_row_t *r, char *val, uint32_t nv, uint8_t *bar);   /* (below) */
+static void uxs_marks(uint32_t m[(P_COUNT + 31u) / 32u]);   /* (ux_section.c) */
+/* (3c-2 task 9) row r moves on its own: a track setting with automation or a lock on the step (uxs_marks' m[]); its KNOB 2 and
+ * its place in the list marked as the knob row's (ux_widgets.c) */
+static int uxm_marked(const ux_row_t *r, const uint32_t *m)
+{
+    int16_t *vp;
+    uint32_t i;
+    if (r->kind != UXR_TRACK || sqv_is(r->id) || !param_ref(TSEL, r->id, &vp) || !vp || vp < TSEL->p || vp >= TSEL->p + P_COUNT)
+        return 0;
+    i = (uint32_t)(vp - TSEL->p);
+    return (int)((m[i / 32u] >> (i % 32u)) & 1u);
+}
 static void uxm_knobs(const ux_more_t *m, uint32_t s, uint32_t t, ux_knob_t k[4])
 {
     uint64_t sh = uxm_mask(m);
@@ -390,7 +403,7 @@ static void uxm_knobs(const ux_more_t *m, uint32_t s, uint32_t t, ux_knob_t k[4]
     k[0].bar = (uint8_t)(b > 1u ? (a - 1u) * 255u / (b - 1u) : 255u);
     k[1].label = uxm_row_text(&m->rows[s], v, sizeof v, &k[1].bar);
     if (m->rows[s].kind == UXR_ACTION || (m->rows[s].kind == UXR_MENU && !menu_valued(m->rows[s].id)))
-        str_cpy(v, "GO", sizeof v);
+        str_cpy(v, UXM_GO_K, sizeof v);
     str_cpy(k[1].value, v, sizeof k[1].value);
 }
 
@@ -586,13 +599,14 @@ static void uxm_steps_draw(const ux_more_t *m, uint32_t sel)
 static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
 {
     uint64_t sh;
-    uint32_t n, i, r = 0, nv, rows;
+    uint32_t n, i, r = 0, nv, rows, mm[(P_COUNT + 31u) / 32u];
     if (!m)
         return;
     sh = uxm_mask(m);
     n = uxm_n(m);
     uxm_fix(m, sh, &sel, &top);
     rows = uxm_rows(m, sel);
+    uxs_marks(mm);
     if (rows != UXM_ROWS)
         uxm_steps_draw(m, sel);
     for (i = top; i < n && r < rows; i++) {
@@ -633,6 +647,8 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
         if (val[0])
             cv_text_on(vx, ty, &UF_HDR, val, on ? UX_SLIDE : UX_TEXT, on ? bg : ux_under(vx, ty + 4));
         (void)uxm_bar(rw, on, ty + UF_HDR_CAP_Y + UF_HDR_CAP_H / 2, 1);   /* (its place: a meter beside the value) */
+        if (uxm_marked(rw, mm))                         /* (3c-2 task 9) it moves on its own: the row's top right end lit, as */
+            cv_rect(228 - UX_MARK_W, y, UX_MARK_W, UX_MARK_H, UX_TEXT);   /* the knob row's rule (ux_widgets.c) */
     }
     nv = uxm_nvis(sh);
     if (nv > rows) {                                    /* the scroll: where the panel is in the list */

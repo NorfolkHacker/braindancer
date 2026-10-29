@@ -35,7 +35,7 @@ static void draw_about_qr(int32_t x, int32_t y)
  * in the ux faces. MENU_DOC_H: the document's rows on the screen (ux_menu.c: under the header, over the footer). */
 #define MENU_DOC_H 210                                /* the document: screen rows 16..225 */
 #define MENU_DOC_X 8                                  /* .. its left margin, and the text's width */
-#define MENU_DOC_W 222
+#define MENU_DOC_W 226                                /* (3c-2 task 9: 8 + 226 clears the scroll bar at 235) */
 enum { MC_TEXT, MC_TITLE, MC_URL };
 typedef struct { const char *text; uint8_t kind; } menu_credit_t;
 static const menu_credit_t MENU_CREDITS[] = {
