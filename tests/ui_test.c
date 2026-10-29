@@ -21450,6 +21450,100 @@ static int test_u6_row(void)
     ui_power_on();
     return bad;
 }
+/* (ACID FM 3c-2 task 7, spec 5.2) the clock rule for every tempo writer. GEN under USB / TRS: no BPM written (the piece at the
+ * incoming tempo), the second message and the header's tempo say whose it is; under INT the genre's range as before */
+static int test_u7_gen(void)
+{
+    int bad = 0, ok, said = 0;
+    uint32_t f;
+    char b[16];
+    uint16_t pr = ui_prefs;
+    ui_power_on();
+    ui_prefs &= (uint16_t)~PREF_BPM_LOCK;
+    go_home(); frames(16);
+    song.g[G_CLOCK] = 1; song.g[G_BPM] = 97;
+    fm1_ms += 1200u;
+    held_turn(B_HOME, 1); frames(8);
+    ok = ui.confirm == CF_DICE_ALL;
+    press(B_OCTUP); frame();
+    ok &= song.g[G_BPM] == 97 && ui.confirm == CF_DICE_ALL;
+    for (f = 0; f < 200u && !said; f++) { said = msg_is("CLOCK: USB"); frame(); }
+    head_bpm_text(b, sizeof b);
+    ok &= said && str_eq(b, "CLOCK: USB");
+    song.g[G_CLOCK] = 2; head_bpm_text(b, sizeof b);
+    ok &= str_eq(b, "CLOCK: TRS");
+    if (!ok) printf("  GEN USB: BPM %d said %d head '%s'\n", song.g[G_BPM], said, b);
+    song.g[G_CLOCK] = 0; song.g[G_BPM] = 97;
+    press(B_OCTUP); frame();
+    head_bpm_text(b, sizeof b);
+    ok &= song.g[G_BPM] >= gs.g->bpm_lo && song.g[G_BPM] <= gs.g->bpm_hi && b[0] >= '0' && b[0] <= '9' && atoi(b) == song.g[G_BPM];
+    if (!ok) printf("  GEN INT: BPM %d (%d..%d) head '%s'\n", song.g[G_BPM], gs.g->bpm_lo, gs.g->bpm_hi, b);
+    press(B_OCTDN); frame();
+    song.g[G_CLOCK] = 1; frame();
+    head_bpm_text(b, sizeof b);                         /* (off GEN: the BPM, the sync mark beside it) */
+    ok &= atoi(b) == song.g[G_BPM];
+    bad += check("ACID FM 3c-2 task 7: GEN under USB / TRS writes no BPM, says CLOCK: USB (the message, the header's tempo); "
+                 "INT: the genre's range", ok);
+    song.g[G_CLOCK] = 0;
+    ui_prefs = pr;
+    ui_power_on();
+    return bad;
+}
+/* the power-on demo: under TRS / USB the tempo stays the host's; INT: DEMO_BPM */
+static int test_u7_demo(void)
+{
+    int bad = 0, ok;
+    ui_power_on();
+    song.g[G_CLOCK] = 2; song.g[G_BPM] = 97;
+    power_on_parts();
+    ok = song.g[G_BPM] == 97;
+    song.g[G_CLOCK] = 1;
+    power_on_parts();
+    ok &= song.g[G_BPM] == 97;
+    song.g[G_CLOCK] = 0;
+    power_on_parts();
+    ok &= song.g[G_BPM] == DEMO_BPM;
+    bad += check("ACID FM 3c-2 task 7: the power-on demo leaves the BPM under TRS / USB, DEMO_BPM under INT", ok);
+    ui_power_on();
+    return bad;
+}
+/* CPU TEST: CLOCK INT for the test (cpt_clk the one before + 1), back when it is left: UNDO (GLO + G4), NEW PROJECT, a project
+ * load (the project's own CLOCK then), GEN */
+static int test_u7_cpu_test(void)
+{
+    int bad = 0, ok, ok1;
+    ui_power_on(); frame();
+    song.g[G_CLOCK] = 0;
+    ok = !project_save(1);                              /* (a section stored with CLOCK INT) */
+    song.g[G_CLOCK] = 1; song.g[G_BPM] = 97; frame();
+    u1_ask(CF_CPU_TEST, 0); press(B_OCTUP); frame();
+    ok &= song.g[G_CLOCK] == 0 && song.g[G_BPM] == 160 && cpt_clk == 2u;
+    ly_white(B_GLO, 8u);                                /* GLO + G4: UNDO */
+    ok &= song.g[G_CLOCK] == 1 && song.g[G_BPM] == 97 && !cpt_clk;
+    if (!ok) printf("  CPU TEST / UNDO: CLOCK %d BPM %d cpt_clk %u\n", song.g[G_CLOCK], song.g[G_BPM], (unsigned)cpt_clk);
+    bad += check("ACID FM 3c-2 task 7: CPU TEST plays on the internal clock (CLOCK USB -> INT, 160 BPM); UNDO brings CLOCK back", ok);
+    u1_ask(CF_CPU_TEST, 0); press(B_OCTUP); frame();
+    ok1 = song.g[G_CLOCK] == 0 && cpt_clk == 2u;
+    u1_ask(CF_INIT_SYS, 0); press(B_OCTUP); frame();
+    ok = ok1 && msg_is("NEW PROJECT") && song.g[G_CLOCK] == 1 && !cpt_clk;
+    song.g[G_CLOCK] = 2; frame();
+    u1_ask(CF_CPU_TEST, 0); press(B_OCTUP); frame();
+    ok1 = song.g[G_CLOCK] == 0 && cpt_clk == 3u;
+    project_load(1); frame();
+    ok &= ok1 && song.g[G_CLOCK] == 0 && !cpt_clk;      /* (the project's own CLOCK, INT) */
+    song.g[G_CLOCK] = 1; frame();
+    u1_ask(CF_CPU_TEST, 0); press(B_OCTUP); frame();
+    ok1 = song.g[G_CLOCK] == 0 && cpt_clk == 2u;
+    gen_go(); frame();
+    ok &= ok1 && song.g[G_CLOCK] == 1 && !cpt_clk && song.g[G_BPM] == 160;   /* (GEN under USB: the tempo left as it was) */
+    if (!ok) printf("  CPU TEST left: CLOCK %d BPM %d cpt_clk %u\n", song.g[G_CLOCK], song.g[G_BPM], (unsigned)cpt_clk);
+    bad += check("  .. NEW PROJECT, a project load (its own CLOCK) and GEN bring CLOCK back too", ok);
+    bad += check("  .. its dialog says so (the internal clock, CLOCK back after)",
+                 strstr(UXD_LOST_HDR[CF_CPU_TEST], "internal clock") && strstr(UXD_LOST_HDR[CF_CPU_TEST], "CLOCK comes back"));
+    song.g[G_CLOCK] = 0;
+    ui_power_on();
+    return bad;
+}
 
 
 int main(void)
@@ -21692,6 +21786,9 @@ int main(void)
     bad += test_u5_more();
     bad += test_u5_about();
     bad += test_u6_row();                               /* (ACID FM 3c-2 task 6) */
+    bad += test_u7_gen();                               /* (ACID FM 3c-2 task 7) */
+    bad += test_u7_demo();
+    bad += test_u7_cpu_test();
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

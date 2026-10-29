@@ -446,6 +446,9 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
                 ed_load_before(&b);
                 set_engine((uint32_t)clamp(ed_rv(a + 2), 0, NENGINES - 1));
                 ed_load_after(&b);
+            } else if (a[0] == 1 && a[1] == G_BPM && tempo_ext()) {   /* (ACID FM 3c-2 task 7, spec 5.2) under CLOCK USB /
+                                                           * TRS refused as the device's tempo writers (ui.c tempo_ext);
+                                                           * the reply the BPM as it is */
             } else if (a[0] == 1 && a[1] == G_DJF) {     /* (0.9.1) the DJ FILTER: recorded as its knob is */
                 motion_djf_set(TSEL, (int16_t)clamp(ed_rv(a + 2), d->min, d->max));
             } else if (d->max > d->min) {

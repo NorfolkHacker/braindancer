@@ -219,7 +219,7 @@ static void head_geo(head_geo_t *g, const char *bpm)
     char z[8] = "0000000";
     z[str_len(bpm) < 7u ? str_len(bpm) : 7u] = 0;
     g->bx = HEAD_BPM_X;
-    text_ink(&AF_M, z, g->b);
+    text_ink(&AF_M, bpm[0] >= '0' && bpm[0] <= '9' ? z : bpm, g->b);   /* (3c-2 task 7: words, head_bpm_text, as they are) */
     g->mx0 = HEAD_TR_X;
     g->mx1 = HEAD_TR_X + 8;
     g->sx0 = g->mx1 + 1;
@@ -313,6 +313,18 @@ static int32_t head_group(void)
     cv_text(x, HEAD_SY, &AF_S, b, T_THEME);
     return x0;
 }
+/* (ACID FM 3c-2 task 7, spec 5.2) the inherited header's tempo (b holds n): on GEN under an outside clock "CLOCK: USB" / "CLOCK:
+ * TRS" (the piece is made at the incoming tempo; ui.c tempo_ext's words), else the BPM */
+static void head_bpm_text(char *b, uint32_t n)
+{
+    char d[8];
+    if (gen_on() && song.g[G_CLOCK]) {
+        str_cpy(b, song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS", n);
+        return;
+    }
+    fmt_int(d, song.g[G_BPM]);
+    str_cpy(b, d, n);
+}
 static void draw_head(void)
 {
     char b[16], ttl[40];
@@ -321,22 +333,24 @@ static void draw_head(void)
     uint32_t rec = (song.rec >> song.sel) & 1u ? 2u : song.rec != 0u;   /* 2 the selected track armed, 1 another */
     uint32_t sig = (uint32_t)song.playing * 3u + rec * 5u + (uint32_t)(song.octave + 8) * 11u + song.sel * 13131u +
                    (ui.msg_t ? str_hash(7u, ui.msg) : ui.layer * 7919u) + (uint32_t)song.g[G_BPM] * 101u + (ui.bpm_t != 0) * 31u +
-                   (uint32_t)seq_counting() * 7u + (ui_prefs & PREF_BPM_LOCK) * 4099u + (uint32_t)song.g[G_CLOCK] * 65599u +
+                   (uint32_t)seq_counting() * 7u + (ui_prefs & PREF_BPM_LOCK) * 4099u + (uint32_t)song.g[G_CLOCK] * (65599u + gen_on()) +
                    (uint32_t)batt_shown() * 7777u + (chain.running ? (chain.row + 1u) * 104729u : 0u) +
                    head_load() * 0x9E3779B1u + str_hash(tc, ttl) * 3u;
     int msg = ui.msg_t || ui.layer;
     int centre = !msg || ui.bpm_t || ui.layer == LAYER_GLO;   /* the BPM being changed: it stays, the message right */
     int32_t lx, r = HEAD_LOAD_X - 6;
-    if (song.g[G_BPM] != ui.roll_bpm) {
+    head_bpm_text(b, sizeof b);
+    if (b[0] > '9') {                                  /* (3c-2 task 7: words, no roll; roll_text takes 7 characters) */
+        ui.roll[ROLL_BPM].from[0] = 0;
+        ui.roll_bpm = song.g[G_BPM];
+    } else if (song.g[G_BPM] != ui.roll_bpm) {
         char a[8];
         fmt_int(a, ui.roll_bpm);
-        fmt_int(b, song.g[G_BPM]);
         roll_note(ROLL_BPM, a, b, ui.force);
         ui.roll_bpm = song.g[G_BPM];
     } else if (ui.force) {
         ui.roll[ROLL_BPM].from[0] = 0;
     }
-    fmt_int(b, song.g[G_BPM]);
     head_geo(&g, b);
     if (!ui.force && sig == ui.head_sig) {
         if (ui.roll[ROLL_BPM].from[0]) {               /* rolling: the BPM's strip only (the rule under it again) */

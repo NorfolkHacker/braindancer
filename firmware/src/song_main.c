@@ -153,6 +153,7 @@ static int section_load(uint32_t s)
     chain_config_t keep = chain_config;
     uint8_t row = ui.song_row;
     int rc;
+    cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST left (a section: its own CLOCK) */
     proj_lfo_keep = 1;                                  /* (0.9.18: the song plays on, MODE FREE's LFOs not faded again) */
     rc = !proj_import(&proj_scratch, &proj_slot[s & 3u], sizeof(project_store_t)) || project_restore_runtime(&proj_scratch);
     proj_lfo_keep = 0;

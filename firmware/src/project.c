@@ -1974,6 +1974,7 @@ static void system_init(void)
     static const uint8_t KEEP[5] = {G_CLOCK, G_TUNE, G_MIDI, G_ROUTE, G_SLOT};
     int16_t kept[5], mr[G_MRSEL + 1 - G_MRIN1];         /* (ACID FM 0.5) and the MIDI routing (G_MRIN1 .. G_MRSEL) */
     uint32_t i;
+    cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST's CLOCK back, then kept (KEEP) */
     demo_end();                                         /* (ACID FM 3b) NEW PROJECT is empty, no demo */
     safe_clear();                                       /* (ACID FM 0.5.2) the safety net: no GEN part, its levers off
                                                          * (byte stores: the ISR reads each once a half) */
@@ -2316,6 +2317,7 @@ static int undo_do(void)                                /* 0: done */
         mut.stale = st;
         mut.moved = mv;
     }
+    cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST left: the CLOCK before it */
     proj_cur = cur;                                     /* (the project's slot and name stay) */
     str_cpy(proj_name, name, sizeof proj_name);
     undo_st[0] = undo_st[1];                            /* (UNDO again: what it replaced) */
@@ -2336,6 +2338,7 @@ static int undo_sound(uint32_t k)
 
 static void project_load(uint32_t slot)
 {
+    cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST left (a project: its own CLOCK) */
 #if FELUCCA_FLASH
     if (flash_ok && !proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t))) proj_fetch(slot);
 #endif

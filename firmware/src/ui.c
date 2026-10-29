@@ -695,6 +695,28 @@ static void ui_say(const char *a, const char *b)
 }
 
 static void ui_message(const char *s) { ui_say(s, ""); }
+/* (3b task 10 fix, ruling 1; 3c-1 task 8: every writer) an external clock sets the tempo (midi_clock.c): HOME's KNOB 4, GLO > MORE's
+ * BPM (param_knob), GLO + SELECT and the GLO layer's TAP (ui_layer.c glo_tap), (3c-2 task 7, spec 5.2) the editor's SET of the
+ * BPM (editor.c) change nothing and say whose it is. 1: refused. (3c-2 task 7: here from ui_input.c, the editor's tests have
+ * no ui_input.c) */
+static int tempo_ext(void)
+{
+    if (!song.g[G_CLOCK])
+        return 0;
+    ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
+    return 1;
+}
+/* (ACID FM 3c-2 task 7, spec 5.2) CPU TEST plays on the internal clock (song_dice.c cpu_test_song): the CLOCK before it + 1 (0:
+ * none), put back when the test is left: NEW PROJECT (system_init, before KEEP), GEN (gen_go), a project or section load
+ * (project_load, section_load: the loaded one's own CLOCK then), UNDO (undo_do, after its restore). Here, not in song_dice.c:
+ * project.c's builds without ui_input.c (the editor's, the backup's tests) reach it */
+static uint8_t cpt_clk;
+static void cpt_clock_back(void)
+{
+    if (cpt_clk)
+        song.g[G_CLOCK] = (int16_t)(cpt_clk - 1u);
+    cpt_clk = 0;
+}
 /* a message led by an icon: its first byte (ui_draw.c draw_head draws the icon, then the words) */
 #define MSG_NOFILE "\x01"                      /* the no-file icon (ICON_X_NOFILE) */
 #include "midi_learn.c"                       /* (0.9.12) MIDI LEARN's UI (the map: midi_control.c) */
@@ -1566,7 +1588,8 @@ static void power_on_parts(void)
         pat_sig[i] = steps_sig(t);            /* a default pattern, not the user's */
         pat_last[i] = (uint8_t)pat;
     }
-    song.g[G_BPM] = DEMO_BPM;
+    if (!song.g[G_CLOCK])                     /* (ACID FM 3c-2 task 7, spec 5.2) under USB / TRS the tempo is the host's */
+        song.g[G_BPM] = DEMO_BPM;
     demo_on = demo_fresh = 1;
     demo_played = 0;
 }

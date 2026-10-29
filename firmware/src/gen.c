@@ -2561,8 +2561,9 @@ static void gen_make(void)
     }
     for (k = 0; k < NTRK; k++) pat_sig[k] = steps_sig(&trk[k]);
     /* the tempo (the genre's range, the energy in it; always moved), the swing, the space, the master */
-    if (!(ui_prefs & PREF_BPM_LOCK)) {                  /* the genre's range, the energy's place in it (from the seed:
-                                                         * the same piece, the same tempo) */
+    if (!(ui_prefs & PREF_BPM_LOCK) && !song.g[G_CLOCK]) {   /* the genre's range, the energy's place in it (from the seed:
+                                                         * the same piece, the same tempo); (ACID FM 3c-2 task 7, spec 5.2)
+                                                         * under USB / TRS the incoming tempo's */
         int32_t lo = g->bpm_lo, hi = g->bpm_hi, v = lo + (hi - lo) * (int32_t)gs.energy / 100 + grr(-3, 3);
         song.g[G_BPM] = (int16_t)clamp(v, lo, hi);
     }
@@ -2626,6 +2627,8 @@ static void gen_go(void)
 {
     uint32_t k;
     char b[8];
+    cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST left: its CLOCK back (before the
+                                                         * mark: UNDO brings the test back on the CLOCK it had) */
     undo_mark();
     gen_make();
     safe_part[0] = gs.act[RL_TEX] && gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) */
@@ -2639,7 +2642,8 @@ static void gen_go(void)
     b[3] = (char)('0' + gp.seed / 10u % 10u); b[4] = (char)('0' + gp.seed % 10u); b[5] = 0;
     str_cpy(gp.last + k, b, sizeof gp.last - k);
     ui_say("GEN: ", gp.last);
-    str_cpy(ui.msg2, live.mode ? "PARTS: PLAY THE SONG" : "UNDO: GLO + G4", sizeof ui.msg2);
+    str_cpy(ui.msg2, live.mode ? "PARTS: PLAY THE SONG" : song.g[G_CLOCK] == 1 ? "CLOCK: USB" : song.g[G_CLOCK] ? "CLOCK: TRS" :
+            "UNDO: GLO + G4", sizeof ui.msg2);          /* (3c-2 task 7: the tempo the outside clock's, as tempo_ext says) */
     ui.force = 1;
 }
 static uint32_t gen_sig(void)                           /* the settings that make the piece */

@@ -1125,15 +1125,7 @@ static void seq_view_turn(uint32_t id, int32_t steps)
 /* (ACID FM 3b, factored out of edit_param) setting id of track t (0: a global) turned steps detents of KNOB knob (0..3, its
  * acceleration): the write every page's knob does (params.c param_ref), a MORE row's too (ux_more.c): the value, the views
  * written back (TRACKS, LOAD, the LFO's MODE / PHASE), the turn recorded (AUTOMATION) and heard by MIDI LEARN (knob_cap) */
-/* (3b task 10 fix, ruling 1; 3c-1 task 8: every writer) an external clock sets the tempo (midi_clock.c): HOME's KNOB 4, GLO > MORE's
- * BPM (param_knob), GLO + SELECT and the GLO layer's TAP (ui_layer.c glo_tap) change nothing and say whose it is. 1: refused */
-static int tempo_ext(void)
-{
-    if (!song.g[G_CLOCK])
-        return 0;
-    ui_message(song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS");
-    return 1;
-}
+/* (tempo_ext, the outside clock's refusal: ui.c, 3c-2 task 7) */
 /* (ACID FM 3c-2 task 2) SAVE > MORE's ENGINE, FAVORITE, LIST (params.c ID_SV_*) turned steps: a detent each, as the inherited
  * PRESETS page's KNOB 2 (the next / previous engine), 3 (the sound's favourite mark) and 4 (ALL, FAV, then the types BASS .. FX);
  * (task 3) END, the inherited ARRANGE's END */

@@ -1030,12 +1030,34 @@ static int drum_kit_retired(void)
     return bad;
 }
 
+/* (ACID FM 3c-2 task 7, spec 5.2) SET of the BPM (scope 1, G_BPM) under CLOCK USB / TRS: refused as the device's own tempo
+ * writers are (tempo_ext: "CLOCK: USB"), the reply the BPM as it is; under INT written */
+static int ed_bpm_clock(void)
+{
+    static uint8_t a[4];
+    int bad = 0, ok;
+    reset();
+    song.g[G_BPM] = 97; song.g[G_CLOCK] = 1;
+    a[0] = 1; a[1] = G_BPM; a[2] = (8192 + 150) & 127; a[3] = (8192 + 150) >> 7;
+    request(ED_SET, a, 4);
+    ok = song.g[G_BPM] == 97 && host_wire[4] == ED_SET && host_wire[5] == 1 && host_wire[6] == G_BPM &&
+         ed_rv(host_wire + 7) == 97 && ui.msg_t && !strcmp(ui.msg, "CLOCK: USB");
+    song.g[G_CLOCK] = 2; ui.msg_t = 0;
+    request(ED_SET, a, 4);
+    ok &= song.g[G_BPM] == 97 && ed_rv(host_wire + 7) == 97 && ui.msg_t && !strcmp(ui.msg, "CLOCK: TRS");
+    bad += check("SET of G_BPM under CLOCK USB / TRS: refused (CLOCK: USB), the reply the BPM as it is", ok);
+    song.g[G_CLOCK] = 0;
+    request(ED_SET, a, 4);
+    bad += check("SET of G_BPM under CLOCK INT: written", song.g[G_BPM] == 150 && ed_rv(host_wire + 7) == 150);
+    return bad;
+}
+
 #ifndef EDITOR_TEST_NO_MAIN                              /* (robust_test.c, fuzz_*.c: this file is their base) */
 int main(void)
 {
     int bad = preferences() + motion_locks() + framing() + uart_recovery() + steps() + stop_failures() + song_protocol() + malformed_saves() +
               fm6_patches() + user_preset_roundtrip() + live_sync() + usb_burst() + menu_protocol() + drum_kit_retired() +
-              lyric_protocol();
+              lyric_protocol() + ed_bpm_clock();
     printf("%s\n", bad ? "EDITOR TEST FAILED" : "editor test passed");
     return bad != 0;
 }

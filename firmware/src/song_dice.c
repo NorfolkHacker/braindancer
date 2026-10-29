@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker
  * JIANT (0.6.26 .. 0.9.16 DICE ALL's own song-idea generator; 0.9.17 the helpers GEN shares, gen.c): the roles, the
  * engines' and scales' numbers, a step's tie, a note held, an euclid, a preset's name, a part's level by its register, a
  * track's loop, the CPU TEST song. Included by ui_input.c (main loop only) before gen.c. (0.9.17) Its own generator
@@ -91,6 +92,11 @@ static void cpu_test_song(void)
     uint32_t k, i, n = trk_live;
     if (song.playing) transport_req = 2;
     cpt_arm = n == NPART;                               /* (0.9.14) its load measured when it plays (ui_menu.c cpt_poll) */
+    if (song.g[G_CLOCK]) {                              /* (ACID FM 3c-2 task 7, spec 5.2) on the internal clock; the CLOCK
+                                                         * before it back when the test is left (ui.c cpt_clock_back) */
+        cpt_clk = (uint8_t)(song.g[G_CLOCK] + 1);
+        song.g[G_CLOCK] = 0;
+    }
     song.g[G_BPM] = 160;
     song.g[G_RTYPE] = 4;                                /* (CLOUD: the heaviest reverb) */
     song.g[G_DPIT] = 12;                                /* (the delay's pitch shifter on) */

@@ -52,7 +52,7 @@ static const char *const UXD_LOST_HDR[] = {
     [CF_INIT_SYS] = "Clears the music in memory; stored sections stay. GLO + G4 brings it back.",
     [CF_DICE_SOUND] = "OCT- puts it back. SELECT dices again.", [CF_DICE_SEQ] = "OCT- puts it back. SELECT dices again.",
     [CF_DICE_LFO] = "OCT- puts it back. SELECT dices again.", [CF_DICE_FX] = "OCT- puts it back. SELECT dices again.",
-    [CF_CPU_TEST] = "Plays at 160 BPM on the internal clock. GLO + G4 brings the music back.",
+    [CF_CPU_TEST] = "160 BPM on the internal clock; CLOCK comes back after. GLO + G4 undoes it.",
     [CF_MUT_BACK] = "Loses what MUTATE changed in its sound and pattern.",
     [CF_LIVE_COMMIT] = "Writes them into the steps. GLO + G4 takes them out.",
     [CF_LOAD_PROJ] = "Loses the changes not stored. GLO + G4 brings them back."};   /* (3c-2 task 4) */
