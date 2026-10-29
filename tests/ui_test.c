@@ -11952,7 +11952,9 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {7, 3, 16, 6, 13, 7, 11, 2, 25, 1, 7, 7, 17, 9};   /* (3c-1 task 8: task 14 9, GLO's MIDI page
+    static const uint8_t WANT[14] = {7, 3, 16, 6, 13, 7, 11, 2, 25, 1, 7, 7, 18, 9};   /* (3c-2 task 6, pre-flight 20: task 13
+                                                         * 18, was 17: TRACK's PLAYS a row before COMP 2's TYPE on SEQ > MORE) */
+                                                         /* (3c-1 task 8: task 14 9, GLO's MIDI page
                                                          * before MORE; task 7: task 14 8, was 4:
                                                          * GLO > SYSTEM gone, its TRACKS GLO > MORE's 5th setting after LIVE's
                                                          * RAILS, the spec's order) */   /* (3c-1 task 2: task 13 14, was 11: SEQ
@@ -12042,8 +12044,8 @@ static int test_nav_tasks(void)
             break;
         case 12:                                        /* COMP 2 of step 9 */
             tk_start(1); tk_go(EN_K1, 8); tk_btn(B_SEQ); tk_btn(B_SEQ); tk_btn(B_SEQ);
-            tk_go(EN_K1, 5); tk_val(EN_K2, 1);          /* (3c-1 task 4: step 9 picked on STEPS, SEQ x3: MORE, its TYPE 2 the
-                                                         * 6th setting) */
+            tk_go(EN_K1, 6); tk_val(EN_K2, 1);          /* (3c-1 task 4: step 9 picked on STEPS, SEQ x3: MORE, its TYPE 2 the
+                                                         * 6th setting; 3c-2 task 6: the 7th, TRACK's PLAYS before it) */
             ok = str_eq(cur_page()->title, "SEQ MORE") && ui.cursor == 8u && TSEL->step[8].comp2 != 0u;
             break;
         default:                                        /* GLO: six tracks (3c-1 task 7: GLO > MORE's SYSTEM > TRACKS, its */
@@ -12064,8 +12066,8 @@ static int test_nav_tasks(void)
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
     bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (115: 3b task 8, FX's DLY MOD and "
                  "SLICER in MORE; 82: 3b task 5, FM6's filter in MORE; 0.9.18 no BAR 80, was 73; 118: 3c-1 task 2, COMP after STEPS' "
-                 "groups; 120: task 3, STEP EXTRAS; 125: task 4, TRACK's and COMP 2's in SEQ > MORE; 129: task 7, GLO's TRACKS in GLO > MORE; 130: task 8, GLO's MIDI page; 131: 3c-2 task 2, SAVE's MORE)",
-                 okall && tot == 131u);
+                 "groups; 120: task 3, STEP EXTRAS; 125: task 4, TRACK's and COMP 2's in SEQ > MORE; 129: task 7, GLO's TRACKS in GLO > MORE; 130: task 8, GLO's MIDI page; 131: 3c-2 task 2, SAVE's MORE; 132: task 6, TRACK's PLAYS)",
+                 okall && tot == 132u);
     ui_power_on();
     return bad;
 }
@@ -18180,12 +18182,12 @@ static int test_t33_cond_words(void)
     int ok = 1;
     uint32_t i, j;
     for (i = 0; i < CP_NTRIG + 1u; i++) {
-        const char *p = UXQ_COND[i];
+        const char *p = N_PLAYS[i];
         ok &= uxq_t_is("condition", p, WANT[i]) && text_w(&UF_LBL, p) <= UX_COL_W - 4;
         for (; *p; p++)
             ok &= *p != ':' && *p != '!';
         for (j = 0; j < i; j++)
-            ok &= !str_eq(UXQ_COND[i], UXQ_COND[j]);
+            ok &= !str_eq(N_PLAYS[i], N_PLAYS[j]);
     }
     return check("ACID FM 3c-1 task 3: the conditions in plain words (ALWAYS, 1ST OF 2, EVERY 2ND .. NOT 1ST), each its own, each "
                  "fits the knob column", ok);
@@ -18319,13 +18321,13 @@ static int test_t34_more_list(void)
     cursor_set(4); frames(20);
     nav_put(SEC_SEQ, "MORE"); frame();
     ok = uxq_t_is("list", uxe_more_list(&UXM_SEQ),
-                  "[TRACK]|SEQ PITCH|CHANCE|HUMAN|REC SNAP|[STEP 5]|TYPE|TYPE 2|FOCUS|PITCH|MOVE|[MUTATE]|SOUND|PATTERN|AMOUNT|MODE|"
+                  "[TRACK]|SEQ PITCH|CHANCE|HUMAN|REC SNAP|PLAYS|[STEP 5]|TYPE|TYPE 2|FOCUS|PITCH|MOVE|[MUTATE]|SOUND|PATTERN|AMOUNT|MODE|"
                   "[SHAPE]|STRETCH|REPEAT|NUDGE|ROTATE|[PLAYHEADS]|HEAD|RATE|DIRECTION|INTERVAL|[AUTOMATION]|PLAY|EVENTS|LOCKS|"
                   "CLEAR|ROW|STEP|SETTING|VALUE");
     uxs_knobs(cur_page(), k);
     uxs_foot(uxs_where(), k, uxs_count(), uxs_next(), b, sizeof b);
     ok &= uxq_t_is("footer", b, "4 / 4 \xB7 SETTING \xB7 SEQ PITCH") && uxq_t_is("where", uxs_where(), "SEQ \xB7 MORE");
-    bad += check("ACID FM 3c-1 task 4: SEQ > MORE: TRACK, the picked step's (STEP 5), MUTATE, SHAPE, PLAYHEADS, AUTOMATION and the "
+    bad += check("ACID FM 3c-1 task 4: SEQ > MORE: TRACK (3c-2 task 6: PLAYS), the picked step's (STEP 5), MUTATE, SHAPE, PLAYHEADS, AUTOMATION and the "
                  "list; footer 4 / 4 . SETTING . SEQ PITCH", ok);
     TSEL->step[4].comp = CP_ARPN; TSEL->step[4].carg = (uint8_t)CP_ARG(1u, 5u, 1u); ui.comp_at = 0;
     TSEL->step[4].comp2 = CP_ECHO; TSEL->step[4].carg2 = (uint8_t)(3u | CP_ECHO_RISE);
@@ -21404,6 +21406,46 @@ static int test_u5_about(void)
     ui_power_on();
     return bad;
 }
+/* (ACID FM 3c-2 task 6, spec 5.1) SEQ > MORE's PLAYS: TRACK's row after REC Q, the selected track's G_PLAYS1 + k (ALWAYS, then
+ * CONDITION's words, params.c N_PLAYS); KNOB 2 steps it 0..12 (clamped); the status line names the track (as GLO > MIDI's
+ * "T3 IN . OFF"); while a song plays STOP TO EDIT, as TRACK's other rows */
+static int test_u6_row(void)
+{
+    int bad = 0, ok;
+    uint32_t r, k;
+    ui_power_on();
+    trks_put(1); frame();                               /* (six tracks: T5 awake) */
+    track_select(4); frame();
+    go_title("SEQ MORE"); frame();
+    r = seqm_row(UXR_TRACK, ID_SQ_PLAYS);
+    ok = r > 0u && r < UXM_SEQ.n && UXM_SEQ.rows[r - 1u].kind == UXR_TRACK && UXM_SEQ.rows[r - 1u].id == P_HRQ &&
+         uxm_head_of(&UXM_SEQ, r) == UXM_H_TRACK && uxq_t_is("PLAYS's name", seqm_name(ID_SQ_PLAYS), "PLAYS") &&
+         uxq_t_is("PLAYS ALWAYS", seqm_val(ID_SQ_PLAYS), "ALWAYS");
+    bad += check("ACID FM 3c-2 task 6: SEQ > MORE's TRACK group: PLAYS after REC Q, ALWAYS", ok);
+    for (ok = 1, k = 1; k <= CP_NTRIG; k++) {
+        seqm(ID_SQ_PLAYS, 1); frame();
+        ok &= song.g[G_PLAYS1 + 4] == (int16_t)k && uxq_t_is("PLAYS", seqm_val(ID_SQ_PLAYS), N_PLAYS[k]);
+    }
+    seqm(ID_SQ_PLAYS, 1); frame();
+    ok &= song.g[G_PLAYS1 + 4] == CP_NTRIG && uxq_t_is("NOT 1ST", seqm_val(ID_SQ_PLAYS), "NOT 1ST");
+    seqm(ID_SQ_PLAYS, -20); frame();
+    ok &= song.g[G_PLAYS1 + 4] == 0;
+    seqm(ID_SQ_PLAYS, 1); frame();
+    ok &= song.g[G_PLAYS1 + 4] == 1 && uxq_t_is("PLAYS's status", uxq_t_say(), "T5 PLAYS \xB7 1ST OF 2");
+    for (k = 0; k < NTRK; k++)
+        ok &= k == 4u || !song.g[G_PLAYS1 + k];
+    bad += check("  KNOB 2 steps it ALWAYS .. NOT 1ST (clamped), T5's alone; the status line T5 PLAYS . 1ST OF 2", ok);
+    track_select(1); frame();
+    ok = uxq_t_is("T2's PLAYS", seqm_val(ID_SQ_PLAYS), "ALWAYS");
+    chain.running = 1;
+    seqm(ID_SQ_PLAYS, 1); frames(4);
+    ok &= !song.g[G_PLAYS1 + 1] && msg_is("STOP TO EDIT");
+    chain.running = 0;
+    bad += check("  the selected track's (T2: ALWAYS); while a song plays: STOP TO EDIT, as TRACK's other rows", ok);
+    trks_put(0);
+    ui_power_on();
+    return bad;
+}
 
 
 int main(void)
@@ -21645,6 +21687,7 @@ int main(void)
     bad += test_u5_knobs();
     bad += test_u5_more();
     bad += test_u5_about();
+    bad += test_u6_row();                               /* (ACID FM 3c-2 task 6) */
     bad += test_edit_syn_is_sound();
     bad += test_edit_syn_knobs_move();
     bad += test_edit_lofi_knob1();

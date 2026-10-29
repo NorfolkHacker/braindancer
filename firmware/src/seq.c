@@ -1341,6 +1341,14 @@ static int cp_trig_cond(const track_t *t, uint32_t a)
         return c[1] == 1u ? t->loops == 0u : t->loops != 0u;   /* FIRST, NOT FIRST */
     return t->loops % c[1] == c[0] - 1u;
 }
+/* (ACID FM 0.6) PLAYS: this loop of the track's pattern is one its PLAYS (core.h G_PLAYS1 + the track) lets through (0
+ * ALWAYS; k: CP_TRIGS[k - 1], as a step's TRIG). seq_step: a loop it leaves out sounds nothing (notes, hits, ratchets,
+ * components); the tick's motion_step still runs, so locks and automation apply, as on a muted track */
+static int trk_plays_on(const track_t *t)
+{
+    uint32_t c = (uint32_t)song.g[G_PLAYS1 + trk_index(t) % NTRK];
+    return !c || cp_trig_cond(t, c - 1u);
+}
 /* (0.6.98) WALK / CLIMB: the move this loop, in degrees (WALK) or octaves (CLIMB): the loops counted in RATEs, the
  * count round the RANGE: UP 0 1 .. R 0 ..; DOWN 0 -1 .. -R; UP-DN 0 1 .. R .. 1 0 ..; RND a place of 0..R a move, by
  * a hash of the move and the step (the same every time round, the pattern's own) */
@@ -1917,7 +1925,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     uint32_t qseq = t->p[P_QUANT] == QN_SEQ && !kit;
     int32_t up = (kit ? 0 : t->p[P_POFS] + live_up(t)) +   /* SHIFT PIT: the notes up (a kit keeps its lanes); LIVE OCT */
                  (t->p[P_AMODE] == AM_TRNS ? t->trn : 0);   /* ARP TRNS: the keys' interval */
-    if ((skip & SEQ_MISS) || (!(skip & SEQ_ROLLED) && !step_rolls(t, s))) {
+    if ((skip & SEQ_MISS) || !trk_plays_on(t) || (!(skip & SEQ_ROLLED) && !step_rolls(t, s))) {   /* (ACID FM 0.6: PLAYS) */
         seq_release(t);
         return;
     }

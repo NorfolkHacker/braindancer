@@ -63,6 +63,9 @@ function installerCheck() {
 /* ------------------------------------------------------------ editor protocol --- */
 const html = readFileSync(join(HERE, "editor.html"), "utf8");
 const proto = html.slice(html.indexOf("/*PROTO-BEGIN*/"), html.indexOf("/*PROTO-END*/"));
+/* (ACID FM 0.6) the editor's knownLayout (outside the protocol's part): 96 globals (PLAYS) one of the layouts it knows */
+const knownLayout96 = () => vm.runInNewContext(html.slice(html.indexOf("const EXPECT = {"), html.indexOf("const P = { LEVEL")) +
+  ";knownLayout({ gcount: 96, pcount: 120, pe0: 112 })");
 const E = vm.runInNewContext(proto + `
 ;({ frame, unframe, parse, req, Link, makeMockDevice, CMD,
    UP, bank, capturePatch, auditionPatch, startWatch, libraryFile, readLibraryFile, paramKeys, legacyKeys, remapParams, patternFromSteps, stepsFromPattern, upName,
@@ -370,7 +373,7 @@ async function editorMock() {
     const rd = E.parse[E.CMD.DESC](await rq(E.req.desc(1, 14)));
     const r1 = E.parse[E.CMD.SET](await rq(E.req.set(1, 14, 5)));
     const r0 = E.parse[E.CMD.SET](await rq(E.req.set(1, 14, 0)));
-    ok(rd.label === "ROUTE" && rd.def === 0 && eq(rd.names, ["CH1-6", "SEL"]) && r1.value === 1 && r0.value === 0 && info.gcount === 90,
+    ok(rd.label === "ROUTE" && rd.def === 0 && eq(rd.names, ["CH1-6", "SEL"]) && r1.value === 1 && r0.value === 0 && info.gcount === 96,
       "editor: MIDI IN routing (ROUT CH1-6 / SEL, global id 14)");
   }
   {
@@ -383,6 +386,17 @@ async function editorMock() {
       "editor: MIDI per track (IN OUT CHANNEL per track, KEYBOARD PLAYS SELECTED: globals 71..89)");
   }
   {
+    /* (ACID FM 0.6) PLAYS per track: G 90..95 (T1..T6), ALWAYS then STEP EXTRAS' CONDITION words; DUMP 96 globals */
+    const words = ["ALWAYS", "1ST OF 2", "EVERY 2ND", "1ST OF 3", "2ND OF 3", "EVERY 3RD", "1ST OF 4", "2ND OF 4", "3RD OF 4",
+      "EVERY 4TH", "1ST OF 8", "1ST ONLY", "NOT 1ST"];
+    const [p1, p6] = await Promise.all([90, 95].map(async (id) => E.parse[E.CMD.DESC](await rq(E.req.desc(1, id)))));
+    const ps = E.parse[E.CMD.SET](await rq(E.req.set(1, 94, 40)));
+    const p0 = E.parse[E.CMD.SET](await rq(E.req.set(1, 94, 0)));
+    ok(p1.label === "PLAYS" && p1.def === 0 && p1.min === 0 && p1.max === 12 && eq(p1.names, words) && p6.label === "PLAYS" &&
+       ps.value === 12 && p0.value === 0 && info.gcount === 96 && dump.g.length === 96 && knownLayout96(),
+      "editor: PLAYS per track (globals 90..95, ALWAYS .. NOT 1ST), 96 globals in DUMP, a known layout");
+  }
+  {
     /* FX > REVERB TYPE (G_RTYPE 24, the old drum channel's id): ROOM (0, the default) / SPRING (1) / SHIMR RESO CLOUD (JIANT 0.5); G_COUNT unchanged */
     const rd = E.parse[E.CMD.DESC](await rq(E.req.desc(1, 24)));
     const r1 = E.parse[E.CMD.SET](await rq(E.req.set(1, 24, 10)));
@@ -390,7 +404,7 @@ async function editorMock() {
     const inert = [25, 26].map(async (id) => E.parse[E.CMD.DESC](await rq(E.req.desc(1, id))));
     const [d25, d26] = await Promise.all(inert);
     ok(rd.label === "TYPE" && rd.def === 0 && eq(rd.names, ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"]) && r1.value === 4 && r0.value === 0 &&
-       d25.label === "PUNCH" && d26.label === "DUCK" && d25.max === 100 && info.gcount === 90,
+       d25.label === "PUNCH" && d26.label === "DUCK" && d25.max === 100 && info.gcount === 96,
       "editor: REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD, set 10 clamps to 4, global id 24; 25, 26 PNCH and DUCK, JIANT's master)");
   }
   const st = E.parse[E.CMD.STEP_SET](await rq(E.req.stepSet(5, { n: 2, notes: [60, 64], time: 0, flags: 1, vel: 100 })));

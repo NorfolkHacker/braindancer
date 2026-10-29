@@ -186,6 +186,9 @@ enum {                          /* global parameters */
     G_MROUT1, G_MROUT6 = G_MROUT1 + 5,  /* each track's IN and OUT (OFF / ON, ON), its CHANNEL 1..16 (T1..T6: 1..6), */
     G_MRCH1, G_MRCH6 = G_MRCH1 + 5,     /* KEYBOARD PLAYS SELECTED (a channel no track takes plays the selected one; */
     G_MRSEL,                            /* OFF). project.c: block 'MR'; none (before 0.5): these, ROUTE SEL as G_MRSEL */
+    G_PLAYS1, G_PLAYS6 = G_PLAYS1 + 5,  /* (ACID FM 0.6) PLAYS, each track's loop condition (seq.c trk_plays_on): 0 ALWAYS,
+                                         * k CP_TRIGS[k - 1] (1ST OF 2 .. NOT 1ST), counted in t->loops. project.c: block
+                                         * 'PL' (none: ALWAYS); NEW PROJECT resets them */
     G_COUNT
 };
 #define G_SL_N (G_SLP15 + 1 - G_SLMODE)     /* the SLICER's globals (stored together: project.c, song_chain.c) */

@@ -997,7 +997,7 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
     }
     if (h >= 0) {
         const char *nm = 0;
-        char v[32];                                     /* (3b task 7 fix: a matrix name and what it is, uxs_mtx_say) */
+        char v[32], tn[16];                             /* (3b task 7 fix: a matrix name and what it is, uxs_mtx_say) */
         uint8_t bar;
         if (pg->graph == GR_MORE && pg->more && h < 2) {   /* (KNOB 1 or 2: the setting picked) */
             uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
@@ -1009,6 +1009,14 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
                 if ((r->kind == UXR_TRACK || r->kind == UXR_GLOBAL) && param_ref(r->kind == UXR_GLOBAL ? 0 : TSEL, r->id, &vp) &&
                     vp && uxs_vfull(r->kind == UXR_GLOBAL, r->id, *vp))   /* (3b task 7: in full, as a page's knob) */
                     str_cpy(v, uxs_vfull(r->kind == UXR_GLOBAL, r->id, *vp), sizeof v);
+                if (r->kind == UXR_TRACK && r->id == ID_SQ_PLAYS && nm) {   /* (3c-2 task 6) PLAYS: the track's, named ("T5
+                                                         * PLAYS . 1ST OF 2", as GLO > MIDI's "T3 IN . OFF") */
+                    tn[0] = 'T';
+                    tn[1] = (char)('1' + song.sel % NTRK);
+                    tn[2] = ' ';
+                    str_cpy(tn + 3, nm, sizeof tn - 3u);
+                    nm = tn;
+                }
             }
         } else if (pg->graph != GR_MORE) {
             int16_t *vp;

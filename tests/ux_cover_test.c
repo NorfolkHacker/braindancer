@@ -314,6 +314,7 @@ static const char *const UXC_WIDE[] = {"MOD SRC", "MOD DEST", "FX SPACE TYPE",  
                                        "MORE RATE", "MORE ORDER", "MORE MODE", "MORE TYPE", "MORE PULSE", "MORE CONDITION",
                                        "MORE SHIFT", "MORE DIRECTION", "MORE RANGE", "MORE FOCUS", "MORE BEND", "MORE LAP",
                                        "MORE INTERVAL", "MORE RATCHET", "MORE EVERY",
+                                       "MORE PLAYS",    /* (3c-2 task 6: PLAYS, CONDITION's words: ALWAYS, 1ST OF 2 ..) */
                                        "LIVE DJ FILTER", "MORE CUT", "MORE DENSITY", "MORE TRACKS",
                                        "MORE NOTES OUT",
                                        "MORE ENGINE",
@@ -609,6 +610,7 @@ static int uxc_widths(void)
             fg_set[song.sel % NTRK][fg_ui].dir = (uint8_t)(r & 3u);
             fg_set[song.sel % NTRK][fg_ui].ivl = (int8_t)((int32_t)(r % 29u) - 14);
             ui.pr_focus = (uint8_t)(r % 4u);
+            song.g[G_PLAYS1 + song.sel % NTRK] = (int16_t)(r % (CP_NTRIG + 1u));   /* (3c-2 task 6: PLAYS, each word) */
             for (id = ID_SQ_STRETCH; id < ID_SQ_END; id++) {
                 char w[48];
                 const char *nm;
@@ -622,6 +624,7 @@ static int uxc_widths(void)
         }
         *TSEL = keep;
         ui.pr_focus = 0; shp_i = 7u; shp_r = 0u; fg_ui = 0; ui.comp_at = 0;
+        song.g[G_PLAYS1 + song.sel % NTRK] = 0;
         memset(&fg_set[song.sel % NTRK], 0, sizeof fg_set[0]);
     }
     {   /* (ACID FM 3c-1 task 6) GLO > LIVE's knobs (ux_glo.c uxg_knobs: RATE LOOP THIN of every value, the DJ FILTER's every

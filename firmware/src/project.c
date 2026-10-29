@@ -861,6 +861,23 @@ static int proj_mr_used(const project_t *q)
             return 1;
     return q->g[G_MRSEL] != 0;
 }
+/* (ACID FM 0.6) PLAYS (core.h G_PLAYS1 ..): FUNC's 'P' 'L' block, the very last (after 'M' 'R'; firmware before stops
+ * reading at its end), written only when a track's PLAYS is not ALWAYS: 'P' 'L', then a byte a track (0 ALWAYS, 1 ..
+ * CP_NTRIG). Without it (every project before, and one whose PLAYS are all ALWAYS: its bytes as before): every PLAYS
+ * ALWAYS (proj_unpack_c's G_NSTORE .. G_COUNT loop gives GP[].def) */
+#define PROJ_PL_N NTRK
+static uint32_t proj_pl_byte(const project_t *q, uint32_t t)
+{
+    return (uint32_t)clamp(q->g[G_PLAYS1 + t], 0, (int32_t)CP_NTRIG);
+}
+static int proj_pl_used(const project_t *q)
+{
+    uint32_t t;
+    for (t = 0; t < NTRK; t++)
+        if (proj_pl_byte(q, t))
+            return 1;
+    return 0;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
@@ -880,6 +897,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 4u;
     if (proj_mr_used(q))                                /* (ACID FM 0.5) the MIDI routing's, when not the default */
         n += 2u + PROJ_MR_N;
+    if (proj_pl_used(q))                                /* (ACID FM 0.6) PLAYS's, when one is not ALWAYS */
+        n += 2u + PROJ_PL_N;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
@@ -1058,6 +1077,11 @@ static int proj_pack(project_store_t *out, const project_t *q)
         for (t = 0; t < NTRK; t++)
             b[pos++] = (uint8_t)proj_mr_byte(q, t);
         b[pos++] = q->g[G_MRSEL] ? 1u : 0u;
+    }
+    if (proj_pl_used(q)) {                              /* (ACID FM 0.6) PLAYS, after 'M' 'R' (the last) */
+        b[pos++] = 'P'; b[pos++] = 'L';
+        for (t = 0; t < NTRK; t++)
+            b[pos++] = (uint8_t)proj_pl_byte(q, t);
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1350,6 +1374,12 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         q->g[G_MRSEL] = (int16_t)(b[pos + 2u + NTRK] & 1u);
         proj_mr_found = 1;
         pos += 2u + PROJ_MR_N;
+    }
+    if (pos + 2u + PROJ_PL_N <= room && b[pos] == 'P' && b[pos + 1u] == 'L') {   /* (ACID FM 0.6) PLAYS (else ALWAYS: the
+                                                         * loop above gave GP[].def) */
+        for (t = 0; t < NTRK; t++)
+            q->g[G_PLAYS1 + t] = (int16_t)(b[pos + 2u + t] > CP_NTRIG ? 0u : b[pos + 2u + t]);
+        pos += 2u + PROJ_PL_N;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
@@ -1938,7 +1968,7 @@ static project_store_t undo_st[2] __attribute__((section(".lowbuf")));   /* (0.6
  * steps, automation or locks; the mix, the global effects, the tempo and the SLICER at their defaults; the song empty,
  * the macros at 0, the punch-in lane clear, the factory DRUM-X kit (X-MOD, TONE off, nothing muted), every FM6 patch
  * the init voice. What is saved (projects, user presets) and the setup (CLOCK, TUNE, MIDI, ROUTE, the project slot,
- * MENU; ACID FM 0.5: the MIDI routing, G_MRIN1 .. G_MRSEL) stay */
+ * MENU; ACID FM 0.5: the MIDI routing, G_MRIN1 .. G_MRSEL) stay; (ACID FM 0.6) every PLAYS ALWAYS (not kept) */
 static void system_init(void)
 {
     static const uint8_t KEEP[5] = {G_CLOCK, G_TUNE, G_MIDI, G_ROUTE, G_SLOT};

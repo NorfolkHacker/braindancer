@@ -40,6 +40,11 @@ static const uint16_t DTIME_MS[NELEM(N_DTIME) - DT_FREE] = {5, 6, 7, 8, 9, 10, 1
 static const char *const N_SCALE[] = {"CHR", "MAJ", "MIN", "DOR", "MIX", "PEN", "MPEN", "HARM",
                                     "PHRY", "LYD", "LOC", "MEL", "BLUES", "WHOLE", "DIMHW", "DIMWH"};
 static const char *const N_ONOFF[] = {"OFF", "ON"};
+/* (ACID FM 0.6) PLAYS (G_PLAYS1 ..) and STEP EXTRAS' CONDITION (ux_seq.c): ALWAYS (none), then core.h CP_TRIGS' a of b loops,
+ * the first loop alone, all but it */
+static const char *const N_PLAYS[CP_NTRIG + 1u] = {"ALWAYS", "1ST OF 2", "EVERY 2ND", "1ST OF 3", "2ND OF 3", "EVERY 3RD",
+                                                   "1ST OF 4", "2ND OF 4", "3RD OF 4", "EVERY 4TH", "1ST OF 8", "1ST ONLY",
+                                                   "NOT 1ST"};
 static const char *const N_DLYTYPE[] = {"ANALOG", "DIGITAL", 0};   /* (0.6.90) DLY 3 > TYPE */
 static const char *const N_PFXRES[] = {"1/8", "1/16", "1/32"};     /* (0.6.99) FX > PUNCH: the lane's step */
 /* seq.c kb_map; 1 = SNAP (stored projects: the former ON); 3 = SEQ: SNAP, and the sequencer's notes snap too as
@@ -238,6 +243,9 @@ static const param_desc_t GP[G_COUNT] = {
     MRT(0), MRT(1), MRT(2), MRT(3), MRT(4), MRT(5),
 #undef MRT
     [G_MRSEL] = PE("SELECTED", N_ONOFF, 0),
+    /* (ACID FM 0.6) PLAYS per track (seq.c trk_plays_on; project.c: block 'PL'; SEQ > MORE: ID_SQ_PLAYS, the selected one's) */
+    [G_PLAYS1] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS1 + 1] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS1 + 2] = PE("PLAYS", N_PLAYS, 0),
+    [G_PLAYS1 + 3] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS1 + 4] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS6] = PE("PLAYS", N_PLAYS, 0),
 };
 
 static const param_desc_t LOFI_RTRG = {"RTRG", F_ONOFF, 0, 1, 0, 0, 0};   /* (0.6.12) P_LRTRG on a LOFI track */
@@ -619,7 +627,7 @@ static int fld_is(uint32_t id) { return (id >= ID_FO_OP && id < ID_FO_END) || (i
  * seq_view_turn turns it with the inherited page's handler. Ids past every track setting, below the fields of 0xC0 */
 enum { ID_SQ_STRETCH = 0xA0, ID_SQ_REPEAT, ID_SQ_NUDGE, ID_SQ_HEAD, ID_SQ_HRATE, ID_SQ_HDIR, ID_SQ_HIVL, ID_SQ_TYPE, ID_SQ_VAL,
        ID_SQ_VAL2, ID_SQ_TYPE2, ID_SQ_VALB, ID_SQ_VAL2B, ID_SQ_EVERY, ID_SQ_FOCUS, ID_SQ_PITCH, ID_SQ_MOVE, ID_SQ_PLAY,
-       ID_SQ_EVENTS, ID_SQ_LOCKS, ID_SQ_ROW, ID_SQ_ESTEP, ID_SQ_EPARAM, ID_SQ_EVAL, ID_SQ_RNG, ID_SQ_RNGB, ID_SQ_END };   /* (RNG:
+       ID_SQ_EVENTS, ID_SQ_LOCKS, ID_SQ_ROW, ID_SQ_ESTEP, ID_SQ_EPARAM, ID_SQ_EVAL, ID_SQ_RNG, ID_SQ_RNGB, ID_SQ_PLAYS, ID_SQ_END };   /* (RNG:
                                                          * WALK's, OCT's and an ARP's RANGE, MODE / ORDER's own row) */
 typedef char sqv_ids_ok[(uint32_t)P_COUNT <= (uint32_t)ID_SQ_STRETCH && (uint32_t)ID_SQ_END <= (uint32_t)ID_FO_OP ? 1 : -1];
 static int sqv_is(uint32_t id) { return id >= ID_SQ_STRETCH && id < ID_SQ_END; }
@@ -815,6 +823,7 @@ static const ux_more_t UXM_FX = {UXM_FX_ROWS, (uint8_t)(sizeof UXM_FX_ROWS / siz
  * TRACK (not the spec's fifth): the step picked on STEPS a few detents away (tests/ui_test.c's task race) */
 static const ux_row_t UXM_SEQ_ROWS[] = {
     {UXM_H_TRACK, UXR_HEAD, 0}, {P_POFS, UXR_TRACK, 0}, {P_TCHAN, UXR_TRACK, 0}, {P_HVEL, UXR_TRACK, 0}, {P_HRQ, UXR_TRACK, 0},
+    {ID_SQ_PLAYS, UXR_TRACK, 0},                         /* (3c-2 task 6) PLAYS: the track's G_PLAYS1 + k (ux_seq.c) */
     {UXM_H_STEP, UXR_HEAD, 0}, {ID_SQ_TYPE, UXR_TRACK, 0}, {ID_SQ_VAL, UXR_TRACK, 0}, {ID_SQ_RNG, UXR_TRACK, 0},
     {ID_SQ_VAL2, UXR_TRACK, 0}, {ID_SQ_TYPE2, UXR_TRACK, 0}, {ID_SQ_VALB, UXR_TRACK, 0}, {ID_SQ_RNGB, UXR_TRACK, 0},
     {ID_SQ_VAL2B, UXR_TRACK, 0}, {ID_SQ_EVERY, UXR_TRACK, 0},

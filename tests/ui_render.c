@@ -617,7 +617,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL, S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS,
        S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM, S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_SEQ_MORE,
        S_SEQ_MORE_END, S_SEQ_MORE_DRUM, S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_GLO_MIX, S_GLO_MORE_END, S_GLO_MIDI, S_GLO_MORE_MIDI,
-       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_SAVE_SONG, S_SAVE_SONG_EMPTY, S_DLG_LOAD_PROJ, S_LAYER_SAVE, S_COUNT };
+       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_SAVE_SONG, S_SAVE_SONG_EMPTY, S_DLG_LOAD_PROJ, S_LAYER_SAVE, S_SEQ_MORE_PLAYS, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo",
     "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "phrases",
     "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image",
@@ -663,7 +663,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state", "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64",
     "seq_steps_drum", "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end",
     "seq_more_drum", "seq_lock", "seq_extras_echo", "glo_mix", "glo_more_end", "glo_midi", "glo_more_midi", "save_sound_empty",
-    "save_more", "save_song", "save_song_empty", "dlg_load_proj", "layer_save"};
+    "save_more", "save_song", "save_song_empty", "dlg_load_proj", "layer_save", "seq_more_plays"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's); (ACID FM 3c-1 task 6)
  * the ux pages: LIVE idle (stopped, nothing live); with tricks (T2 THIN 70 %, T3 x2 RATCH x3, T4 LOOP 8, T5 2/3; black key 3 held:
@@ -2097,6 +2097,10 @@ static void setup(int s)
         seq_more_at(UXR_TRACK, s == S_SEQ_MORE ? ID_SQ_TYPE : ID_SQ_EVAL);
         break;
     }
+    case S_SEQ_MORE_PLAYS:                       /* (3c-2 task 6) TRACK's PLAYS: T5 at 1ST OF 2, KNOB 2 just turned (T5 PLAYS . ..) */
+        trks_put(1); song.sel = 4; song.g[G_PLAYS1 + 4] = 1;
+        seq_more_at(UXR_TRACK, ID_SQ_PLAYS); ux_knob_touch(1);
+        break;
     case S_SEQ_MORE_DRUM:
         drum(0); ui.cursor = 4;
         trk[3].step[4].comp = CP_ECHO; trk[3].step[4].carg = (uint8_t)(2u | CP_ECHO_EVEN);

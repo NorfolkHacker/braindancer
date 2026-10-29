@@ -107,6 +107,11 @@ is INT, osc 2's interval −24..24 (was KTR). A project (kit marker below 3, or 
 mark) stored before loads LOFI's TONE as CUT, BEND MASK 0, and ANALOG's KTR as INT 0. VOICE 2 (ALLOC DETUNE PAN MUTE)
 is no page any more: PAN on GLO > MIX (MIXER until ACID FM 0.5), MUTE the GLO layer's, the others at their stored values.
 
+**ACID FM 0.6: 96 globals**: G 90..95 each track's PLAYS (T1..T6), on which loops of its pattern it plays: 0 ALWAYS, then
+1ST OF 2, EVERY 2ND, 1ST OF 3, 2ND OF 3, EVERY 3RD, 1ST OF 4, 2ND OF 4, 3RD OF 4, EVERY 4TH, 1ST OF 8, 1ST ONLY, NOT 1ST
+(0..12, the words of STEP EXTRAS' CONDITION). Saved in FUNC's 'P' 'L' block (after 'M' 'R', the last) only when one is not
+ALWAYS; a project without it loads every PLAYS ALWAYS. NEW PROJECT resets them.
+
 **ACID FM 0.5: 90 globals**: G 71..76 each track's MIDI IN (OFF / ON, ON), 77..82 its OUT (OFF / ON, ON), 83..88 its
 CHANNEL (1..16, T1..T6: 1..6), 89 KEYBOARD PLAYS SELECTED (OFF / ON: a channel no track takes plays the selected track).
 They replace ROUTE (G 14, still answered and stored, no longer read but by a project's load: SEL = KEYBOARD PLAYS SELECTED
