@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ABOUT_URL = "https://github.com/NorfolkHacker/acid-fm"
+ABOUT_URL = "https://github.com/NorfolkHacker/braindancer"
 
 src = (ROOT / "firmware/src/ui_menu.c").read_text()
 m = re.search(r"static const uint32_t ABOUT_QR\[29\] = \{(.*?)\};", src, re.S)

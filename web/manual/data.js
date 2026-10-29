@@ -611,6 +611,10 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.7", items: [
+    "ACID FM is now Braindancer: the same firmware, renamed. It is named for braindance, the 90s IDM of Aphex Twin and the Rephlex catalogue that GEN's genres come from. A rename only: no new features, and your projects, presets and settings load as before.",
+    "On the FM-1: the splash and ABOUT say BRAINDANCER, and over USB the computer sees a MIDI device called BRAINDANCER (formerly ACID FM). Your DAW may list it as a new port and ask you to pick it again.",
+    "The website is now norfolkhacker.github.io/braindancer/ (installer, emulator, manual); the old links forward there. The installer finds a device on Braindancer or ACID FM."]},
   {v: "0.6", items: [
     "0.6: SAVE is SOUND → SONG → PROJECT → MORE. SOUND lists the 32 user slots; SONG puts the sections on top and the song's rows under them as chips; PROJECT shows four cards, a dot on the one with changes not stored, and warns on LOAD only when there are some; the tools are in MORE.",
     "The MENU is AUDIO → CLICK → CONTROLS → MORE, in the same look; ABOUT and PROFILE are restyled. ALGORITHM and PRESETS do nothing in it.",

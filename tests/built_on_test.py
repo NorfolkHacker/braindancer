@@ -273,7 +273,7 @@ for f in [str(c.relative_to(ROOT)) for c in sorted((ROOT / "firmware/src").glob(
 # ("ACID FM 0.6", "ACID FM 3b"), the old name beside the new one ("formerly ACID FM", "Braindancer / ACID FM": a device or a
 # package still on ACID FM is found), and the one page that forwards the old site path (web/404.html)
 OLD = re.compile(r"ACID[ -]FM|acid[ -]fm|ACID_FM|AcidFM", re.I)
-OLD_OK = re.compile(r"superpowers/(specs|plans)/[\w.-]*acid-fm[\w.-]*|ACID FM (v?\d|3[abc])|(?<![A-Za-z])(formerly|Formerly) ACID FM|written when it was still ACID FM|(formerly|previously|earlier|old|was|and|or|not) (the )?ACID FM|ACID FM (is|was) now|"
+OLD_OK = re.compile(r"superpowers/(specs|plans)/[\w.-]*acid-fm[\w.-]*|ACID FM (v?\d|3[abc])|(?<![A-Za-z])(formerly|Formerly) ACID FM|written when it was still ACID FM|(Braindancer or|or) the earlier ACID FM|ACID FM is now (\*\*)?Braindancer|"
                     r"(Braindancer|BRAINDANCER)\)?[,/、 ]+(\(?or )?(an earlier )?ACID FM|ACID FM[,/ ]+(Braindancer|JIANT)")
 USER_FACING = ["README.md", "BUILDING.md", "LICENSING.md", "docs/MANUAL.md", "docs/cheatsheet/controls.html",
                "docs/cheatsheet/sound.html", "docs/navigation-map.svg", ".github/ISSUE_TEMPLATE/bug_report.yml",
@@ -284,7 +284,9 @@ OLD_PATH_OK = {"web/404.html"}   # (redirects /acid-fm/ paths: the forwarding si
 for f in USER_FACING:
     src = (ROOT / f).read_text(encoding="utf-8")
     if f == "web/manual/data.js":                       # (the past news, 0.1 .. 0.6, keep the old name)
-        src = src[:src.index('{v: "0.6"')]
+        a = src.index('{v: "0.6"')                       # (the news entries 0.6 .. 0.1: from the 0.6 entry to the news array's end;
+        b = src.index("\n]", a)                          # everything else in the file, before or after, is checked)
+        src = src[:a] + src[b:]
     if f.endswith(".py"):
         src = py_strings(src)
     elif f.endswith(".js"):

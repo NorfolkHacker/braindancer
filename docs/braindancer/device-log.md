@@ -129,3 +129,13 @@ Still pending:
   MENU › MORE lost 0, late ~39/s, cpu 75-76 %; a dialog open (CLEAR SEQ) lost 0, late ~38/s, cpu 74 %. (0.5 on the same
   test: ~68-70 late/s.) The safety net did not fire during the test (safety counters unchanged).
 - Proven commit: a11bb5f.
+
+## 2026-10-29 — Braindancer 0.7 (the rename)
+
+- Backup before: PENDING (path and sha256 of the full-flash backup of the ACID FM 0.6 device).
+- Release built (`./build.sh --release 0.7`): PENDING (file, size, identity, sha256, clean HEAD).
+- Install: PENDING (the device found as ACID FM; `done: the FM-1 runs ...`; the device returning as BRAINDANCER after the restart).
+- Serial `status`: PENDING (expected `braindancer v0.7`).
+- Splash and ABOUT look (BRAINDANCER wordmark, v0.7, the QR to github.com/NorfolkHacker/braindancer): PENDING (the user's look).
+- The computer's MIDI port name (BRAINDANCER): PENDING.
+- Proven commit: PENDING.

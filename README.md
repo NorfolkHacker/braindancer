@@ -10,9 +10,18 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/braindancer/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/braindancer/manual/)**
 
-## Status: 0.6
+## Status: 0.7
 
-0.6 is SAVE, the MENU and the dialogs in the Braindancer look (piece 3c-2), on top of 0.5.2:
+0.7 is the rename: ACID FM is now **Braindancer**, after braindance, the 90s IDM of Aphex Twin and the Rephlex catalogue.
+It is a rename only: no new features, and projects, presets and settings load as before.
+
+- The splash and ABOUT say BRAINDANCER, and the FM-1 shows up over USB as a MIDI device called BRAINDANCER (formerly ACID FM).
+- The website is now https://norfolkhacker.github.io/braindancer/ (the installer, emulator and manual); the old links
+  forward there. The code is at github.com/NorfolkHacker/braindancer.
+- The installer, the tools and the web editor find a device on Braindancer or ACID FM.
+- Still built on JIANT FM and Felucca.
+
+Before that, 0.6 was SAVE, the MENU and the dialogs in the ACID look (piece 3c-2), on top of 0.5.2:
 
 - SAVE is SOUND, SONG, PROJECT and MORE. SOUND lists the 32 user slots; SONG puts the sections on top and the song's
   rows under them as chips; PROJECT shows four cards, a dot on the one with changes not stored, and warns on LOAD only
@@ -36,7 +45,7 @@ arp) instead of skipping, and comes back once the load eases.
 GLITCH HOP and AMB TECHNO replace BROKEN BEAT and DRIFT; DRILL'N'BASS 155–172, ELECTRO 124–138, RETROBOC 68–100) and makes
 an external clock (USB or TRS) hold a steady tempo.
 
-0.5 is SEQ, GLO and MIDI in the Braindancer look (piece 3c-1), on top of 0.4:
+0.5 is SEQ, GLO and MIDI in the ACID look (piece 3c-1), on top of 0.4:
 
 - SEQ is STEPS, STEP EXTRAS, PATTERN and MORE. STEP EXTRAS holds the chance, ratchet, condition and micro-timing of the
   picked step; with a step held, MORE's rows lock on it (the ACID lock card).
@@ -44,13 +53,13 @@ an external clock (USB or TRS) hold a steady tempo.
   the six tracks' levels, pan and sends; MORE holds the rest (rails, tempo, system, undo).
 - The MIDI page: per track MIDI in, out and channel; the clock INT, USB or TRS; clock out over USB; the keyboard plays
   the selected track. Older settings and projects load as before.
-- SEQ TOOLS, REC and GLO layers (the held layers) in the Braindancer look, with the keys' names and states on the keys.
+- SEQ TOOLS, REC and GLO layers (the held layers) in the ACID look, with the keys' names and states on the keys.
 - Level bars in dB on LIVE, MIX and HOME.
 - The manual is English only and Braindancer's own.
 
-Before that, 0.4 was the sound sections in the Braindancer look (piece 3b), on top of 0.3:
+Before that, 0.4 was the sound sections in the ACID look (piece 3b), on top of 0.3:
 
-- EDIT, ENV, ARP, SCL, LFO and FX in the Braindancer look: a picture of the sound, four knobs, and MORE for the rest, with
+- EDIT, ENV, ARP, SCL, LFO and FX in the ACID look: a picture of the sound, four knobs, and MORE for the rest, with
   names in plain words. The old creatures are removed.
 - The held layers (EDIT, MACRO, FX, SCL) in the same look; with a step held, MORE's rows lock on that step too.
 - GEN shows ten IDM genres (IDM, BROKEN BEAT, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, DRIFT),
