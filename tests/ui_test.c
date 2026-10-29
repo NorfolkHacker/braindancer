@@ -1586,7 +1586,7 @@ static int test_midi(void)
 
 static int test_save(void)
 {
-    int bad = 0;
+    int bad = 0, ok;
     uint32_t i;
     ui_power_on();
     trk[0].p[P_E0] = 5;
@@ -1668,11 +1668,16 @@ static int test_save(void)
     bad += check("OCT+ (YES): NAME, the slot not written yet", name_on() && stored_param(0, 0, P_E0) != 5);
     press(B_OCTUP);
     bad += check("OCT+ overwrites it", ui.confirm == CF_NONE && !name_on() && stored_param(0, 0, P_E0) == 5);
-    trk[0].p[P_LEVEL] = 11;
+    trk[0].p[P_LEVEL] = 11;                             /* (an edit just before: 3c-2 final review 2, the dialog first) */
     turn(EN_K2, 1);
     press(B_OCTUP);
-    bad += check("KNOB 2 LOAD, OCT+: the project back; LOAD stays picked", trk[0].p[P_LEVEL] != 11 &&
-                 trk[0].p[P_LEVEL] == stored_param(0, 0, P_LEVEL) && msg_is("LOADED") && ui.act == 2u);
+    ok = ui.confirm == CF_LOAD_PROJ && trk[0].p[P_LEVEL] == 11;
+    press(B_OCTUP);
+    bad += check("KNOB 2 LOAD over an edit, OCT+: CF_LOAD_PROJ, OCT+ the project back", ok && trk[0].p[P_LEVEL] != 11 &&
+                 trk[0].p[P_LEVEL] == stored_param(0, 0, P_LEVEL) && msg_is("LOADED") && !ui.confirm);
+    turn(EN_K2, 1);
+    press(B_OCTUP);
+    bad += check("  clean, OCT+: loaded at once; LOAD stays picked", !ui.confirm && msg_is("LOADED") && ui.act == 2u);
     /* user presets (3c-2 task 2: SAVE > SOUND, was USER; ERASE SAVE > MORE's row) */
     go_page(GR_SVSND);
     up_store(4, "OLD");
@@ -7860,8 +7865,10 @@ static int test_project_page(void)
     bad += check("  KNOB 1 back: project 1, its song still there (its A: from flash), the music kept", ok);
     if (!FELUCCA_FLASH) { sl_steps(60); project_save(0); sl_steps(80); }
     song.g[G_SLOT] = 1;
-    turn(EN_K2, 1); press(B_OCTUP); frame();            /* LOAD A */
-    ok = trk[0].step[0].note[0] == 60 && live.cur == 0 && chain_config.count == 2;
+    turn(EN_K2, 1); press(B_OCTUP); frame();            /* LOAD A (the music, 80.., not stored: CF_LOAD_PROJ first) */
+    ok = ui.confirm == CF_LOAD_PROJ;
+    press(B_OCTUP); frame();
+    ok &= trk[0].step[0].note[0] == 60 && live.cur == 0 && chain_config.count == 2;
     bad += check("  LOAD: section A is the music, the project's song kept", ok);
     transport_req = 1; frame();
     turn(EN_K1, 1); frame();
@@ -20946,6 +20953,60 @@ static int test_u4_unsaved(void)
     ui_power_on();
     return bad;
 }
+/* (3c-2 final review) 1: CF_LOAD_PROJ's answer loads nothing while the song runs (as its siblings: no UNDO marked then); 2: LOAD
+ * decides "unsaved" when it is pressed (an edit in the same frame asks, not the 250 ms tick's flag); 3: a live section jump while
+ * playing (SAVE + G3) leaves the music that section's: clean, LOAD after stopping asks nothing; an edit after it still asks */
+static int test_u4_final(void)
+{
+    int bad = 0, ok;
+    int16_t a_x;
+    u4_proj();
+    u4_touch(); u4_poll(300);
+    a_x = trk[0].p[P_ATK];
+    turn(EN_K2, 1); frame();
+    press(B_OCTUP); frame();
+    ok = ui.confirm == CF_LOAD_PROJ && ui.confirm_trk == 1u;
+    chain.running = 1;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && proj_cur == 0u && trk[0].p[P_ATK] == a_x;
+    chain.running = 0;
+    if (!ok) printf("  LOAD's answer, the song running: confirm %u proj_cur %u atk %d / %d\n", (unsigned)ui.confirm,
+                    (unsigned)proj_cur, trk[0].p[P_ATK], a_x);
+    bad += check("3c-2 final review 1: CF_LOAD_PROJ's answer while the song runs loads nothing (no UNDO marked then)", ok);
+    u4_proj();
+    u4_poll(300);
+    ok = !project_unsaved();
+    turn(EN_K2, 1); frame();
+    trk[0].p[P_ATK] = (int16_t)(trk[0].p[P_ATK] + 5);   /* (an editor / MIDI write just before, no tick between) */
+    press(B_OCTUP); frame();
+    ok &= ui.confirm == CF_LOAD_PROJ && proj_cur == 0u;
+    press(B_OCTDN); frame();
+    if (!ok) printf("  edit then LOAD: confirm %u proj_cur %u\n", (unsigned)ui.confirm, (unsigned)proj_cur);
+    bad += check("  2: an edit then LOAD in the same frame: the dialog (unsaved decided when LOAD is pressed)", ok);
+    u4_proj();
+    a_x = trk[0].p[P_ATK];                              /* (A's) */
+    u4_poll(300);
+    go_home(); frame();
+    transport_req = 1; sl_play(256);
+    sl_key(1);                                          /* G3: section B on the next bar */
+    sl_play(chain_bar());
+    ok = live.cur == 1 && live.req < 0 && song.playing;
+    stop_transport(); song_poll();
+    u4_poll(300);
+    ok &= !project_unsaved();
+    nav_put(SEC_SAVE, "PROJECT"); frame();
+    song.g[G_SLOT] = 1; ui.msg_t = 0;
+    turn(EN_K2, 1); frame();
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm && proj_cur == 0u && live.cur == 0 && trk[0].p[P_ATK] == a_x;
+    if (!ok) printf("  live jump: cur %d unsaved %d confirm %u proj_cur %u\n", live.cur, project_unsaved(), (unsigned)ui.confirm,
+                    (unsigned)proj_cur);
+    u4_touch(); u4_poll(300);
+    ok &= project_unsaved();
+    bad += check("  3: a live jump while playing (SAVE + G3): clean after stopping, LOAD at once; an edit after it: unsaved", ok);
+    ui_power_on();
+    return bad;
+}
 /* SAVE > MORE's TOOLS: each row its dialog (the track, the slot); CLEAR SEQ and CLEAR SONG on nothing: NOTHING TO CLEAR; the song
  * playing: STOP TO EDIT */
 static int test_u4_tools(void)
@@ -21915,6 +21976,7 @@ int main(void)
     bad += test_u4_nav();                               /* (ACID FM 3c-2 task 4) */
     bad += test_u4_project();
     bad += test_u4_unsaved();
+    bad += test_u4_final();                             /* (3c-2 final review 1, 2, 3) */
     bad += test_u4_tools();
     bad += test_u4_layer();
     bad += test_u4_song();

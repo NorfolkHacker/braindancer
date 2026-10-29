@@ -33,6 +33,7 @@ static int undo_do(void);                       /* .. back (and again: forward) 
 static uint8_t undo_ok;
 static int project_used(uint32_t slot);
 static int project_unsaved(void);                        /* (ACID FM 3c-2 task 4) project.c: the music changed since stored or loaded */
+static int project_unsaved_now(void);                    /* (3c-2 final review 2) .. decided now (a hash), not at the last tick */
 static uint32_t lib_scan(uint32_t n, char *b);           /* (0.8.5) project.c: SAVE > PROJECT's cards (ux_save.c) */
 static uint32_t lib_gen(void);
 static int project_recall_sound(uint32_t slot, uint32_t k);

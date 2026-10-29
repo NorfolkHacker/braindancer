@@ -1252,7 +1252,7 @@ static void save_oct(const page_t *pg)
                 ui_message("STOP TO EDIT");
             else if (!project_used(k))
                 ui_message("EMPTY SLOT");
-            else if (project_unsaved())
+            else if (project_unsaved_now())             /* (3c-2 final review 2: decided now, not at the last 250 ms tick) */
                 confirm_open(CF_LOAD_PROJ, k);
             else {
                 undo_mark();                            /* (0.6.21) UNDO: the music before the load */
@@ -2412,8 +2412,10 @@ static void ui_input_frame(void)
                     ui_message("SONG CLEARED");
                 }
             } else if (kind == CF_LOAD_PROJ) {          /* (ACID FM 3c-2 task 4) SAVE > PROJECT's LOAD over changes not stored
-                                                         * (UNDO: marked above, GLO + G4 brings them back) */
-                project_load(ui.confirm_trk & 3u);
+                                                         * (UNDO: marked above, GLO + G4 brings them back; 3c-2 final review 1:
+                                                         * not while the song runs, as its siblings: no UNDO marked then) */
+                if (!chain_busy())
+                    project_load(ui.confirm_trk & 3u);
             } else if (kind == CF_LIVE_COMMIT) {        /* (0.9.11) LIVE: the modifiers written (UNDO: marked above) */
                 live_commit(ui.confirm_trk);
             } else if (kind == CF_MUT_BACK) {           /* (0.9.3) MUTATE OFF: the track as the anchor (UNDO: marked above) */

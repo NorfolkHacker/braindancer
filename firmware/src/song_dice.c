@@ -91,6 +91,8 @@ static void cpu_test_song(void)
 {
     uint32_t k, i, n = trk_live;
     if (song.playing) transport_req = 2;
+    safe_clear();                                       /* (3c-2 final review 8) the safety net: no GEN part to hush in the test,
+                                                         * its levers off (its figures the real ones) */
     cpt_arm = n == NPART;                               /* (0.9.14) its load measured when it plays (ui_menu.c cpt_poll) */
     if (song.g[G_CLOCK]) {                              /* (ACID FM 3c-2 task 7, spec 5.2) on the internal clock; the CLOCK
                                                          * before it back when the test is left (ui.c cpt_clock_back) */

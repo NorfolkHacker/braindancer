@@ -396,6 +396,22 @@ static int autosave_test(void)
     as_power_on();
     ok &= autosave_boot(1) == 1 && song.g[G_BPM] != 150 && trk[8u % NTRK].step[8].n == 1u;
     bad += check("autosave: a write cut short (power off): the copy before is restored", ok);
+    /* (3c-2 final review 4) CPU TEST under CLOCK USB (on INT, cpt_clk the one before + 1): the autosave holds USB, so a power-off
+     * during the test brings USB back */
+    as_power_on();
+    autosave_boot(1);
+    song.g[G_CLOCK] = 0;
+    cpt_clk = 2u;
+    as_edit(9);
+    as_run(11000u);
+    ok = !as.err && song.g[G_CLOCK] == 0;
+    as_power_on();
+    cpt_clk = 0;
+    song.g[G_CLOCK] = 0;
+    ok &= autosave_boot(1) == 1 && song.g[G_CLOCK] == 1;
+    if (!ok) printf("persist:   CPU TEST's autosave: CLOCK %d after power-on\n", song.g[G_CLOCK]);
+    song.g[G_CLOCK] = 0;
+    bad += check("autosave during CPU TEST: the CLOCK before it stored (USB back after a power-off)", ok);
     /* wear: a 4-hour session: 3 h of editing (a change every 3 s), pauses and playing it back, then an hour away */
     as_power_on();
     autosave_boot(1);

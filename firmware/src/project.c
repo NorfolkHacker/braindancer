@@ -1548,6 +1548,12 @@ static void proj_clean_mark(void)
     proj_unsaved = 0;
 }
 static int project_unsaved(void) { return proj_unsaved; }
+static int project_unsaved_now(void)                    /* (3c-2 final review 2) decided now (SAVE > PROJECT's LOAD): an edit just
+                                                         * before asks too. Main loop, one hash */
+{
+    proj_unsaved = (uint8_t)(proj_music_sig() != proj_clean_sig);
+    return proj_unsaved;
+}
 /* the GM drum part of a project of before 1.0 (proj_drums_to_part): DRUM's first kit, as a preset load sets it
  * (until 1.0.2 the SAMPLE engine's PERC set, retired since) */
 static void proj_legacy_drums(track_t *t)
@@ -2596,6 +2602,10 @@ static void autosave_poll(void)
     as.last = fm1_ms;
     as.wrote = 1;
     project_capture(&proj_scratch);
+    if (cpt_clk) {                                      /* (3c-2 final review 4) CPU TEST on INT: the CLOCK before it stored, so a */
+        proj_scratch.g[G_CLOCK] = (int16_t)(cpt_clk - 1u);   /* power-off during the test brings USB / TRS back */
+        proj_scratch.sum = proj_sum(&proj_scratch);
+    }
     proj_wire_gen++;
     as.err = !proj_pack(&proj_wire, &proj_scratch) || st_save(OBJ_AUTOSAVE, &proj_wire, sizeof proj_wire) != 0;
     if (!as.err) {

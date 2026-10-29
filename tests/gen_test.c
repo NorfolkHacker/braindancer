@@ -1196,7 +1196,7 @@ int main(void)
     {   /* (ACID FM 0.5.2 review I1, M1) the parts the safety net may hush (audio.c fx_safety_tick: safe_part) are the GEN
          * piece's texture and arp only while that piece is the music, and only if it plays them: UNDO, NEW PROJECT, a
          * section or project loaded, a part diced on that track: none, and the net's levers off */
-        uint32_t sd, m1_bad = 0, armed = 0, ok_undo, ok_new, ok_sec, ok_dice, ok_regen, k;
+        uint32_t sd, m1_bad = 0, armed = 0, ok_undo, ok_new, ok_sec, ok_dice, ok_regen, ok_cpt, k;
         mc_host_v12 = 1; gt_cpt = 74; gen_reset();
         for (sd = 0; sd < 60u; sd++) {
             gen_with(sd % 3u ? GEN_EXPLORE : 1u + sd % 10u, sd * 37u + 11u, 50, sd % 3u);
@@ -1224,11 +1224,21 @@ int main(void)
         k = safe_part[0];
         (void)dice_seq(&trk[k % NTRK]);
         ok_dice = k < NTRK && safe_part[0] == NTRK;
+        {   /* (3c-2 final review 8) CPU TEST after a GEN piece: none of its tracks the net may hush (its figures the real ones) */
+            uint32_t a0;
+            gen_with(1, gp.seed, 50, 1);
+            a0 = safe_part[0] < NTRK || safe_part[1] < NTRK;
+            fx_safe = SAFE_TEX | SAFE_ARP;
+            cpu_test_song();
+            ok_cpt = a0 && safe_part[0] == NTRK && safe_part[1] == NTRK && !fx_safe;
+            if (!ok_cpt) printf("gen:   CPU TEST after GEN: armed %u, safe_part %u %u, fx_safe %u\n", a0, safe_part[0], safe_part[1], fx_safe);
+        }
         fx_safe = 0;
         printf("gen: (0.5.2) the safety net's parts: %u of 60 pieces with one, %u not the playing texture / arp\n", armed, m1_bad);
         bad += gcheck("(0.5.2 review M1) the net's parts: the piece's texture and arp, only if it plays them", !m1_bad && armed > 10u);
         bad += gcheck("  (review I1) none, the levers off, after UNDO, NEW PROJECT, a section load (a project load), a part diced "
                       "on the track; GEN again: back", ok_undo && ok_new && ok_sec && ok_dice && ok_regen);
+        bad += gcheck("  (3c-2 final review 8) none, the levers off, after CPU TEST (its load the real one)", ok_cpt);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);

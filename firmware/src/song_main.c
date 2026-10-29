@@ -379,9 +379,12 @@ static void song_poll(void)
 {
     uint32_t k;
     if (chain.applied) {
+        uint32_t jump = chain.applied == 2u;          /* (a live jump, not a song row: the song's end restores song_keep) */
         chain.applied = 0;
         for (k = 0; k < NTRK; k++)
             fm6_adopt(k);                             /* (an FM6 track's SLOT: F n or OWN) */
+        if (jump)
+            proj_clean_mark();                        /* (3c-2 final review 3) the music is that section's now: clean */
         sync_reload = 1;
         ui.force = 1;
     }

@@ -30,13 +30,15 @@ Decisions by the user (2026-10-28):
            crowded (ellipsis on a long "GEN: EXPLORE 43..") (Task 7 concern 1).
 [later]    Pool spare is 9,888 B, 32 B under the 9,920 of 0.5 (project_t holds g[G_COUNT]; G_COUNT 90 -> 96 for PLAYS); no
            new .pool object (Task 6). Image 556,196 B at Task 9; the 16 KiB floor holds.
-[later]    web editor knownLayout lacks the current P layout (P_COUNT 123 / P_E0 115); the web test checks a known pair
-           (120 / 112) (Task 6 #3).
 [later]    tests/ux_msg_scan.py scans params.c's PD / PE labels only, not enum word tables: N_PLAYS (ALWAYS, 1ST OF 2 ..)
            is scanned only through the UXQ_EVERY words (Task 6 #2); "MORE PLAYS" is on the UXC_WIDE allowlist in
            tests/ux_cover_test.c (ALWAYS is 56 px in a 48 px column, falls back to a smaller face), as "MORE EVERY".
 [later]    The PLAYS turn of a section load restores the section's stored PLAYS (as the MIDI routing); PLAYS belongs to the
-           section / project (Task 6 #4).
+           section / project (Task 6 #4). Only a stopped section load (section_load, SAVE > PROJECT's LOAD, SAVE + F3..B3
+           stopped) applies a section's stored PLAYS and MIDI routing; song playback (a chain row) and a live jump while
+           playing (song_play.c sec_apply copies only the SLICER globals) keep the PLAYS and routing in effect before, so a
+           song A-B-B-C with another PLAYS stored in B does not play it. That piece decides whether PLAYS (and the routing)
+           is per project or per section (final review #9).
 [later]    The MORE panel's signature hashes every P_* mark, not only the rows shown: one extra redraw when a lock on a
            hidden setting changes (Task 9 #5).
 [later]    SAVE > MORE panels: the LOAD SLOT / ERASE USER SLOT refusals while a song plays say STOP TO EDIT, before the
@@ -47,6 +49,10 @@ Decisions by the user (2026-10-28):
            status line (Task 3, 4, 5).
 [later]    The web editor's MIDI tab is a heading group in the Settings tab (gcount >= 90); not rendered in a browser here
            (Task 8).
+[later]    save_on / LZ_SAVE leftover (firmware/src/ui.c save_on, lz_fam's LZ_SAVE; :637 / :667 at 1c9e56e): the
+           inherited SAVE lens is gone with ui_lzsave.c, but save_on() still feeds lz_on() and lz_fam() can still pick
+           LZ_SAVE through that geometry; remove it (and LZ_SAVE's branches) once nothing on the SAVE pages reads the
+           lens (ledger line 119, final review #6).
 [later]    The SAVE layer's old JIANT overlay (MAP / KNOBS / STATE cards) is gone with ui_lzsave.c; the layer maps live in
            ux_layer.c (Task 4 #5).
 [later]    tools/gen_readme_hero.py still builds the inherited JIANT README images (docs/jiant-hero.png, jiant-screens.png)

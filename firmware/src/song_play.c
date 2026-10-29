@@ -203,6 +203,7 @@ static void chain_tick(uint32_t n)
         live.req = -1;
         song.rec = 0;                                 /* (a take does not run on into another section) */
         sec_apply();
+        chain.applied = 2;                            /* (3c-2 final review 3: a live jump; song_poll marks the music clean) */
         if (live.srec == 2u)
             srec_add(live.cur);
     }
