@@ -313,13 +313,14 @@ static int32_t head_group(void)
     cv_text(x, HEAD_SY, &AF_S, b, T_THEME);
     return x0;
 }
-/* (ACID FM 3c-2 task 7, spec 5.2) the inherited header's tempo (b holds n): on GEN under an outside clock "CLOCK: USB" / "CLOCK:
- * TRS" (the piece is made at the incoming tempo; ui.c tempo_ext's words), else the BPM */
+/* (ACID FM 3c-2 task 7, spec 5.2) the inherited header's tempo (b holds n): on GEN under an outside clock the clock's port, "USB"
+ * / "TRS", the sync mark after it (the piece is made at the incoming tempo; fix round 1: the short form, as wide as a 3-digit
+ * BPM, so the message keeps its room; "CLOCK: USB" in full is GEN's second message, gen.c gen_go), else the BPM */
 static void head_bpm_text(char *b, uint32_t n)
 {
     char d[8];
     if (gen_on() && song.g[G_CLOCK]) {
-        str_cpy(b, song.g[G_CLOCK] == 1 ? "CLOCK: USB" : "CLOCK: TRS", n);
+        str_cpy(b, song.g[G_CLOCK] == 1 ? "USB" : "TRS", n);
         return;
     }
     fmt_int(d, song.g[G_BPM]);

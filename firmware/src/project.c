@@ -2338,13 +2338,14 @@ static int undo_sound(uint32_t k)
 
 static void project_load(uint32_t slot)
 {
-    cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST left (a project: its own CLOCK) */
 #if FELUCCA_FLASH
     if (flash_ok && !proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t))) proj_fetch(slot);
 #endif
     if (!proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t))) { ui_message("EMPTY SLOT"); return; }
     proj_bound(&proj_scratch);                          /* a retained RAM slot of an older format: as from flash */
     if (!project_restore_runtime(&proj_scratch)) {
+        cpt_clk = 0;                                    /* (ACID FM 3c-2 task 7, fix round 1) CPU TEST left: the project's
+                                                         * own CLOCK (restored with it); a failed load leaves the test on INT */
         proj_cur = (uint8_t)(slot & 3u);
         live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing) */
         proj_clean_mark();                              /* (ACID FM 3c-2 task 4) */

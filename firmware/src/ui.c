@@ -707,8 +707,9 @@ static int tempo_ext(void)
     return 1;
 }
 /* (ACID FM 3c-2 task 7, spec 5.2) CPU TEST plays on the internal clock (song_dice.c cpu_test_song): the CLOCK before it + 1 (0:
- * none), put back when the test is left: NEW PROJECT (system_init, before KEEP), GEN (gen_go), a project or section load
- * (project_load, section_load: the loaded one's own CLOCK then), UNDO (undo_do, after its restore). Here, not in song_dice.c:
+ * none), put back when the test is left: NEW PROJECT (system_init, before KEEP), GEN (gen_go), UNDO (undo_do, after its
+ * restore); a project or section loaded (project_load, section_load, after the restore: the loaded one's own CLOCK, cpt_clk
+ * dropped). Here, not in song_dice.c:
  * project.c's builds without ui_input.c (the editor's, the backup's tests) reach it */
 static uint8_t cpt_clk;
 static void cpt_clock_back(void)

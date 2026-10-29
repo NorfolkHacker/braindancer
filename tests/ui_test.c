@@ -21469,20 +21469,39 @@ static int test_u7_gen(void)
     ok &= song.g[G_BPM] == 97 && ui.confirm == CF_DICE_ALL;
     for (f = 0; f < 200u && !said; f++) { said = msg_is("CLOCK: USB"); frame(); }
     head_bpm_text(b, sizeof b);
-    ok &= said && str_eq(b, "CLOCK: USB");
+    ok &= said && str_eq(b, "USB");
+    {   /* (fix round 1) the short form where the tempo goes: about as wide as a 3-digit BPM (letters are a little wider
+         * than digits: within a gap), so the header's message keeps the room it has under INT (drawn: the header's ink right of
+         * the sync mark is the message's, not a lone ellipsis) */
+        head_geo_t gu, gd;
+        head_geo(&gu, b); head_geo(&gd, "120");
+        ok &= gu.b[2] <= gd.b[2] + HEAD_GAP;
+        if (gu.b[2] > gd.b[2] + HEAD_GAP) printf("  GEN USB: header word %d px, a 3-digit BPM %d px\n", (int)gu.b[2], (int)gd.b[2]);
+        ui_say("GEN: EXPLORE ", "1234"); ui.force = 1; frame();
+        {
+            uint32_t x, y, ink = 0;
+            int32_t x0 = gu.bx + gu.b[2] + HEAD_GAP + 7 + 8;
+            for (y = 2; y < 20u; y++)
+                for (x = (uint32_t)x0; x < 196u; x++)
+                    ink += swap16(host_screen[y * 240u + x]) != swap16(host_screen[2u * 240u + 239u]);
+            ok &= ink >= 150u;                          /* (an ellipsis alone: a few dozen px) */
+            if (ink < 150u) printf("  GEN USB: the header's message %u px of ink\n", ink);
+        }
+    }
     song.g[G_CLOCK] = 2; head_bpm_text(b, sizeof b);
-    ok &= str_eq(b, "CLOCK: TRS");
+    ok &= str_eq(b, "TRS");
     if (!ok) printf("  GEN USB: BPM %d said %d head '%s'\n", song.g[G_BPM], said, b);
-    song.g[G_CLOCK] = 0; song.g[G_BPM] = 97;
+    song.g[G_CLOCK] = 0; song.g[G_BPM] = 40;           /* (fix round 1: below every genre's range: a pass proves GEN wrote it) */
     press(B_OCTUP); frame();
     head_bpm_text(b, sizeof b);
-    ok &= song.g[G_BPM] >= gs.g->bpm_lo && song.g[G_BPM] <= gs.g->bpm_hi && b[0] >= '0' && b[0] <= '9' && atoi(b) == song.g[G_BPM];
+    ok &= gs.g->bpm_lo > 40 && song.g[G_BPM] >= gs.g->bpm_lo && song.g[G_BPM] <= gs.g->bpm_hi && b[0] >= '0' && b[0] <= '9' &&
+          atoi(b) == song.g[G_BPM];
     if (!ok) printf("  GEN INT: BPM %d (%d..%d) head '%s'\n", song.g[G_BPM], gs.g->bpm_lo, gs.g->bpm_hi, b);
     press(B_OCTDN); frame();
     song.g[G_CLOCK] = 1; frame();
     head_bpm_text(b, sizeof b);                         /* (off GEN: the BPM, the sync mark beside it) */
     ok &= atoi(b) == song.g[G_BPM];
-    bad += check("ACID FM 3c-2 task 7: GEN under USB / TRS writes no BPM, says CLOCK: USB (the message, the header's tempo); "
+    bad += check("ACID FM 3c-2 task 7: GEN under USB / TRS writes no BPM, says CLOCK: USB (the message; the header USB where the tempo goes, its message readable); "
                  "INT: the genre's range", ok);
     song.g[G_CLOCK] = 0;
     ui_prefs = pr;
@@ -21529,6 +21548,11 @@ static int test_u7_cpu_test(void)
     song.g[G_CLOCK] = 2; frame();
     u1_ask(CF_CPU_TEST, 0); press(B_OCTUP); frame();
     ok1 = song.g[G_CLOCK] == 0 && cpt_clk == 3u;
+    memset(&proj_slot[3], 0, sizeof proj_slot[3]);      /* (fix round 1) a failed load (an empty slot): the test plays on, on INT */
+    project_load(3); frame();
+    ok1 &= msg_is("EMPTY SLOT") && song.g[G_CLOCK] == 0 && cpt_clk == 3u && song.g[G_BPM] == 160;
+    ok1 &= section_load(3) && song.g[G_CLOCK] == 0 && cpt_clk == 3u;
+    if (!ok1) printf("  CPU TEST, a failed load: CLOCK %d cpt_clk %u\n", song.g[G_CLOCK], (unsigned)cpt_clk);
     project_load(1); frame();
     ok &= ok1 && song.g[G_CLOCK] == 0 && !cpt_clk;      /* (the project's own CLOCK, INT) */
     song.g[G_CLOCK] = 1; frame();
@@ -21537,7 +21561,7 @@ static int test_u7_cpu_test(void)
     gen_go(); frame();
     ok &= ok1 && song.g[G_CLOCK] == 1 && !cpt_clk && song.g[G_BPM] == 160;   /* (GEN under USB: the tempo left as it was) */
     if (!ok) printf("  CPU TEST left: CLOCK %d BPM %d cpt_clk %u\n", song.g[G_CLOCK], song.g[G_BPM], (unsigned)cpt_clk);
-    bad += check("  .. NEW PROJECT, a project load (its own CLOCK) and GEN bring CLOCK back too", ok);
+    bad += check("  .. NEW PROJECT, a project load (its own CLOCK) and GEN bring CLOCK back too; a failed load does not", ok);
     bad += check("  .. its dialog says so (the internal clock, CLOCK back after)",
                  strstr(UXD_LOST_HDR[CF_CPU_TEST], "internal clock") && strstr(UXD_LOST_HDR[CF_CPU_TEST], "CLOCK comes back"));
     song.g[G_CLOCK] = 0;
