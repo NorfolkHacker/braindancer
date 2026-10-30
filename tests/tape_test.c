@@ -482,7 +482,8 @@ static void test_in_out(void)
 }
 
 /* (Braindancer 0.8) TAPE the safety net's first rung (audio.c fx_safety_tick: fx_safe SAFE_TAPE): a -12 dBFS 220 Hz tone
- * through TAPE as mix_block runs it (tape_begin, tape_block while in the chain), AGE 50; the rung on at block 200, off at
+ * through TAPE as mix_block runs it (tape_begin, tape_block while in the chain), AGE 50 with HISS 0 (its noise would be
+ * the measure's floor); the rung on at block 200, off at
  * 600: TAPE fades out and back in on its own fade, no click at either edge (the second difference around each against
  * the tone's own), AGE's six untouched */
 static double rung_d2(int hard, double *e, double *ms, uint32_t *outb, uint32_t *inb, int *kept)
@@ -493,6 +494,7 @@ static double rung_d2(int hard, double *e, double *ms, uint32_t *outb, uint32_t 
     int16_t g6[6];
     tape_reset();
     tape_age_apply(50);
+    song.g[G_THISS] = 0;                                /* (HISS off: the tone's own second difference the measure) */
     memcpy(g6, &song.g[G_TAGE], sizeof g6);
     e[0] = e[1] = *ms = 0; *outb = *inb = 0;
     for (b = 0; b < 1000u; b++) {
@@ -530,14 +532,14 @@ static void test_rung_click(void)
     double e[2], h[2], ms, ms2, tone;
     int kept, k2;
     tone = rung_d2(0, e, &ms, &outb, &inb, &kept);
-    snprintf(what, sizeof what, "the safety net's rung (AGE 50): out at block 200, in at 600: second difference %.0f / %.0f (TAPE's "
-             "own in the chain, HISS 20: %.0f; + the tone's %.0f x4 at most); out in %u blocks, whole again in %u; AGE's six kept",
+    snprintf(what, sizeof what, "the safety net's rung (AGE 50, HISS 0): out at block 200, in at 600: second difference %.0f / %.0f "
+             "(in the chain %.0f; the tone's %.0f, at most x4); out in %u blocks, whole again in %u; the six kept",
              e[0], e[1], ms, tone, outb, inb);
-    ck(what, e[0] <= ms + 4.0 * tone && e[1] <= ms + 4.0 * tone && outb && outb <= TAPE_FADE / CTL + 1u && inb &&
+    ck(what, e[0] <= 4.0 * tone && e[1] <= 4.0 * tone && outb && outb <= TAPE_FADE / CTL + 1u && inb &&
        inb <= ((TAPE_D0 >> 8) + 8u + TAPE_FADE) / CTL + 2u && kept);
     (void)rung_d2(1, h, &ms2, &o2, &i2, &k2);
     snprintf(what, sizeof what, "(the measure: TAPE taken out at once on the rung is a click: %.0f, past it)", h[0]);
-    ck(what, h[0] > ms + 4.0 * tone);
+    ck(what, h[0] > 4.0 * tone);
 }
 /* a mix far past anything the parts make (a 0.5 G sine, SAT 100): no product wraps (SAT's input clamped) */
 static void test_huge(void)

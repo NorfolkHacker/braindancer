@@ -400,7 +400,8 @@ static void safe_reset(uint32_t cap, uint32_t lite)
     gov_cap = (uint8_t)cap; gov_lite = (uint8_t)lite; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = gov_floor = 0;
     fx_safe = 0; dly_safety = 0; safe_hush_n[0] = safe_hush_n[1] = 0; tape_safety = 0;
     dsf_behind = 0; dsf_calm = 0; dsf_wait = 0; safe_kills = 0;
-    for (i = 0; i < 4u; i++) { dsf_since[i] = 0xFFFFu; dsf_rearm[i] = 0; }
+    for (i = 0; i < 4u; i++) { dsf_since[i] = 0xFFFFu; dsf_rearm[i] = 0; dsf_seq[i] = 0; }
+    dsf_tick = 0;
     memset(&tape, 0, sizeof tape);                      /* (Braindancer 0.8) TAPE off (fresh: its globals 0), out of the chain */
     prf.rest_ph = 0;
     safe_part[0] = safe_part[1] = NTRK;
@@ -569,6 +570,29 @@ static void safety(void)
                    tape_safety, tf, 1u << dsf_rearm[3]);
             check("  (0.8) a borderline load (two halves behind every 1.16 s, 20 s): TAPE's rung switched 3 times at most",
                   tf <= 3u && tape_safety <= 2u);
+        }
+        {   /* (review 4) the rungs back in the reverse of the order they came on: the delay's rung on (TAPE off), then
+             * AGE turned up while still behind: TAPE's rung on after it, so it goes first in the calm */
+            uint32_t ot = 0, od = 0, ft = 0, fd = 0, w2 = 0;
+            safe_reset(4u, LOAD_LITE);
+            for (h = 1; h <= 100u; h++) safe_run(1u, 125u, 0);
+            tape_age_apply(50);
+            for (h = 1; h <= 300u; h++) {
+                safe_run(1u, 125u, 0);
+                if ((fx_safe & SAFE_TAPE) && !ot) ot = h;
+            }
+            od = fx_safe & SAFE_DLY;
+            w2 = fx_safe;
+            for (h = 1; h <= 800u; h++) {
+                safe_run(1u, 60u, 0);
+                if (!(fx_safe & SAFE_TAPE) && (w2 & SAFE_TAPE)) ft = h;
+                if (!(fx_safe & SAFE_DLY) && (w2 & SAFE_DLY)) fd = h;
+                w2 = fx_safe;
+            }
+            printf("audio: the delay's rung, then AGE up: TAPE's rung %u halves on; back at 60 %%: TAPE at %u, the delay at %u\n",
+                   ot, ft, fd);
+            check("  (0.8) TAPE's rung on after the delay's (AGE turned up meanwhile): back first (TAPE 344, the delay 688)",
+                  od && ot && ft == 344u && fd == 688u && !fx_safe && tape_safety == 1u && dly_safety == 1u);
         }
         safe_reset(4u, LOAD_LITE);
         tape_age_apply(50);

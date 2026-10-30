@@ -21,7 +21,6 @@
  *   seqtick/live   .. every track under GLO > LIVE's modifiers (seq_live.c: x2, a LOOP of 4, REV, THIN 30 %, GIRO +1)
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
  *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
- *   song/cputest.tape (Braindancer 0.8) .. through TAPE at AGE 100 (fx.c tape_block): its cost on top (gen.c GC_TAPE1)
  *   fx/<EFFECT>    (0.9.17) the CPU TEST song with an FX layer buffer effect held (REPEAT 1/16, GLITCH, TAPE STOP, its
  *                  SCRATCH, SHUFFLE, FREEZE; .max at their heaviest knobs): the mean of its rounds (cpu_vg.py)
  *   idle/stopped   (0.9.16) that song stopped and every tail out: the audio at rest (both cores' work)
@@ -219,9 +218,6 @@ int main(void)
     song.g[G_DJF] = -24;                                /* (0.9.1) the same song through the DJ FILTER (a low-pass, ~1.4 kHz) */
     vg_section("song/cputest.djf");
     song.g[G_DJF] = 0;
-    tape_age_apply(100);                                /* (Braindancer 0.8) .. through TAPE at AGE 100 (every detail on) */
-    vg_section("song/cputest.tape");
-    tape_age_apply(0);
     {   /* (0.9.17) fx/<EFFECT>: the same song with an FX layer buffer effect held, rounds of NB blocks (cpu_vg.py: their
          * mean): REPEAT 1/16 (for scale), the glitcher at its defaults and at its heaviest (.max) */
         static const struct { const char *n; uint8_t e, rounds, k, v; uint16_t pre; } FXS[] = {

@@ -188,9 +188,24 @@ static uint16_t dsf_calm, dsf_wait;                     /* halves in a row under
 static uint16_t dsf_since[4] = {0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu};   /* since each lever's release */
 static uint32_t dly_safety, safe_hush_n[2], safe_kills;
 static uint32_t tape_safety;                            /* the times TAPE's rung came on (console: safety_tape) */
+static uint32_t dsf_seq[4], dsf_tick;                   /* when each lever last came on (a count): released last on first */
 static uint32_t dsf_lever(uint32_t bit)                 /* a lever's bit -> its index: SAFE_TAPE -> 3, else bit >> 1 */
 {
     return bit == SAFE_TAPE ? 3u : bit >> 1;
+}
+static uint32_t dsf_last(uint32_t on)                   /* the lever on that came on last (none recorded: the arp, the
+                                                         * texture, the delay, TAPE, as the ladder's own order) */
+{
+    static const uint8_t ORD[4] = {3u, 0u, 1u, 2u};
+    uint32_t k, l = 3u, best = 0;
+    for (k = 0; k < 4u; k++) {
+        uint32_t m = ORD[k];
+        if ((on & (m == 3u ? SAFE_TAPE : 1u << m)) && dsf_seq[m] >= best) {
+            best = dsf_seq[m];
+            l = m;
+        }
+    }
+    return l;
 }
 static uint32_t voices_stolen(void)                    /* (the console) taken for a new note, the budget of voices full */
 {
@@ -212,6 +227,7 @@ static __attribute__((noinline)) void fx_safety_tick(uint32_t r, int late)
     if (up) {
         l = dsf_lever(up);                             /* (the lever: 0 the delay, 1 the texture, 2 the arp, 3 TAPE) */
         dsf_rearm[l] = dsf_since[l] < DSF_REARM ? (uint8_t)(dsf_rearm[l] ? 3u : 2u) : 0u;   /* (1 s, 4 s, 8 s) */
+        dsf_seq[l] = ++dsf_tick;
         fx_safe = (uint8_t)(on | up);
         dsf_calm = 0;
         dsf_wait = DSF_STEP;
@@ -230,7 +246,8 @@ static __attribute__((noinline)) void fx_safety_tick(uint32_t r, int late)
         }
     } else if (on) {
         if (r < DSF_CALM && !late) {
-            l = on & SAFE_ARP ? 2u : on & SAFE_TEX ? 1u : on & SAFE_DLY ? 0u : 3u;   /* (the last one on goes first) */
+            l = dsf_last(on);                          /* (the last one on goes first: TAPE turned on after the
+                                                         * delay's rung came on goes before it) */
             if (++dsf_calm >= (344u << dsf_rearm[l])) {
                 fx_safe = (uint8_t)(on & ~(l == 3u ? SAFE_TAPE : 1u << l));
                 dsf_calm = 0;
