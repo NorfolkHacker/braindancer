@@ -285,8 +285,8 @@ SELECT goes down each row from left to right; the button goes to the next page.
 | --- | --- | --- | --- | --- |
 | SENDS | DISTORT | CHORUS | DELAY | REVERB |
 | SPACE | DLY TIME | DLY FDBK | REV TYPE | REV SIZE |
-| MASTER | CLIP | PUNCH | DUCK | DUCK TIME |
-| MORE | the row (DISTORT, AUTO PAN, DELAY, REVERB, CHORUS, SLICER, SLICE PITCH, PUNCH LANE) | its value | — | — |
+| MASTER | CLIP | PUNCH | DUCK | AGE |
+| MORE | the row (DISTORT, AUTO PAN, DELAY, REVERB, CHORUS, SLICER, SLICE PITCH, PUNCH LANE, MASTER, TAPE) | its value | — | — |
 
 **SCL**
 
@@ -440,6 +440,16 @@ every engine) or with ENGINE on SAVE › MORE.
 ANALOG, FM6, NOISE** (the first six are the tracks at power-on, T1–T6). PROGRAM CHANGE numbers the sounds in this
 order (see [14](#14-midi-and-usb)).
 
+**New in 0.8**: 20 factory sounds, last in each engine's list (GEN still chooses among the earlier ones):
+
+| Engine | New sounds |
+| --- | --- |
+| **ANALOG** | ACID SQUELCH, ACID SQUARE, ACID LEAD, DETUNE PAD, DUSTY LEAD, RUBBER BASS, BRAIN BLIPS |
+| **FM6** | GLASS EP, METAL BASS, TIN BELL, MUSIC BOX |
+| **PHASE** | RESO SWEEP, DIGI CHOIR, CHIME KEYS |
+| **LOFI** | DUSTY KEYS, WOBBLE LEAD, CRUSH BASS |
+| **VOICE** | DREAM CHOIR, AIR CHOIR, LOW HUM PAD |
+
 **Sound types**: every factory sound has a type: **BASS, LEAD, PAD, KEYS, PLUCK, BELL, VOX, DRUM, FX**. On SAVE ›
 PRESETS, **KNOB 4 (LIST)** steps ALL → FAV → BASS → LEAD → … → FX: with a type, KNOB 1 and the PRESETS knob browse only
 that type's sounds, **across every engine**, and loading one keeps the steps as always. The dice (GEN) uses the types
@@ -464,6 +474,11 @@ page draws the sound (middle C as it strikes); values carry their unit (355HZ, 1
 
 - **ANALOG**: two oscillators. WAVE: SAW, SQR, TRI, SIN, PWM, SYNC, RING, SAW3. **INTERVAL** sets oscillator 2's
   interval (±24 semitones). Its filter is per voice; its page 3 is VOICE.
+  - **The acid response** (MONO or LEGATO only): the sequencer plays accents and slides like an acid bass line.
+    Accented steps that follow each other open the filter further each time (up to a limit), and it settles back
+    after a plain step. The climb holds through rests and starts again at each PLAY. A **slide** is a short glide of
+    about 58 ms with no new attack, whatever GLIDE is set to. Notes played on the keys keep the old accent, and POLY,
+    UNISON and the other engines are unchanged.
 - **FM6**: a six-operator FM engine (Dexed's msfa), 32 algorithms drawn on screen, four voices per track. SOUND's knobs
   are macros over the patch (ALGORITHM **P 5** = the patch's own algorithm, number 5). **OPERATOR** and **OP ENV** edit
   each of the six operators on the device (KNOB 1 picks the operator); editing makes the patch the track's own (PATCH
@@ -584,6 +599,9 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
   loads the whole kit into the section: the eight sounds' A and B sides, their LAYERs and SENDs, and the track's KIT
   knobs. Switching engines, INIT SOUND, a project load and GEN leave the section's kit as it is; DRUM-X brings the
   factory kit back. Edit any of them in EDIT > SOUND; the section saves the result.
+  In 0.8, **909 CLUB** has a shorter, clickier kick, a noisier snare, bright short hats and a ride on the BELL lane;
+  **808 BOOM** has a long low kick, a tonal snare, soft hats, a long tom and a cowbell on BELL; **LOFI DUST**, **TECHNO
+  RAW** and **BREAKS** have crunchier lanes.
 
 - Every sound has two sides, **A** and **B**. **MORPH** (KIT, KNOB 1, also on HOME) moves the whole kit between them:
   the knob to play live.
@@ -1227,8 +1245,8 @@ track's sounds.
 | --- | --- | --- |
 | **SENDS** (the track's) | DISTORT · CHORUS · DELAY · REVERB | The four as bars; under each where it goes (DISTORT's TYPE, the delay's TIME, the reverb's TYPE). With LOAD ECO there is no chorus: its bar dims. |
 | **SPACE** | DLY TIME · DLY FDBK · REV TYPE · REV SIZE | The note, the delay's echoes where they sound, each as loud as MIX and FDBK say, and the reverb's tail falling 60 dB over its length. |
-| **MASTER** | CLIP · PUNCH · DUCK · DUCK TIME | The output's meter with the point where it clips, CLIP's curve and, after a kick, the drums and the rest. |
-| **MORE** | the row · its value | DISTORT (DIST TYPE, DIST TONE), AUTO PAN (PAN DEPTH, PAN RATE, PAN SYNC, PAN WAVE), DELAY (DLY TONE, DLY MIX, DLY WIDE, DLY PITCH, DLY SPRAY, DLY MOD, DLY TYPE, DLY PING), REVERB (REV DAMP, REV PRE / AIR / PITCH by the type, REV MOD, REV RATE, REV TONE, REV WIDE; on RESO DAMP is FOLLOW), CHORUS (CHO RATE, CHO DEPTH, CHO WIDE), SLICER (SLICE MODE, SLICE PAT, SLICE RATE, SLICE DEPTH, SLICE T1–T6, SLICE FX), SLICE PITCH (PITCH 1–16, PITCH LOOP, PITCH SNAP), PUNCH LANE (LANE STEPS, LANE RATE, CLEAR LANE). |
+| **MASTER** | CLIP · PUNCH · DUCK · AGE | The output's meter with the point where it clips, CLIP's curve, after a kick the drums and the rest and, while TAPE is on, its five details as small bars. |
+| **MORE** | the row · its value | DISTORT (DIST TYPE, DIST TONE), AUTO PAN (PAN DEPTH, PAN RATE, PAN SYNC, PAN WAVE), DELAY (DLY TONE, DLY MIX, DLY WIDE, DLY PITCH, DLY SPRAY, DLY MOD, DLY TYPE, DLY PING), REVERB (REV DAMP, REV PRE / AIR / PITCH by the type, REV MOD, REV RATE, REV TONE, REV WIDE; on RESO DAMP is FOLLOW), CHORUS (CHO RATE, CHO DEPTH, CHO WIDE), SLICER (SLICE MODE, SLICE PAT, SLICE RATE, SLICE DEPTH, SLICE T1–T6, SLICE FX), SLICE PITCH (PITCH 1–16, PITCH LOOP, PITCH SNAP), PUNCH LANE (LANE STEPS, LANE RATE, CLEAR LANE), MASTER (DUCK TIME), TAPE (WOW, FLUTTER, TAPE SAT, HISS, TAPE TONE). |
 
 The sections below name the settings by their group; the rows are on FX › MORE unless a page is named.
 
@@ -1324,7 +1342,27 @@ Hidden with LOAD ECO (a track's CHORUS send then says ECO).
 
 - **CLIP**: saturation that adds character, not volume.
 - **PUNCH**: fattens the DRUM tracks.
-- **DUCK**: the kick pulls the rest down; **DUCK TIME** is its release.
+- **DUCK**: the kick pulls the rest down. Its release, **DUCK TIME**, is on FX › MORE under MASTER.
+- **AGE**: old tape in one knob (KNOB 4). It sets TAPE's five details together; see TAPE below.
+
+### TAPE
+
+**TAPE** colours the whole mix like an old tape machine. It sits on the master after CLIP, PUNCH and DUCK. It is off at
+first: with AGE and every detail at 0 it is out of the chain and the sound is exactly as without it.
+
+- **AGE** (FX › MASTER, KNOB 4) sets the five details at once: 0 is off, the middle is a clear tape wobble, the top is
+  a worn cassette. The status line says it in words (**A LITTLE TAPE**, **OLD TAPE**, **WORN CASSETTE**).
+- The details are on **FX › MORE** under TAPE: **WOW** (a slow, uneven drift of the pitch), **FLUTTER** (a quick pitch
+  tremble), **TAPE SAT** (a soft tape saturation), **HISS** (tape hiss that follows the music and is silent over
+  silence) and **TAPE TONE** (rolls the highs off, the higher the duller).
+- A detail you turn by hand stays where you put it until AGE is turned again. The status line then reads
+  **AGE · OFF, 2 BY HAND** (the number of details set by hand).
+- The FX › MASTER picture shows the five details as small bars while TAPE is on.
+- AGE can be automated like the DJ FILTER: with REC armed, the AGE knob records and plays back with the section, and a
+  stop puts back the six values as they were. AGE has no lock.
+- TAPE is saved with the project; a project from an older version loads with TAPE off.
+- If the sound engine is overloaded, TAPE is the first thing it switches off, before the delay's short mode, the
+  texture and the arp. Your settings are never changed; it comes back by itself when there is room again.
 
 ### DJ FILTER (GLO › LIVE KNOB 4)
 

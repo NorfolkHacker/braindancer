@@ -10,9 +10,26 @@ the Rephlex catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/braindancer/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/braindancer/manual/)**
 
-## Status: 0.7
+## Status: 0.8
 
-0.7 is the rename: ACID FM is now **Braindancer**, after braindance, the 90s IDM of Aphex Twin and the Rephlex catalogue.
+0.8 is about the sound (piece 5), on top of 0.7:
+
+- **TAPE**, a new master effect after CLIP, PUNCH and DUCK: WOW, FLUTTER, SAT, HISS and TONE, with one **AGE** knob that
+  sets them together. FX › MASTER is now CLIP · PUNCH · DUCK · AGE; DUCK TIME moved to FX › MORE › MASTER and TAPE has its
+  own group in FX › MORE. It is off at first, saved with the project (a 0.7 project loads with TAPE off), AGE can be
+  automated, and it is the first thing the overload safety switches off (your settings are never changed).
+- **The 303 acid response** (ANALOG, MONO or LEGATO): accents that follow each other climb the cutoff and relax after a
+  plain step; a slide is a short glide (about 58 ms) with no new attack, whatever GLIDE is. Notes played on the keys keep
+  the old accent.
+- **20 new factory presets** (ANALOG ACID SQUELCH, ACID SQUARE, ACID LEAD, DETUNE PAD, DUSTY LEAD, RUBBER BASS, BRAIN BLIPS;
+  FM6 GLASS EP, METAL BASS, TIN BELL, MUSIC BOX; PHASE RESO SWEEP, DIGI CHOIR, CHIME KEYS; LOFI DUSTY KEYS, WOBBLE LEAD,
+  CRUSH BASS; VOICE DREAM CHOIR, AIR CHOIR, LOW HUM PAD), added at the end of each list. GEN still picks from the earlier ones.
+- **DRUM-X kits**: 909 CLUB (shorter, clickier kick, noisier snare, bright short hats, a ride on BELL), 808 BOOM (long low
+  kick, tonal snare, soft hats, long tom, a cowbell on BELL), and crunchier lanes in LOFI DUST, TECHNO RAW and BREAKS.
+- The web editor has the six TAPE globals (G 96 to 101); see `web/EDITOR_PROTOCOL.md`.
+- Still built on JIANT FM and Felucca.
+
+Before that, 0.7 was the rename: ACID FM is now **Braindancer**, after braindance, the 90s IDM of Aphex Twin and the Rephlex catalogue.
 It is a rename only: no new features, and projects, presets and settings load as before.
 
 - The splash and ABOUT say BRAINDANCER, and the FM-1 shows up over USB as a MIDI device called BRAINDANCER (formerly ACID FM).
@@ -89,7 +106,7 @@ The Braindancer features arrive in steps (see `docs/superpowers/specs/2026-10-24
 2. Trim (0.2): engines for IDM, the voice ceiling measured, room made for samples
 3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c-1 in 0.5: SEQ, GLO, MIDI; 3c-2 in 0.6: SAVE, MENU, dialogs, PLAYS)
 4. BREAK: load breakbeats from the web page, chop and rearrange them
-5. Sound: TAPE (wow, flutter, saturation), 303-style accent and slide, new FM and drum voices
+5. Sound (0.8): TAPE (wow, flutter, saturation), 303-style accent and slide, new presets and drum kits
 6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, RETROBOC, AMBIENT, GLITCH
 
 The manual is Braindancer's own; it grows as Braindancer's features land.

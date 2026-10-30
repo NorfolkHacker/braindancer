@@ -265,7 +265,7 @@ def controls():
                           ('MORE', 'PHASE · STEPS (LENGTH, STEP RATE, SMOOTH, STEP 1–16): K1 picks, K2 sets')]),
         ('FX', HEAT[5], [('SENDS', 'DISTORT CHORUS DELAY REVERB'), ('SPACE', 'DLY TIME DLY FDBK REV TYPE REV SIZE'),
                          ('MASTER', 'CLIP PUNCH DUCK DUCK TIME'),
-                         ('MORE', 'DISTORT · AUTO PAN · DELAY · REVERB · CHORUS · SLICER · SLICE PITCH · PUNCH LANE: K1 picks, K2 sets')]),
+                         ('MORE', 'DISTORT · AUTO PAN · DELAY · REVERB · CHORUS · SLICER · SLICE PITCH · PUNCH LANE · MASTER · TAPE: K1 picks, K2 sets')]),
         ('EDIT', HEAT[3], [('SOUND', 'E1 E2 E3 E4'), ('TONE', 'E5 E6 E7 E8'), ('VOICE', 'VOICE GLIDE PRIORITY SPREAD'),
                            ('FILTER', 'FILTER CUTOFF RESO DISTORT'), ('FM6 SOUND', 'ALGORITHM FEEDBACK MOD LEVEL MOD RATIO'),
                            ('OPERATOR', 'OP RATIO FINE LEVEL'), ('OP ENV', 'OP STAGE RATE LEVEL'), ('KIT', 'MORPH TUNE TONE DECAY'),
@@ -443,9 +443,10 @@ def sound():
     b.append('<div class="grid g2" style="margin-top:22px;grid-template-columns:2fr 1fr">')
     b.append(card('REVERB · FIVE MODELS', HEAT[2], knobs('REV TYPE', 'REV SIZE', 'REV DAMP', 'REV PRE') + knobs('REV MOD', 'REV RATE', 'REV TONE', 'REV WIDE') +
                   '<div style="margin-top:10px">' + t + '</div>'))
-    b.append(card('MASTER', HEAT[6], knobs('CLIP', 'PUNCH', 'DUCK', 'DUCK TIME') +
+    b.append(card('MASTER', HEAT[6], knobs('CLIP', 'PUNCH', 'DUCK', 'AGE') +
                   '<p style="margin-top:8px"><b>CLIP</b> saturates without getting louder. <b>PUNCH</b> drives the drums: '
-                  'denser body. <b>DUCK</b>: the kick pulls the rest down (DUCK TIME its release). An always-on '
+                  'denser body. <b>DUCK</b>: the kick pulls the rest down (DUCK TIME, its release, is in FX › MORE › MASTER). '
+                  '<b>AGE</b>: old tape in one knob, setting <b>TAPE</b>\'s WOW, FLUTTER, TAPE SAT, HISS and TAPE TONE together (off at 0; the details are in FX › MORE › TAPE). An always-on '
                   '<b>leveler</b> before the limiter keeps patches at a steady volume. <b>DJ FILTER</b> (GLO › LIVE KNOB 4): '
                   'left a low-pass, right a high-pass.</p>'
                   '<h4>PUNCH-IN FX (FX HELD)</h4><p>REPEAT 1/8 · 1/16 · 1/32, GLITCH, TAPE STOP, FREEZE, SHUFFLE; on the notes: OCT−/+, '
