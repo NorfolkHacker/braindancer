@@ -384,6 +384,8 @@ static __attribute__((noinline)) void master_begin(void)
 #define TAPE_FADE 256u                                  /* in / out of the chain, samples (5.8 ms) */
 #define TAPE_FULL 32768                                 /* in the chain: the gain whole (Q15) */
 #define TAPE_QUIET (TAPE_LEN / CTL + 2u)                /* silent blocks written before TAPE is at rest (master_rest) */
+#define TAPE_SAT_MAX (1 << 20)                          /* SAT's input at most (x1 into the soft clip: full past 2^18; x3
+                                                         * into a product: (2^20 >> 4) * 12288 < 2^31) */
 _Static_assert((TAPE_LEN & (TAPE_LEN - 1u)) == 0u &&
                (TAPE_D0 >> 8) + ((100 * TAPE_WOW_Q) >> 8) + (TAPE_FLUT_Q >> 8) + 3 < (int)TAPE_LEN,
                "TAPE: a power of two; its farthest read (WOW, FLUTTER, the Hermite's older taps) within the line");
@@ -541,8 +543,10 @@ static __attribute__((noinline)) void tape_block(uint32_t n)
         }
         for (c = 0; c < 2u; c++) {
             int32_t y = x[c], v, t;
-            if (tape.sat_g)
+            if (tape.sat_g) {                           /* (SAT's input clamped where the soft clip is long full: */
+                y = y > TAPE_SAT_MAX ? TAPE_SAT_MAX : y < -TAPE_SAT_MAX ? -TAPE_SAT_MAX : y;   /* no product wraps) */
                 y = ((softclip(((y + 8) >> 4) * tape.sat_g >> 10) * tape.sat_mk + 16384) >> 15) << 2;
+            }
             v = y;
             if (tape.hiss_k) {
                 int32_t u = (int32_t)(noise32(&tape.nz[c]) >> 17), d = u - tape.nzp[c];

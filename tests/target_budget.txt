@@ -40,3 +40,4 @@ dly_lo 2949
 formant_word_render 338
 formant_block 122
 djf_block 180
+tape_block 780

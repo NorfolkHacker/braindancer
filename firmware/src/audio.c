@@ -165,6 +165,8 @@ static void gov_tick(int over, int hot, int under, int shed)
  * left to shed, the costly reverbs already ROOM / SPRING) and the audio still behind two halves in a row (a render past
  * its half, or the DMA moved on while it ran: the lag that, carried on, loses a half), the next lever, one each 0.5 s
  * while that lasts (fx_safe, voice.c):
+ *   0. (Braindancer 0.8) TAPE, while in the chain: faded out (fx.c tape_begin, its own fade), its settings (AGE and the
+ *      five) left as they are, the master undelayed meanwhile; its whole cost (fx.c tape_block) off at once;
  *   1. the delay's line past the full rate: on its full-rate line (fx.c dly_rate: faded out over 2.9 ms, the line
  *      cleared, started again; TIME at most ~0.74 s). On an FM-1 the quarter-rate line costs ~10 % of the CPU
  *      whatever the voices (EXPLORE 3423, a 2 s delay: 2 halves lost a second; its TIME shortened: none);
@@ -173,16 +175,23 @@ static void gov_tick(int over, int hot, int under, int shed)
  * GEN never turns the SLICER on. The delay's lever only while its bus runs (not at rest, fx_rest: then its line costs
  * nothing, its rate a stale one). Back a lever at a time in reverse order, each after 1 s of halves in a row under 80 %
  * (DSF_CALM); a lever on again within 5 s of its own release takes 4 s of calm to go, then 8 s, each lever its own:
- * a load at the edge settles on it, never flaps. dly_safety, safe_hush_n: the times each came on (the console's
- * status); safe_kills: the voices the hush faded (not stolen ones) */
+ * a load at the edge settles on it, never flaps. dly_safety, safe_hush_n, tape_safety: the times each came on (the
+ * console's status); safe_kills: the voices the hush faded (not stolen ones). New music (voice.c safe_clear): all off,
+ * TAPE back */
 #define DSF_HALF ((HALF_FRAMES * 1000000u / FS) * FM1_TICKS_PER_US)
 #define DSF_CALM ((HALF_FRAMES * 1000000u / FS) * 80u / 100u * FM1_TICKS_PER_US)
 #define DSF_STEP 172u                                  /* halves between two levers (0.5 s: the last one's effect seen) */
 #define DSF_REARM 1720u                                /* .. a lever on again within 5 s of its release: a longer calm */
-static uint8_t dsf_behind, dsf_rearm[3];               /* bit k: the half k halves ago behind; each lever's calm, 1 s << it */
-static uint16_t dsf_calm, dsf_wait, dsf_since[3] = {0xFFFFu, 0xFFFFu, 0xFFFFu};   /* halves in a row under 80 %; to the
-                                                         * next lever; since each lever's release */
+static uint8_t dsf_behind;                              /* bit k: the half k halves ago behind */
+static uint8_t dsf_rearm[4];                            /* [0] delay [1] texture [2] arp [3] TAPE: each lever's calm, 1 s << it */
+static uint16_t dsf_calm, dsf_wait;                     /* halves in a row under 80 %; to the next lever */
+static uint16_t dsf_since[4] = {0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu};   /* since each lever's release */
 static uint32_t dly_safety, safe_hush_n[2], safe_kills;
+static uint32_t tape_safety;                            /* the times TAPE's rung came on (console: safety_tape) */
+static uint32_t dsf_lever(uint32_t bit)                 /* a lever's bit -> its index: SAFE_TAPE -> 3, else bit >> 1 */
+{
+    return bit == SAFE_TAPE ? 3u : bit >> 1;
+}
 static uint32_t voices_stolen(void)                    /* (the console) taken for a new note, the budget of voices full */
 {
     return voice_kills - voice_trims - shed_count - safe_kills;
@@ -191,21 +200,24 @@ static __attribute__((noinline)) void fx_safety_tick(uint32_t r, int late)
 {
     uint32_t up = 0, k, i, l, on = fx_safe, tex = safe_part[0], arp = safe_part[1];
     dsf_behind = (uint8_t)(dsf_behind << 1 | (late || r > DSF_HALF));
-    for (l = 0; l < 3u; l++)
+    for (l = 0; l < 4u; l++)
         if (dsf_since[l] < 0xFFFFu)
             dsf_since[l]++;
     if (dsf_wait)
         dsf_wait--;
     if ((dsf_behind & 3u) == 3u && !dsf_wait && gov_cap <= 4u && LOAD_EFF())
-        up = !(on & SAFE_DLY) && fx.dr_sh && !prf.rest_ph ? SAFE_DLY : !(on & SAFE_TEX) && tex < NTRK ? SAFE_TEX :
+        up = !(on & SAFE_TAPE) && tape.on && tape.gt ? SAFE_TAPE :   /* (0.8: TAPE first, while in the chain) */
+             !(on & SAFE_DLY) && fx.dr_sh && !prf.rest_ph ? SAFE_DLY : !(on & SAFE_TEX) && tex < NTRK ? SAFE_TEX :
              !(on & SAFE_ARP) && arp < NTRK ? SAFE_ARP : 0u;
     if (up) {
-        l = up >> 1;                                   /* (the lever: 0 the delay, 1 the texture, 2 the arp) */
+        l = dsf_lever(up);                             /* (the lever: 0 the delay, 1 the texture, 2 the arp, 3 TAPE) */
         dsf_rearm[l] = dsf_since[l] < DSF_REARM ? (uint8_t)(dsf_rearm[l] ? 3u : 2u) : 0u;   /* (1 s, 4 s, 8 s) */
         fx_safe = (uint8_t)(on | up);
         dsf_calm = 0;
         dsf_wait = DSF_STEP;
-        if (up == SAFE_DLY) {
+        if (up == SAFE_TAPE) {
+            tape_safety++;                              /* (fx.c tape_begin fades it out from the next block) */
+        } else if (up == SAFE_DLY) {
             dly_safety++;
         } else {
             k = up == SAFE_ARP ? arp : tex;
@@ -218,9 +230,9 @@ static __attribute__((noinline)) void fx_safety_tick(uint32_t r, int late)
         }
     } else if (on) {
         if (r < DSF_CALM && !late) {
-            l = on & SAFE_ARP ? 2u : on & SAFE_TEX ? 1u : 0u;   /* (the last one on goes first) */
+            l = on & SAFE_ARP ? 2u : on & SAFE_TEX ? 1u : on & SAFE_DLY ? 0u : 3u;   /* (the last one on goes first) */
             if (++dsf_calm >= (344u << dsf_rearm[l])) {
-                fx_safe = (uint8_t)(on & ~(1u << l));
+                fx_safe = (uint8_t)(on & ~(l == 3u ? SAFE_TAPE : 1u << l));
                 dsf_calm = 0;
                 dsf_since[l] = 0;
             }

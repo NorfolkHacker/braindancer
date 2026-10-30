@@ -398,9 +398,10 @@ static void safe_reset(uint32_t cap, uint32_t lite)
     uint32_t i;
     fresh();
     gov_cap = (uint8_t)cap; gov_lite = (uint8_t)lite; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = gov_floor = 0;
-    fx_safe = 0; dly_safety = 0; safe_hush_n[0] = safe_hush_n[1] = 0;
+    fx_safe = 0; dly_safety = 0; safe_hush_n[0] = safe_hush_n[1] = 0; tape_safety = 0;
     dsf_behind = 0; dsf_calm = 0; dsf_wait = 0; safe_kills = 0;
-    for (i = 0; i < 3u; i++) { dsf_since[i] = 0xFFFFu; dsf_rearm[i] = 0; }
+    for (i = 0; i < 4u; i++) { dsf_since[i] = 0xFFFFu; dsf_rearm[i] = 0; }
+    memset(&tape, 0, sizeof tape);                      /* (Braindancer 0.8) TAPE off (fresh: its globals 0), out of the chain */
     prf.rest_ph = 0;
     safe_part[0] = safe_part[1] = NTRK;
     song.g[G_BPM] = 120; song.g[G_DTIME] = 8; song.g[G_DMIX] = 127; song.g[G_DFDBK] = 40;   /* 2BAR: 4 s, a quarter rate */
@@ -508,6 +509,73 @@ static void safety(void)
         }
         trk_note_on(&trk[5], 67, 100);
         check("  the texture plays again", held(&trk[5], 67) != 0);
+    }
+    {   /* (Braindancer 0.8) TAPE the first rung: AGE 50, the same GEN piece's ladder at 125 %: TAPE faded out first (its
+         * settings kept), then the delay, the texture, the arp a step apart each; back in reverse order, TAPE last */
+        uint32_t on[4] = {0, 0, 0, 0}, off[4] = {0, 0, 0, 0}, was = 0, h, zero = 0, out = 0, full = 0, rung, bph = HALF_FRAMES / CTL;
+        int16_t g6[6];
+        safe_reset(4u, LOAD_LITE);
+        tape_age_apply(50);
+        memcpy(g6, &song.g[G_TAGE], sizeof g6);
+        safe_part[0] = 5u; safe_part[1] = 2u;
+        trk[5].p[P_VOICE] = V_POLY; trk_note_on(&trk[5], 60, 100);
+        trk[2].p[P_VOICE] = V_POLY; trk_note_on(&trk[2], 64, 100);
+        for (h = 1; h <= 4u; h++) safe_run(1u, 60u, 0);   /* (TAPE in the chain, whole) */
+        rung = tape.on && tape.g == TAPE_FULL;
+        for (h = 1; h <= 700u; h++) {
+            safe_run(1u, 125u, 0);
+            for (i = 0; i < 4u; i++) if ((fx_safe >> i & 1u) && !(was >> i & 1u)) on[i] = h;
+            if (on[3] && !zero && !tape.g) zero = h;
+            if (on[3] && !out && !tape.on) out = h;
+            was = fx_safe;
+        }
+        printf("audio: TAPE the first rung at 125 %%: TAPE at half %u (its gain 0 %u halves on, out of the chain at %u), the "
+               "delay at %u, the texture at %u, the arp at %u\n", on[3], zero - on[3], out - on[3], on[0], on[1], on[2]);
+        check("  (0.8) TAPE in the chain (AGE 50), at the floor and behind: TAPE's rung first, within 2 halves, counted once",
+              rung && on[3] >= 1u && on[3] <= 2u && tape_safety == 1u && dly_safety == 1u);
+        check("  .. faded out (its gain 0 within TAPE_FADE / CTL + 1 blocks of the rung), out of the chain, AGE's six kept",
+              zero && (zero - on[3]) * bph <= TAPE_FADE / CTL + 1u && out && !tape.on && !memcmp(g6, &song.g[G_TAGE], sizeof g6));
+        check("  .. then the delay, the texture, the arp a step apart each (as before, a step later)",
+              on[0] == on[3] + DSF_STEP && on[1] == on[0] + DSF_STEP && on[2] == on[1] + DSF_STEP &&
+              fx_safe == (SAFE_TAPE | SAFE_DLY | SAFE_TEX | SAFE_ARP) && safe_hush_n[0] == 1u && safe_hush_n[1] == 1u);
+        zero = 0;
+        for (h = 1; h <= 1600u; h++) {
+            safe_run(1u, 60u, 0);
+            for (i = 0; i < 4u; i++) if (!(fx_safe >> i & 1u) && (was >> i & 1u)) off[i] = h;
+            if (off[3] && !zero && tape.on) zero = h;
+            if (off[3] && !full && tape.g == TAPE_FULL) full = h;
+            was = fx_safe;
+        }
+        printf("audio: TAPE's rung back at 60 %%: the arp at half %u, the texture at %u, the delay at %u, TAPE at %u (in the "
+               "chain %u halves on, whole at %u)\n", off[2], off[1], off[0], off[3], zero - off[3], full - off[3]);
+        check("  calm: back in reverse order a second apart (the arp, the texture, the delay, TAPE at 344, 688, 1032, 1376)",
+              off[2] == 344u && off[1] == 688u && off[0] == 1032u && off[3] == 1376u && !fx_safe);
+        check("  .. TAPE in the chain again, whole within its hold and fade, AGE's six as they were",
+              zero == off[3] + 1u && full && (full - off[3] - 1u) * HALF_FRAMES <= (TAPE_D0 >> 8) + 8u + TAPE_FADE + HALF_FRAMES &&
+              !memcmp(g6, &song.g[G_TAGE], sizeof g6));
+        safe_reset(4u, LOAD_LITE);
+        tape_age_apply(50);
+        fl = 0;
+        {
+            uint32_t tw = 0, tf = 0;
+            for (i = 0; i < 17u; i++) {
+                for (h = 0; h < 400u; h++) {
+                    safe_run(1u, h < 2u ? 115u : 75u, &fl);
+                    tf += (fx_safe & SAFE_TAPE) != tw;
+                    tw = fx_safe & SAFE_TAPE;
+                }
+            }
+            printf("audio: TAPE's rung under the borderline load: %u engaged, %u switches of it in 20 s (its calm x%u)\n",
+                   tape_safety, tf, 1u << dsf_rearm[3]);
+            check("  (0.8) a borderline load (two halves behind every 1.16 s, 20 s): TAPE's rung switched 3 times at most",
+                  tf <= 3u && tape_safety <= 2u);
+        }
+        safe_reset(4u, LOAD_LITE);
+        tape_age_apply(50);
+        fx_safe = SAFE_TAPE | SAFE_DLY;
+        safe_clear();
+        check("  (0.8) new music (safe_clear): TAPE's rung off", !fx_safe);
+        safe_reset(4u, LOAD_LITE);
     }
     {   /* (review M2) the delay bus at rest (fx_rest: nothing sent, its rate a stale one): its lever not on */
         uint32_t sh;

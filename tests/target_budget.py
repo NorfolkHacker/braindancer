@@ -32,7 +32,8 @@ FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_re
          "rev_room", "rev_spring", "dist_amp", "dx_hands_step",                # the reverb bus (fx.c): REVERB TYPE ROOM / SPRING
          "dly_lo",                                          # (0.8.4) the delay at half / a quarter rate (fx.c)
          "formant_word_render", "formant_block",           # (JIANT 0.8.5) VOICE singing words (eng_formant.c, sing.c)
-         "djf_block"]                                      # (0.9.1) the master DJ FILTER (fx.c), while it is off the middle
+         "djf_block",                                      # (0.9.1) the master DJ FILTER (fx.c), while it is off the middle
+         "tape_block"]                                     # (Braindancer 0.8) TAPE (fx.c), while in the chain
 # built only with FELUCCA_FM4=1 (DIGITAL, src/eng_digital.c; not in the default build, so not in BUDGET): absent,
 # they are skipped; present, checked against these (their budget lines until the engine was retired in 1.0)
 OPTIONAL = {"digital_render": 12, "digital_render_legacy": 333, "digital_render_custom": 558,

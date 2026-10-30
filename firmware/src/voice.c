@@ -301,12 +301,12 @@ static volatile uint8_t gov_cap = 16u, gov_lite;
 /* (ACID FM 0.5.2) the safety net past the governor's floor (audio.c fx_safety_tick), a lever at a time: bit 0 the delay
  * kept on its full-rate line (fx.c dly_rate: TIME at most ~0.74 s; the quarter-rate line costs ~10 % of the FM-1's CPU),
  * bit 1 a GEN piece's texture part hushed, bit 2 its arp (no new notes, its voices faded out: safe_part, set by gen.c).
- * Set while the governor has nothing left to shed and the audio is still behind; off again in reverse order */
+ * (Braindancer 0.8) Before them, bit 3: TAPE out of the chain (its settings kept: back when the load is). Set while the
+ * governor has nothing left to shed and the audio is still behind; off again in reverse order */
 #define SAFE_DLY 1u
 #define SAFE_TEX 2u
 #define SAFE_ARP 4u
-#define SAFE_TAPE 8u            /* (Braindancer 0.8) bit 3: TAPE faded out of the chain (fx.c tape_begin); set by the
-                                 * safety ladder (audio.c fx_safety_tick) once TAPE is its first rung; not set yet */
+#define SAFE_TAPE 8u            /* (0.8) bit 3: TAPE faded out of the chain (fx.c tape_begin), the ladder's first rung */
 static volatile uint8_t fx_safe;
 static uint8_t safe_part[2] = {NTRK, NTRK};             /* the GEN piece's texture and arp tracks (NTRK: none) */
 static uint32_t safe_hushed(uint32_t k)                 /* track k hushed by the safety net */

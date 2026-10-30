@@ -2015,6 +2015,14 @@ static const uint8_t GC_DIVQ[6] = {1, 2, 4, 8, 3, 6};   /* a DIV's steps a beat,
  * x 1.22), 63 / 81. EXPLORE 3423 at the defaults made a 2 s grain delay at a quarter rate the model did not count, and
  * an FM-1 lost blocks on it. Over the budget the delay is shortened to the full rate (gen_fit_delay) */
 static const uint8_t GC_DLO[2][3] = {{0, 52, 66}, {0, 63, 81}};   /* [two cores][the line's rate: full, half, quarter] */
+/* (Braindancer 0.8) TAPE (fx.c tape_block), while a detail is set: a fixed cost a sample whatever the voices, on core 0
+ * after the parts (the critical path: x 1.22 with two cores, as GC_DLO). GEN never sets TAPE nor changes it: a piece made
+ * with TAPE on is fitted with its cost counted. Measured with cpu_vg (tests/cpu_vg.c song/cputest.tape, AGE 100: every
+ * detail on): 3269 instructions a sample against 2892 at the same place in the song with TAPE off (+377), the CPU TEST
+ * song 2716 on that compiler: 377 x 1000 / 2716 = 139 thousandths of CPU TEST (the A / B at one place: the sections'
+ * own difference, 3269 - 2716 = 553, is mostly the song's later bars) */
+#define GC_TAPE1 139u
+static const uint8_t GC_TAPE[2] = {GC_TAPE1, GC_TAPE1 * 122u / 100u};   /* [two cores]: TAPE on core 0, the critical path */
 static uint32_t gc_dly_stage(void)                       /* the piece's delay's rate (fx.c fx_buses, dly_rate): 0 full,
                                                          * 1 half, 2 a quarter; the full rate only clear of dly_stage's
                                                          * hysteresis (a line at a lower rate before stays there to 1/32
@@ -2059,6 +2067,7 @@ static uint32_t gc_cost(int steps)                      /* steps 0: before the p
     uint32_t c = (mc_two() ? 295u : 380u) + GC_REV[(uint32_t)(steps ? song.g[G_RTYPE] : g->rtype) % 5u];
     if (steps && (song.g[G_DPIT] || song.g[G_DSPRY])) c += GC_GRAIN;
     if (steps) c += GC_DLO[mc_two() ? 1 : 0][gc_dly_stage()];   /* (0.5.2) the delay's line past the full rate */
+    if (tape_set()) c += GC_TAPE[mc_two() ? 1 : 0];      /* (Braindancer 0.8) TAPE in the chain */
     for (k = 0; k < NTRK && k < trk_live; k++) {
         const track_t *t = &trk[k];
         uint32_t r = gs.role[k], e = t->eng_req % NENGINES, len = dlen(t), on = 0, ns = 0, tie = 0, v, f, cap;

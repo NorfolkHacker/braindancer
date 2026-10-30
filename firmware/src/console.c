@@ -209,6 +209,7 @@ static void con_status(void)
     con_kv("dly_safety", (int32_t)dly_safety);         /* (ACID FM 0.5.2) the safety net (audio.c): the long delay put on */
     con_kv("safety_tex", (int32_t)safe_hush_n[0]);     /* .. its full-rate line; a GEN piece's texture, its arp hushed */
     con_kv("safety_arp", (int32_t)safe_hush_n[1]);
+    con_kv("safety_tape", (int32_t)tape_safety);       /* (Braindancer 0.8) TAPE taken out of the chain (its first rung) */
     con_kv("voices_given_up", (int32_t)voice_kills);    /* (0.8.9) events, one a voice: the three below */
     con_kv("voices_trimmed", (int32_t)voice_trims);     /* the load budget: a tail already under -50 dB, inaudible */
     con_kv("voices_stolen", (int32_t)voices_stolen());      /* for a new note, the 8 all busy */

@@ -481,6 +481,84 @@ static void test_in_out(void)
     ck(what, h > 4.0 * tone);
 }
 
+/* (Braindancer 0.8) TAPE the safety net's first rung (audio.c fx_safety_tick: fx_safe SAFE_TAPE): a -12 dBFS 220 Hz tone
+ * through TAPE as mix_block runs it (tape_begin, tape_block while in the chain), AGE 50; the rung on at block 200, off at
+ * 600: TAPE fades out and back in on its own fade, no click at either edge (the second difference around each against
+ * the tone's own), AGE's six untouched */
+static double rung_d2(int hard, double *e, double *ms, uint32_t *outb, uint32_t *inb, int *kept)
+{
+    uint32_t b, i;
+    double amp = 32768.0 * pow(10.0, -12.0 / 20.0), w = 2.0 * M_PI * 220.0 / FS, ph = 0;
+    int32_t p1 = 0, p2 = 0;
+    int16_t g6[6];
+    tape_reset();
+    tape_age_apply(50);
+    memcpy(g6, &song.g[G_TAGE], sizeof g6);
+    e[0] = e[1] = *ms = 0; *outb = *inb = 0;
+    for (b = 0; b < 1000u; b++) {
+        if (b == 200u) fx_safe |= SAFE_TAPE;
+        if (b == 600u) fx_safe &= (uint8_t)~SAFE_TAPE;
+        if (hard && b == 200u) tape.on = 0;             /* (out at once: no fade) */
+        for (i = 0; i < CTL; i++) {
+            mix_l[i] = mix_r[i] = (int32_t)lrint(amp * sin(ph));
+            ph += w;
+            wet[i] = 0;
+        }
+        if (tape.on || tape_set())                      /* (mix_block's order) */
+            tape_begin();
+        if (tape.on)
+            tape_block(CTL);
+        for (i = 0; i < CTL; i++) {
+            int32_t y = mix_l[i] + wet[i], d2 = y - 2 * p1 + p2;
+            if (b >= 196u && b < 220u && fabs((double)d2) > e[0]) e[0] = fabs((double)d2);
+            if (b >= 596u && b < 630u && fabs((double)d2) > e[1]) e[1] = fabs((double)d2);
+            if (b >= 100u && b < 196u && fabs((double)d2) > *ms) *ms = fabs((double)d2);
+            p2 = p1;
+            p1 = y;
+        }
+        if (b >= 200u && b < 600u && !tape.on && !*outb) *outb = b + 1u - 200u;
+        if (b >= 600u && tape.on && tape.g == TAPE_FULL && !*inb) *inb = b + 1u - 600u;
+    }
+    *kept = !memcmp(g6, &song.g[G_TAGE], sizeof g6);  /* (the rung leaves the user's settings) */
+    tape_reset();
+    return amp * w * w;
+}
+static void test_rung_click(void)
+{
+    char what[260];
+    uint32_t outb, inb, o2, i2;
+    double e[2], h[2], ms, ms2, tone;
+    int kept, k2;
+    tone = rung_d2(0, e, &ms, &outb, &inb, &kept);
+    snprintf(what, sizeof what, "the safety net's rung (AGE 50): out at block 200, in at 600: second difference %.0f / %.0f (TAPE's "
+             "own in the chain, HISS 20: %.0f; + the tone's %.0f x4 at most); out in %u blocks, whole again in %u; AGE's six kept",
+             e[0], e[1], ms, tone, outb, inb);
+    ck(what, e[0] <= ms + 4.0 * tone && e[1] <= ms + 4.0 * tone && outb && outb <= TAPE_FADE / CTL + 1u && inb &&
+       inb <= ((TAPE_D0 >> 8) + 8u + TAPE_FADE) / CTL + 2u && kept);
+    (void)rung_d2(1, h, &ms2, &o2, &i2, &k2);
+    snprintf(what, sizeof what, "(the measure: TAPE taken out at once on the rung is a click: %.0f, past it)", h[0]);
+    ck(what, h[0] > ms + 4.0 * tone);
+}
+/* a mix far past anything the parts make (a 0.5 G sine, SAT 100): no product wraps (SAT's input clamped) */
+static void test_huge(void)
+{
+    char what[200];
+    uint32_t i, bad_n = 0;
+    int32_t pk = 0;
+    tape_reset();
+    tape_g(0, 0, 100, 0, 0);
+    tape_tone(440, 5.0e8, 200);
+    for (i = 100u * CTL; i < 200u * CTL; i++) {
+        int32_t x = in_l[i - D0], y = out_l[i];
+        if (abs(y) > pk) pk = abs(y);
+        bad_n += x != 0 && (x > 0) != (y > 0);           /* (a wrapped product: the sign flips) */
+    }
+    snprintf(what, sizeof what, "SAT 100 on a huge mix (a 5e8 sine): its sign kept everywhere (%u flips), the peak %d (SAT's ceiling)",
+             bad_n, pk);
+    ck(what, !bad_n && pk > 30000 && pk <= 4 * 65536);
+    tape_reset();
+}
+
 /* ---- 4. at rest ---- */
 static void test_rest(void)
 {
@@ -747,6 +825,8 @@ int main(void)
     test_off_again();
     test_tone_through();
     test_in_out();
+    test_rung_click();
+    test_huge();
     test_rest();
     test_store();
     test_age_auto();

@@ -18,6 +18,8 @@ static int gcheck(const char *what, int ok)
     printf("gen: %-74s %s\n", what, ok ? "ok" : "FAIL");
     return ok ? 0 : 1;
 }
+#define GT_TAPE_C0_ONE 706u                               /* (Braindancer 0.8) GEN genre 2 seed 97's estimate before TAPE: one core, */
+#define GT_TAPE_C0_TWO 621u                               /* .. two (measured at 3ca080d) */
 static uint8_t gt_cpt;                                   /* (0.9.14) the CPU TEST result the pieces are made for (gen.c gc_dev) */
 static uint32_t gt_dly_stage(void)                     /* (ACID FM 0.5.2) the rate the piece's delay line runs at (fx.c
                                                          * fx_buses, dly_rate): 0 full, 1 half, 2 a quarter; the full
@@ -1240,6 +1242,46 @@ int main(void)
                       "on the track; GEN again: back", ok_undo && ok_new && ok_sec && ok_dice && ok_regen);
         bad += gcheck("  (3c-2 final review 8) none, the levers off, after CPU TEST (its load the real one)", ok_cpt);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (Braindancer 0.8) TAPE in GEN's budget (gen.c GC_TAPE): its cost counted while a detail is set (GEN never sets
+         * it, never changes it); AGE 0: the estimate as before TAPE was counted. A genre's piece (its parts kept whatever
+         * the budget: the same piece both ways), one core and two (CPU TEST 74 %); then EXPLORE 3423 on two cores (572
+         * of 588 without TAPE): GEN makes it lighter with TAPE counted (its fit's levers; what is left over the budget is
+         * the safety net's, TAPE its first rung) */
+        static const uint32_t C0[2] = {GT_TAPE_C0_ONE, GT_TAPE_C0_TWO};   /* (gc_cost(1) of the piece before TAPE was counted) */
+        uint32_t c, k, e0[2], e50[2], s0[2], s50[2], kept = 1, x0, x50, xb;
+        int16_t g6[6];
+        for (c = 0; c < 2u; c++) {
+            mc_host_v12 = (uint8_t)c; mc_off = (uint8_t)!c;   /* (one core: CORES 1) */
+            gt_cpt = 74; gen_reset();
+            gen_with(2, 97, 50, 1);
+            e0[c] = gc_cost(1); s0[c] = all_sig() ^ (uint32_t)song.g[G_DTIME] << 24;
+            gen_reset();
+            tape_age_apply(50);
+            memcpy(g6, &song.g[G_TAGE], sizeof g6);
+            gen_with(2, 97, 50, 1);
+            e50[c] = gc_cost(1); s50[c] = all_sig() ^ (uint32_t)song.g[G_DTIME] << 24;
+            kept &= !memcmp(g6, &song.g[G_TAGE], sizeof g6) && song.g[G_TAGE] == 50;
+            for (k = 0; k < 6u; k++) song.g[G_TAGE + k] = 0;
+        }
+        gen_reset();
+        gen_with(GEN_EXPLORE, 3423, 50, 1);
+        x0 = gc_cost(1);
+        gen_reset();
+        tape_age_apply(50);
+        gen_with(GEN_EXPLORE, 3423, 50, 1);
+        x50 = gc_cost(1); xb = gc_budget();
+        kept &= song.g[G_TAGE] == 50 && song.g[G_THISS] == 20;
+        for (k = 0; k < 6u; k++) song.g[G_TAGE + k] = 0;
+        printf("gen: (0.8) GEN genre 2 seed 97, one core: %u (before %u), with AGE 50 %u (+%u); two cores: %u (before %u), with AGE 50 %u "
+               "(+%u); EXPLORE 3423 (two cores): %u, with AGE 50 %u of %u\n", e0[0], C0[0], e50[0], e50[0] - e0[0],
+               e0[1], C0[1], e50[1], e50[1] - e0[1], x0, x50, xb);
+        bad += gcheck("(0.8) TAPE off (AGE 0): GEN's estimate as before TAPE (one core, two)", e0[0] == C0[0] && e0[1] == C0[1]);
+        bad += gcheck("  AGE 50 set before GEN: the same piece, its estimate exactly GC_TAPE more; the six as they were",
+                      s0[0] == s50[0] && s0[1] == s50[1] && e50[0] == e0[0] + GC_TAPE[0] && e50[1] == e0[1] + GC_TAPE[1] && kept);
+        bad += gcheck("  EXPLORE 3423 with AGE 50: made lighter with TAPE counted (GEN's fit; the net's first rung past it)",
+                      x0 <= xb && x50 < x0 + GC_TAPE[1]);
+        mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;
