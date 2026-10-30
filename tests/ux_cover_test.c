@@ -397,14 +397,14 @@ static int uxc_widths(void)
         for (s = 0; s < NELEM(KEYS); s++)
             for (i = 0; i < NPAGES; i++) {
                 const page_t *pg = &PAGES[i];
-                uint64_t m;
+                uxm_bits_t m;
                 uint32_t r, n, a, cnt;
                 if (pg->fam != SEC_FAM[KEYS[s]] || pg->graph != GR_MORE || !pg->more || (KEYS[s] != SEC_EDIT && e))
                     continue;
                 m = uxm_mask(pg->more);
                 n = uxm_n(pg->more);
                 for (r = cnt = 0; r < n; r++)
-                    cnt += uxm_pick_ok(pg->more, m, r) != 0;
+                    cnt += uxm_pick_ok(pg->more, &m, r) != 0;
                 for (a = 1; a <= cnt; a++) {
                     fmt_int(b, (int32_t)a);
                     str_cpy(b + str_len(b), "/", sizeof b - str_len(b));
@@ -417,7 +417,7 @@ static int uxc_widths(void)
                     char v[24], w[48];
                     uint8_t bar;
                     const char *nm;
-                    if (!uxm_pick_ok(pg->more, m, r))
+                    if (!uxm_pick_ok(pg->more, &m, r))
                         continue;
                     if (rw->kind == UXR_ACTION) {
                         uxc_wfit("MORE GO", "GO");
@@ -1059,7 +1059,7 @@ int main(int argc, char **argv)
     {   /* (ACID FM 3c-2 task 2) SAVE: each control the inherited USER and PRESETS (task 3: SECTIONS, ARRANGE) pages had is a SAVE
          * page's knob or a SAVE > MORE row */
         ux_knob_t kn[4];
-        uint64_t m;
+        uxm_bits_t m;
         char pt[24];
         ok = 1;
         m = uxm_mask(&UXM_SAVE);
@@ -1076,7 +1076,7 @@ int main(int argc, char **argv)
             }
             else
                 for (s = 0; s < UXM_SAVE.n; s++)
-                    if (UXM_SAVE.rows[s].kind == v->kind && UXM_SAVE.rows[s].id == v->id && uxm_pick_ok(&UXM_SAVE, m, s)) {
+                    if (UXM_SAVE.rows[s].kind == v->kind && UXM_SAVE.rows[s].id == v->id && uxm_pick_ok(&UXM_SAVE, &m, s)) {
                         char val[24];
                         uint8_t bar;
                         got = str_eq(uxm_list_name(&UXM_SAVE.rows[s], uxm_row_text(&UXM_SAVE.rows[s], val, sizeof val, &bar)),

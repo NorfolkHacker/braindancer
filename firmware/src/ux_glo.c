@@ -73,7 +73,7 @@ static int uxg_more_live(void)
         return 0;
     s = uxm_at[uxm_key()].sel;
     t = uxm_at[uxm_key()].top;
-    uxm_fix(&UXM_GLO, uxm_mask(&UXM_GLO), &s, &t);
+    { uxm_bits_t b = uxm_mask(&UXM_GLO); uxm_fix(&UXM_GLO, &b, &s, &t); }
     return uxm_head_of(&UXM_GLO, s) == UXM_H_LIVE;
 }
 static void uxg_cat(char *b, uint32_t n, const char *s) { str_cpy(b + str_len(b), s, n - str_len(b)); }
@@ -528,14 +528,14 @@ static uint32_t uxg_cpu_pct(void)                       /* the load now, % (song
 static int uxg_cpu_shown(void)                         /* GLO > MORE's CPU row on the panel now (its pick and scroll) */
 {
     uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, r, vt;
-    uint64_t m = uxm_mask(&UXM_GLO);
-    uxm_fix(&UXM_GLO, m, &s, &t);
+    uxm_bits_t m = uxm_mask(&UXM_GLO);
+    uxm_fix(&UXM_GLO, &m, &s, &t);
     for (r = 0; r < UXM_GLO.n && !(UXM_GLO.rows[r].kind == UXR_GLOBAL && UXM_GLO.rows[r].id == G_INFO); r++)
         ;
-    if (!uxm_on(m, r))
+    if (!uxm_on(&m, r))
         return 0;
-    vt = uxm_vis(m, t);
-    return uxm_vis(m, r) >= vt && uxm_vis(m, r) < vt + uxm_rows(&UXM_GLO, s);
+    vt = uxm_vis(&m, t);
+    return uxm_vis(&m, r) >= vt && uxm_vis(&m, r) < vt + uxm_rows(&UXM_GLO, s);
 }
 static const char *uxg_cpu_text(char *val, uint32_t nv, uint8_t *bar)   /* GLO > MORE's CPU row: "25%" */
 {

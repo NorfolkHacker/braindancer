@@ -913,7 +913,7 @@ static void uxs_knobs(const page_t *pg, ux_knob_t k[4])
         if (pg->more) {                                 /* marked as the row is in the list) */
             uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
             uxm_knobs(pg->more, s, t, k);
-            uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
+            { uxm_bits_t b = uxm_mask(pg->more); uxm_fix(pg->more, &b, &s, &t); }
             k[1].mark = (uint8_t)(s < uxm_n(pg->more) && uxm_marked(&pg->more->rows[s], mm));
         }
         return;
@@ -1008,7 +1008,7 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
         uint8_t bar;
         if (pg->graph == GR_MORE && pg->more && h < 2) {   /* (KNOB 1 or 2: the setting picked) */
             uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
-            uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
+            { uxm_bits_t b = uxm_mask(pg->more); uxm_fix(pg->more, &b, &s, &t); }
             if (s < uxm_n(pg->more)) {
                 const ux_row_t *r = &pg->more->rows[s];
                 int16_t *vp;
@@ -1071,7 +1071,7 @@ static const char *uxs_status(const page_t *pg, uint16_t *col)
         return uxg_midi_idle();
     if (pg->graph == GR_MORE && pg->more) {             /* (3b task 8) a PUNCH LANE row picked: how a lane is recorded */
         uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
-        uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
+        { uxm_bits_t b = uxm_mask(pg->more); uxm_fix(pg->more, &b, &s, &t); }
         if (uxm_head_of(pg->more, s) == UXM_H_LANE)
             return UXS_LANE_SAY;
         if (uxm_head_of(pg->more, s) == UXM_H_UNDO)     /* (3c-1 task 7) GLO's UNDO: what it takes back */
@@ -2992,11 +2992,11 @@ static void ux_section_draw(void)
     for (c = 0; c < 4u; c++)
         sig = str_hash(sig * 31u + k[c].bar, k[c].value);
     if (pg->graph == GR_MORE && pg->more) {             /* (MORE: the pick, the scroll, the rows shown and their values) */
-        uint64_t m = uxm_mask(pg->more);
+        uxm_bits_t m = uxm_mask(pg->more);
         uint32_t i;
-        sig = sig * 131u + uxm_at[uxm_key()].sel * 7u + uxm_at[uxm_key()].top + (uint32_t)(m ^ (m >> 32));
+        sig = sig * 131u + uxm_at[uxm_key()].sel * 7u + uxm_at[uxm_key()].top + (uint32_t)((m.w[0] ^ (m.w[0] >> 32)) ^ (m.w[1] ^ (m.w[1] >> 32)));   /* (a list of 64 rows or less: w[1] is 0) */
         for (i = 0; i < uxm_n(pg->more); i++)
-            if (uxm_on(m, i) && pg->more->rows[i].kind != UXR_HEAD) {
+            if (uxm_on(&m, i) && pg->more->rows[i].kind != UXR_HEAD) {
                 int16_t *vp;
                 if (param_ref(pg->more->rows[i].kind == UXR_GLOBAL ? 0 : TSEL, pg->more->rows[i].id, &vp) && vp)
                     sig = sig * 33u + (uint16_t)*vp;

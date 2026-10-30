@@ -819,7 +819,7 @@ static const ux_row_t UXM_FX_ROWS[] = {
     {G_SLP0 + 12, UXR_GLOBAL, 0}, {G_SLP0 + 13, UXR_GLOBAL, 0}, {G_SLP0 + 14, UXR_GLOBAL, 0}, {G_SLP15, UXR_GLOBAL, 0},
     {UXM_H_LANE, UXR_HEAD, 0}, {G_PFXLEN, UXR_GLOBAL, 0}, {G_PFXRES, UXR_GLOBAL, 0}, {UXM_A_LANE, UXR_ACTION, 0},
 };
-typedef char uxm_fx_fits[sizeof UXM_FX_ROWS / sizeof UXM_FX_ROWS[0] <= 64u ? 1 : -1];   /* (ux_more.c: a list holds 64 at most) */
+typedef char uxm_fx_fits[sizeof UXM_FX_ROWS / sizeof UXM_FX_ROWS[0] <= UXM_MAXROWS ? 1 : -1];   /* (ux_more.c: a list holds UXM_MAXROWS at most) */
 static const ux_more_t UXM_FX = {UXM_FX_ROWS, (uint8_t)(sizeof UXM_FX_ROWS / sizeof UXM_FX_ROWS[0])};
 /* (ACID FM 3c-1 task 4) SEQ's MORE (spec 2.4): everything the inherited SEQ pages reached that STEPS, STEP EXTRAS and PATTERN do
  * not: TRACK (JIANT's TRACK page), the picked step's (its heading names it, STEP 5: the two components of COMP and COMP 2, EVERY,

@@ -190,41 +190,42 @@ static void uxm_paged(const ux_more_t *m, uint32_t got[2][8])
         }
     }
 }
-/* the rows of m shown now, a bit each (a list holds 64 at most) */
-static uint64_t uxm_mask(const ux_more_t *m)
+/* the rows of m shown now, a bit each (a list holds UXM_MAXROWS at most) */
+static void uxm_bit(uxm_bits_t *sh, uint32_t i) { sh->w[i >> 6] |= 1ull << (i & 63u); }
+static uxm_bits_t uxm_mask(const ux_more_t *m)
 {
-    uint64_t sh = 0;
-    uint32_t i, n = m->n < 64u ? m->n : 64u, h = 64u, pd[2][8];
+    uxm_bits_t sh = {{0, 0}};
+    uint32_t i, n = m->n < UXM_MAXROWS ? m->n : UXM_MAXROWS, h = UXM_MAXROWS, pd[2][8];
     uxm_paged(m, pd);
     for (i = 0; i < n; i++) {
         const ux_row_t *r = &m->rows[i];
         if (r->kind == UXR_HEAD) {
-            h = uxm_row_ok(r) ? i : 64u;
+            h = uxm_row_ok(r) ? i : UXM_MAXROWS;
             continue;
         }
         if ((r->kind == UXR_TRACK || r->kind == UXR_GLOBAL) && r->id < 256u &&
             ((pd[r->kind == UXR_GLOBAL][r->id >> 5] >> (r->id & 31u)) & 1u))
             continue;                                   /* (on a page of the chain shown now) */
         if (ux_row_shown(r)) {
-            sh |= 1ull << i;
-            if (h < 64u)                                /* (its heading with it) */
-                sh |= 1ull << h, h = 64u;
+            uxm_bit(&sh, i);
+            if (h < UXM_MAXROWS)                        /* (its heading with it) */
+                uxm_bit(&sh, h), h = UXM_MAXROWS;
         }
     }
     return sh;
 }
-static uint32_t uxm_n(const ux_more_t *m) { return m->n < 64u ? m->n : 64u; }
-static int uxm_on(uint64_t sh, uint32_t i) { return i < 64u && ((sh >> i) & 1u); }
-static int uxm_pick_ok(const ux_more_t *m, uint64_t sh, uint32_t i) { return uxm_on(sh, i) && m->rows[i].kind != UXR_HEAD; }
-static uint32_t uxm_vis(uint64_t sh, uint32_t i)        /* shown rows before row i */
+static uint32_t uxm_n(const ux_more_t *m) { return m->n < UXM_MAXROWS ? m->n : UXM_MAXROWS; }
+static int uxm_on(const uxm_bits_t *sh, uint32_t i) { return i < UXM_MAXROWS && ((sh->w[i >> 6] >> (i & 63u)) & 1u); }
+static int uxm_pick_ok(const ux_more_t *m, const uxm_bits_t *sh, uint32_t i) { return uxm_on(sh, i) && m->rows[i].kind != UXR_HEAD; }
+static uint32_t uxm_vis(const uxm_bits_t *sh, uint32_t i)       /* shown rows before row i */
 {
     uint32_t v = 0, k;
-    for (k = 0; k < i && k < 64u; k++)
-        v += (uint32_t)((sh >> k) & 1u);
+    for (k = 0; k < i && k < UXM_MAXROWS; k++)
+        v += (uint32_t)((sh->w[k >> 6] >> (k & 63u)) & 1u);
     return v;
 }
-static uint32_t uxm_nvis(uint64_t sh) { return uxm_vis(sh, 64u); }
-static uint32_t uxm_row_of(const ux_more_t *m, uint64_t sh, uint32_t v)   /* the v-th shown row (none: n) */
+static uint32_t uxm_nvis(const uxm_bits_t *sh) { return uxm_vis(sh, UXM_MAXROWS); }
+static uint32_t uxm_row_of(const ux_more_t *m, const uxm_bits_t *sh, uint32_t v)   /* the v-th shown row (none: n) */
 {
     uint32_t i;
     for (i = 0; i < uxm_n(m); i++)
@@ -250,7 +251,7 @@ static uint32_t uxm_rows(const ux_more_t *m, uint32_t s) { return uxm_steps_pic(
                                                          * rows on the panel with s picked */
 /* sel a shown setting (the nearest after it, else before; none: n), top a shown row with sel in sight (sel on the top
  * row: its heading above it when it has one), not past the last page */
-static void uxm_fix(const ux_more_t *m, uint64_t sh, uint32_t *sel, uint32_t *top)
+static void uxm_fix(const ux_more_t *m, const uxm_bits_t *sh, uint32_t *sel, uint32_t *top)
 {
     uint32_t n = uxm_n(m), s = *sel, t = *top, nv = uxm_nvis(sh), mt, vs, vt, rows;
     if (s >= n || !uxm_pick_ok(m, sh, s)) {
@@ -283,29 +284,29 @@ static void uxm_fix(const ux_more_t *m, uint64_t sh, uint32_t *sel, uint32_t *to
 static void uxn_set(uint32_t row, int32_t steps);       /* (3c-2 task 5: ux_menu.c, a MENU row's KNOB 2) */
 static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32_t knob, int32_t steps)
 {
-    uint64_t sh;
+    uxm_bits_t sh;
     uint32_t n;
     if (!m || !steps)
         return 0;
     sh = uxm_mask(m);
     n = uxm_n(m);
-    uxm_fix(m, sh, sel, top);
+    uxm_fix(m, &sh, sel, top);
     if (knob == 0u) {                                   /* KNOB 1: the next / previous setting, stopping at the ends */
         uint32_t s = *sel, k;
         int32_t a = steps < 0 ? -steps : steps;
         while (s < n && a-- > 0) {
             if (steps > 0)
-                for (k = s + 1u; k < n && !uxm_pick_ok(m, sh, k); k++)
+                for (k = s + 1u; k < n && !uxm_pick_ok(m, &sh, k); k++)
                     ;
             else
-                for (k = s; k-- > 0u && !uxm_pick_ok(m, sh, k);)
+                for (k = s; k-- > 0u && !uxm_pick_ok(m, &sh, k);)
                     ;
             if (k >= n)
                 break;
             s = k;
         }
         *sel = s;
-        uxm_fix(m, sh, sel, top);
+        uxm_fix(m, &sh, sel, top);
         return 1;
     }
     if (knob == 1u) {                                   /* KNOB 2: the picked one set (as a page's knob), an action done */
@@ -325,19 +326,19 @@ static int ux_more_turn(const ux_more_t *m, uint32_t *sel, uint32_t *top, uint32
         return 1;
     }
     if (knob == UXM_SELECT) {                           /* SELECT: a row a detent; the pick dragged along to stay in sight */
-        uint32_t nv = uxm_nvis(sh), rows = uxm_rows(m, *sel), mt = nv > rows ? nv - rows : 0u, vt = uxm_vis(sh, *top), vs, k;
+        uint32_t nv = uxm_nvis(&sh), rows = uxm_rows(m, *sel), mt = nv > rows ? nv - rows : 0u, vt = uxm_vis(&sh, *top), vs, k;
         int32_t to;
         if (steps < 0 && vt == 0u)
             return 0;                                   /* (before the first row: the page before) */
         to = clamp((int32_t)vt + steps, 0, (int32_t)mt);
-        *top = uxm_row_of(m, sh, (uint32_t)to);
+        *top = uxm_row_of(m, &sh, (uint32_t)to);
         if (*sel < n) {
-            vs = uxm_vis(sh, *sel);
+            vs = uxm_vis(&sh, *sel);
             if (vs < (uint32_t)to)                      /* (above the panel: the first setting on it) */
-                for (k = *top; k < n && !uxm_pick_ok(m, sh, k); k++)
+                for (k = *top; k < n && !uxm_pick_ok(m, &sh, k); k++)
                     ;
             else if (vs >= (uint32_t)to + rows)         /* (below it: the last one on it) */
-                for (k = uxm_row_of(m, sh, (uint32_t)to + rows); k-- > 0u && !uxm_pick_ok(m, sh, k);)
+                for (k = uxm_row_of(m, &sh, (uint32_t)to + rows); k-- > 0u && !uxm_pick_ok(m, &sh, k);)
                     ;
             else
                 k = *sel;
@@ -384,15 +385,15 @@ static int uxm_marked(const ux_row_t *r, const uint32_t *m)
 }
 static void uxm_knobs(const ux_more_t *m, uint32_t s, uint32_t t, ux_knob_t k[4])
 {
-    uint64_t sh = uxm_mask(m);
+    uxm_bits_t sh = uxm_mask(m);
     uint32_t n = uxm_n(m), a = 0, b = 0, i;
     char v[24];
-    uxm_fix(m, sh, &s, &t);
+    uxm_fix(m, &sh, &s, &t);
     k[0].label = UXS_PICK;
     if (s >= n)
         return;
     for (i = 0; i < n; i++)
-        if (uxm_pick_ok(m, sh, i)) {
+        if (uxm_pick_ok(m, &sh, i)) {
             b++;
             if (i <= s)
                 a = b;
@@ -418,7 +419,7 @@ static const ux_row_t *uxm_lock_row(const page_t *pg)
     key = uxm_key_of(pg);
     s = uxm_at[key].sel;
     t = uxm_at[key].top;
-    uxm_fix(pg->more, uxm_mask(pg->more), &s, &t);
+    { uxm_bits_t b = uxm_mask(pg->more); uxm_fix(pg->more, &b, &s, &t); }
     return s < uxm_n(pg->more) ? &pg->more->rows[s] : 0;
 }
 static void uxm_lock_pick(const page_t *pg, int32_t steps)
@@ -468,10 +469,10 @@ static const char *uxm_lock_card(const page_t *pg, uint32_t c, uint32_t step, ch
     if (!r || c > 1u)
         return "";
     if (c == 0u) {                                      /* KNOB 1: the pick, "3/12" (as MORE's knob row) */
-        uint64_t m = uxm_mask(pg->more);
+        uxm_bits_t m = uxm_mask(pg->more);
         uint32_t i, a = 0, b = 0;
         for (i = 0; i < uxm_n(pg->more); i++)
-            if (uxm_pick_ok(pg->more, m, i)) {
+            if (uxm_pick_ok(pg->more, &m, i)) {
                 b++;
                 if (&pg->more->rows[i] <= r)
                     a = b;
@@ -598,13 +599,13 @@ static void uxm_steps_draw(const ux_more_t *m, uint32_t sel)
 }
 static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
 {
-    uint64_t sh;
+    uxm_bits_t sh;
     uint32_t n, i, r = 0, nv, rows, mm[(P_COUNT + 31u) / 32u];
     if (!m)
         return;
     sh = uxm_mask(m);
     n = uxm_n(m);
-    uxm_fix(m, sh, &sel, &top);
+    uxm_fix(m, &sh, &sel, &top);
     rows = uxm_rows(m, sel);
     uxs_marks(mm);
     if (rows != UXM_ROWS)
@@ -617,7 +618,7 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
         const char *name;
         int on = i == sel;
         uint16_t bg;
-        if (!uxm_on(sh, i))
+        if (!uxm_on(&sh, i))
             continue;
         r++;
         name = uxm_list_name(rw, uxm_row_text(rw, val, sizeof val, &bar));
@@ -650,10 +651,10 @@ static void ux_more_draw(const ux_more_t *m, uint32_t sel, uint32_t top)
         if (uxm_marked(rw, mm))                         /* (3c-2 task 9) it moves on its own: the row's top right end lit, as */
             cv_rect(228 - UX_MARK_W, y, UX_MARK_W, UX_MARK_H, UX_TEXT);   /* the knob row's rule (ux_widgets.c) */
     }
-    nv = uxm_nvis(sh);
+    nv = uxm_nvis(&sh);
     if (nv > rows) {                                    /* the scroll: where the panel is in the list */
         int32_t h = (int32_t)(rows * UXM_PITCH) - 4, th = h * (int32_t)rows / (int32_t)nv,
-                ty = 3 + (h - th) * (int32_t)uxm_vis(sh, top) / (int32_t)(nv - rows);
+                ty = 3 + (h - th) * (int32_t)uxm_vis(&sh, top) / (int32_t)(nv - rows);
         cv_rect(233, 3, 2, h, UX_LINE);
         cv_rect(233, ty, 2, th < 6 ? 6 : th, UX_MID);
     }

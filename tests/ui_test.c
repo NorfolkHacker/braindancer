@@ -762,12 +762,12 @@ static int test_mutate(void)
 /* (3b task 4) the name of the synths' MORE row of setting id when it is listed now ("" when not) */
 static const char *uxm_row_name(uint32_t id)
 {
-    uint64_t m = uxm_mask(&UXM_SYN);
+    uxm_bits_t m = uxm_mask(&UXM_SYN);
     uint32_t r;
     char v[24];
     uint8_t bar;
     for (r = 0; r < UXM_SYN.n; r++)
-        if (uxm_on(m, r) && UXM_SYN.rows[r].kind == UXR_TRACK && UXM_SYN.rows[r].id == id)
+        if (uxm_on(&m, r) && UXM_SYN.rows[r].kind == UXR_TRACK && UXM_SYN.rows[r].id == id)
             return uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, &bar);
     return "";
 }
@@ -12672,27 +12672,27 @@ static void uxs_syn_on(uint32_t e)                      /* T1 on engine e (its f
 static void uxs_cur(uint32_t *s, uint32_t *t)           /* MORE's pick and scroll as drawn */
 {
     *s = uxm_at[SEC_EDIT].sel; *t = uxm_at[SEC_EDIT].top;
-    uxm_fix(&UXM_SYN, uxm_mask(&UXM_SYN), s, t);
+    { uxm_bits_t b = uxm_mask(&UXM_SYN); uxm_fix(&UXM_SYN, &b, s, t); }
 }
 static int uxs_in_view(void)
 {
     uint32_t s, t;
-    uint64_t m = uxm_mask(&UXM_SYN);
+    uxm_bits_t m = uxm_mask(&UXM_SYN);
     uxs_cur(&s, &t);
-    return uxm_vis(m, s) >= uxm_vis(m, t) && uxm_vis(m, s) < uxm_vis(m, t) + UXM_ROWS;
+    return uxm_vis(&m, s) >= uxm_vis(&m, t) && uxm_vis(&m, s) < uxm_vis(&m, t) + UXM_ROWS;
 }
 /* MORE's rows shown now, their names, "|" between, a heading in brackets */
 static const char *uxs_more_list(void)
 {
     static char b[200];
-    uint64_t m = uxm_mask(&UXM_SYN);
+    uxm_bits_t m = uxm_mask(&UXM_SYN);
     uint32_t r;
     b[0] = 0;
     for (r = 0; r < UXM_SYN.n; r++) {
         char v[24];
         uint8_t bar;
         const char *nm;
-        if (!uxm_on(m, r)) continue;
+        if (!uxm_on(&m, r)) continue;
         nm = uxm_row_text(&UXM_SYN.rows[r], v, sizeof v, &bar);
         if (b[0]) str_cpy(b + str_len(b), "|", sizeof b - str_len(b));
         if (UXM_SYN.rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "[", sizeof b - str_len(b));
@@ -12700,6 +12700,77 @@ static const char *uxs_more_list(void)
         if (UXM_SYN.rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "]", sizeof b - str_len(b));
     }
     return b;
+}
+/* (0.8 task 2) MORE lists past 64 rows: a 100-row list shows, counts, turns and scrolls to its end; every list of the firmware
+ * shows the rows the old one-uint64_t mask showed */
+static uint64_t m2_old_mask(const ux_more_t *m)             /* (the pre-0.8 uxm_mask, kept as the reference) */
+{
+    uint64_t sh = 0;
+    uint32_t i, n = m->n < 64u ? m->n : 64u, h = 64u, pd[2][8];
+    uxm_paged(m, pd);
+    for (i = 0; i < n; i++) {
+        const ux_row_t *r = &m->rows[i];
+        if (r->kind == UXR_HEAD) {
+            h = uxm_row_ok(r) ? i : 64u;
+            continue;
+        }
+        if ((r->kind == UXR_TRACK || r->kind == UXR_GLOBAL) && r->id < 256u &&
+            ((pd[r->kind == UXR_GLOBAL][r->id >> 5] >> (r->id & 31u)) & 1u))
+            continue;
+        if (ux_row_shown(r)) {
+            sh |= 1ull << i;
+            if (h < 64u)
+                sh |= 1ull << h, h = 64u;
+        }
+    }
+    return sh;
+}
+static int test_m2_wide(void)
+{
+    static ux_row_t R[100];
+    static const ux_more_t W = {R, 100};
+    static const ux_more_t *const ALL[] = {&UXM_MENU, &UXM_SYN, &UXM_FM6, &UXM_DRM, &UXM_SCL, &UXM_LFO, &UXM_FX, &UXM_SEQ, &UXM_GLO, &UXM_SAVE};
+    static const uint8_t ENG[] = {ENGI_ANALOG, ENGI_VOICE, ENGI_FM6};
+    uxm_bits_t sh;
+    uint32_t i, e, s = 0, t = 0, last = 0, nsel = 0;
+    int ok = 1, bad = 0;
+    ui_power_on(); frame();
+    for (i = 0; i < 100u; i++) {
+        R[i].id = (uint16_t)(i % 10u ? G_SLP0 + (i % 16u) : UXM_H_SLPIT);
+        R[i].kind = i % 10u ? UXR_GLOBAL : UXR_HEAD;
+        R[i].eng = 0;
+    }
+    sh = uxm_mask(&W);
+    ok &= uxm_on(&sh, 99u) && uxm_on(&sh, 64u) && uxm_on(&sh, 70u) && !uxm_on(&sh, 100u) && uxm_nvis(&sh) == 100u;
+    ok &= uxm_vis(&sh, 80u) == 80u && uxm_row_of(&W, &sh, 77u) == 77u && uxm_n(&W) == 100u;
+    bad += check("0.8 MORE: a 100-row list is all shown past row 64", ok);
+    for (i = 0; i < 100u; i++)
+        if (uxm_pick_ok(&W, &sh, i))
+            last = i, nsel++;
+    ok = last == 99u && nsel == 90u;
+    (void)ux_more_turn(&W, &s, &t, 0u, 99);
+    ok &= s == 99u && t + UXM_ROWS >= 100u - 0u && uxm_vis(&sh, s) >= uxm_vis(&sh, t) && uxm_vis(&sh, s) < uxm_vis(&sh, t) + UXM_ROWS;
+    s = 0; t = 0;
+    (void)ux_more_turn(&W, &s, &t, UXM_SELECT, 200);
+    ok &= t >= 92u && s >= t && uxm_pick_ok(&W, &sh, s);
+    bad += check("0.8 MORE: KNOB 1 reaches row 99 and SELECT scrolls to the end", ok);
+    s = 85u; t = 0;                                    /* (row 85 on top is row 80's: the heading above a top row stays with it) */
+    uxm_fix(&W, &sh, &s, &t);
+    ok = uxm_vis(&sh, s) >= uxm_vis(&sh, t) && uxm_vis(&sh, s) < uxm_vis(&sh, t) + UXM_ROWS;
+    s = 71u; t = 85u;                                  /* (the pick above the panel: the top is its heading, row 70) */
+    uxm_fix(&W, &sh, &s, &t);
+    ok &= t == 70u && R[t].kind == UXR_HEAD && s == 71u;
+    bad += check("0.8 MORE: uxm_fix keeps a heading above a top row past 64", ok);
+    ok = 1;
+    for (e = 0; e < sizeof ENG; e++) {
+        uxk_engine(ENG[e]);
+        for (i = 0; i < sizeof ALL / sizeof ALL[0]; i++) {
+            uxm_bits_t b = uxm_mask(ALL[i]);
+            ok &= b.w[0] == m2_old_mask(ALL[i]) && (ALL[i]->n > 64u || b.w[1] == 0u);
+        }
+    }
+    bad += check("0.8 MORE: every list shows the rows the 64-bit mask showed", ok);
+    return bad;
 }
 /* SELECT walks EDIT's chain with MORE last (the footer's n / N counting it); on MORE: KNOB 1 picks a setting (over the
  * headings and the hidden rows, stopping at the ends), SELECT scrolls a row a detent (the pick dragged along, stopping at the
@@ -12710,7 +12781,7 @@ static int test_ux_more_nav(void)
                                                                   * WORDS LYRIC TYPE LYRIC) */
     uint8_t v[16], got[32];
     uint32_t s, t, k, ng = 0, mp = uxs_more_page();
-    uint64_t m;
+    uxm_bits_t m;
     int bad = 0, ok;
     ui_power_on(); frame();
     uxk_engine(ENGI_FM6);
@@ -12772,22 +12843,21 @@ static int test_ux_more_nav(void)
     }
     bad += check("ACID FM 3b: each synth's MORE lists what its pages leave (ANALOG: no VOICE row twice; LOFI BYTE RETRIG; "
                  "VOICE its WORDS)", ok);
-    m = 0;
     {   /* a heading whose rows are all hidden goes with them */
         static const ux_row_t R[4] = {{UXM_H_FILTER, UXR_HEAD}, {P_FCUT, UXR_TRACK}, {UXM_H_VOICE, UXR_HEAD}, {P_GLIDE, UXR_TRACK}};
         static const ux_more_t M = {R, 4};
         uxk_engine(ENGI_ANALOG);
-        m = uxm_mask(&M);
-        ok = m == 0xCu;
+        uxm_bits_t b = uxm_mask(&M);
+        ok = b.w[0] == 0xCu && b.w[1] == 0u;
     }
     bad += check("ACID FM 3b: MORE skips the rows JIANT's rules hide, their headings too", ok);
     {   /* an action row: VOICE's TYPE LYRIC (WORDS' OCT+ TYPE in JIANT, no dialog there): shown on VOICE only, KNOB 2 up does it */
         static const ux_row_t R[2] = {{UXM_H_VOICE, UXR_HEAD}, {UXM_A_LYRIC, UXR_ACTION}};
         static const ux_more_t M = {R, 2};
         uint32_t s2 = 0, t2 = 0;
-        ok = uxm_mask(&M) == 0u;                        /* (ANALOG: none) */
+        { uxm_bits_t b = uxm_mask(&M); ok = b.w[0] == 0u && b.w[1] == 0u; }   /* (ANALOG: none) */
         uxk_engine(ENGI_VOICE);
-        ok &= uxm_mask(&M) == 3u;
+        { uxm_bits_t b = uxm_mask(&M); ok &= b.w[0] == 3u && b.w[1] == 0u; }
         (void)ux_more_turn(&M, &s2, &t2, 1u, -1);
         ok &= !name_on();
         (void)ux_more_turn(&M, &s2, &t2, 1u, 1);
@@ -13687,7 +13757,7 @@ static int test_ux_knob_widths(void)
             }
             mp = uxs_more_page();                       /* MORE: KNOB 1 n/N, KNOB 2 each row's name and its every value */
             {
-                uint64_t sh;
+                uxm_bits_t sh;
                 uint32_t r;
                 ui.page = (uint8_t)mp; page_entered();
                 sh = uxm_mask(&UXM_SYN);
@@ -13697,7 +13767,7 @@ static int test_ux_knob_widths(void)
                     int16_t *vp, keep;
                     const param_desc_t *d;
                     int32_t x;
-                    if (!uxm_pick_ok(&UXM_SYN, sh, r)) continue;
+                    if (!uxm_pick_ok(&UXM_SYN, &sh, r)) continue;
                     uxm_at[SEC_EDIT].sel = (uint8_t)r; uxm_at[SEC_EDIT].top = 0;
                     d = rw->kind == UXR_TRACK ? param_ref(TSEL, rw->id, &vp) : 0;
                     keep = d && vp ? *vp : 0;
@@ -13740,14 +13810,14 @@ static uint32_t uxe_more_page(const ux_more_t *m)
 static const char *uxe_more_list(const ux_more_t *m)   /* MORE's rows shown now, "|" between, a heading in brackets */
 {
     static char b[800];                                 /* (3b task 8: FX's 63 rows) */
-    uint64_t sh = uxm_mask(m);
+    uxm_bits_t sh = uxm_mask(m);
     uint32_t r;
     b[0] = 0;
     for (r = 0; r < m->n; r++) {
         char v[24];
         uint8_t bar;
         const char *nm;
-        if (!uxm_on(sh, r)) continue;
+        if (!uxm_on(&sh, r)) continue;
         nm = uxm_row_text(&m->rows[r], v, sizeof v, &bar);
         if (b[0]) str_cpy(b + str_len(b), "|", sizeof b - str_len(b));
         if (m->rows[r].kind == UXR_HEAD) str_cpy(b + str_len(b), "[", sizeof b - str_len(b));
@@ -14272,10 +14342,10 @@ static int test_ux_knob_widths_fm6_drm(void)
             }
             ui.page = (uint8_t)uxe_more_page(m); page_entered();
             for (r = 0; r < m->n; r++) {
-                uint64_t sh = uxm_mask(m);
+                uxm_bits_t sh = uxm_mask(m);
                 const ux_row_t *rw = &m->rows[r];
                 uint32_t k;
-                if (!uxm_pick_ok(m, sh, r)) continue;
+                if (!uxm_pick_ok(m, &sh, r)) continue;
                 uxm_at[uxm_key()].sel = (uint8_t)r; uxm_at[uxm_key()].top = 0;
                 for (k = 0; k < 260u; k++) {
                     ux_knob_t kk[4];
@@ -15306,7 +15376,7 @@ static int test_ux_more_rows_ok(void)
         ok &= !uxm_row_ok(&BAD[r]) && (BAD[r].kind == UXR_HEAD || !ux_row_shown(&BAD[r]));
     for (r = 0; r < NELEM(GOOD); r++)
         ok &= uxm_row_ok(&GOOD[r]);
-    ok &= uxm_mask(&M) == (1ull << 3 | 1ull << 4);      /* (the bad heading and the bad rows gone; VOICE and GLIDE shown) */
+    { uxm_bits_t b = uxm_mask(&M); ok &= b.w[0] == (1ull << 3 | 1ull << 4) && b.w[1] == 0u; }      /* (the bad heading and the bad rows gone; VOICE and GLIDE shown) */
     (void)ux_more_turn(&M, &s, &t, 0u, -3);
     ok &= s == 4u;
     bad += check("ACID FM 3b: every MORE row is a real setting, view, action or heading; a bad one is never shown",
@@ -15991,12 +16061,12 @@ static int test_t7_fix(void)
                 if (page_id(pg, c) >= P_E0 && page_id(pg, c) <= P_E7 && k[c].label[0])
                     lab[page_id(pg, c) - P_E0] = k[c].label;
             if (pg->graph == GR_MORE && pg->more) {
-                uint64_t sh = uxm_mask(pg->more);
+                uxm_bits_t sh = uxm_mask(pg->more);
                 for (j = 0; j < pg->more->n; j++) {
                     const ux_row_t *r = &pg->more->rows[j];
                     char v[24];
                     uint8_t bar;
-                    if (uxm_on(sh, j) && r->kind == UXR_TRACK && r->id >= P_E0 && r->id <= P_E7)
+                    if (uxm_on(&sh, j) && r->kind == UXR_TRACK && r->id >= P_E0 && r->id <= P_E7)
                         lab[r->id - P_E0] = uxm_row_text(r, v, sizeof v, &bar);
                 }
             }
@@ -16191,9 +16261,9 @@ static int test_t7_fix(void)
               uxt7_pix_near(16 + 8 * 13 - 2, (int32_t)k3 - 20, UX_ACCENT, 0);
         {
             uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top;
-            uint64_t m = uxm_mask(&UXM_LFO);
-            uxm_fix(&UXM_LFO, m, &s, &t);
-            ok &= uxm_vis(m, s) >= uxm_vis(m, t) && uxm_vis(m, s) < uxm_vis(m, t) + 5u;   /* (the pick in the list's 5 rows) */
+            uxm_bits_t m = uxm_mask(&UXM_LFO);
+            uxm_fix(&UXM_LFO, &m, &s, &t);
+            ok &= uxm_vis(&m, s) >= uxm_vis(&m, t) && uxm_vis(&m, s) < uxm_vis(&m, t) + 5u;   /* (the pick in the list's 5 rows) */
         }
         if (!ok) printf("  STEPS: no bars\n");
         ok &= uxe_cells_ok();
@@ -20696,14 +20766,14 @@ static void u4_touch(void)                              /* a knob turned: ENV > 
 static void u4_more_cur(uint32_t *s, uint32_t *t)      /* SAVE > MORE's pick and scroll as drawn */
 {
     *s = uxm_at[nav_key(SEC_SAVE)].sel; *t = uxm_at[nav_key(SEC_SAVE)].top;
-    uxm_fix(&UXM_SAVE, uxm_mask(&UXM_SAVE), s, t);
+    { uxm_bits_t b = uxm_mask(&UXM_SAVE); uxm_fix(&UXM_SAVE, &b, s, t); }
 }
 static int u4_more_in_view(void)
 {
     uint32_t s, t;
-    uint64_t m = uxm_mask(&UXM_SAVE);
+    uxm_bits_t m = uxm_mask(&UXM_SAVE);
     u4_more_cur(&s, &t);
-    return uxm_vis(m, s) >= uxm_vis(m, t) && uxm_vis(m, s) < uxm_vis(m, t) + UXM_ROWS;
+    return uxm_vis(&m, s) >= uxm_vis(&m, t) && uxm_vis(&m, s) < uxm_vis(&m, t) + UXM_ROWS;
 }
 /* SAVE = SOUND -> SONG -> PROJECT -> MORE, four pages, the footer counting MORE; SELECT walks and scrolls MORE; ALGORITHM the track;
  * PRESETS never a page */
@@ -21212,7 +21282,8 @@ static int test_u5_cover(void)
           MN_ROW[MN_AUDIO][0] == MI_LOWCUT && MN_ROW[MN_AUDIO][1] == MI_TRACKS && MN_ROW[MN_AUDIO][2] == MI_LOAD &&
           MN_ROW[MN_AUDIO][3] == MI_BPMLOCK && MN_ROW[MN_CLICK][3] == MI_NONE && MN_ROW[MN_CONTROLS][3] == MI_PANEL &&
           mi_tab(MI_MIDIOUT) == MN_MORE && mi_tab(MI_COLOR) == MN_MORE && mi_tab(MI_ABOUT) == MN_MORE;
-    ok &= uxm_nvis(uxm_mask(&UXM_MENU)) == UXM_MENU.n && UXM_MENU.n == 18u;   /* (every row shown: six headings, twelve rows) */
+    { uxm_bits_t b = uxm_mask(&UXM_MENU); ok &= uxm_nvis(&b) == UXM_MENU.n; }
+    ok &= UXM_MENU.n && UXM_MENU.n == 18u;   /* (every row shown: six headings, twelve rows) */
     for (p = 0; p < MN_MORE; p++)                      /* (a page opens on a value) */
         ok &= menu_valued(MN_ROW[p][0]);
     bad += check("ACID FM 3c-2 task 5: every MENU item on one page or MORE row (hidden ones and MIDI OUT on none), AUDIO CLICK CONTROLS MORE", ok);
@@ -21646,10 +21717,10 @@ static int test_u7_cpu_test(void)
 static int u9_row_marked(void)                          /* the MORE list's row picked: its top right end lit (UX_TEXT) */
 {
     const ux_more_t *m = cur_page()->more;
-    uint64_t sh = uxm_mask(m);
+    uxm_bits_t sh = uxm_mask(m);
     uint32_t s = uxm_at[uxm_key()].sel, t = uxm_at[uxm_key()].top, r;
-    uxm_fix(m, sh, &s, &t);
-    r = uxm_vis(sh, s) - uxm_vis(sh, t);
+    uxm_fix(m, &sh, &s, &t);
+    r = uxm_vis(&sh, s) - uxm_vis(&sh, t);
     return ux_px(228u - 2u, UX_Y_PANEL + 3u + r * UXM_PITCH + 1u) == UX_TEXT;
 }
 static int test_u9_marks(void)
@@ -21912,6 +21983,7 @@ int main(void)
     bad += test_power_on_demo();
     bad += test_param_knob_same();                     /* (ACID FM 3b task 3) */
     bad += test_ux_more_nav();
+    bad += test_m2_wide();                             /* (0.8 task 2) */
     bad += test_ux_more_set();
     bad += test_ux_section_draw();
     bad += test_ux_section_foot();

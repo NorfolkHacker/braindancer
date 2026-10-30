@@ -937,7 +937,7 @@ static void fx_more_at(uint32_t id, uint32_t kind)      /* FX > MORE, the row (k
     uxm_at[uxm_key()].top = 0;
     {   /* (the pick in sight) */
         uint32_t s = r, t = 0;
-        uxm_fix(&UXM_FX, uxm_mask(&UXM_FX), &s, &t);
+        { uxm_bits_t b = uxm_mask(&UXM_FX); uxm_fix(&UXM_FX, &b, &s, &t); }
         uxm_at[uxm_key()].sel = (uint8_t)s;
         uxm_at[uxm_key()].top = (uint8_t)t;
     }
@@ -956,7 +956,7 @@ static void glo_more_at(uint32_t kind, uint32_t id)
         ;
     sl = r; t = r && r < UXM_GLO.n && UXM_GLO.rows[r - 1u].kind == UXR_HEAD ? r - 1u : r;   /* (its heading on top) */
     uxg_cpu_on = 0;                                     /* (the CPU readout taken now: song.cpu_q8 as the scene sets it) */
-    uxm_fix(&UXM_GLO, uxm_mask(&UXM_GLO), &sl, &t);
+    { uxm_bits_t b = uxm_mask(&UXM_GLO); uxm_fix(&UXM_GLO, &b, &sl, &t); }
     uxm_at[uxm_key()].sel = (uint8_t)sl;
     uxm_at[uxm_key()].top = (uint8_t)t;
 }
@@ -999,7 +999,7 @@ static void seq_more_at(uint32_t kind, uint32_t id)
     uxm_at[uxm_key()].top = 0;
     {
         uint32_t sl = r, t = r;
-        uxm_fix(&UXM_SEQ, uxm_mask(&UXM_SEQ), &sl, &t);
+        { uxm_bits_t b = uxm_mask(&UXM_SEQ); uxm_fix(&UXM_SEQ, &b, &sl, &t); }
         uxm_at[uxm_key()].top = (uint8_t)t;
     }
 }

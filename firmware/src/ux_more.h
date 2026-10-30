@@ -40,6 +40,8 @@ enum { UXM_A_LYRIC, UXM_A_LANE, UXM_A_CLRAUTO, UXM_A_UNDO, UXM_A_LCLEAR, UXM_A_U
  * (ui.uslot), the song's row picked (ui.song_row: task 3's DELETE ROW) */
 enum { UXA_SEL, UXA_USLOT, UXA_ROW };
 
+#define UXM_MAXROWS 128u         /* (0.8: was 64, one uint64_t) a MORE list's rows at most */
+typedef struct { uint64_t w[2]; } uxm_bits_t;   /* the rows shown now, a bit each */
 #define UXM_ROWS 8u              /* rows on the panel at once */
 #define UXM_PITCH 18             /* .. a row's height (8 x 18 = 144 of the panel's 150) */
 #define UXM_SELECT 4u            /* ux_more_turn's knob for SELECT (0..3: KNOB 1..4) */

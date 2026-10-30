@@ -24,7 +24,7 @@ static uint32_t uxn_row(uint32_t c) { return uxn_page() < MN_MORE && c < 4u ? MN
 static uint32_t uxn_pick(void)                          /* MORE's row picked (MI_*; none: MI_NONE) */
 {
     uint32_t s = ui.mn_sel, t = ui.mn_top;
-    uxm_fix(&UXM_MENU, uxm_mask(&UXM_MENU), &s, &t);
+    { uxm_bits_t b = uxm_mask(&UXM_MENU); uxm_fix(&UXM_MENU, &b, &s, &t); }
     ui.mn_sel = (uint8_t)s;
     ui.mn_top = (uint8_t)t;
     return s < UXM_MENU.n && UXM_MENU.rows[s].kind == UXR_MENU ? UXM_MENU.rows[s].id : MI_NONE;
@@ -234,8 +234,8 @@ static uint32_t uxn_sig(void)
 {
     uint32_t i, sig = uxn_page() * 2654435761u ^ ui.menu_sel * 977u ^ ux_glow_eff(1) * 131u;
     if (uxn_page() == MN_MORE) {
-        uint64_t m = uxm_mask(&UXM_MENU);
-        sig = sig * 131u + ui.mn_sel * 7u + ui.mn_top + (uint32_t)(m ^ (m >> 32));
+        uxm_bits_t m = uxm_mask(&UXM_MENU);
+        sig = sig * 131u + ui.mn_sel * 7u + ui.mn_top + (uint32_t)(m.w[0] ^ (m.w[0] >> 32));   /* (18 rows) */
     }
     for (i = 0; i < MI_VALUES; i++)
         sig = sig * 33u + menu_get(i);
