@@ -14,6 +14,9 @@
  *    clamped, NEW PROJECT, UNDO. */
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 static unsigned tape_runs;
 static int32_t tape_in_any;                             /* (what tape_block saw: its input not all 0) */
 #define TAPE_COUNT()                                                                                       \
@@ -35,6 +38,10 @@ static void ck(const char *what, int ok)
 
 /* ---- 1. off ---- */
 #define DJF_CENTRE_090 0x8b898fe6u
+#define SC_NB 12000u                                    /* (blocks at most: the off-again scene's ~8.7 s) */
+static uint32_t sc_nb = 2400u;                          /* (the 0.7 hash: 2400) */
+static uint32_t sc_mix[SC_NB], sc_out[SC_NB];           /* each block's hash: the mix TAPE gives the master, the output */
+static uint32_t sc_on = SC_NB, sc_off = SC_NB;          /* TAPE (WOW 40, TONE 50, HISS 30) in at block sc_on, out at sc_off */
 static uint32_t centre_render(void)                     /* (tests/djf_test.c's scene) */
 {
     static int32_t o[2u * CTL];
@@ -59,11 +66,20 @@ static uint32_t centre_render(void)                     /* (tests/djf_test.c's s
     }
     song.g[G_CLIP] = 30;
     transport_req = 1; ui_input();
-    for (b = 0; b < 2400u; b++) {
+    for (b = 0; b < sc_nb; b++) {
+        uint32_t hm = 2166136261u, ho = 2166136261u;
+        if (b == sc_on) { song.g[G_TWOW] = 40; song.g[G_TTONE] = 50; song.g[G_THISS] = 30; }
+        if (b == sc_off) { song.g[G_TWOW] = 0; song.g[G_TTONE] = 0; song.g[G_THISS] = 0; }
         memset(o, 0, sizeof o);
         mix_block(o, CTL);
-        for (i = 0; i < 2u * CTL; i++)
+        for (i = 0; i < 2u * CTL; i++) {
             h = (h ^ (uint32_t)o[i]) * 16777619u;
+            ho = (ho ^ (uint32_t)o[i]) * 16777619u;
+        }
+        for (i = 0; i < CTL; i++)                       /* (mix_l / mix_r: TAPE's output, what the leveler reads) */
+            hm = (((hm ^ (uint32_t)mix_l[i]) * 16777619u) ^ (uint32_t)mix_r[i]) * 16777619u;
+        sc_mix[b] = hm;
+        sc_out[b] = ho;
     }
     transport_req = 2; ui_input();
     return h;
@@ -79,6 +95,68 @@ static void test_off(void)
     snprintf(what, sizeof what, "off (every TAPE global 0): the sequenced four-part mix bit for bit 0.7's (%08x)", h);
     ck(what, z && h == DJF_CENTRE_090);
     ck("off: tape_block never ran, TAPE out of the chain", tape_runs == 0u && !tape.on);
+}
+
+static void tape_reset(void);
+/* the scene from this process's state as it is (a child of it: both variants start from the same state), TAPE in at
+ * block on, out at off: the blocks' hashes into mix / out, tape_block's runs into *runs */
+static int scene_fork(uint32_t on, uint32_t off, uint32_t *mix, uint32_t *out, uint32_t *runs)
+{
+    int fd[2], st = 0;
+    pid_t pid;
+    size_t got = 0, want = 2u * SC_NB * sizeof *mix + sizeof *runs;
+    static uint8_t buf[2u * SC_NB * 4u + 4u];
+    if (pipe(fd)) return 0;
+    fflush(stdout);
+    pid = fork();
+    if (pid < 0) return 0;
+    if (!pid) {
+        close(fd[0]);
+        sc_on = on; sc_off = off; sc_nb = SC_NB;
+        tape_runs = 0;
+        (void)centre_render();
+        memcpy(buf, sc_mix, sizeof sc_mix);
+        memcpy(buf + sizeof sc_mix, sc_out, sizeof sc_out);
+        memcpy(buf + 2u * sizeof sc_mix, &tape_runs, 4);
+        if (write(fd[1], buf, want) != (ssize_t)want) _exit(1);
+        _exit(tape.on ? 2 : 0);
+    }
+    close(fd[1]);
+    while (got < want) {
+        ssize_t r = read(fd[0], buf + got, want - got);
+        if (r <= 0) break;
+        got += (size_t)r;
+    }
+    close(fd[0]);
+    waitpid(pid, &st, 0);
+    memcpy(mix, buf, SC_NB * 4u);
+    memcpy(out, buf + SC_NB * 4u, SC_NB * 4u);
+    memcpy(runs, buf + 2u * SC_NB * 4u, 4);
+    return got == want && WIFEXITED(st) && !WEXITSTATUS(st);
+}
+/* on and back off: once out of the chain, the mix TAPE hands on is bit for bit what it would be had it never been on */
+static void test_off_again(void)
+{
+    static uint32_t ref_mix[SC_NB], ref_out[SC_NB];
+    uint32_t b, from = SC_NB, ofrom = SC_NB, diff = 0, runs = 0, r0 = 1;
+    int ok;
+    char what[220];
+    ok = scene_fork(SC_NB, SC_NB, ref_mix, ref_out, &r0) && !r0;
+    ok &= scene_fork(400u, 900u, sc_mix, sc_out, &runs);
+    for (b = 400u; b < 900u; b++) diff += sc_mix[b] != ref_mix[b];
+    for (b = SC_NB; b-- > 900u;) {
+        if (sc_mix[b] != ref_mix[b]) break;
+        from = b;
+    }
+    for (b = SC_NB; b-- > 900u;) {
+        if (sc_out[b] != ref_out[b]) break;
+        ofrom = b;
+    }
+    snprintf(what, sizeof what, "on at block 400, off at 900: the mix TAPE gives bit for bit the same again from block %u (<= %u; %u "
+             "blocks differed while on); the output (after the leveler's slow states) from %u (<= %u)", from, 900u + TAPE_FADE / CTL + 1u, diff,
+             ofrom, 900u + 6u * FS / CTL);
+    ck(what, ok && runs > 400u && diff > 400u && from <= 900u + TAPE_FADE / CTL + 1u && ofrom <= 900u + 6u * FS / CTL);
+    tape_reset();
 }
 
 /* ---- 2. a tone through it ---- */
@@ -291,6 +369,26 @@ static void test_tone_through(void)
                  D0 * 1000.0 / FS, m, m1);
         ck(what, m <= 16 && m1 > 100);
     }
+    /* a hot mix (3 x past the old int16 line's +-131068): through the line unclipped, sample for sample */
+    {
+        int32_t m = 0, pi, po;
+        double g1, g0;
+        tape_reset();
+        tape_g(0, 0, 0, 1, 0);
+        tape_tone(440, 400000, 200);
+        for (i = 100u * CTL; i < 200u * CTL; i++)
+            if (abs(out_l[i] - in_l[i - D0]) > m) m = abs(out_l[i] - in_l[i - D0]);
+        pi = peak_of(in_l, 100u * CTL, 200u * CTL);
+        po = peak_of(out_l, 100u * CTL, 200u * CTL);
+        g0 = gain_db(50, 3000);
+        tape_reset();
+        tape_g(0, 0, 0, 0, 50);
+        tape_tone(3000, 400000, 1500);
+        g1 = rms_db(out_l, 300u * CTL, 1500u * CTL) - rms_db(in_l, 300u * CTL - D0, 1500u * CTL - D0);
+        snprintf(what, sizeof what, "a hot mix (a 400000 sine, HISS 1): peak %d out of %d in, %d at most from the dry delayed; TONE 50 on it "
+                 "%+.2f dB (%+.2f at -12 dB)", po, pi, m, g1, g0);
+        ck(what, abs(po - pi) <= 48 && m <= 48 && fabs(g1 - g0) < 0.05);
+    }
     /* TONE */
     {
         double g300 = gain_db(100, 300), g10k = gain_db(100, 10000), h50 = gain_db(50, 10000), h0 = gain_db(0, 10000);
@@ -490,6 +588,7 @@ static void test_store(void)
 int main(void)
 {
     test_off();
+    test_off_again();
     test_tone_through();
     test_in_out();
     test_rest();

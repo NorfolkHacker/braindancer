@@ -376,7 +376,8 @@ static __attribute__((noinline)) void master_begin(void)
  * as without it. In the chain the master is TAPE_D0 later: ~4 ms, kept short for live playing (WOW's swing +-1.6 ms
  * around it: a 0.5 % drift at 0.5 Hz). In and out: a TAPE_FADE crossfade with the undelayed mix; in, held until the
  * line holds the music (no click) */
-#define TAPE_LEN 256u                                   /* the line, a side (5.8 ms) */
+#define TAPE_LEN 256u                                   /* the line, a side (5.8 ms), the mix as it is (int32: no clip,
+                                                         * no lost bits of its own) */
 #define TAPE_D0 (176 << 8)                              /* the centre read, Q8 samples back (3.99 ms) */
 #define TAPE_WOW_Q 184                                  /* WOW's swing, Q8 samples a percent: +-72 (1.63 ms) at 100 */
 #define TAPE_FLUT_Q 768                                 /* FLUTTER's, Q8 samples at 100: +-3 */
@@ -386,13 +387,15 @@ static __attribute__((noinline)) void master_begin(void)
 _Static_assert((TAPE_LEN & (TAPE_LEN - 1u)) == 0u &&
                (TAPE_D0 >> 8) + ((100 * TAPE_WOW_Q) >> 8) + (TAPE_FLUT_Q >> 8) + 3 < (int)TAPE_LEN,
                "TAPE: a power of two; its farthest read (WOW, FLUTTER, the Hermite's older taps) within the line");
-static int16_t tape_buf[2][TAPE_LEN];                   /* the input >> 2 (and HISS), saturated */
+static int32_t tape_buf[2][TAPE_LEN];                   /* the input (and HISS), the mix's scale */
+_Static_assert(CTL == 32u, "TAPE's ramps: a block of 32 (TAPE_DIVB)");
+#define TAPE_DIVB(x) (((x) + (((x) >> 31) & 31)) >> 5)  /* x / CTL, as C's divide rounds (toward 0), without one */
 static struct {
     uint32_t w, wseg, fph[2], flut_inc[2];              /* write index; WOW's segment left (samples); FLUTTER's phases, steps */
     int32_t rng, nz[2], nzp[2];                         /* WOW's noise; HISS's, a side, and its last value */
     int32_t wpos, wstep, wsm, wm, fm[2];                /* WOW (Q16 samples): the ramp, its step a sample, smoothed; the
                                                          * reads' offsets at the block's end (Q8): WOW's, FLUTTER's */
-    int32_t env, tlp[2], terr[2];                       /* HISS's follower (the line's scale); TONE's states, their remainders */
+    int32_t env, tlp[2], terr[2];                       /* HISS's follower (|x| >> 2, Q15); TONE's states, their remainders */
     int32_t g, gt;                                      /* in the chain (Q15): now (below 0: the fade in held), target */
     int32_t sat_g, sat_mk, tone_k, hiss_k, flut_a, wow_a;   /* this block's (tape_begin) */
     uint16_t quiet;                                     /* blocks in a row that wrote only silence */
@@ -437,8 +440,10 @@ static __attribute__((noinline)) void tape_begin(void)
     tape.flut_inc[1] = tape.flut_inc[0] + tape.flut_inc[0] * 7u / 100u;   /* (the right: 1.07 x) */
     tape.wow_a = clamp(song.g[G_TWOW], 0, 100) * TAPE_WOW_Q;
 }
-/* the line buf (written at w) q (Q8) samples back: dly_rd_q's Hermite on TAPE_LEN */
-static inline int32_t tape_rd_q(const int16_t *buf, uint32_t w, int32_t q)
+/* (t * f) >> 8 for f 0..255, exactly, without the product's overflow (t the mix's scale, far past Q15) */
+static inline int32_t tape_mf(int32_t t, int32_t f) { return (t >> 8) * f + (((t & 255) * f) >> 8); }
+/* the line buf (written at w) q (Q8) samples back: dly_rd_q's Hermite on TAPE_LEN, its products split (tape_mf) */
+static inline int32_t tape_rd_q(const int32_t *buf, uint32_t w, int32_t q)
 {
     int32_t f = q & 255, xm1, x0, x1, x2, c1, c2, c3;
     uint32_t i = w - (uint32_t)(q >> 8);
@@ -451,7 +456,7 @@ static inline int32_t tape_rd_q(const int16_t *buf, uint32_t w, int32_t q)
     c1 = (x1 - xm1) >> 1;
     c2 = xm1 - ((5 * x0) >> 1) + 2 * x1 - (x2 >> 1);
     c3 = ((x2 - xm1) >> 1) + ((3 * (x0 - x1)) >> 1);
-    return x0 + ((((((c3 * f) >> 8) + c2) * f >> 8) + c1) * f >> 8);
+    return x0 + tape_mf(tape_mf(tape_mf(c3, f) + c2, f) + c1, f);
 }
 /* mix_l / mix_r (+ wet, folded and cleared) through TAPE, in place */
 static __attribute__((noinline)) void tape_block(uint32_t n)
@@ -472,16 +477,20 @@ static __attribute__((noinline)) void tape_block(uint32_t n)
     tape.wsm += (tape.wpos - tape.wsm) >> 5;            /* (~23 ms: no pitch steps at the corners) */
     m1 = tape.wsm >> 8;
     for (c = 0; c < 2u; c++) {                          /* the reads ramped across the block */
-        int32_t f1;
+        int32_t f1, e;
         tape.fph[c] += tape.flut_inc[c] * n;
         f1 = (osc_sine(tape.fph[c]) * tape.flut_a) >> 15;
-        dq[c] = (m1 + f1 - tape.wm - tape.fm[c]) / (int32_t)n;
+        e = m1 + f1 - tape.wm - tape.fm[c];
+        dq[c] = TAPE_DIVB(e);                           /* (/ n: n is CTL, audio.c audio_block) */
         q[c] = TAPE_D0 + tape.wm + tape.fm[c];
         tape.fm[c] += tape.wm + dq[c] * (int32_t)n - m1;   /* (where the ramp ends: the next block starts there) */
     }
     dg = gt > g ? TAPE_FULL / (int32_t)TAPE_FADE : gt < g ? -(TAPE_FULL / (int32_t)TAPE_FADE) : 0;
     for (i = 0; i < n; i++) {
-        int32_t x[2], al, ar, a;
+        int32_t x[2], al, ar, a, gs = 0;
+        if (g > 0 && g < TAPE_FULL)                     /* the fade's share eased (3 g^2 - 2 g^3): no corner where it */
+            gs = (((g * g) >> 15) * ((3 * TAPE_FULL - 2 * g) >> 1)) >> 14;   /* starts or ends (a step in the slope */
+                                                        /* is a tick on a loud mix) */
         x[0] = mix_l[i] + wet[i];
         x[1] = mix_r[i] + wet[i];
         al = x[0] < 0 ? -x[0] : x[0];
@@ -498,27 +507,25 @@ static __attribute__((noinline)) void tape_block(uint32_t n)
             int32_t y = x[c], v, t;
             if (tape.sat_g)
                 y = ((softclip(((y + 8) >> 4) * tape.sat_g >> 10) * tape.sat_mk + 16384) >> 15) << 2;
-            v = (y + 2) >> 2;
+            v = y;
             if (tape.hiss_k) {
                 int32_t u = (int32_t)(noise32(&tape.nz[c]) >> 17), d = u - tape.nzp[c];
                 tape.nzp[c] = u;
-                v += (((d * env) >> 15) * tape.hiss_k) >> 15;
+                v += ((((d * env) >> 15) * tape.hiss_k) >> 15) << 2;
             }
-            v = clamp(v, -32768, 32767);
-            tape_buf[c][w] = (int16_t)v;
+            tape_buf[c][w] = v;
             wrote |= v;
-            t = clamp(tape_rd_q(tape_buf[c], w, q[c]), -32767, 32767);
+            t = tape_rd_q(tape_buf[c], w, q[c]);
             q[c] += dq[c];
-            if (tape.tone_k) {                          /* TONE: the remainder carried (silence settles at 0) */
-                int32_t p = (t - tape.tlp[c]) * tape.tone_k + tape.terr[c];
-                tape.tlp[c] += p >> 15;
-                tape.terr[c] = p & 32767;
+            if (tape.tone_k) {                          /* TONE: the remainder carried (silence settles at 0); e * a in */
+                int32_t e = t - tape.tlp[c], lo = (e & 32767) * tape.tone_k + tape.terr[c];   /* two parts (no overflow) */
+                tape.tlp[c] += (e >> 15) * tape.tone_k + (lo >> 15);
+                tape.terr[c] = lo & 32767;
                 t = tape.tlp[c];
             } else {
                 tape.tlp[c] = t;                        /* (TONE 0: no filter; its state with the signal, no step later) */
             }
-            t <<= 2;
-            (c ? mix_r : mix_l)[i] = g >= TAPE_FULL ? t : g <= 0 ? x[c] : x[c] + (int32_t)(((int64_t)(t - x[c]) * g) >> 15);
+            (c ? mix_r : mix_l)[i] = g >= TAPE_FULL ? t : g <= 0 ? x[c] : x[c] + (int32_t)(((int64_t)(t - x[c]) * gs) >> 15);
         }
         wet[i] = 0;
         w = (w + 1u) & (TAPE_LEN - 1u);
