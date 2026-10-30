@@ -132,10 +132,12 @@ Still pending:
 
 ## 2026-10-29 — Braindancer 0.7 (the rename)
 
-- Backup before: PENDING (path and sha256 of the full-flash backup of the ACID FM 0.6 device).
-- Release built (`./build.sh --release 0.7`): PENDING (file, size, identity, sha256, clean HEAD).
-- Install: PENDING (the device found as ACID FM; `done: the FM-1 runs ...`; the device returning as BRAINDANCER after the restart).
-- Serial `status`: PENDING (expected `braindancer v0.7`).
-- Splash and ABOUT look (BRAINDANCER wordmark, v0.7, the QR to github.com/NorfolkHacker/braindancer): PENDING (the user's look).
-- The computer's MIDI port name (BRAINDANCER): PENDING.
-- Proven commit: PENDING.
+- Backup before: ~/fm1-backups/2026-10-30-acid-fm-0.6/fm1-recovery-20261030-180449/full-flash-before.bin, sha256
+  f60f69a80cc33a3b58bf3a60434f6d015e1f69f55ec83f49a64f7e10f71f3e45 (1 MiB, 0 of 143 firmware sectors blank).
+- Release built on clean HEAD aec409f: braindancer-0.7.fwsc, 610126 B, identity FM-1_907, sha256
+  f5f9061fb06e246b1aa5150f15c77b187886e0495129bbd0d87a652b61f6c1ae. `tools/fm1_install.py --port "ACID FM"` found the
+  device as "ACID FM" (FM-1_906) and finished: `done: the FM-1 runs FM-1_907`.
+- Console: `braindancer v0.7`, idle cpu_pct 7, audio_lost 0.
+- The computer's MIDI port: "BRAINDANCER MIDI 1" (ALSA client "BRAINDANCER").
+- The user checked the splash (BRAINDANCER types out and fits) and ABOUT (Braindancer v0.7, the address line fits): yes.
+- Proven commit: aec409f.
