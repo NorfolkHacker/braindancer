@@ -14,7 +14,7 @@ the Rephlex catalogue.
 
 0.8 is about the sound (piece 5), on top of 0.7:
 
-- **TAPE**, a new master effect after CLIP, PUNCH and DUCK: WOW, FLUTTER, SAT, HISS and TONE, with one **AGE** knob that
+- **TAPE**, a new master effect after CLIP, PUNCH and DUCK: WOW, FLUTTER, TAPE SAT, HISS and TAPE TONE, with one **AGE** knob that
   sets them together. FX › MASTER is now CLIP · PUNCH · DUCK · AGE; DUCK TIME moved to FX › MORE › MASTER and TAPE has its
   own group in FX › MORE. It is off at first, saved with the project (a 0.7 project loads with TAPE off), AGE can be
   automated, and it is the first thing the overload safety switches off (your settings are never changed).

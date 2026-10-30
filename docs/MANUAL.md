@@ -1361,7 +1361,7 @@ first: with AGE and every detail at 0 it is out of the chain and the sound is ex
 - AGE can be automated like the DJ FILTER: with REC armed, the AGE knob records and plays back with the section, and a
   stop puts back the six values as they were. AGE has no lock.
 - TAPE is saved with the project; a project from an older version loads with TAPE off.
-- If the sound engine is overloaded, TAPE is the first thing it switches off, before the delay's short mode, the
+- If the sound engine is overloaded, TAPE is the first thing it switches off, before the long delay is moved to its full-rate line with TIME shortened, the
   texture and the arp. Your settings are never changed; it comes back by itself when there is room again.
 
 ### DJ FILTER (GLO › LIVE KNOB 4)
