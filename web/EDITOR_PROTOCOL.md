@@ -107,6 +107,11 @@ is INT, osc 2's interval −24..24 (was KTR). A project (kit marker below 3, or 
 mark) stored before loads LOFI's TONE as CUT, BEND MASK 0, and ANALOG's KTR as INT 0. VOICE 2 (ALLOC DETUNE PAN MUTE)
 is no page any more: PAN on GLO > MIX (MIXER until ACID FM 0.5), MUTE the GLO layer's, the others at their stored values.
 
+**Braindancer 0.8: 102 globals**: G 96 AGE, 97 WOW, 98 FLUTTER, 99 SAT, 100 HISS, 101 TONE: the master's TAPE, each
+0..100 (fmt PCT), 0 by default; every one of WOW .. TONE at 0 puts TAPE out of the chain (the output as before; AGE
+alone does nothing on its own: it is the macro that sets the five). Saved in FUNC's 'T' 'P' block (after 'P' 'L', the
+last) only when one is not 0; a project without it loads TAPE all 0 (off). NEW PROJECT resets them.
+
 **ACID FM 0.6: 96 globals**: G 90..95 each track's PLAYS (T1..T6), on which loops of its pattern it plays: 0 ALWAYS, then
 1ST OF 2, EVERY 2ND, 1ST OF 3, 2ND OF 3, EVERY 3RD, 1ST OF 4, 2ND OF 4, 3RD OF 4, EVERY 4TH, 1ST OF 8, 1ST ONLY, NOT 1ST
 (0..12, the words of STEP EXTRAS' CONDITION). Saved in FUNC's 'P' 'L' block (after 'M' 'R', the last) only when one is not

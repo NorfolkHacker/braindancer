@@ -366,6 +366,179 @@ static __attribute__((noinline)) void master_begin(void)
                                                          * full scale: CLIP adds saturation, not loudness (the leveler) */
         clip_mk = (int32_t)((6000u << 15) / (uint32_t)softclip((6000 * clip_g) >> 12));
 }
+/* (Braindancer 0.8) TAPE (G_TAGE .. G_TTONE: FX > MASTER AGE, FX > MORE > TAPE), after CLIP: the mix (dry + the buses'
+ * return, folded as CLIP folds it) written into a short line and read back where the transport has drifted to (WOW: a
+ * smoothed random drift, a segment of 0.3 .. 2 Hz at a time, each the other way; FLUTTER: 6 .. 15 Hz, the right at 1.07
+ * x the left's rate), a 4-point Hermite between samples; SAT (the soft clip, its level kept at a mix's usual level as
+ * CLIP's); HISS (noise, a first difference: bright, its level following the music's peak, none over silence; written
+ * with the music, so it plays with it); TONE (a one-pole high-cut, its remainder carried: silence settles at exactly 0).
+ * Every detail 0 (AGE alone does nothing: it only sets them): out of the chain, tape_block not run, the mix bit for bit
+ * as without it. In the chain the master is TAPE_D0 later: ~4 ms, kept short for live playing (WOW's swing +-1.6 ms
+ * around it: a 0.5 % drift at 0.5 Hz). In and out: a TAPE_FADE crossfade with the undelayed mix; in, held until the
+ * line holds the music (no click) */
+#define TAPE_LEN 256u                                   /* the line, a side (5.8 ms) */
+#define TAPE_D0 (176 << 8)                              /* the centre read, Q8 samples back (3.99 ms) */
+#define TAPE_WOW_Q 184                                  /* WOW's swing, Q8 samples a percent: +-72 (1.63 ms) at 100 */
+#define TAPE_FLUT_Q 768                                 /* FLUTTER's, Q8 samples at 100: +-3 */
+#define TAPE_FADE 256u                                  /* in / out of the chain, samples (5.8 ms) */
+#define TAPE_FULL 32768                                 /* in the chain: the gain whole (Q15) */
+#define TAPE_QUIET (TAPE_LEN / CTL + 2u)                /* silent blocks written before TAPE is at rest (master_rest) */
+_Static_assert((TAPE_LEN & (TAPE_LEN - 1u)) == 0u &&
+               (TAPE_D0 >> 8) + ((100 * TAPE_WOW_Q) >> 8) + (TAPE_FLUT_Q >> 8) + 3 < (int)TAPE_LEN,
+               "TAPE: a power of two; its farthest read (WOW, FLUTTER, the Hermite's older taps) within the line");
+static int16_t tape_buf[2][TAPE_LEN];                   /* the input >> 2 (and HISS), saturated */
+static struct {
+    uint32_t w, wseg, fph[2], flut_inc[2];              /* write index; WOW's segment left (samples); FLUTTER's phases, steps */
+    int32_t rng, nz[2], nzp[2];                         /* WOW's noise; HISS's, a side, and its last value */
+    int32_t wpos, wstep, wsm, wm, fm[2];                /* WOW (Q16 samples): the ramp, its step a sample, smoothed; the
+                                                         * reads' offsets at the block's end (Q8): WOW's, FLUTTER's */
+    int32_t env, tlp[2], terr[2];                       /* HISS's follower (the line's scale); TONE's states, their remainders */
+    int32_t g, gt;                                      /* in the chain (Q15): now (below 0: the fade in held), target */
+    int32_t sat_g, sat_mk, tone_k, hiss_k, flut_a, wow_a;   /* this block's (tape_begin) */
+    uint16_t quiet;                                     /* blocks in a row that wrote only silence */
+    uint8_t on, wsg;                                    /* in the chain (tape_block runs); WOW's way this segment */
+} tape;
+/* TONE's one-pole a (Q15) at TONE 0, 10 .. 100: fc 18 kHz .. 2.6 kHz (TONE 0: no filter), and those fc / 100 (the words) */
+static const uint16_t TAPE_TONE_K[11] = {30245, 28803, 27013, 24947, 22698, 20368, 18049, 15817, 13727, 11813, 10094};
+static const uint8_t TAPE_TONE_HZ100[11] = {180, 148, 122, 101, 83, 68, 56, 46, 38, 31, 26};
+#ifndef TAPE_COUNT
+#define TAPE_COUNT()                                    /* (tests/tape_test.c counts the blocks it runs) */
+#endif
+static int tape_set(void)                               /* a detail not 0 (AGE alone does nothing) */
+{
+    return (song.g[G_TWOW] | song.g[G_TFLUT] | song.g[G_TSAT] | song.g[G_THISS] | song.g[G_TTONE]) != 0;
+}
+/* the block's targets from the globals and the safety net; entering: the line and the states cleared, the fade held */
+static __attribute__((noinline)) void tape_begin(void)
+{
+    int32_t s, o, i, f;
+    tape.gt = tape_set() && !(fx_safe & SAFE_TAPE) ? TAPE_FULL : 0;
+    if (!tape.on) {
+        if (!tape.gt)
+            return;
+        memset(tape_buf, 0, sizeof tape_buf);
+        memset(&tape, 0, sizeof tape);
+        tape.gt = TAPE_FULL;
+        tape.rng = 0x1d872b41; tape.nz[0] = 0x2545f491; tape.nz[1] = 0x6c8e9cf5;
+        tape.g = -(int32_t)((TAPE_D0 >> 8) + 8) * (TAPE_FULL / (int32_t)TAPE_FADE);   /* (the line's first read past) */
+        tape.on = 1;
+    }
+    s = clamp(song.g[G_TSAT], 0, 100);                  /* SAT: x1 .. x3 into the soft clip, made up as CLIP (Q12) */
+    tape.sat_g = s ? 4096 + s * 8192 / 100 : 0;
+    if (s)
+        tape.sat_mk = (int32_t)((6000u << 15) / (uint32_t)softclip((6000 * tape.sat_g) >> 12));
+    o = clamp(song.g[G_TTONE], 0, 100);
+    i = o / 10;
+    tape.tone_k = !o ? 0 : i >= 10 ? TAPE_TONE_K[10] : TAPE_TONE_K[i] + (TAPE_TONE_K[i + 1] - TAPE_TONE_K[i]) * (o % 10) / 10;
+    tape.hiss_k = clamp(song.g[G_THISS], 0, 100) * 1035 / 100;   /* (at 100 ~ -35 dB under a sine's level) */
+    f = clamp(song.g[G_TFLUT], 0, 100);
+    tape.flut_a = f * TAPE_FLUT_Q / 100;
+    tape.flut_inc[0] = (uint32_t)(600 + 9 * f) * 97392u / 100u; /* (6 + 9 f / 100 Hz: 2^32 / FS a Hz) */
+    tape.flut_inc[1] = tape.flut_inc[0] + tape.flut_inc[0] * 7u / 100u;   /* (the right: 1.07 x) */
+    tape.wow_a = clamp(song.g[G_TWOW], 0, 100) * TAPE_WOW_Q;
+}
+/* the line buf (written at w) q (Q8) samples back: dly_rd_q's Hermite on TAPE_LEN */
+static inline int32_t tape_rd_q(const int16_t *buf, uint32_t w, int32_t q)
+{
+    int32_t f = q & 255, xm1, x0, x1, x2, c1, c2, c3;
+    uint32_t i = w - (uint32_t)(q >> 8);
+    x0 = buf[i & (TAPE_LEN - 1u)];
+    if (!f)
+        return x0;
+    xm1 = buf[(i + 1u) & (TAPE_LEN - 1u)];
+    x1 = buf[(i - 1u) & (TAPE_LEN - 1u)];
+    x2 = buf[(i - 2u) & (TAPE_LEN - 1u)];
+    c1 = (x1 - xm1) >> 1;
+    c2 = xm1 - ((5 * x0) >> 1) + 2 * x1 - (x2 >> 1);
+    c3 = ((x2 - xm1) >> 1) + ((3 * (x0 - x1)) >> 1);
+    return x0 + ((((((c3 * f) >> 8) + c2) * f >> 8) + c1) * f >> 8);
+}
+/* mix_l / mix_r (+ wet, folded and cleared) through TAPE, in place */
+static __attribute__((noinline)) void tape_block(uint32_t n)
+{
+    int32_t q[2], dq[2], m1, g = tape.g, gt = tape.gt, dg, env = tape.env, wrote = 0;
+    uint32_t i, c, w = tape.w;
+    TAPE_COUNT();
+    if (tape.wseg <= n) {                               /* WOW: a new segment, 0.3 .. 2 Hz, to a target the other way */
+        uint32_t r = noise32(&tape.rng);
+        int32_t mag = (int32_t)(((uint32_t)tape.wow_a * (128u + ((r >> 8) & 127u))) >> 8);   /* (half .. all of it) */
+        tape.wseg = (uint32_t)FS * 10u / (3u + r % 18u);
+        tape.wsg ^= 1u;
+        tape.wstep = (((tape.wsg ? mag : -mag) << 8) - tape.wpos) / (int32_t)tape.wseg;
+    } else {
+        tape.wseg -= n;
+    }
+    tape.wpos += tape.wstep * (int32_t)n;
+    tape.wsm += (tape.wpos - tape.wsm) >> 5;            /* (~23 ms: no pitch steps at the corners) */
+    m1 = tape.wsm >> 8;
+    for (c = 0; c < 2u; c++) {                          /* the reads ramped across the block */
+        int32_t f1;
+        tape.fph[c] += tape.flut_inc[c] * n;
+        f1 = (osc_sine(tape.fph[c]) * tape.flut_a) >> 15;
+        dq[c] = (m1 + f1 - tape.wm - tape.fm[c]) / (int32_t)n;
+        q[c] = TAPE_D0 + tape.wm + tape.fm[c];
+        tape.fm[c] += tape.wm + dq[c] * (int32_t)n - m1;   /* (where the ramp ends: the next block starts there) */
+    }
+    dg = gt > g ? TAPE_FULL / (int32_t)TAPE_FADE : gt < g ? -(TAPE_FULL / (int32_t)TAPE_FADE) : 0;
+    for (i = 0; i < n; i++) {
+        int32_t x[2], al, ar, a;
+        x[0] = mix_l[i] + wet[i];
+        x[1] = mix_r[i] + wet[i];
+        al = x[0] < 0 ? -x[0] : x[0];
+        ar = x[1] < 0 ? -x[1] : x[1];
+        a = (al > ar ? al : ar) >> 2;
+        if (a > 32767) a = 32767;
+        if (a >= env) {                                 /* HISS's follower: up at once, down ~12 ms, to exactly 0 */
+            env = a;
+        } else {
+            env -= (env >> 9) + 1;
+            if (env < 0) env = 0;
+        }
+        for (c = 0; c < 2u; c++) {
+            int32_t y = x[c], v, t;
+            if (tape.sat_g)
+                y = ((softclip(((y + 8) >> 4) * tape.sat_g >> 10) * tape.sat_mk + 16384) >> 15) << 2;
+            v = (y + 2) >> 2;
+            if (tape.hiss_k) {
+                int32_t u = (int32_t)(noise32(&tape.nz[c]) >> 17), d = u - tape.nzp[c];
+                tape.nzp[c] = u;
+                v += (((d * env) >> 15) * tape.hiss_k) >> 15;
+            }
+            v = clamp(v, -32768, 32767);
+            tape_buf[c][w] = (int16_t)v;
+            wrote |= v;
+            t = clamp(tape_rd_q(tape_buf[c], w, q[c]), -32767, 32767);
+            q[c] += dq[c];
+            if (tape.tone_k) {                          /* TONE: the remainder carried (silence settles at 0) */
+                int32_t p = (t - tape.tlp[c]) * tape.tone_k + tape.terr[c];
+                tape.tlp[c] += p >> 15;
+                tape.terr[c] = p & 32767;
+                t = tape.tlp[c];
+            } else {
+                tape.tlp[c] = t;                        /* (TONE 0: no filter; its state with the signal, no step later) */
+            }
+            t <<= 2;
+            (c ? mix_r : mix_l)[i] = g >= TAPE_FULL ? t : g <= 0 ? x[c] : x[c] + (int32_t)(((int64_t)(t - x[c]) * g) >> 15);
+        }
+        wet[i] = 0;
+        w = (w + 1u) & (TAPE_LEN - 1u);
+        if (dg) {
+            g += dg;
+            if (dg > 0 ? g >= gt : g <= gt) { g = gt; dg = 0; }
+        }
+    }
+    tape.wm = m1;
+    tape.w = w;
+    tape.env = env;
+    tape.g = g;
+    tape.quiet = (uint16_t)(wrote ? 0u : tape.quiet < 0xFFFFu ? tape.quiet + 1u : tape.quiet);
+    if (!g && !gt)
+        tape.on = 0;                                    /* out (tape_begin clears it all on the way back in) */
+}
+static int tape_idle(void)                              /* at rest: the line silent, the follower and TONE at 0 */
+{
+    return tape.quiet >= TAPE_QUIET && !tape.env && !tape.tlp[0] && !tape.tlp[1];
+}
 /* (JIANT 0.5) the LEVELER, always on: the mix (dry + wet, before the MASTER knob) followed block by block (its peak,
  * ~45 ms up, ~1.5 s down: no pumping) and brought toward LEV_T at 2:1 (the gain the square root of LEV_T / level, -9 .. +6 dB),
  * ramped across the block; the gain itself smoothed (~190 ms); below LEV_GATE (-40 dB) it eases back to unity, so a tail or silence is not
@@ -2408,6 +2581,8 @@ static __attribute__((noinline)) int master_rest(uint32_t n)
         return 0;
     if (fx_lowcut)                                      /* (SPEAKER EQ LOWCUT / BASS+: their states can settle off 0, */
         return 0;                                       /* not checked: never at rest there) */
+    if (tape.on && !tape_idle())                        /* (Braindancer 0.8) TAPE: its line and states not yet silent */
+        return 0;
     lev_cur = lev_g;                                    /* (as lev_block leaves them in a silent block) */
     return 1;
 }
@@ -2466,6 +2641,8 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     dx_mot_block(n);                                    /* (0.5.1) DRUM-X X-MOD's LFO */
     master_begin();
     duck_block();
+    if (tape.on || tape_set())                          /* (Braindancer 0.8) TAPE's block: in, out, its settings */
+        tape_begin();
     perf = perf_begin(n);                               /* the FX hold layer at work (perform.c) */
 #ifndef FX_HUSH_OFF                                     /* (tests/hush_test.c: the reference without it) */
     if (!perf && mix_hush()) {                          /* (0.9.16) all at rest: nothing rendered (above) */
@@ -2539,6 +2716,8 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         djf_block(n);
     if (clip_g)
         clip_block(n);
+    if (tape.on)                                        /* (Braindancer 0.8) TAPE; out of the chain: not run */
+        tape_block(n);
     t0 = MC_TICKS();
     prf_blk[PRF_POST] = t0 - t1;
 #ifndef FX_HUSH_OFF

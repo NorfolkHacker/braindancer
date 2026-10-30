@@ -131,6 +131,10 @@
 #                   mix bit for bit as 0.9.0 rendered it (never run); the low-pass / high-pass responses (pass band, 12 dB an
 #                   octave, the peak, the ends, stereo); no click crossing the middle, jumping sides, swept, automated; its
 #                   automation recorded, played, stopped, saved apart ('M' 'G') and loaded; an old project loads it centred.
+# TAPE (tests/tape_test.c, Braindancer 0.8): the master TAPE (src/fx.c tape_block, G_TAGE .. G_TTONE): all 0, the
+#                   sequenced mix bit for bit as 0.7 rendered it (never run); WOW's and FLUTTER's drift (cents, rates, left /
+#                   right apart), SAT's level, the line's exact delay, TONE's roll-off, HISS under the music and none over
+#                   silence; in and out of the chain without a click; at rest after a note; stored in 'T' 'P' (none at 0).
 # MICRO (tests/micro_test.c, 0.9.1): a step's MICRO in 64ths (core.h ST_MICRO): every value, a project of before played
 #                   sample for sample and saved byte for byte as 0.9.0 did; live recording at REC Q 0 % within 1/64 of a step
 #                   of where played (72 / 120 / 174 BPM, 1/8 1/16 1/32 16T, swing) and played back there; REC Q 50 % half way;
@@ -226,6 +230,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "motion, whole-step chance, FUN7 migration, song restore, ARP repeat and the 1.2 ARP modes" "$OUT/motion_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/djf_test" tests/djf_test.c -lm
     run "DJ FILTER (0.9.1): centred bit for bit 0.9.0, LP / HP response, no click crossing the middle, automation, old projects" "$OUT/djf_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/tape_test" tests/tape_test.c -lm
+    run "TAPE (0.8): off bit for bit 0.7, WOW / FLUTTER / SAT / HISS / TONE in range, in and out without a click, stored" "$OUT/tape_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/micro_test" tests/micro_test.c -lm
     run "MICRO in 64ths (0.9.1): recorded within 1/64 of a step at any tempo / division, played there, REC Q 50 %, old projects, 'M' 'F'" "$OUT/micro_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm

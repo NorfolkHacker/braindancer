@@ -246,6 +246,11 @@ static const param_desc_t GP[G_COUNT] = {
     /* (ACID FM 0.6) PLAYS per track (seq.c trk_plays_on; project.c: block 'PL'; SEQ > MORE: ID_SQ_PLAYS, the selected one's) */
     [G_PLAYS1] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS1 + 1] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS1 + 2] = PE("PLAYS", N_PLAYS, 0),
     [G_PLAYS1 + 3] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS1 + 4] = PE("PLAYS", N_PLAYS, 0), [G_PLAYS6] = PE("PLAYS", N_PLAYS, 0),
+    /* (Braindancer 0.8) TAPE (fx.c tape_block; project.c: block 'TP'): AGE, the macro; its five details. All 0: out of
+     * the chain */
+    [G_TAGE] = PD("AGE", F_PCT, 0, 100, 0), [G_TWOW] = PD("WOW", F_PCT, 0, 100, 0),
+    [G_TFLUT] = PD("FLUTTER", F_PCT, 0, 100, 0), [G_TSAT] = PD("SAT", F_PCT, 0, 100, 0),
+    [G_THISS] = PD("HISS", F_PCT, 0, 100, 0), [G_TTONE] = PD("TONE", F_PCT, 0, 100, 0),
 };
 
 static const param_desc_t LOFI_RTRG = {"RTRG", F_ONOFF, 0, 1, 0, 0, 0};   /* (0.6.12) P_LRTRG on a LOFI track */

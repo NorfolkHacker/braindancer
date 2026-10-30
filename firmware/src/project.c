@@ -878,6 +878,24 @@ static int proj_pl_used(const project_t *q)
             return 1;
     return 0;
 }
+/* (Braindancer 0.8) TAPE (core.h G_TAGE .. G_TTONE): FUNC's 'T' 'P' block, the very last (after 'P' 'L', or what is
+ * last before it; firmware before stops reading at its end), written only when one of the six is not 0: 'T' 'P', six
+ * bytes (AGE WOW FLUTTER SAT HISS TONE, 0..100), a count n (0), n records (none yet). Without it (every project before,
+ * and one with TAPE all 0: its bytes as before): all six 0, TAPE off (proj_unpack_c's G_NSTORE .. G_COUNT loop gives
+ * GP[].def) */
+#define PROJ_TP_N 7u
+static uint32_t proj_tp_byte(const project_t *q, uint32_t k)
+{
+    return (uint32_t)clamp(q->g[G_TAGE + k], 0, 100);
+}
+static int proj_tp_used(const project_t *q)
+{
+    uint32_t k;
+    for (k = 0; k < 6u; k++)
+        if (proj_tp_byte(q, k))
+            return 1;
+    return 0;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
@@ -899,6 +917,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 2u + PROJ_MR_N;
     if (proj_pl_used(q))                                /* (ACID FM 0.6) PLAYS's, when one is not ALWAYS */
         n += 2u + PROJ_PL_N;
+    if (proj_tp_used(q))                                /* (Braindancer 0.8) TAPE's, when one is not 0 */
+        n += 2u + PROJ_TP_N;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
@@ -1082,6 +1102,12 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'P'; b[pos++] = 'L';
         for (t = 0; t < NTRK; t++)
             b[pos++] = (uint8_t)proj_pl_byte(q, t);
+    }
+    if (proj_tp_used(q)) {                              /* (Braindancer 0.8) TAPE, after 'P' 'L' (the last) */
+        b[pos++] = 'T'; b[pos++] = 'P';
+        for (t = 0; t < 6u; t++)
+            b[pos++] = (uint8_t)proj_tp_byte(q, t);
+        b[pos++] = 0;                                   /* (its records: none) */
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1380,6 +1406,12 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         for (t = 0; t < NTRK; t++)
             q->g[G_PLAYS1 + t] = (int16_t)(b[pos + 2u + t] > CP_NTRIG ? 0u : b[pos + 2u + t]);
         pos += 2u + PROJ_PL_N;
+    }
+    if (pos + 2u + PROJ_TP_N <= room && b[pos] == 'T' && b[pos + 1u] == 'P') {   /* (Braindancer 0.8) TAPE (else all 0:
+                                                         * the loop above gave GP[].def) */
+        for (t = 0; t < 6u; t++)
+            q->g[G_TAGE + t] = (int16_t)(b[pos + 2u + t] > 100u ? 100u : b[pos + 2u + t]);
+        pos += 2u + PROJ_TP_N;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)

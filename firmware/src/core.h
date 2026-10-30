@@ -189,7 +189,10 @@ enum {                          /* global parameters */
     G_PLAYS1, G_PLAYS6 = G_PLAYS1 + 5,  /* (ACID FM 0.6) PLAYS, each track's loop condition (seq.c trk_plays_on): 0 ALWAYS,
                                          * k CP_TRIGS[k - 1] (1ST OF 2 .. NOT 1ST), counted in t->loops. project.c: block
                                          * 'PL' (none: ALWAYS); NEW PROJECT resets them */
-    G_COUNT
+    G_TAGE,                     /* (Braindancer 0.8) TAPE (fx.c tape_block): AGE 0..100, the macro (FX > MASTER KNOB 4) */
+    G_TWOW, G_TFLUT, G_TSAT,    /* .. its five details 0..100 (FX > MORE > TAPE): WOW, FLUTTER, SAT, */
+    G_THISS, G_TTONE,           /* HISS, TONE. project.c: block 'T' 'P' (none: all 0, TAPE off) */
+    G_COUNT                     /* 102 */
 };
 #define G_SL_N (G_SLP15 + 1 - G_SLMODE)     /* the SLICER's globals (stored together: project.c, song_chain.c) */
 #define G_CSTER G_DHPF                 /* (JIANT 0.6.9) CHORUS STEREO -64..63: 0 as before (G_DHPF's 0), - narrower .. mono */

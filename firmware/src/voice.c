@@ -305,6 +305,8 @@ static volatile uint8_t gov_cap = 16u, gov_lite;
 #define SAFE_DLY 1u
 #define SAFE_TEX 2u
 #define SAFE_ARP 4u
+#define SAFE_TAPE 8u            /* (Braindancer 0.8) bit 3: TAPE faded out of the chain (fx.c tape_begin); set by the
+                                 * safety ladder (audio.c fx_safety_tick) once TAPE is its first rung; not set yet */
 static volatile uint8_t fx_safe;
 static uint8_t safe_part[2] = {NTRK, NTRK};             /* the GEN piece's texture and arp tracks (NTRK: none) */
 static uint32_t safe_hushed(uint32_t k)                 /* track k hushed by the safety net */
