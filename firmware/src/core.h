@@ -638,6 +638,8 @@ typedef struct track {
     uint8_t seq_n;
     uint8_t seq_hold;            /* last step slides: keep the notes until the next step */
     uint8_t slide_glide;         /* next legato note glides (slide) */
+    int16_t acc_sw;              /* (0.8) the 303 accent sweep: a cutoff offset (CUT << 8 units) consecutive accents climb */
+    uint8_t acc_relax;           /* .. a step without accent played: it decays */
     /* (0.9.18) RATCH spills: a ratcheted step's hits after its first, each sp_q samples on from the step's start (seq.c
      * seq_spill), over the steps after it; never saved */
     uint8_t sp_left, sp_k, sp_m, sp_inst;   /* hits still to come; the next one's number; its notes; the step it came from */

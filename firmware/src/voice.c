@@ -340,6 +340,34 @@ static uint32_t trk_vmode(const track_t *t)
     return ENGINES[t->engine]->oneshot ? V_POLY : (uint32_t)t->p[P_VOICE];
 }
 
+/* (Braindancer 0.8) the 303 acid response: ANALOG in MONO / LEGATO. Consecutive accented steps climb the cutoff
+ * (acc_sw, CUT << 8 units: ACC_STEP a step up to ACC_MAX), a step without accent lets it relax (~46 ms, track_render);
+ * an accent opens the filter with the envelope twice as far; a slide glides 58 ms (glide 2) without a new attack.
+ * POLY / UNISON and the other engines: the accent as before */
+#define ACC_STEP 6144            /* an accented step's climb (24 CUT steps) */
+#define ACC_MAX 16384            /* (64 CUT steps) */
+#ifndef ACID_OFF
+#define ACID_OFF() 0             /* (tests/acid_test.c: 1, the sound without it) */
+#endif
+static int an_acid(const track_t *t)
+{
+    uint32_t mode = trk_vmode(t);
+    return !ACID_OFF() && ENGINES[t->engine % NENGINES] == &ENG_ANALOG && (mode == V_MONO || mode == V_LEGATO);
+}
+static void acc_step(track_t *t, int accent)      /* the sequencer's step starts (seq.c seq_step): climb or relax */
+{
+    if (!an_acid(t)) {
+        t->acc_sw = 0;
+        return;
+    }
+    if (accent) {
+        t->acc_sw = (int16_t)(t->acc_sw + ACC_STEP < ACC_MAX ? t->acc_sw + ACC_STEP : ACC_MAX);
+        t->acc_relax = 0;
+    } else {
+        t->acc_relax = 1;
+    }
+}
+
 /* ------------------------------------------------- the shared voice budget --- */
 /* (JIANT 0.6.16) the load budget: audio.c sets it when a half took more than 65 % of its time (the render), clears
  * it after a while under 60 %. While it is set the sound may not grow: a new note takes a voice (the oldest released
@@ -749,6 +777,7 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
     }
     {
         uint32_t sounding = t->mono_note && t->v[0].active && t->v[0].gate, want;
+        int sl = t->slide_glide && an_acid(t);         /* (0.8) the 303 slide: 58 ms whatever GLIDE, no new attack */
         mono_remove(t, note);
         if (t->nmono >= 8u)
             mono_remove(t, t->mono_stack[0]);
@@ -757,9 +786,9 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
         if (sounding && want == t->mono_note)
             return;                                     /* LOW / HIGH priority: this key does not win */
         if (mode == V_MONO)                             /* MONO: always retrigger, glide when GLIDE is set */
-            mono_play(t, want, vel, 1, t->p[P_GLIDE] != 0 || t->slide_glide);
+            mono_play(t, want, vel, !(sl && sounding), sl ? 2 : (t->p[P_GLIDE] != 0 || t->slide_glide));
         else                                            /* LEGATO / UNISON: glide only between held notes */
-            mono_play(t, want, vel, !sounding, sounding && (t->p[P_GLIDE] != 0 || t->slide_glide));
+            mono_play(t, want, vel, !sounding, !sounding ? 0 : sl ? 2 : (t->p[P_GLIDE] != 0 || t->slide_glide));
     }
 }
 
@@ -1016,7 +1045,7 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     bend16 = bend >= 0 ? bend / 16 : -((-bend + 15) / 16);
     bend_fine = (bend - bend16 * 16) * 2367 / 2560;
     uint32_t nr = 0, fade = t->xf_on && t->xf, snap = fade && xf_snap_t == ti;
-    int32_t damt;
+    int32_t damt, acid, acc2;
     int16_t pe_new[8], p_new[P_COUNT];
     for (i = 0; i < n; i++)
         out[i] = 0;
@@ -1039,6 +1068,11 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         drum_side_begin(t, n);
     if (e->block)                                       /* the engine's per-part work */
         e->block(t);
+    acid = an_acid(t);                                  /* (0.8) the 303 acid response: a plain step relaxes the sweep */
+    if (t->acc_relax && t->acc_sw)
+        t->acc_sw = (int16_t)(t->acc_sw > (t->acc_sw >> 6) + 1 ? t->acc_sw - (t->acc_sw >> 6) - 1 : 0);
+    acc2 = acid && t->acc_sw && !t->acc_relax ? 48 : 24;   /* .. an accented step's envelope twice as deep (the keys,
+                                                         * a stopped sequence: as before) */
     damt = e == &ENG_DRUM ? 0 : 127 - clamp(p[P_DRIFT], 0, 127);   /* (0.7.8) DRIFT, 127 stored = 0 % */
     if (damt)
         drift_clk[ti]++;
@@ -1111,8 +1145,10 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         if (fsum)                                       /* residual below 1/16 semitone */
             m.inc += (uint32_t)((int32_t)(m.inc >> 12) * fsum);
         m.cutoff = ((lfo * p[P_LD_FLT]) >> 7) + ((m.envq15 * p[P_ED_FLT]) >> 7) + dcut;
-        if (v->vel > 110)                               /* accent opens the filter with the env */
-            m.cutoff += (m.envq15 * 24) >> 7;
+        if (v->vel > 110)                               /* accent opens the filter with the env (0.8: acid, twice) */
+            m.cutoff += (m.envq15 * acc2) >> 7;
+        if (acid)                                       /* (0.8) the 303 climb */
+            m.cutoff += t->acc_sw;
         m.shape = (64 << 8) + ((lfo * p[P_LD_SHP]) >> 7) + ((m.envq15 * p[P_ED_SHP]) >> 7);
         if (MOD.on)                                     /* the modulation matrix (mod.c) */
             mod_voice(t, v, &m, fsum);

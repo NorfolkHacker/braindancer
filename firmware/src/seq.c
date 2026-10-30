@@ -1573,6 +1573,8 @@ static void seq_stop(void)
         trk[i].rh_n = 0;                           /* a recorded note held over the stop: as far as it got */
         spill_stop(&trk[i]);
         trk[i].pulse_from = trk[i].jump_to = trk[i].rev = 0;
+        trk[i].acc_sw = 0;                         /* (0.8) the 303 sweep: from 0 at the next PLAY */
+        trk[i].acc_relax = 0;
     }
     fg_reset();                                    /* (0.6.52) FUGUE's heads silent */
     mo_flush();                                    /* (0.6.72) MIDI OUT ALL: nothing left hanging */
@@ -1959,6 +1961,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         seq_release(t);
         return;
     }
+    if (!kit)                                       /* (0.8) the 303 acid response: an accent climbs, a plain step relaxes */
+        acc_step(t, (s->flags & SF_ACCENT) != 0);
     if (arp)                                        /* (0.6.82) the components on these notes, one a type: the */
         ac = cp_get(t, arp, CP_ARPN, CP_ARPQ, &aa); /* step's first, else its second */
     arpn = ac == CP_ARPN;                           /* (0.9.18) ARP: the notes one at a time (arp_start); SEQ: a lap's */

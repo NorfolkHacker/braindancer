@@ -135,6 +135,10 @@
 #                   sequenced mix bit for bit as 0.7 rendered it (never run); WOW's and FLUTTER's drift (cents, rates, left /
 #                   right apart), SAT's level, the line's exact delay, TONE's roll-off, HISS under the music and none over
 #                   silence; in and out of the chain without a click; at rest after a note; stored in 'T' 'P' (none at 0).
+# ACID (tests/acid_test.c, Braindancer 0.8): the 303 acid response on ANALOG MONO / LEGATO (src/voice.c an_acid / acc_step):
+#                   consecutive accents climb the cutoff (6144 a step to 16384), a plain step relaxes it (~46 ms), the
+#                   sound brighter step by step; a slide glides 58 ms without a new attack whatever GLIDE; POLY / UNISON
+#                   and FM6 / PHASE bit for bit as before; the stop zeroes it; build/acid_demo/ before / after WAVs.
 # MICRO (tests/micro_test.c, 0.9.1): a step's MICRO in 64ths (core.h ST_MICRO): every value, a project of before played
 #                   sample for sample and saved byte for byte as 0.9.0 did; live recording at REC Q 0 % within 1/64 of a step
 #                   of where played (72 / 120 / 174 BPM, 1/8 1/16 1/32 16T, swing) and played back there; REC Q 50 % half way;
@@ -232,6 +236,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "DJ FILTER (0.9.1): centred bit for bit 0.9.0, LP / HP response, no click crossing the middle, automation, old projects" "$OUT/djf_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/tape_test" tests/tape_test.c -lm
     run "TAPE (0.8): off bit for bit 0.7, WOW / FLUTTER / SAT / HISS / TONE in range, in and out without a click, stored" "$OUT/tape_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/acid_test" tests/acid_test.c -lm
+    run "303 acid response (0.8): accent climb and relax, 58 ms slide without retrigger, poly and other engines unchanged" "$OUT/acid_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/micro_test" tests/micro_test.c -lm
     run "MICRO in 64ths (0.9.1): recorded within 1/64 of a step at any tempo / division, played there, REC Q 50 %, old projects, 'M' 'F'" "$OUT/micro_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
