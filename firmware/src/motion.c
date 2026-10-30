@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Sparse, bounded step automation. Main-loop writes publish under the same
  * interrupt guard as parameter batches. The ISR only scans 64 fixed records.
  * p[] is the sounding value; motion_base_value() is the patch's saved value.
@@ -18,6 +19,10 @@ static uint8_t motion_base_valid, motion_full;
  * record moved it this pass (bit per track; 0: song.g[G_DJF] is the knob's own) */
 static int16_t motion_djf_base __attribute__((section(".bss.djf")));   /* (as fx.c's djf: out of the merged statics) */
 static uint8_t motion_djf_on __attribute__((section(".bss.djf")));
+/* (Braindancer 0.8) TAPE's AGE records (MOT_AGE), as the DJ FILTER's: AGE and its five details before they moved them (the
+ * knob's, the hand's), and the tracks whose record moved them this pass */
+static int16_t motion_age_base[6] __attribute__((section(".bss.djf")));   /* G_TAGE .. G_TTONE before records moved them */
+static uint8_t motion_age_on __attribute__((section(".bss.djf")));        /* tracks whose AGE record moved them (bit) */
 static uint32_t motion_guard(void)
 {
 #if defined(FM1_IRQ_TARGET)
@@ -40,17 +45,18 @@ static int motion_param(uint32_t id)
 {
     /* Sound only: transport, routing, voice allocation and discrete engine
      * changes never become automation. FX sends and continuous mix are safe. */
-    return id == MOT_DJF || (id < P_COUNT && (id <= P_REL || (id >= P_ED_FLT && id <= P_LD_AMP) ||
+    return id == MOT_DJF || id == MOT_AGE || (id < P_COUNT && (id <= P_REL || (id >= P_ED_FLT && id <= P_LD_AMP) ||
         (id >= P_DIST && id <= P_REV) || id == P_GLIDE || id == P_PAN ||
         id == P_DETUNE || (id >= P_FM1_ATK && id <= P_FM4_LEVEL) || (id >= P_SOFS && id <= P_LN7) ||
         id == P_DTONE || id == P_MSSLW || id == P_FCUT || id == P_FRES || (id >= P_MS0 && id <= P_MS15) || id >= P_E0));   /* (the sequence offset OFS
         * PIT, the DRUM lane levels, DIST's TONE, the modulation sequence's slew and levels, E0..E7) */
 }
-/* the range of id's values on track t (MOT_DJF: the global's) */
+/* the range of id's values on track t (MOT_DJF, MOT_AGE: the global's) */
 static const param_desc_t *motion_desc(const track_t *t, uint32_t id)
 {
-    return id == MOT_DJF ? &GP[G_DJF] : param_desc_of(eng_idx(t->eng_req), id);
+    return id == MOT_DJF ? &GP[G_DJF] : id == MOT_AGE ? &GP[G_TAGE] : param_desc_of(eng_idx(t->eng_req), id);
 }
+static int motion_global(uint32_t id) { return id == MOT_DJF || id == MOT_AGE; }   /* a global's record: automation only */
 /* the DJ FILTER as the knob set it (what a save keeps): its records' value is the music's, not the knob's */
 static int16_t motion_djf_value(void) { return motion_djf_on ? motion_djf_base : song.g[G_DJF]; }
 /* track k's records stop moving it: the knob's value back when no track's does */
@@ -62,6 +68,17 @@ static void motion_djf_off(uint32_t k)
     if (!motion_djf_on)
         song.g[G_DJF] = motion_djf_base;
 }
+/* (Braindancer 0.8) TAPE's six (k 0 AGE, 1..5 its details) as the knob and the hand set them (what a save keeps) */
+static int16_t motion_age_value(uint32_t k) { return motion_age_on ? motion_age_base[k] : song.g[G_TAGE + k]; }
+/* track k's records stop moving them: the six back when no track's moves them */
+static void motion_age_off(uint32_t k)
+{
+    if (!((motion_age_on >> k) & 1u))
+        return;
+    motion_age_on &= (uint8_t)~(1u << k);
+    if (!motion_age_on)
+        memcpy(&song.g[G_TAGE], motion_age_base, sizeof motion_age_base);
+}
 static int motion_valid(const motion_store_t *m)
 {
     uint32_t i, j;
@@ -69,7 +86,7 @@ static int motion_valid(const motion_store_t *m)
     for (i = 0; i < m->count; i++) {
         const motion_event_t *e = &m->event[i];
         if (!motion_param(MOTION_ID(e)) || MOTION_VAL(e) < -64 || MOTION_VAL(e) > 127 ||
-            (MOTION_ID(e) == MOT_DJF && (e->param & MOTION_LOCK))) return 0;
+            (motion_global(MOTION_ID(e)) && (e->param & MOTION_LOCK))) return 0;
         for (j = 0; j < i; j++)
             if (MOTION_PLACE(&m->event[j]) == MOTION_PLACE(e) && MOTION_ID(&m->event[j]) == MOTION_ID(e)) return 0;
     }
@@ -130,6 +147,8 @@ static int16_t motion_base_value(const track_t *t, uint32_t id)
     uint32_t k = trk_index(t);
     if (id == MOT_DJF)
         return motion_djf_value();
+    if (id == MOT_AGE)
+        return motion_age_value(0);
     return (motion_active[k][id / 32u] >> (id % 32u)) & 1u ? motion_base[k][id] : t->p[id];
 }
 static void motion_restore(track_t *t)
@@ -138,6 +157,7 @@ static void motion_restore(track_t *t)
     for (id = 0; id < P_COUNT; id++)
         if ((motion_active[k][id / 32u] >> (id % 32u)) & 1u) t->p[id] = motion_base[k][id];
     motion_djf_off(k);
+    motion_age_off(k);
     memset(motion_active[k], 0, sizeof motion_active[k]);
     memset(motion_locked[k], 0, sizeof motion_locked[k]);
     motion_unguard(f);
@@ -191,7 +211,7 @@ static int motion_put(track_t *t, uint32_t step, uint32_t id, int16_t value, uin
 {
     uint32_t k = trk_index(t), i, f;
     const param_desc_t *d;
-    if (k >= NTRK || step >= NSTEP || !motion_param(id) || (id == MOT_DJF && kind)) return 1;   /* (MOT_DJF: no lock) */
+    if (k >= NTRK || step >= NSTEP || !motion_param(id) || (motion_global(id) && kind)) return 1;   /* (MOT_DJF, MOT_AGE: no lock) */
     d = motion_desc(t, id);
     if (value < d->min || value > d->max || value < -64 || value > 127) return 1;
     value = (int16_t)param_fit(d, value);                    /* (a retired KIT: the kit it plays) */
@@ -248,6 +268,15 @@ static int motion_capture(track_t *t, uint32_t id, int16_t value)
         motion_unguard(f);
         return 0;
     }
+    if (id == MOT_AGE && (!rec_on(t) || t != TSEL)) {   /* (0.8) AGE's knob while its records play: the new base (the six) */
+        f = motion_guard();
+        if (motion_age_on) {
+            motion_age_base[0] = (int16_t)clamp(value, 0, 100);
+            tape_age_map(value, motion_age_base + 1);
+        }
+        motion_unguard(f);
+        return 0;
+    }
     if (!rec_on(t) || t != TSEL) {
         /* A live edit becomes a new base, even when an earlier motion value is
          * currently sounding. Subsequent recorded events can still override it. */
@@ -266,6 +295,12 @@ static int motion_capture(track_t *t, uint32_t id, int16_t value)
     if (id == MOT_DJF) {                                /* (motion_djf_set took the base: a stop puts it back) */
         if (!motion_djf_on) motion_djf_base = value;
         motion_djf_on |= (uint8_t)(1u << k);
+    } else if (id == MOT_AGE) {                         /* (motion_age_set took the six: a stop puts them back) */
+        if (!motion_age_on) {
+            motion_age_base[0] = (int16_t)clamp(value, 0, 100);
+            tape_age_map(value, motion_age_base + 1);
+        }
+        motion_age_on |= (uint8_t)(1u << k);
     } else if ((motion_base_valid >> k) & 1u) motion_active[k][id / 32u] |= 1u << (id % 32u);
     motion_unguard(f);
     return motion_set_event(t, idx, id, value);
@@ -282,6 +317,20 @@ static void motion_djf_set(track_t *t, int16_t v)
     song.g[G_DJF] = (int16_t)clamp(v, -64, 63);
     motion_unguard(f);
     (void)motion_capture(t, MOT_DJF, song.g[G_DJF]);
+}
+/* (Braindancer 0.8) AGE turned to v (FX > MASTER KNOB 4, the editor): tape_age_apply(v) (AGE and its five on its map);
+ * recording on track t (armed, playing, selected), a MOT_AGE record at the nearest step, the six before the first turn
+ * kept to come back at the stop (as motion_djf_set) */
+static void motion_age_set(track_t *t, int16_t v)
+{
+    uint32_t f = motion_guard();
+    if (rec_on(t) && t == TSEL && !motion_age_on) {
+        memcpy(motion_age_base, &song.g[G_TAGE], sizeof motion_age_base);
+        motion_age_on |= (uint8_t)(1u << trk_index(t));
+    }
+    motion_unguard(f);
+    tape_age_apply(v);
+    (void)motion_capture(t, MOT_AGE, song.g[G_TAGE]);
 }
 /* step `step` starts: the locks of the step before go back to what sounds without them: the latest automation event
  * of track t's id at a step up to this one in this pass (motion_restore at step 0 starts each pass), else the sound's
@@ -328,6 +377,13 @@ static __attribute__((noinline)) void motion_step(track_t *t, uint32_t step, con
             if (!motion_djf_on) motion_djf_base = song.g[G_DJF];
             motion_djf_on |= (uint8_t)(1u << k);
             song.g[G_DJF] = (int16_t)clamp(MOTION_VAL(e), -64, 63);
+            continue;
+        }
+        if (id == MOT_AGE) {                            /* (Braindancer 0.8) TAPE's AGE: AGE and its five (the sound reads
+                                                         * the five: fx.c tape_block) */
+            if (!motion_age_on) memcpy(motion_age_base, &song.g[G_TAGE], sizeof motion_age_base);
+            motion_age_on |= (uint8_t)(1u << k);
+            tape_age_apply(MOTION_VAL(e));
             continue;
         }
         const param_desc_t *d = param_desc_of(eng_idx(t->eng_req), id);
@@ -398,7 +454,7 @@ static int motion_move(track_t *t, uint32_t i, uint32_t step, uint32_t id, int16
     int32_t at;
     uint32_t f;
     if (i >= motion.count || MOTION_TRK(&motion.event[i]) != trk_index(t) || step >= NSTEP || !motion_param(id) ||
-        (id == MOT_DJF && (motion.event[i].param & MOTION_LOCK)))
+        (motion_global(id) && (motion.event[i].param & MOTION_LOCK)))
         return 1;
     at = motion_find(t, step, id);
     if (at >= 0 && (uint32_t)at != i)

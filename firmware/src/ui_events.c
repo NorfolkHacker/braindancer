@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* Felucca 1.1.5: SEQ > AUTO LIST, the selected track's parameter locks and automation events as a list (the page after
  * AUTOMATION; included by ui.c). A row: its kind (LOCK / AUTO), its step, its parameter, its value; in the order of
  * the steps, then of the parameters; the last row is + ADD LOCK.
@@ -21,7 +22,8 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range);
 static int ev_id_ok(const track_t *t, uint32_t id)
 {
     const param_desc_t *d;
-    if (id == MOT_DJF)                                  /* (0.9.1) the DJ FILTER's records: listed (GLO > MIXER records them) */
+    if (id == MOT_DJF || id == MOT_AGE)                 /* (0.9.1) the DJ FILTER's records: listed (GLO > MIXER records them);
+                                                         * (Braindancer 0.8) AGE's (FX > MASTER KNOB 4) */
         return 1;
     if (id >= P_COUNT || !motion_param(id) || (id >= P_FM1_ATK && id <= P_FM4_LEVEL && id != P_TCHAN && id != P_MORPH && id != P_DXIMG &&
                                                               id != P_HVEL && id != P_HTIM && id != P_HGAT && id != P_HRQ))

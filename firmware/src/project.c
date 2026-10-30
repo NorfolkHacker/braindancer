@@ -799,6 +799,15 @@ static uint32_t proj_djf_events(const motion_store_t *m)
         n += MOTION_ID(&m->event[i]) == MOT_DJF;
     return n;
 }
+/* (Braindancer 0.8) TAPE's AGE records (core.h MOT_AGE) among m's: kept in 'T' 'P' alone (out of the main block and 'M'
+ * 'G', which firmware before 0.8 reads and refuses a record it does not know in) */
+static uint32_t proj_age_events(const motion_store_t *m)
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < m->count && i < MOTION_MAX; i++)
+        n += MOTION_ID(&m->event[i]) == MOT_AGE;
+    return n;
+}
 /* (0.9.1) MICRO's fine part (core.h SF_MFINE: the 64ths above the sixteenth cwhen holds): FUNC's block 'M' 'F' after the
  * others, a byte of the tracks it holds (bit t), then each of them: 64 steps x 2 bits (step i at byte i / 4, bits 2 (i %
  * 4)); only when a step has one. Firmware before 0.9.1 stops at the block: it plays such a step at the sixteenth below
@@ -879,10 +888,11 @@ static int proj_pl_used(const project_t *q)
     return 0;
 }
 /* (Braindancer 0.8) TAPE (core.h G_TAGE .. G_TTONE): FUNC's 'T' 'P' block, the very last (after 'P' 'L', or what is
- * last before it; firmware before stops reading at its end), written only when one of the six is not 0: 'T' 'P', six
- * bytes (AGE WOW FLUTTER SAT HISS TONE, 0..100), a count n (0), n records (none yet). Without it (every project before,
- * and one with TAPE all 0: its bytes as before): all six 0, TAPE off (proj_unpack_c's G_NSTORE .. G_COUNT loop gives
- * GP[].def) */
+ * last before it; firmware before stops reading at its end), written only when one of the six is not 0 or AGE has
+ * records: 'T' 'P', six bytes (AGE WOW FLUTTER SAT HISS TONE, 0..100), a count n, then n records as 'M' 'G''s, each
+ * MOT_AGE's (task 4: AGE's automation; any other refuses the load). Without it (every project before, and one with TAPE
+ * all 0 and no AGE record: its bytes as before): all six 0, TAPE off (proj_unpack_c's G_NSTORE .. G_COUNT loop gives
+ * GP[].def), no AGE record */
 #define PROJ_TP_N 7u
 static uint32_t proj_tp_byte(const project_t *q, uint32_t k)
 {
@@ -917,7 +927,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 2u + PROJ_MR_N;
     if (proj_pl_used(q))                                /* (ACID FM 0.6) PLAYS's, when one is not ALWAYS */
         n += 2u + PROJ_PL_N;
-    if (proj_tp_used(q))                                /* (Braindancer 0.8) TAPE's, when one is not 0 */
+    if (proj_tp_used(q) || proj_age_events(&q->motion))   /* (Braindancer 0.8) TAPE's, when one is not 0 or AGE has records
+                                                         * (theirs counted with the motion's above) */
         n += 2u + PROJ_TP_N;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
@@ -1001,13 +1012,13 @@ static int proj_pack(project_store_t *out, const project_t *q)
         }
     }
     memcpy(b + pos, &q->chain, sizeof q->chain); pos += sizeof q->chain;
-    {   /* the motion: its head (the count without the DJ FILTER's records), the others in order */
-        uint32_t nd = proj_djf_events(&q->motion);
+    {   /* the motion: its head (the count without the DJ FILTER's and AGE's records), the others in order */
+        uint32_t nd = proj_djf_events(&q->motion) + proj_age_events(&q->motion);
         memcpy(b + pos, &q->motion, 4u);
         b[pos] = (uint8_t)(q->motion.count - nd);
         pos += 4u;
         for (i = 0; i < q->motion.count; i++)
-            if (MOTION_ID(&q->motion.event[i]) != MOT_DJF) {
+            if (MOTION_ID(&q->motion.event[i]) != MOT_DJF && MOTION_ID(&q->motion.event[i]) != MOT_AGE) {
                 memcpy(b + pos, &q->motion.event[i], sizeof q->motion.event[0]);
                 pos += sizeof q->motion.event[0];
             }
@@ -1103,11 +1114,16 @@ static int proj_pack(project_store_t *out, const project_t *q)
         for (t = 0; t < NTRK; t++)
             b[pos++] = (uint8_t)proj_pl_byte(q, t);
     }
-    if (proj_tp_used(q)) {                              /* (Braindancer 0.8) TAPE, after 'P' 'L' (the last) */
+    if (proj_tp_used(q) || proj_age_events(&q->motion)) {   /* (Braindancer 0.8) TAPE, after 'P' 'L' (the last) */
         b[pos++] = 'T'; b[pos++] = 'P';
         for (t = 0; t < 6u; t++)
             b[pos++] = (uint8_t)proj_tp_byte(q, t);
-        b[pos++] = 0;                                   /* (its records: none) */
+        b[pos++] = (uint8_t)proj_age_events(&q->motion);   /* AGE's records (task 4) */
+        for (i = 0; i < q->motion.count; i++)
+            if (MOTION_ID(&q->motion.event[i]) == MOT_AGE) {
+                memcpy(b + pos, &q->motion.event[i], sizeof q->motion.event[0]);
+                pos += sizeof q->motion.event[0];
+            }
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1408,10 +1424,18 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         pos += 2u + PROJ_PL_N;
     }
     if (pos + 2u + PROJ_TP_N <= room && b[pos] == 'T' && b[pos + 1u] == 'P') {   /* (Braindancer 0.8) TAPE (else all 0:
-                                                         * the loop above gave GP[].def) */
+                                                         * the loop above gave GP[].def; no AGE record) */
+        uint32_t n = b[pos + 2u + 6u], k;               /* (its count: AGE's records, as 'M' 'G''s) */
         for (t = 0; t < 6u; t++)
             q->g[G_TAGE + t] = (int16_t)(b[pos + 2u + t] > 100u ? 100u : b[pos + 2u + t]);
         pos += 2u + PROJ_TP_N;
+        if (q->motion.count + n > MOTION_MAX || pos + n * sizeof q->motion.event[0] > room) return 0;
+        memcpy(q->motion.event + q->motion.count, b + pos, n * sizeof q->motion.event[0]);
+        for (k = 0; k < n; k++)
+            if (MOTION_ID(&q->motion.event[q->motion.count + k]) != MOT_AGE) return 0;
+        q->motion.count = (uint8_t)(q->motion.count + n);
+        if (!motion_valid(&q->motion)) return 0;
+        pos += n * sizeof q->motion.event[0];
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
@@ -1693,6 +1717,8 @@ static void project_capture(project_t *p)
     for (i = 0; i < G_COUNT; i++)
         p->g[i] = song.g[i];
     p->g[G_DJF] = motion_djf_value();                   /* (0.9.1) the knob's, not what its automation set */
+    for (i = 0; i < 6u; i++)                            /* (Braindancer 0.8) TAPE's six: the knob's and the hand's, as G_DJF */
+        p->g[G_TAGE + i] = motion_age_value(i);
     p->sel = song.sel;
     p->parts = NPART;
     p->phys = PROJ_PHYS;
@@ -2558,7 +2584,8 @@ static uint32_t proj_music_sig(void)
     }
     for (i = 0; i < G_COUNT; i++)
         if (i != G_SLOT && i != G_LOAD && i != G_SAVE) {
-            int16_t v = i == G_DJF ? motion_djf_value() : song.g[i];   /* (0.9.1: the knob's, not its records') */
+            int16_t v = i == G_DJF ? motion_djf_value() : i >= G_TAGE && i <= G_TTONE ? motion_age_value(i - G_TAGE) :
+                        song.g[i];                      /* (0.9.1: the knob's, not its records'; 0.8: TAPE's six too) */
             h = as_mix(h, &v, sizeof v);
         }
     h = as_mix(h, &motion, sizeof motion);

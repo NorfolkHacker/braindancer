@@ -3415,7 +3415,7 @@ function renderMotion() {
   if (rows.contains(document.activeElement)) return;
   rows.replaceChildren(el("tr", {}, ...["motionStep", "motionParam", "motionValue"].map(k => el("th", {text:t(k)})), el("th")),
     ...m.events.map(e => {
-      const desc = e.param === 127 ? d.gdesc[17] : d.pdesc[e.param], label = desc?.label || `P${e.param}`;   /* (0.9.1: 127 the DJ FILTER's) */
+      const desc = e.param === 127 ? d.gdesc[17] : e.param === 126 ? d.gdesc[96] : d.pdesc[e.param], label = desc?.label || `P${e.param}`;   /* (0.9.1: 127 the DJ FILTER's; Braindancer 0.8: 126 AGE's) */
       const value = el("input", {type:"number",min:desc?.min ?? -8192,max:desc?.max ?? 8191,value:e.value,"aria-label":`${e.step + 1} ${label}`});
       value.addEventListener("change", () => op(async () => {
         assertSession(d);

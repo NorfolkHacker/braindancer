@@ -1073,6 +1073,26 @@ static int ed_tape_age(void)
     ok &= song.g[G_TAGE] == 100 && tape_age_custom() == 0u && song.g[G_TTONE] == TAPE_AGE_PT[2][4];
     bad += check("SET of AGE (G 96): TAPE's five on its map (50: TAPE_AGE_PT[1], none by hand); a detail SET after it overrides "
                  "that one; 150 clamps to 100", ok);
+    {   /* (Braindancer 0.8 task 4) SET 1 96 70 while the selected track records: AGE 70 and its five, a MOT_AGE record */
+        int16_t m[5], b6[6];
+        uint32_t i, n = 0;
+        reset();
+        song.sel = 0;
+        memcpy(b6, &song.g[G_TAGE], sizeof b6);
+        song.rec = 1;
+        seq_start();
+        a[1] = G_TAGE; a[2] = (8192 + 70) & 127; a[3] = (8192 + 70) >> 7;
+        request(ED_SET, a, 4);
+        tape_age_map(70, m);
+        for (i = 0; i < motion.count; i++)
+            n += MOTION_ID(&motion.event[i]) == MOT_AGE && MOTION_TRK(&motion.event[i]) == 0u && MOTION_VAL(&motion.event[i]) == 70;
+        ok = song.g[G_TAGE] == 70 && !memcmp(&song.g[G_TWOW], m, sizeof m) && n == 1u;
+        seq_stop();
+        song.rec = 0;
+        ok &= !memcmp(&song.g[G_TAGE], b6, sizeof b6);   /* (the stop: the six before the record) */
+        bad += check("SET of AGE (G 96) 70 while T1 records: AGE 70 and its five, recorded (a MOT_AGE record); the stop puts "
+                     "back the six before", ok);
+    }
     return bad;
 }
 

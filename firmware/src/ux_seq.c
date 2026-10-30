@@ -658,7 +658,7 @@ static __attribute__((noinline)) const char *uxq_vtext(uint32_t id, char *val, u
                 uxq_cat(val, nv, UXQ_VW[UXQ_V_ADD]);
         } else if (id == ID_SQ_ESTEP)
             uxq_num(val, nv, (int32_t)step + 1);
-        else if ((pid >= P_COUNT && pid != MOT_DJF) || !ev_id_ok(t, pid))
+        else if ((pid >= P_COUNT && pid != MOT_DJF && pid != MOT_AGE) || !ev_id_ok(t, pid))
             uxq_cat(val, nv, UXQ_WORD[UXQ_W_NONE]);
         else if (id == ID_SQ_EPARAM) {
             char b[12];

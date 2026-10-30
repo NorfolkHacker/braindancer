@@ -1337,7 +1337,7 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
             undo_mark();
         age_any = 1;
         age_ms = fm1_ms;
-        tape_age_apply(v);
+        motion_age_set(TSEL, (int16_t)v);               /* (task 4: recorded as the DJ FILTER's knob is) */
         return;
     }
     *vp = (int16_t)v;

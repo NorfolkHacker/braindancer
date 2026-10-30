@@ -11,7 +11,9 @@
  * 3. in and out of the chain without a click; out again within its fade, and not run after.
  * 4. at rest after a note: tape_idle, its states exactly 0, the silence path taken.
  * 5. stored: no block when all 0 (the bytes as before), 'T' 'P' the last block, the round trip, old projects, 255
- *    clamped, NEW PROJECT, UNDO. */
+ *    clamped, NEW PROJECT, UNDO.
+ * 6. AGE's automation (MOT_AGE, as the DJ FILTER's): recorded, played back (the five with it), the six back at a stop,
+ *    no lock; its records in 'T' 'P' alone (every byte before as without them), a crafted / oversize block refused. */
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -585,6 +587,160 @@ static void test_store(void)
     tape_reset();
 }
 
+/* ---- 6. AGE's automation (as the DJ FILTER's: tests/djf_test.c test_automation): MOT_AGE records, kept in 'T' 'P' ---- */
+static void age_steps(track_t *t, uint32_t n, int half)  /* n steps on (a 1/16 at 120), each in two ticks when half */
+{
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        uint32_t s = step_samples(t, div_samples((uint32_t)t->p[P_SDIV]), t->seq_idx);
+        if (half) { seq_tick(t, s / 2u); seq_tick(t, s - s / 2u); }
+        else seq_tick(t, s);
+    }
+}
+static int age_six(const int16_t *g, const int16_t *w) { return !memcmp(g, w, 6u * sizeof g[0]); }
+static int age_on_map(int32_t age)                       /* song.g: AGE age and its five on the map */
+{
+    int16_t d[5];
+    tape_age_map(age, d);
+    return song.g[G_TAGE] == age && !memcmp(&song.g[G_TWOW], d, sizeof d);
+}
+static uint32_t age_steps_of(const motion_store_t *m, uint32_t k)   /* the steps of track k's MOT_AGE records (bit) */
+{
+    uint32_t i, s = 0;
+    for (i = 0; i < m->count; i++)
+        if (MOTION_ID(&m->event[i]) == MOT_AGE && MOTION_TRK(&m->event[i]) == k) s |= 1u << MOTION_STEP(&m->event[i]);
+    return s;
+}
+static int age_lock_refused(void)                       /* a store holding an AGE lock: invalid; the event itself: valid */
+{
+    static motion_store_t m;
+    memset(&m, 0, sizeof m);
+    m.count = 1;
+    motion_at(&m.event[0], 0u << 6 | 3u, 10);
+    m.event[0].param = (uint8_t)MOT_AGE;
+    if (!motion_valid(&m)) return 0;
+    m.event[0].param = (uint8_t)(MOT_AGE | MOTION_LOCK);
+    return !motion_valid(&m);
+}
+static void test_age_auto(void)
+{
+    static project_store_t st, st2, sx;
+    static project_t q, q2, r;
+    track_t *t;
+    int16_t b0[6];
+    uint32_t i, k, n, n2, sum, steps;
+    int ok, same;
+    char what[200];
+    ui_power_on();
+    tape_reset();
+    t = &trk[0];
+    song.sel = 0;
+    tape_age_apply(20);                                 /* the knob before, and SAT by hand */
+    song.g[G_TSAT] = 7;
+    memcpy(b0, &song.g[G_TAGE], sizeof b0);
+    song.rec = 1;
+    seq_start();
+    seq_tick(t, CTL);
+    motion_age_set(t, 30);                              /* step 0 */
+    age_steps(t, 4u, 1);
+    nav_put(SEC_FX, "MASTER");                          /* step 4: FX > MASTER KNOB 4 (AGE), recording */
+    frames(200);
+    turn(EN_K4, 30);
+    age_steps(t, 4u, 1);
+    motion_age_set(t, 90);                              /* step 8 */
+    steps = age_steps_of(&motion, 0);
+    ok = steps == (1u << 0 | 1u << 4 | 1u << 8) && age_on_map(90) && proj_age_events(&motion) == 3u;
+    snprintf(what, sizeof what, "recording: AGE turned at steps 0, 4, 8 writes three MOT_AGE records on T1 (steps %#x)",
+             (unsigned)steps);
+    ck(what, ok);
+    ck("AUTO LIST lists them, named AGE", ev_id_ok(t, MOT_AGE) && str_eq(track_desc(t, MOT_AGE)->label, "AGE") &&
+       motion_desc(t, MOT_AGE) == &GP[G_TAGE]);
+    seq_stop();
+    ck("stop: the six back to their values before the first record (AGE 20, SAT 7 by hand)", age_six(&song.g[G_TAGE], b0));
+    seq_start();
+    seq_tick(t, CTL);
+    ok = age_on_map(30);
+    song.g[G_TWOW] = 3;                                 /* WOW by hand while the records play */
+    age_steps(t, 4u, 0);
+    ok &= age_on_map(60);
+    ck("playback: step 0's record sets AGE 30 and its five; a WOW by hand meanwhile overwritten at step 4's (AGE 60)", ok);
+    ck("playback: the base (a save's) is the knob's, not the records'", motion_base_value(t, MOT_AGE) == b0[0]);
+    project_capture(&q);
+    ok = age_six(&q.g[G_TAGE], b0);
+    age_steps(t, 4u, 0);
+    ok &= age_on_map(90);
+    ck("playback: step 8's (AGE 90); a save keeps the six the knob set", ok);
+    seq_stop();
+    ck("stop again: the six back", age_six(&song.g[G_TAGE], b0));
+    song.rec = 0;
+    ck("no lock for it (motion_put .., MOTION_LOCK refused with 1; motion_valid refuses one)",
+       motion_put(t, 3, MOT_AGE, 10, MOTION_LOCK) == 1 && motion_param(MOT_AGE) && age_steps_of(&motion, 0) == 0x111u &&
+       age_lock_refused());
+    (void)motion_set_event(t, 7, P_REV, 90);            /* (a track parameter's record, a DJ FILTER's) */
+    (void)motion_set_event(t, 9, MOT_DJF, -10);
+    project_capture(&q);
+    q2 = q;                                             /* the same project without the AGE records */
+    for (i = 0, n = 0; i < q.motion.count; i++)
+        if (MOTION_ID(&q.motion.event[i]) != MOT_AGE) q2.motion.event[n++] = q.motion.event[i];
+    memset(q2.motion.event + n, 0, (MOTION_MAX - n) * sizeof q2.motion.event[0]);
+    q2.motion.count = (uint8_t)n;
+    n = proj_packed_size(&q);
+    n2 = proj_packed_size(&q2);
+    ok = proj_pack(&st, &q) && proj_pack(&st2, &q2) && n == n2 + 3u * sizeof q.motion.event[0] && !memcmp(st.raw, st2.raw, n2 - 1u);
+    ok &= st.raw[n2 - 1u] == 3u && st2.raw[n2 - 1u] == 0u && st.raw[n2 - 1u - PROJ_TP_N] == 'P' && st.raw[n2 - 2u - PROJ_TP_N] == 'T';
+    for (k = 0; k < 3u; k++)
+        ok &= (st.raw[n2 + 4u * k + 1u] & 0x7Fu) == MOT_AGE;
+    for (k = 0; k + 3u < n2; k++)                       /* ('M' 'G': the DJ FILTER's one) */
+        if (st.raw[k] == 'M' && st.raw[k + 1u] == 'G' && st.raw[k + 2u] == 1u && (st.raw[k + 4u] & 0x7Fu) == MOT_DJF) break;
+    ok &= k + 3u < n2;
+    ck("FUNC: every byte as the project without AGE records (the main motion, 'M' 'G' the DJ FILTER's alone) up to 'T' 'P''s "
+       "count: 3, then the three MOT_AGE records", ok);
+    ok = proj_import(&r, &st, sizeof st) && r.motion.count == q.motion.count && age_six(&r.g[G_TAGE], b0) &&
+         proj_age_events(&r.motion) == 3u && proj_djf_events(&r.motion) == 1u;
+    for (i = 0, same = 1; i < q.motion.count; i++) {
+        int found = 0;
+        for (k = 0; k < r.motion.count; k++)
+            found |= !memcmp(&q.motion.event[i], &r.motion.event[k], sizeof q.motion.event[0]);
+        same &= found;
+    }
+    ck("loaded back: the same records, the knob's six", ok && same);
+    ok = proj_import(&r, &st2, sizeof st2) && !proj_age_events(&r.motion) && r.motion.count == q2.motion.count;
+    ck("loaded back without AGE records ('T' 'P' count 0, as Task 1 wrote it): none", ok);
+    sx = st;                                            /* a record in 'T' 'P' that is not AGE's: refused */
+    sx.raw[n2 + 4u + 1u] = (uint8_t)((sx.raw[n2 + 4u + 1u] & 0x80u) | P_REV);
+    sum = proj_hash(sx.raw, PROJ_STORE_SIZE - 4u);
+    memcpy(sx.raw + PROJ_STORE_SIZE - 4u, &sum, 4);
+    ok = !proj_import(&r, &sx, sizeof sx);
+    sx = st;                                            /* (as is, rehashed: loads) */
+    sum = proj_hash(sx.raw, PROJ_STORE_SIZE - 4u);
+    memcpy(sx.raw + PROJ_STORE_SIZE - 4u, &sum, 4);
+    ok &= proj_import(&r, &sx, sizeof sx) != 0;
+    ck("a crafted 'T' 'P' holding a P_REV record: the load refused (proj_unpack_c 0)", ok);
+    ok = 1;
+    for (k = 4u; k < 256u; k += k < 8u ? 1u : 37u) {   /* a count past its records (zeros after: not AGE's), past 64 */
+        sx = st;
+        sx.raw[n2 - 1u] = (uint8_t)k;
+        sum = proj_hash(sx.raw, PROJ_STORE_SIZE - 4u);
+        memcpy(sx.raw + PROJ_STORE_SIZE - 4u, &sum, 4);
+        ok &= !proj_import(&r, &sx, sizeof sx);
+    }
+    ck("'T' 'P' with a count past its records or past the 64: refused", ok);
+    ui_power_on();
+    tape_reset();
+    project_capture(&q);                                /* (TAPE all 0: no 'T' 'P', as 0.7's) */
+    ok = proj_pack(&st, &q) && !proj_tp_used(&q);
+    seq_start();
+    song.rec = 1;
+    motion_age_set(&trk[0], 40);                        /* (records in the song before the load) */
+    song.rec = 0;
+    seq_stop();
+    ok &= proj_age_events(&motion) == 1u && proj_import(&r, &st, sizeof st) && !project_restore_runtime(&r) &&
+          !proj_age_events(&r.motion) && !proj_age_events(&motion) && !song.g[G_TAGE];
+    ck("a 0.7 project (no 'T' 'P'): loads with no AGE records, TAPE off", ok);
+    ui_power_on();
+    tape_reset();
+}
+
 int main(void)
 {
     test_off();
@@ -593,6 +749,7 @@ int main(void)
     test_in_out();
     test_rest();
     test_store();
+    test_age_auto();
     printf(bad ? "tape: %d FAILED\n" : "tape: all checks ok\n", bad);
     return bad != 0;
 }

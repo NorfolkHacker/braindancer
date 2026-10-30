@@ -110,7 +110,12 @@ is no page any more: PAN on GLO > MIX (MIXER until ACID FM 0.5), MUTE the GLO la
 **Braindancer 0.8: 102 globals**: G 96 AGE, 97 WOW, 98 FLUTTER, 99 SAT, 100 HISS, 101 TONE: the master's TAPE, each
 0..100 (fmt PCT), 0 by default; every one of WOW .. TONE at 0 puts TAPE out of the chain (the output as before; AGE
 alone does nothing on its own: it is the macro that sets the five). Saved in FUNC's 'T' 'P' block (after 'P' 'L', the
-last) only when one is not 0; a project without it loads TAPE all 0 (off). NEW PROJECT resets them.
+last) only when one is not 0; a project without it loads TAPE all 0 (off). NEW PROJECT resets them. AGE is automated as
+the DJ FILTER is: a `SET` of G 96 while the selected track records is recorded as FX > MASTER's knob is, as `MOTION`
+records of id 126 (`MOT_AGE`, past every track parameter; automation only: op 5, a lock, is refused with 1), listed by the
+query as any other; each sets AGE and its five details at its step, and a stop puts back the six as they were. Stored in
+'T' 'P' alone (its count and records, as 'M' 'G''s), never in the main motion block or 'M' 'G' (firmware before 0.8
+refuses a record it does not know there; it stops reading before 'T' 'P').
 
 **ACID FM 0.6: 96 globals**: G 90..95 each track's PLAYS (T1..T6), on which loops of its pattern it plays: 0 ALWAYS, then
 1ST OF 2, EVERY 2ND, 1ST OF 3, 2ND OF 3, EVERY 3RD, 1ST OF 4, 2ND OF 4, 3RD OF 4, EVERY 4TH, 1ST OF 8, 1ST ONLY, NOT 1ST

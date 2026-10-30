@@ -586,6 +586,11 @@ static void step_set_ratchet(step_t *s, uint32_t hits)
  * event's; a stop or the loop's restart puts back the knob's (motion.c). Stored in FUNC's block 'M' 'G' (project.c) */
 #define MOT_DJF 127u
 _Static_assert(P_COUNT < MOT_DJF, "MOT_DJF past every track parameter");
+/* (Braindancer 0.8) MOT_AGE: a record of TAPE's AGE (G_TAGE), automation only, as MOT_DJF: it sets AGE and its five
+ * details (fx.c tape_age_apply) at its step; a stop or the loop's restart puts back the six as they were before (motion.c).
+ * Stored in FUNC's block 'T' 'P' alone (project.c: firmware before stops reading before it) */
+#define MOT_AGE 126u            /* (0.8) a record of TAPE's AGE (G_TAGE), automation only, as MOT_DJF */
+_Static_assert(P_COUNT < MOT_AGE, "MOT_AGE past every track parameter");
 typedef struct { uint8_t place, param; int16_t value; } motion_event_t;
 typedef struct { uint8_t count, on, rsv[2]; motion_event_t event[MOTION_MAX]; } motion_store_t;
 static void motion_at(motion_event_t *e, uint32_t place, int16_t v)   /* place: track << 6 | step; v: the value */

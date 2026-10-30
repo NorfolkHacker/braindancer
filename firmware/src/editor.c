@@ -453,8 +453,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
                 motion_djf_set(TSEL, (int16_t)clamp(ed_rv(a + 2), d->min, d->max));
             } else if (a[0] == 1 && a[1] == G_TAGE) {    /* (Braindancer 0.8) AGE: as FX > MASTER's knob, TAPE's five details
                                                            * on its map with it (fx.c: the sound reads the details; they go
-                                                           * back to the editor as pushes) */
-                tape_age_apply(clamp(ed_rv(a + 2), 0, 100));
+                                                           * back to the editor as pushes), recorded as the knob is */
+                motion_age_set(TSEL, (int16_t)clamp(ed_rv(a + 2), 0, 100));
             } else if (d->max > d->min) {
                 *vp = (int16_t)enum_orig(d, clamp(ed_rv(a + 2), d->min, d->max));
                 if (a[0] == 0)
