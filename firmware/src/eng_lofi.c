@@ -628,6 +628,10 @@ static const preset_t LOFI_PRESETS[] = {
     {"TRI BASS", {0, 1, 64, 0, 80, 0, 0, 0}, {0, 60, 90, 20}, 0, 1 | TAG(BASS), FX(0, 0, 5, 0), PAT(2)},
     {"SOFT CHIP", {1, 0, 64, 0, 85, 8, 0, 0}, {5, 70, 80, 50}, 0, TAG(KEYS), FX(0, 20, 35, 40), PAT(6)},
     {"SAW CHIP", {2, 2, 64, 0, 100, 10, 0, 0}, {0, 65, 90, 35}, 0, 1 | TAG(LEAD), FX(5, 0, 35, 25), PAT(4)},
+    /* (Braindancer 0.8) */
+    {"DUSTY KEYS", {0, 1, 64, 30, 70, 25, 0, 0}, {0, 70, 60, 50}, 0, TAG(KEYS), FX(10, 40, 30, 40), PAT(6)},
+    {"WOBBLE LEAD", {0, 0, 32, 10, 95, 70, 10, 0}, {4, 65, 95, 40}, 0, 1 | TAG(LEAD), FX(0, 20, 45, 30), PAT(4)},
+    {"CRUSH BASS", {1, 1, 0, 45, 75, 0, 0, 0}, {0, 50, 60, 20}, 0, 1 | TAG(BASS), FX(15, 0, 10, 5), PAT(2)},
 };
 
 static const engine_t ENG_LOFI = {

@@ -270,6 +270,14 @@ static const preset_t ANALOG_PRESETS[] = {
     {"DARK PAD", {0, 18, 64, 6, 38, 30, 10, -12}, {70, 95, 120, 100}, 12, TAG(PAD), FX(0, 55, 30, 75), PAT(5)},
     {"GLASS KEYS", {3, 8, 60, 0, 120, 0, 0, 19}, {0, 82, 20, 65}, 0, TAG(KEYS), FX(0, 35, 35, 50), PAT(6)},
     {"ORGAN SQR", {1, 4, 64, 0, 100, 0, 5, 12}, {0, 64, 127, 30}, 0, TAG(KEYS), FX(0, 35, 10, 35), PAT(6)},
+    /* (Braindancer 0.8) an IDM set: squelchy acid, detuned pads, dusty wobbly leads */
+    {"ACID SQUELCH", {0, 0, 0, 0, 30, 118, 45, 0}, {0, 52, 10, 28}, 62, 1 | TAG(BASS), FX(25, 0, 40, 10), PAT(1)},
+    {"ACID SQUARE", {1, 0, 0, 0, 36, 110, 30, 0}, {0, 48, 15, 25}, 56, 1 | TAG(BASS), FX(15, 0, 35, 10), PAT(1)},
+    {"ACID LEAD", {0, 8, 50, 0, 48, 100, 35, 12}, {0, 60, 40, 35}, 50, 1 | TAG(LEAD), FX(20, 10, 45, 25), PAT(4)},
+    {"DETUNE PAD", {7, 32, 64, 4, 52, 15, 0, 0}, {75, 95, 118, 100}, 10, TAG(PAD), FX(0, 70, 30, 80), PAT(5)},
+    {"DUSTY LEAD", {2, 14, 50, 22, 60, 30, 20, 12}, {8, 75, 95, 50}, 15, 1 | TAG(LEAD), FX(10, 40, 45, 40), PAT(4)},
+    {"RUBBER BASS", {3, 6, 40, 0, 44, 70, 25, -12}, {0, 55, 45, 22}, 45, 1 | TAG(BASS), FX(10, 0, 15, 10), PAT(2)},
+    {"BRAIN BLIPS", {1, 12, 50, 0, 70, 60, 0, 19}, {0, 45, 0, 30}, 40, TAG(PLUCK), FX(0, 20, 60, 40), PAT(3)},
 };
 
 static const engine_t ENG_ANALOG = {

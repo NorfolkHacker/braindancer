@@ -516,6 +516,11 @@ static const preset_t FM6_PRESETS[] = {
     {"FM STRINGS", {0, 0, -10, 0, 0, 0, 35, 4}, {0, 0, 127, 0}, 0, TAG(PAD), FX(0, 55, 25, 65), PAT(5)},
     {"HARD BASS", {0, 2, 25, 0, 0, 0, 0, 2}, {0, 0, 127, 0}, 0, 1 | TAG(BASS), FX(15, 0, 10, 5), PAT(2)},
     {"WOOD", {0, 0, -15, 0, 0, 0, 0, 5}, {0, 0, 127, 0}, 0, TAG(PLUCK), FX(0, 10, 30, 45), PAT(3)},
+    /* (Braindancer 0.8) bells, glassy keys, metallic basses */
+    {"GLASS EP", {0, 0, -12, 0, 10, 0, 25, 0}, {0, 0, 127, 0}, 0, TAG(KEYS), FX(0, 50, 30, 50), PAT(6)},
+    {"METAL BASS", {0, 3, 30, 2, 0, 0, 0, 2}, {0, 0, 127, 0}, 0, 1 | TAG(BASS), FX(20, 0, 15, 10), PAT(2)},
+    {"TIN BELL", {0, 0, 18, 3, 0, 0, 12, 1}, {0, 0, 127, 0}, 0, TAG(BELL), FX(0, 20, 40, 70), PAT(7)},
+    {"MUSIC BOX", {0, 0, -8, 0, -15, 0, 0, 5}, {0, 0, 127, 0}, 0, TAG(PLUCK), FX(0, 10, 35, 60), PAT(3)},
 };
 
 static const engine_t ENG_FM6 = {

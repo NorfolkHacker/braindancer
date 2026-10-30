@@ -222,6 +222,10 @@ static const preset_t PHASE_PRESETS[] = {
     {"HARP", {3, 0, 70, 90, 0, 0, 0, 0}, {0, 85, 0, 70}, 0, TAG(PLUCK), FX(0, 15, 40, 55), PAT(3)},
     {"PD LEAD", {0, 2, 65, 55, 9, 0, 20, 10}, {4, 70, 95, 45}, 0, 1 | TAG(LEAD), FX(10, 10, 40, 30), PAT(4)},
     {"RING KEYS", {2, 4, 60, 60, 0, 1, 0, 0}, {0, 75, 25, 60}, 0, TAG(KEYS), FX(0, 25, 35, 50), PAT(6)},
+    /* (Braindancer 0.8) */
+    {"RESO SWEEP", {5, 0, 75, 95, 0, 0, 0, 0}, {0, 70, 25, 45}, 0, 1 | TAG(BASS), FX(15, 0, 35, 20), PAT(1)},
+    {"DIGI CHOIR", {5, 4, 32, 28, 14, 0, 0, 0}, {65, 95, 118, 100}, 0, TAG(PAD), FX(0, 65, 25, 85), PAT(5)},
+    {"CHIME KEYS", {6, 2, 70, 75, 6, 1, 0, 0}, {0, 80, 20, 70}, 0, TAG(BELL), FX(0, 25, 40, 60), PAT(7)},
 };
 
 static const engine_t ENG_PHASE = {

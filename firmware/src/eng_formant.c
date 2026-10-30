@@ -442,6 +442,10 @@ static const preset_t FORMANT_PRESETS[] = {
     {"SCAT EN", {0, 64, 0, 0, 96, 4, 76, 0}, {16, 60, 100, 60}, 0, 1 | TAG(VOX), FX(0, 0, 35, 30), PAT(4), WORDS(LG_EN, 17)},
     {"ROBOT EN", {0, 64, 0, -3, 127, 0, 90, 0}, {2, 65, 120, 56}, 0, 1 | TAG(VOX), FX(10, 10, 35, 30), PAT(4), WORDS(LG_EN, 6)},
     {"WHISPER JA", {0, 64, 0, 3, 50, 120, 52, 0}, {40, 90, 110, 80}, 0, TAG(VOX), FX(0, 40, 30, 70), PAT(5), WORDS(LG_JA, 7)},
+    /* (Braindancer 0.8) */
+    {"DREAM CHOIR", {0, 40, 40, 0, 35, 30, 58, 10}, {80, 95, 118, 100}, 0, TAG(VOX), FX(0, 75, 20, 95), PAT(5)},
+    {"AIR CHOIR", {80, 0, 30, 0, 30, 60, 50, 20}, {70, 90, 115, 95}, 0, TAG(VOX), FX(0, 65, 25, 90), PAT(5)},
+    {"LOW HUM PAD", {95, 64, 60, -12, 50, 20, 62, 5}, {60, 90, 115, 90}, 0, TAG(VOX), FX(0, 55, 20, 80), PAT(5)},
 };
 
 static const engine_t ENG_FORMANT = {

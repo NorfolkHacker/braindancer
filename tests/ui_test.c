@@ -3353,6 +3353,78 @@ static int test_chain(void)
  * Replaces 0.9.1's checks of PRESETS as the step cursor (SEQ STEP NOTE COMP ..), the bar (PATTERN's level), the slot /
  * project / row (USER PROJECT SONG AUTO LIST), nothing (TOOLS), the module (FX BUSES and the effects), the track (ENV,
  * LFO, CHORD, ARP), ROOT (SCL), KNOB 1's (EDIT's detail, STAGE, MOD, MSEQ) and the menu's rows: KNOB 1 picks those now */
+static int test_p7_presets(void)
+{
+    static const char *const OLD[5][25] = {
+        {"SAW LEAD","SOFT PAD","SQR BASS","PWM STR","ACID","SINE KEY","RAVE","SUB BASS","PLUCK","BRASS","WIND","STRINGS","SYNC LEAD","RING BELL","FAT BASS","JUNO PAD","REESE","HOOVER","DUB STAB","CELLO","ARP PLUCK","MOOG LEAD","DARK PAD","GLASS KEYS","ORGAN SQR"},
+        {"TINE EP","BELL","FM BASS","BRASS","PAD","MARIMBA","ORGAN","PLUCK","ICE BELL","DX KEYS","FM PLUCK","SOFT BELL","FM STRINGS","HARD BASS","WOOD"},
+        {"BRASS","ORGAN","STRING","RESO","BELL","WIRE","GROWL","FB BASS","CZ PIANO","GLASS PAD","DIGI STAB","SYN BASS","VOX PAD","HARP","PD LEAD","RING KEYS"},
+        {"BYTEBEAT","BYTE VAR","BYTE BENT","PULSE LD","WAVE BASS","8BIT KEYS","WAVE LEAD","STEP LEAD","BYTE TONE","FLOAT FM","FLOAT ARP","FLOAT PAD","CHIP PAD","GB ARP","TRI BASS","SOFT CHIP","SAW CHIP"},
+        {"CHOIR AAH","VOX LEAD","WOW BASS","WHISPER","OOH PAD","CHANT","TALK BOX","CANTOR ES","CANTORA ES","SINGER EN","UTA JA","WORD CHOIR","SCAT EN","ROBOT EN","WHISPER JA"}};
+    static const engine_t *const EN[5] = {&ENG_ANALOG, &ENG_FM6, &ENG_PHASE, &ENG_LOFI, &ENG_FORMANT};
+    static const uint8_t EI[5] = {ENGI_ANALOG, ENGI_FM6, ENGI_PHASE, ENGI_LOFI, ENGI_VOICE};
+    static const uint8_t OLDN[5] = {25, 15, 16, 17, 15}, ADD[5] = {7, 4, 3, 3, 3};
+    static const uint32_t OLDH[5] = {1745192848u, 706377957u, 1293237032u, 4203934503u, 1385822632u};
+    int bad = 0, cnt_ok = 1, old_ok = 1, hash_ok = 1, load_ok = 1, name_ok = 1, tag_ok = 1;
+    uint32_t e, k, j;
+    for (e = 0; e < 5u; e++) {
+        const engine_t *en = EN[e];
+        uint32_t h = 2166136261u;
+        cnt_ok &= en->npresets == OLDN[e] + ADD[e];
+        for (k = 0; k < OLDN[e] && k < en->npresets; k++) {
+            const preset_t *p = &en->presets[k];
+            old_ok &= !strcmp(p->name, OLD[e][k]);
+            for (j = 0; j < 8; j++) h = (h ^ (uint8_t)p->e[j]) * 16777619u;
+            for (j = 0; j < 4; j++) h = (h ^ p->env[j]) * 16777619u;
+            for (j = 0; j < 4; j++) h = (h ^ p->fx[j]) * 16777619u;
+            h = (h ^ (uint8_t)p->fenv) * 16777619u; h = (h ^ p->mono) * 16777619u; h = (h ^ p->pat) * 16777619u; h = (h ^ p->xp) * 16777619u;
+        }
+        hash_ok &= h == OLDH[e];
+        for (k = OLDN[e]; k < en->npresets; k++) {
+            const preset_t *p = &en->presets[k];
+            const char *s;
+            track_t *t = &trk[1];
+            ui_power_on();
+            t = &trk[1];
+            set_engine_of(t, EI[e]);
+            apply_preset_to(t, k);
+            for (j = 0; j < 8; j++) {
+                const param_desc_t *d = track_desc(t, P_E0 + j);
+                if (d->min == d->max) continue;     /* (LOFI's slot 4 is CUT only under BYTE / FLOAT: LOFI_NONE elsewhere, as the 0.7 rows have it) */
+                load_ok &= t->p[P_E0 + j] >= d->min && t->p[P_E0 + j] <= d->max && p->e[j] >= d->min && p->e[j] <= d->max;
+            }
+            name_ok &= strlen(p->name) <= 12u;
+            for (s = p->name; *s; s++) name_ok &= (*s >= 'A' && *s <= 'Z') || (*s >= '0' && *s <= '9') || *s == ' ';
+            for (j = 0; j < k; j++) name_ok &= strcmp(en->presets[j].name, p->name) != 0;
+            tag_ok &= PR_TAG(p) > PT_NONE && PR_TAG(p) < PT_N;
+        }
+    }
+    bad += check("0.8 IDM presets: the counts are 0.7's + (7, 4, 3, 3, 3)", cnt_ok);
+    bad += check("0.8 IDM presets: every 0.7 preset keeps its index, name and values", old_ok && hash_ok);
+    bad += check("0.8 IDM presets: each new one loads inside its ranges; unique names, 12 characters, plain glyphs; a type", load_ok && name_ok && tag_ok);
+    {
+        static const struct { uint8_t e, k, mono, tag; } L[20] = {
+            {0,25,1,PT_BASS},{0,26,1,PT_BASS},{0,27,1,PT_LEAD},{0,28,0,PT_PAD},{0,29,1,PT_LEAD},{0,30,1,PT_BASS},{0,31,0,PT_PLUCK},
+            {1,15,0,PT_KEYS},{1,16,1,PT_BASS},{1,17,0,PT_BELL},{1,18,0,PT_PLUCK},
+            {2,16,1,PT_BASS},{2,17,0,PT_PAD},{2,18,0,PT_BELL},
+            {3,17,0,PT_KEYS},{3,18,1,PT_LEAD},{3,19,1,PT_BASS},
+            {4,15,0,PT_VOX},{4,16,0,PT_VOX},{4,17,0,PT_VOX}};
+        int ok = 1;
+        for (k = 0; k < 20u; k++) {
+            const preset_t *p = &EN[L[k].e]->presets[L[k].k];
+            ok &= L[k].k < EN[L[k].e]->npresets && PR_MONO(p) == L[k].mono && PR_TAG(p) == L[k].tag;
+        }
+        bad += check("0.8 IDM presets: MONO and sound type as listed", ok);
+    }
+    {
+        int ok = 1;
+        for (k = 17; k < 20u; k++) ok &= preset_nth(&ENG_LOFI, k) == k;
+        for (k = 0; k < 20u; k++) ok &= preset_rank(&ENG_LOFI, preset_nth(&ENG_LOFI, k)) == k;
+        bad += check("0.8 IDM presets: PRESETS on LOFI browses the three new ones last", ok);
+    }
+    return bad;
+}
+
 static int test_presets_knob(void)
 {
     int bad = 0, seq_ok = 1, snd_ok = 1, pat_ok = 1, grid_ok;
@@ -22126,6 +22198,7 @@ int main(void)
     bad += test_screen();
     bad += test_favorites();
     bad += test_preset_types();
+    bad += test_p7_presets();                          /* (Braindancer 0.8) */
     bad += test_midi_learn();
     bad += test_display_preferences();
     bad += test_menu_tabs();

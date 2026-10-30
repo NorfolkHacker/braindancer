@@ -558,6 +558,20 @@ int main(void)
         int32_t peak_max = 0;
         uint32_t vmax_all = 0;
         uint32_t vref = 0;
+        {   /* (Braindancer 0.8) GEN chooses among 0.7's presets only: 40 seeds x every genre */
+            uint32_t gg, sd2, j, over = 0, seen = 0;
+            for (gg = 0; gg < NGENRE; gg++)
+                for (sd2 = 0; sd2 < 40u; sd2++) {
+                    gen_with(gg + 1u, sd2 * 17u + gg, 50, 0);
+                    for (j = 0; j < gs.nsnd; j++) {
+                        uint32_t e2 = gs.snd[j] >> 8, k2 = gs.snd[j] & 255u;
+                        seen++;
+                        if (e2 >= NENGINES || k2 >= gen_npre(ENGINES[e2])) over++;
+                    }
+                }
+            printf("gen: preset indices: %u picks, %u past 0.7's\n", seen, over);
+            bad += gcheck("  (0.8) 40 seeds x every genre: no track's preset index past 0.7's (gen_npre)", seen > 0u && !over);
+        }
         bad += gcheck("EXPLORE (0.8.6): GENRE EXPLORE at power-on", genre0 == GEN_EXPLORE);
         gen_reset();
         gt_cpt = 63;                                    /* (0.9.14) the device as the model holds it (gen.c gc_dev x1.00): the

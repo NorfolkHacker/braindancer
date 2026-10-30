@@ -1368,6 +1368,12 @@ static const uint8_t GENVF[RL_N][2] = {{0, 0}, {6, 20}, {4, 14}, {6, 18}, {8, 24
  * recipe's (no range); their weights */
 static const uint8_t GENV[3][8] = {{0, 6, 55, 76, 12, 58, 55, 72}, {38, 62, 70, 88, 55, 90, 66, 90}, {2, 14, 62, 84, 60, 88, 64, 86}};
 static const uint8_t GENV_LW[4] = {45, 15, 25, 15}, GENV_AW[4] = {60, 8, 17, 15};
+/* (Braindancer 0.8) the presets GEN chooses among: 0.7's (the 0.8 IDM presets are appended, for the player's hand: a
+ * seed keeps making the pieces it made) */
+static uint32_t gen_npre(const engine_t *en)
+{
+    return en == &ENG_ANALOG ? 25u : en == &ENG_FM6 ? 15u : en == &ENG_PHASE ? 16u : en == &ENG_LOFI ? 17u : en == &ENG_FORMANT ? 15u : en->npresets;
+}
 static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
 {
     const grecipe_t *r = &RECIPE[ri];
@@ -1380,7 +1386,7 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     gs.fm6 += e == ENGI_FM6;
     set_engine_of(t, e);
     en = trk_engp(t);
-    n = en->npresets;
+    n = gen_npre(en);
     if (!n) return;
     for (i = 0; i < n; i++) {
         const char *pn = en->presets[i].name;

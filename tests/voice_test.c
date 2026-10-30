@@ -956,6 +956,7 @@ static void check_presets(void)
     uint32_t k, ok = 1, okdc = 1, oke = 1, okr = 1, okc = 1;
     double worst = 0, peak = 0;
     for (k = getenv("VDC") ? 0u : 7u; k < ENG_FORMANT.npresets; k++) {   /* (VDC: the vowel presets too, for comparison) */
+        if (k >= 7u && !ENG_FORMANT.presets[k].xp) continue;   /* (Braindancer 0.8: the choirs appended after WHISPER JA are vowel presets, no words) */
         double m = 0, r;
         uint32_t i, j, live = 0;
         vsetup((int32_t)k, 0, "la sol mar canta");
