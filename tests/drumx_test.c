@@ -239,11 +239,26 @@ static void test_kits_08(void)
         snprintf(nm, sizeof nm, "8: 808 bell within 500..1200 Hz (MORPH %d)", m ? 127 : 0);
         check(nm, hz >= 500.0 && hz <= 1200.0, "%.0f Hz", hz);
         {
-            double sh = t8_band(FS / 10u, 500.0, 1200.0);
-            snprintf(nm, sizeof nm, "8: 808 bell: share of its first 100 ms in 500..1200 Hz, floor 30 %% (MORPH %d)", m ? 127 : 0);
-            /* (fix round 1) the committed values measure 39.5 % / 30.4 % here, under the 50 % asked: reported, not failed, until the
-             * controller decides (the lane's values stay as committed in 1ac7b4c); the floor below keeps it from getting worse */
-            check(nm, sh >= 0.30, "%.1f %%, wanted >= 50 %% (open)", sh * 100.0);
+            uint32_t n = FS / 10u, kk, bk = 0, i2, t40;
+            double best = 0, sh = t8_band(n, 500.0, 1200.0);
+            int32_t pk2 = 0;
+            for (kk = 1; kk < n / 2u; kk++) {                  /* the DFT peak (Hann, first 100 ms) */
+                double re = 0, im = 0, e;
+                for (i2 = 0; i2 < n; i2++) {
+                    double w = 0.5 - 0.5 * cos(6.283185307179586 * i2 / n), a2 = 6.283185307179586 * kk * i2 / n;
+                    re += w * buf[i2] * cos(a2);
+                    im -= w * buf[i2] * sin(a2);
+                }
+                e = re * re + im * im;
+                if (e > best) { best = e; bk = kk; }
+            }
+            strike(t8_kit(2, m ? 127 : 0), DV_BELL, MAXN);
+            for (i2 = 0; i2 < MAXN; i2++)
+                pk2 = abs(buf[i2]) > pk2 ? abs(buf[i2]) : pk2;
+            t40 = t8_len(pk2 * 0.01, MAXN) * 1000u / FS;
+            snprintf(nm, sizeof nm, "8: 808 bell: DFT peak 500..1200 Hz, >= 40 %% there, -40 dB within 300 ms (MORPH %d)", m ? 127 : 0);
+            check(nm, bk * (FS / n) >= 500u && bk * (FS / n) <= 1200u && sh >= 0.40 && t40 <= 300u,
+                  "peak %u Hz, %.1f %% in the band, -40 dB at %u ms", bk * (FS / n), sh * 100.0, t40);
         }
     }
     /* every lane of every kit sounds (RMS over the first 50 ms above -50 dBFS), stays under full scale, ends within 3 s */

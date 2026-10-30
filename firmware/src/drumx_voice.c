@@ -430,7 +430,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_METAL, DXF_HP, 0), {96, 0, 56, 92, 96}, {104, 0, 68, 108, 102}},   /* HAT OP */
             {DX_MODE(DXW_SINE, DXF_LP, 1) | DXM_LONG << 5, {22, 20, 88, 4, 10}, {28, 40, 98, 12, 30}},   /* TOM */
             {DX_MODE(DXW_BELL, DXF_HP, 1), {67, 6, 10, 10, 34}, {74, 18, 16, 22, 48}},   /* RIM */
-            {DX_MODE(DXW_METAL, DXF_BP, 1), {68, 0, 40, 2, 12}, {72, 0, 48, 4, 14}},   /* BELL */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {68, 0, 40, 0, 8}, {68, 0, 48, 0, 10}},   /* BELL (cowbell: 620 Hz and its 1.47 partial) */
         },
         {0, 4, 0, 6, 6, 0, 0, 8}, {0, 204, 208, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
     },
