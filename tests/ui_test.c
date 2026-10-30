@@ -8576,8 +8576,8 @@ static int test_drum_kits(void)
     turn(EN_PRESET, 1);                                 /* browsing (HOME): 909 CLUB */
     ok &= TSEL->preset == k909 && !memcmp(dx_kit, DX_KITS[k909].lane, sizeof dx_kit) && !memcmp(dx_lay, DX_KITS[k909].lay, sizeof dx_lay) &&
           !memcmp(dx_snd, DX_KITS[k909].snd, sizeof dx_snd) && dx_snd[DV_SNARE] == DX_KITS[k909].snd[DV_SNARE] &&
-          dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD] + 20 && (dx_kit[DV_KICK].mode & DX_DRIVE);
-    bad += check("DRUM presets: 909 CLUB browsed on a DRUM track loads its kit (sounds, LAYERs, SENDs: the kick driven, +20 PMOD)", ok);
+          dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD] + 30 && (dx_kit[DV_KICK].mode & DX_DRIVE);
+    bad += check("DRUM presets: 909 CLUB browsed on a DRUM track loads its kit (sounds, LAYERs, SENDs: the kick driven, +30 PMOD)", ok);
     set_engine(ENGI_ANALOG);
     set_engine(ENGI_DRUM);                              /* an engine switch (preset 0 applied): the section's kit stays */
     ok = TSEL->preset == 0 && !memcmp(dx_kit, DX_KITS[k909].lane, sizeof dx_kit);

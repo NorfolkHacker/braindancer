@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
+ * Portions Copyright (C) 2026 NorfolkHacker */
 /* DRUM-X (src/drumx_voice.c: the DRUM engine) on the host, through hostsim.c:
  *   build/host/drumx_test [DEMODIR]          (run_tests.sh: build/drumx_demo)
  * 1. every lane of the kit, struck through the DRUM engine (its GM note), sounds (peak above -30 dBFS), never at
@@ -18,6 +19,8 @@
  * 5c. the master (JIANT): PNCH 100 lifts a kick's first 8 ms (+30 %) and lowers its tail; DUCK 100: a held synth
  *    note drops 10 dB or more 5..40 ms after a kick (against DUCK 0), and is back (within 1 dB) after the release;
  *    CLIP 100: the loud mix saturates (crest factor down), never past full scale; CLIP 0 is out of the chain.
+ * 8. (0.8) the kits re-voiced (values only): 909 CLUB and 808 BOOM, the crunchier lanes of LOFI DUST, TECHNO RAW, BREAKS;
+ *    the others as in 0.7 (hashes), the 808 kick longer, the 909 hat brighter, the 808 bell 500..1200 Hz, every lane sounds.
  * 6. demos into DEMODIR: every lane at MORPH 0, 64, 127; a beat with MORPH swept over 4 bars. */
 #include <stdarg.h>
 #define main hostsim_main
@@ -105,6 +108,156 @@ static void save(const char *dir, const char *name, uint32_t n)
     for (i = 0; i < n; i++)
         wav_put(f, buf[i], buf[i]);
     fclose(f);
+}
+
+/* (0.8, Task 8) the re-voiced kits: values only. The kits that stay (DRUM-X, INDUSTRIAL, ACOUSTIC, DUB ROOTS) hash as in 0.7. */
+static uint64_t fnv(const void *p, size_t n)
+{
+    const uint8_t *b = p;
+    uint64_t h = 0xcbf29ce484222325ull;
+    while (n--)
+        h = (h ^ *b++) * 0x100000001b3ull;
+    return h;
+}
+static uint32_t t8_len(double thr, uint32_t n)           /* the last sample over thr (absolute), +1 */
+{
+    uint32_t i, e = 0;
+    for (i = 0; i < n; i++)
+        if (abs(buf[i]) > thr)
+            e = i + 1u;
+    return e;
+}
+static double t8_crest(uint32_t n)
+{
+    int32_t pk = 0;
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        pk = abs(buf[i]) > pk ? abs(buf[i]) : pk;
+    return pk / (rms(0, n) + 1e-9);
+}
+/* a lane of the kit struck (kit k loaded, lane l replaced by *over when given), at MORPH m */
+static track_t *t8_kit(uint32_t k, int16_t m)
+{
+    track_t *t = kitx(m, 64);
+    dx_kit_load(k);
+    return t;
+}
+#ifndef CW
+#define CW (FS / 20u)
+#endif
+static void test_kits_08(void)
+{
+    /* the 0.7 tables' hashes (pasted from the unchanged tables) */
+    static const uint64_t H_DEF = 0x6d6910f64bda73bbull, H_K0 = 0x9c271016ac351cb6ull,
+                         H_K4 = 0x29b9ec104649b9d9ull, H_K5 = 0x4494d5ba1eff0116ull, H_K6 = 0xef11b4344d056a5cull;
+    /* the 0.7 lanes of the crunchier ones: {kit, lane, mode, A, B} */
+    static const struct { uint8_t kit, lane; dx_lane_t o; } OLD[] = {
+        {3, DV_SNARE, {DX_MODE(DXW_FM, DXF_BP, 1), {44, 30, 36, 104, 68}, {50, 18, 48, 127, 48}}},
+        {3, DV_HATC, {DX_MODE(DXW_METAL, DXF_BP, 0), {104, 0, 12, 96, 88}, {112, 0, 4, 112, 94}}},
+        {7, DV_SNARE, {DX_MODE(DXW_FM, DXF_HP, 0), {40, 40, 46, 102, 110}, {46, 28, 58, 126, 90}}},
+        {7, DV_CLAP, {DX_MODE(DXW_SINE, DXF_BP, 0), {60, 0, 48, 127, 94}, {54, 0, 60, 127, 86}}},
+        {8, DV_KICK, {DX_MODE(DXW_SINE, DXF_LP, 1), {11, 78, 68, 12, 32}, {16, 108, 84, 18, 72}}},
+        {8, DV_SNARE, {DX_MODE(DXW_FM, DXF_BP, 1), {42, 38, 54, 96, 112}, {48, 26, 66, 120, 92}}},
+    };
+    uint32_t k, l, m, i, ok1 = 1, nl = 0;
+    int ok;
+    char nm[96];
+
+    for (k = 0; k < DX_NKIT; k++)
+        ok1 &= (uint32_t)dx_kit_ok(DX_KITS[k].lane);
+    check("8: dx_kit_ok on every lane of every kit", ok1, NULL);
+    check("8: DX_KIT_DEF and kits 0, 4, 5, 6 unchanged", fnv(DX_KIT_DEF, sizeof DX_KIT_DEF) == H_DEF &&
+          fnv(&DX_KITS[0], sizeof DX_KITS[0]) == H_K0 && fnv(&DX_KITS[4], sizeof DX_KITS[4]) == H_K4 &&
+          fnv(&DX_KITS[5], sizeof DX_KITS[5]) == H_K5 && fnv(&DX_KITS[6], sizeof DX_KITS[6]) == H_K6, NULL);
+    /* kits 1, 2, 3, 7, 8 differ from the 0.7 ones: 909 and 808 whole, the others in the six lanes above */
+    {
+        static const uint64_t H07[9] = {0, 0x9c3b2048444c40c4ull, 0x91e9e80ed2b14640ull, 0x136617893471a949ull, 0, 0, 0,
+                                       0x3f70ffcc9a99790eull, 0x5c50761ea9df0584ull};   /* the 0.7 kits' hashes */
+        ok = 1;
+        for (k = 1; k < 9u; k++)
+            if (k != 4 && k != 5 && k != 6)
+                ok &= fnv(&DX_KITS[k], sizeof DX_KITS[k]) != H07[k];
+        check("8: kits 1, 2, 3, 7, 8 differ from 0.7", ok, NULL);
+    }
+    /* 808's kick rings longer than 909's (time to -40 dB of its peak, at least twice), at both MORPH ends */
+    for (m = 0; m < 2u; m++) {
+        uint32_t len[3] = {0, 0, 0};
+        for (k = 1; k <= 2u; k++) {
+            track_t *t = t8_kit(k, m ? 127 : 0);
+            int32_t pk = 0;
+            strike(t, DV_KICK, MAXN);
+            for (i = 0; i < MAXN; i++)
+                pk = abs(buf[i]) > pk ? abs(buf[i]) : pk;
+            len[k] = t8_len(pk * 0.01, MAXN);
+        }
+        snprintf(nm, sizeof nm, "8: 808 kick rings >= 2x 909's (MORPH %d)", m ? 127 : 0);
+        check(nm, len[2] >= 2u * len[1], "909 %u, 808 %u samples", len[1], len[2]);
+    }
+    /* 909's closed hat is brighter than 808's in its first 20 ms */
+    for (m = 0; m < 2u; m++) {
+        uint32_t c[3] = {0, 0, 0};
+        for (k = 1; k <= 2u; k++) {
+            strike(t8_kit(k, m ? 127 : 0), DV_HATC, FS / 2u);
+            c[k] = crossings(0, FS / 50u);
+        }
+        snprintf(nm, sizeof nm, "8: 909 closed hat brighter than 808's (MORPH %d)", m ? 127 : 0);
+        check(nm, c[1] > c[2], "909 %u, 808 %u crossings", c[1], c[2]);
+    }
+    /* 808's bell (a cowbell): its crossing rate puts the energy within 500..1200 Hz */
+    for (m = 0; m < 2u; m++) {
+        uint32_t n = FS / 5u;
+        double hz;
+        strike(t8_kit(2, m ? 127 : 0), DV_BELL, FS / 2u);
+        hz = crossings(0, n) / ((double)n / FS);
+        snprintf(nm, sizeof nm, "8: 808 bell within 500..1200 Hz (MORPH %d)", m ? 127 : 0);
+        check(nm, hz >= 500.0 && hz <= 1200.0, "%.0f Hz", hz);
+    }
+    /* every lane of every kit sounds (RMS over the first 50 ms above -50 dBFS), stays under full scale, ends within 3 s */
+    for (k = 0; k < DX_NKIT; k++)
+        for (m = 0; m < 2u; m++)
+            for (l = 0; l < 8u; l++) {
+                track_t *t = t8_kit(k, m ? 127 : 0);
+                int32_t pk = 0;
+                double r;
+                int ended = !strike(t, l, MAXN);
+                int32_t tail = 0;
+                for (i = 0; i < MAXN; i++)
+                    pk = abs(buf[i]) > pk ? abs(buf[i]) : pk;
+                for (i = MAXN - FS / 5u; i < MAXN; i++)       /* a long (LONG) kick's voice may still ring at 3 s: it is -60 dBFS by then */
+                    tail = abs(buf[i]) > tail ? abs(buf[i]) : tail;
+                ended |= tail < 33;
+                /* a LONG kick (808 BOOM's, DUB ROOTS': the boom is a decay of up to 1.5 s, -84 dB is past 3 s) is still ringing at 3 s,
+                 * as the shipped DUB ROOTS' always was: there it must be on its way out (last 200 ms under a quarter of the peak) */
+                if ((DX_KITS[k].lane[l].mode >> 5 & 3u) == DXM_LONG && l == DV_KICK)
+                    ended |= tail * 4 < pk;
+                r = rms(0, FS / 20u);
+                /* full scale: buf is the Q-int mix, 32768 << 8 .. as the first checks: under 32000 of 16 bit units */
+                snprintf(nm, sizeof nm, "8: kit %u lane %u MORPH %d sounds, < full scale, ends", k, l, m ? 127 : 0);
+                if (!(r > 32768.0 * 0.00316 && pk < 32767 && ended))
+                    check(nm, 0, "rms %.1f peak %d ended %d", r, pk, ended);
+                else
+                    nl++;
+            }
+    check("8: every lane of every kit sounds, stays in range, ends", nl == DX_NKIT * 16u, "%u of %u lane renders", nl, DX_NKIT * 16u);
+    /* the crunchier lanes: a lower crest factor than the 0.7 lanes */
+    for (i = 0; i < sizeof OLD / sizeof OLD[0]; i++)
+        for (m = 0; m < 2u; m++) {
+            double cn = 0, co = 0;
+            uint32_t r;
+            /* the noise differs hit to hit: the crest factor is the mean of eight hits, new lane and 0.7 lane each */
+            for (r = 0; r < 8u; r++) {
+                track_t *t = t8_kit(OLD[i].kit, m ? 127 : 0);
+                strike(t, OLD[i].lane, FS / 2u);
+                cn += t8_crest(CW) / 8.0;
+                t = t8_kit(OLD[i].kit, m ? 127 : 0);
+                dx_kit[OLD[i].lane] = OLD[i].o;
+                strike(t, OLD[i].lane, FS / 2u);
+                co += t8_crest(CW) / 8.0;
+            }
+            snprintf(nm, sizeof nm, "8: kit %u lane %u crunchier (MORPH %d)", OLD[i].kit, OLD[i].lane, m ? 127 : 0);
+            check(nm, cn < co, "crest %.2f vs 0.7 %.2f", cn, co);
+        }
+    dx_kit_load(0);                                       /* the tests that follow take the factory kit */
 }
 
 int main(int argc, char **argv)
@@ -590,6 +743,7 @@ int main(int argc, char **argv)
         }
         printf("drumx: demos in %s\n", dir);
     }
+    test_kits_08();
     printf("drumx: %s\n", fails ? "FAILED" : "all checks ok");
     return fails != 0;
 }
