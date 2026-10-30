@@ -1290,6 +1290,7 @@ static void save_oct(const page_t *pg)
     else
         name_open(NK_USER_SAVE, ui.uslot);
 }
+#define AGE_UNDO_MS 1000u                               /* (AGE: a pause this long ends a turn, for UNDO) */
 static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
 {
     int16_t *vp;
@@ -1326,7 +1327,16 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
             v += v > from ? 1 : -1;
     }
     if (!t && id == G_TAGE) {                           /* (Braindancer 0.8) FX > MASTER's AGE: TAPE's five details on its map
-                                                         * with it (fx.c; a detail row: the plain write below) */
+                                                         * with it (fx.c; a detail row: the plain write below). It moves six
+                                                         * settings, the ones set by hand too: UNDO marked once a turn (the
+                                                         * first detent after AGE_UNDO_MS without one), then UNDO puts all
+                                                         * six back */
+        static uint32_t age_ms;
+        static uint8_t age_any;
+        if (!age_any || fm1_ms - age_ms > AGE_UNDO_MS)
+            undo_mark();
+        age_any = 1;
+        age_ms = fm1_ms;
         tape_age_apply(v);
         return;
     }

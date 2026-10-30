@@ -2781,7 +2781,7 @@ const LAYOUT = (pe0) => [
       [50 + 4 * k, 51 + 4 * k, 52 + 4 * k, 53 + 4 * k]])] : [["SLICER", 0, [45, 46, 47, 48]]]),   /* (0.6.3: one, on a bus) */
     ["DLY", 1, [4, 5, 6, 7]], ...(pe0 >= 112 ? [["DLY 2", 1, [28, 34, 35, ...(dev && dev.info && dev.info.gcount >= 67 ? [66] : [])]],
     ...(dev && dev.info && dev.info.gcount >= 69 ? [["DLY 3", 1, [67, 68]]] : [])] : []), ["REVERB", 1, pe0 >= 112 ? [24, 8, 9, 31] : [24, 8, 9]],
-    ...(pe0 >= 112 ? [["REVERB 2", 1, [29, 30, 32, 33]]] : []), ["CHORUS", 1, pe0 >= 112 ? [10, 11, 27] : [10, 11]]] },   /* G_RTYPE 24: ROOM SPRING SHIMR RESO CLOUD; MASTER: CLIP PNCH DUCK DUCK TIME; (0.6.9) AUTOPAN: DPTH RATE SYNC WAVE, CHORUS: STER (27) */
+    ...(pe0 >= 112 ? [["REVERB 2", 1, [29, 30, 32, 33]]] : []), ["CHORUS", 1, pe0 >= 112 ? [10, 11, 27] : [10, 11]]] },   /* G_RTYPE 24: ROOM SPRING SHIMR RESO CLOUD; MASTER: CLIP PNCH DUCK DUCK TIME (Braindancer 0.8, 102 globals: CLIP PNCH DUCK AGE, DUCK TIME on TAPE 2); (0.6.9) AUTOPAN: DPTH RATE SYNC WAVE, CHORUS: STER (27) */
   { t: "SCL", pages: [["SCL", 0, [25, 26, 27, 28]], ["SCL 2", 1, [36]]] },   /* (JIANT 0.4) G_STRN 36: every sequence along the scale */
   { t: "ARP", pages: [["ARP", 0, [17, 18, 19, 20]], ["ARP 2", 0, [21, 22, 23, 24]]] },
   { t: "SEQ PATTERN", tab: "seqgroups", pages: [["PATTERN", 0, [29, 30, 31, 32]], ...(pe0 >= 83 ? [["STRETCH · TRACK", 0, P_SHIFT]] : [])] },   /* ROTATE PITCH 81, 82 (SHIFT until 0.6.91) */

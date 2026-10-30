@@ -215,12 +215,13 @@ static uxm_bits_t uxm_mask(const ux_more_t *m)
     return sh;
 }
 static uint32_t uxm_n(const ux_more_t *m) { return m->n < UXM_MAXROWS ? m->n : UXM_MAXROWS; }
-/* (Braindancer 0.8) the rows shown folded to 32 bits for a change signature (ux_section.c): the high word turned a bit
- * further (rotated by one) before the fold, so rows i and i + 64 swapped (one shown, the other hidden) change it; a list of
- * 64 rows or less (w[1] 0) folds as before */
+/* (Braindancer 0.8) the rows shown folded to 32 bits for a change signature (ux_section.c): the high word mixed in by a
+ * multiply (the golden ratio's odd 64-bit constant: a row's bit spreads up the word) and a shift (the top bits down too: row
+ * 127 alone would be bit 63 still), so a row below 64 swapped with one above (i and i + 64, or any other pair across the
+ * words) changes it; a list of 64 rows or less (w[1] 0) folds as before */
 static uint32_t uxm_sig_fold(const uxm_bits_t *sh)
 {
-    uint64_t x = sh->w[0] ^ (sh->w[1] << 1 | sh->w[1] >> 63);
+    uint64_t m = sh->w[1] * 0x9E3779B97F4A7C15ull, x = sh->w[0] ^ m ^ (m >> 29);
     return (uint32_t)(x ^ (x >> 32));
 }
 static int uxm_on(const uxm_bits_t *sh, uint32_t i) { return i < UXM_MAXROWS && ((sh->w[i >> 6] >> (i & 63u)) & 1u); }

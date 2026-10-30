@@ -1052,12 +1052,36 @@ static int ed_bpm_clock(void)
     return bad;
 }
 
+/* (Braindancer 0.8 task 3 fix) SET of AGE (scope 1, G_TAGE 96) from the editor: as FX > MASTER's knob, TAPE's five details on
+ * AGE's map with it (fx.c tape_age_apply: none "by hand"); a detail SET after it the plain write, overriding that one */
+static int ed_tape_age(void)
+{
+    static uint8_t a[4];
+    int bad = 0, ok;
+    uint32_t k;
+    reset();
+    a[0] = 1; a[1] = G_TAGE; a[2] = (8192 + 50) & 127; a[3] = (8192 + 50) >> 7;
+    request(ED_SET, a, 4);
+    ok = song.g[G_TAGE] == 50 && tape_age_custom() == 0u && tape_set() && ed_rv(host_wire + 7) == 50;
+    for (k = 0; k < 5u; k++)
+        ok &= song.g[G_TWOW + k] == TAPE_AGE_PT[1][k];
+    a[1] = G_TSAT; a[2] = (8192 + 5) & 127; a[3] = (8192 + 5) >> 7;
+    request(ED_SET, a, 4);
+    ok &= song.g[G_TSAT] == 5 && song.g[G_TAGE] == 50 && tape_age_custom() == 1u << (G_TSAT - G_TWOW);
+    a[1] = G_TAGE; a[2] = (8192 + 150) & 127; a[3] = (8192 + 150) >> 7;
+    request(ED_SET, a, 4);
+    ok &= song.g[G_TAGE] == 100 && tape_age_custom() == 0u && song.g[G_TTONE] == TAPE_AGE_PT[2][4];
+    bad += check("SET of AGE (G 96): TAPE's five on its map (50: TAPE_AGE_PT[1], none by hand); a detail SET after it overrides "
+                 "that one; 150 clamps to 100", ok);
+    return bad;
+}
+
 #ifndef EDITOR_TEST_NO_MAIN                              /* (robust_test.c, fuzz_*.c: this file is their base) */
 int main(void)
 {
     int bad = preferences() + motion_locks() + framing() + uart_recovery() + steps() + stop_failures() + song_protocol() + malformed_saves() +
               fm6_patches() + user_preset_roundtrip() + live_sync() + usb_burst() + menu_protocol() + drum_kit_retired() +
-              lyric_protocol() + ed_bpm_clock();
+              lyric_protocol() + ed_bpm_clock() + ed_tape_age();
     printf("%s\n", bad ? "EDITOR TEST FAILED" : "editor test passed");
     return bad != 0;
 }

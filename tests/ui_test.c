@@ -17350,11 +17350,10 @@ static int test_t3_age(void)
     for (k = 0; k < 5u; k++)
         ok &= m[k] == TAPE_AGE_PT[2][k] && TAPE_AGE_PT[0][k] == 0 && TAPE_AGE_PT[1][k] <= TAPE_AGE_PT[2][k];
     bad += check("0.8 task 3: AGE's map: linear between AGE 0, 50 and 100 (25 the midpoint of 0's and 50's), 0 all off", ok);
-    tape_age_apply(30);                                 /* UNDO after an AGE turn: all six back */
+    tape_age_apply(30);                                 /* UNDO after an AGE turn: all six back (the turn marks UNDO itself) */
     song.g[G_TSAT] = 7;
-    undo_mark();
     memcpy(g0, song.g, sizeof g0);
-    frames(200);
+    frames(1200);
     turn(EN_K4, 40); frame();
     ok = song.g[G_TAGE] == 70 && uxt3_on_map(70) && !undo_do();
     for (k = G_TAGE; k <= G_TTONE; k++)
@@ -17419,8 +17418,24 @@ static int test_t3_more(void)
             a.w[1] = 0;
             ok &= uxm_sig_fold(&a) == (uint32_t)(a.w[0] ^ (a.w[0] >> 32));
         }
-        bad += check("0.8 task 3 (task 2 review #2): MORE's change signature: rows i and i + 64 swapped change it; a list of 64 "
-                     "rows or less folds as before", ok);
+        {   /* (fix round 1) other offsets across the two words: rows i and i + k swapped (k 33 63 65 96 100), w[1] not 0 */
+            static const uint32_t K[] = {33, 63, 65, 96, 100};
+            uint32_t q, j;
+            for (q = 0; q < NELEM(K); q++)
+                for (r = 0; r < 128u; r++) {
+                    j = r + K[q];
+                    if (j >= 128u || (r < 64u) == (j < 64u))
+                        continue;                       /* (one row in each word) */
+                    memset(&a, 0, sizeof a);
+                    a.w[0] = 0x0123456789ABCDEFull; a.w[1] = 0x00F0F0F00000F00Full;
+                    a.w[r >> 6] |= 1ull << (r & 63u); a.w[j >> 6] &= ~(1ull << (j & 63u));
+                    b = a;
+                    b.w[r >> 6] &= ~(1ull << (r & 63u)); b.w[j >> 6] |= 1ull << (j & 63u);
+                    if (uxm_sig_fold(&a) == uxm_sig_fold(&b)) { printf("  rows %u / %u cancel\n", (unsigned)r, (unsigned)j); ok = 0; }
+                }
+        }
+        bad += check("0.8 task 3 (task 2 review #2): MORE's change signature: rows i and i + 64 (and i + 33, 63, 65, 96, 100 across "
+                     "the words) swapped change it; a list of 64 rows or less folds as before", ok);
     }
     uxt8_open(3);                                       /* a row past 64 changed: the list redrawn */
     rt = uxt8_row(UXR_GLOBAL, G_TTONE);
