@@ -68,8 +68,8 @@ for who in ("Juan Jiant", "Hugelton Instruments", "NorfolkHacker"):   # (the cre
 # ABOUT names Braindancer
 for c in sorted((ROOT / "firmware/src").glob("*.c")):
     for m in re.finditer(r'"((?:[^"\\\n]|\\.)*)"', visible(c.read_text(encoding="utf-8", errors="replace"))):
-        if "ACID FM" in m.group(1):
-            bad.append(f'{c.name}: a string literal says "ACID FM": {m.group(1)[:60]!r}')
+        if re.search(r"ACID[ -]FM|acid[ -]fm|ACID_FM|AcidFM", m.group(1), re.I):   # (the Task 3 OLD regex: acid-fm too)
+            bad.append(f'{c.name}: a string literal says the old name: {m.group(1)[:60]!r}')
 # the USB product strings (usb.c STR_PROD, the app's and the loader's): UTF-16LE, the length byte right
 _usb = (ROOT / "firmware/src/usb.c").read_text(encoding="utf-8")
 _prods = re.findall(r"STR_PROD\[\] = \{([^}]*)\};", _usb, re.S)   # (the loader's first, then the app's)
@@ -273,7 +273,7 @@ for f in [str(c.relative_to(ROOT)) for c in sorted((ROOT / "firmware/src").glob(
 # ("ACID FM 0.6", "ACID FM 3b"), the old name beside the new one ("formerly ACID FM", "Braindancer / ACID FM": a device or a
 # package still on ACID FM is found), and the one page that forwards the old site path (web/404.html)
 OLD = re.compile(r"ACID[ -]FM|acid[ -]fm|ACID_FM|AcidFM", re.I)
-OLD_OK = re.compile(r"superpowers/(specs|plans)/[\w.-]*acid-fm[\w.-]*|ACID FM (v?\d|3[abc])|(?<![A-Za-z])(formerly|Formerly) ACID FM|written when it was still ACID FM|(Braindancer or|or) the earlier ACID FM|ACID FM is now (\*\*)?Braindancer|"
+OLD_OK = re.compile(r"superpowers/(specs|plans)/[\w.-]*acid-fm[\w.-]*|ACID FM (0\.[1-6]|3[abc])|(?<![A-Za-z])(formerly|Formerly) ACID FM|written when it was still ACID FM|(Braindancer or|or) the earlier ACID FM|ACID FM is now (\*\*)?Braindancer|"
                     r"(Braindancer|BRAINDANCER)\)?[,/、 ]+(\(?or )?(an earlier )?ACID FM|ACID FM[,/ ]+(Braindancer|JIANT)")
 USER_FACING = ["README.md", "BUILDING.md", "LICENSING.md", "docs/MANUAL.md", "docs/cheatsheet/controls.html",
                "docs/cheatsheet/sound.html", "docs/navigation-map.svg", ".github/ISSUE_TEMPLATE/bug_report.yml",
@@ -318,8 +318,35 @@ for f, s in (("README.md", "# Braindancer"), ("web/landing/index.html", "<title>
 if not re.search(r"braindancer\|acid", (ROOT / "web/fm1diag.js").read_text(encoding="utf-8"), re.I):
     bad.append("web/fm1diag.js: the stock-file filename test does not know braindancer and acid-fm")
 
+# (Braindancer 0.7, final review) EVERY port-name regex in web/ and tools/ (a regex literal naming felucca|jiant) takes the
+# device's three names: BRAINDANCER, BRAINDANCER UPD (loader) and the old ACID FM
+_found = 0
+for _f in sorted(list((ROOT / "web").glob("*.html")) + list((ROOT / "web").glob("*.js")) + list((ROOT / "web").glob("*.mjs"))
+                 + list((ROOT / "tools").glob("*.py")) + list((ROOT / "tools").glob("*.js"))):
+    if _f.name.startswith("test_") or _f.name.endswith("_test.py"):
+        continue
+    _t = _f.read_text(encoding="utf-8", errors="replace")
+    for _m in re.finditer(r"(?<![\w\\)\]\"'])/((?:[^/\n\\\[]|\\.|\[[^\]\n]*\])*?(?:felucca|jiant)(?:[^/\n\\\[]|\\.|\[[^\]\n]*\])*)/([a-z]*)", _t, re.I):
+        _src = _m.group(1)
+        if "|" not in _src or "/" in _src or "github" in _src or _src.startswith("^") or "felucca|jiant" not in _src.lower():   # (port names, not INFO strings)
+            continue
+        _found += 1
+        _rx = re.compile(_src.replace("(?:", "(?:"), re.I if "i" in _m.group(2) else 0)
+        for _n in ("BRAINDANCER", "BRAINDANCER UPD", "ACID FM"):
+            if not _rx.search(_n):
+                bad.append(f"{_f.name}: port-name regex /{_src[:60]}/ does not match {_n!r}")
+    if _f.suffix == ".py":                                # (re.compile(r"...") in the tools)
+        for _m in re.finditer(r're\.compile\(r"([^"]*(?:felucca|jiant)[^"]*)"', _t, re.I):
+            _found += 1
+            for _n in ("BRAINDANCER", "BRAINDANCER UPD", "ACID FM"):
+                if not re.compile(_m.group(1), re.I).search(_n):
+                    bad.append(f"{_f.name}: port-name regex r\"{_m.group(1)[:60]}\" does not match {_n!r}")
+if _found < 4:
+    bad.append(f"port-name regex check found only {_found} regexes (expected the editor's two, PORT_RE, fm1diag, fm1_install)")
+
 if bad:
     print("\n".join("FAIL: " + b for b in bad))
     sys.exit(1)
 print(f"ok   built on JIANT FM and Felucca: ABOUT and {len(WEB)} web files; the copyright lines kept; the manual English "
       f"only, JIANT on its credits line alone ({len(MANUAL) + len(GENERATORS)} files)")
+

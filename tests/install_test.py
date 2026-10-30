@@ -240,6 +240,14 @@ def installs():
     dev = FakeFM1(image, identity="ota-FM-1_900", name="BRAINDANCER UPD", after_name="BRAINDANCER")
     rc, out, err = cli(["--info"], dev)
     ok(rc == 0 and "update loader" in out, "--info: 'BRAINDANCER UPD' (ota-FM-1_900) is the update loader")
+    # (Braindancer 0.7) the real 0.6 -> 0.7 update: a device on "ACID FM" -> update mode ("BRAINDANCER UPD" or "ACID FM Update") -> back as
+    # "BRAINDANCER", with no --port and with --port "ACID FM"
+    for loader in ("BRAINDANCER UPD", "ACID FM Update"):
+        for extra in ([], ["--port", "ACID FM"]):
+            dev = FakeFM1(image, identity="FM-1_900", name="ACID FM", loader_name=loader, after_name="BRAINDANCER")
+            rc, out, err = cli([p, "--yes"] + extra, dev)
+            ok(rc == 0 and dev.bad == 0 and dev.upgrades == 2 and "done: the FM-1 runs FM-1_900" in out,
+               f"install: 'ACID FM' -> {loader!r} -> 'BRAINDANCER' (args {extra})")
     ok(all(I.PORT_RE.search(n) for n in ("BRAINDANCER", "BRAINDANCER UPD", "ACID FM", "JIANT", "Felucca")), "PORT_RE: Braindancer and the old names")
     import build as B
     ok(B.release_names("0.7") == ("braindancer-0.7.fwsc", "braindancer-0.7-app.bin"), "build: a release is braindancer-X.Y.fwsc / -app.bin")

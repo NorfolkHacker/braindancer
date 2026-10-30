@@ -1771,9 +1771,9 @@ async function installerFlows() {
   /* (0.9.12) the USB names over the versions, as hosts show them: every one is probed (fm1ota.js PORT_RE) and the
    * editor connects to every JIANT / Felucca one (editor.html's port filter), never to other gear */
   const NAMES = ["JIANT", "2- JIANT", "MIDIIN2 (JIANT)", "MIDIOUT2 (JIANT)", "JIANT MIDI 1", "JIANT 1", "JIANT FM", "JIANT Update",
-    "Felucca", "Felucca Update", "2- Felucca", "ACID FM", "2- ACID FM", "MIDIIN2 (ACID FM)", "ACID FM MIDI 1", "ACID FM Update"];
+    "Felucca", "Felucca Update", "2- Felucca", "BRAINDANCER", "BRAINDANCER UPD", "2- BRAINDANCER", "ACID FM", "2- ACID FM", "MIDIIN2 (ACID FM)", "ACID FM MIDI 1", "ACID FM Update"];
   const edSrc = readFileSync(join(HERE, "editor.html"), "utf8");
-  const edRes = [...edSrc.matchAll(/\/(felucca\|jiant\|acid \?fm)\/i\.test\(p\.name/g)].map((m) => new RegExp(m[1], "i"));
+  const edRes = [...edSrc.matchAll(/\/(felucca\|jiant\|acid \?fm\|braindancer)\/i\.test\(p\.name/g)].map((m) => new RegExp(m[1], "i"));
   ok(NAMES.every((n) => PORT_RE.test(n)) && !["IAC Driver Bus 1", "Microsoft GS Wavetable Synth", "Arturia KeyStep", "Acidlab Bassline"].some((n) => PORT_RE.test(n)),
     "installer: PORT_RE takes JIANT, JIANT FM, Felucca, ACID FM and their update names (not other gear)");
   ok(edRes.length === 2 && edRes.every((re) => NAMES.filter((n) => !/update/i.test(n)).every((n) => re.test(n)) && !re.test("IAC Driver Bus 1")),

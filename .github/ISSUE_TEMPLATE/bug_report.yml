@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        One bug per issue. Ideas are welcome too: open a blank issue with "idea" in the title. This is Braindancer (a fork of JIANT FM, based on Felucca): report here, not to JIANT or Felucca.
+        One bug per issue. Ideas are welcome too: open a blank issue with "idea" in the title. This is Braindancer (built on JIANT FM and Felucca): report here, not to JIANT or Felucca.
   - type: input
     id: version
     attributes:
