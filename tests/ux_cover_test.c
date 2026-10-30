@@ -1019,11 +1019,14 @@ int main(int argc, char **argv)
     ok &= got[TRK][P_MS0] && got[TRK][P_MS15] && got[TRK][P_MSLEN] && got[TRK][P_MSDIV] && got[TRK][P_MSSLW] && got[TRK][ID_LPHS];
     uxc_reach(SEC_FX, 0, got);                          /* (3b task 8: SENDS SPACE MASTER on pages; JIANT's other thirteen FX
                                                          * pages' settings, the SLICER's steps too, in MORE only) */
-    ok &= got[TRK][P_DIST] && got[TRK][P_REV] && got[GLO][G_DTIME] && got[GLO][G_RSIZE] && got[GLO][G_CLIP] && got[GLO][G_DREL] &&
-          !got[GLO][G_SLP0] && !got[GLO][G_SLMODE] && !got[TRK][P_DTYPE] && !got[GLO][G_DMIX] && !got[GLO][G_PFXLEN];
+    ok &= got[TRK][P_DIST] && got[TRK][P_REV] && got[GLO][G_DTIME] && got[GLO][G_RSIZE] && got[GLO][G_CLIP] && got[GLO][G_TAGE] &&
+          !got[GLO][G_SLP0] && !got[GLO][G_SLMODE] && !got[TRK][P_DTYPE] && !got[GLO][G_DMIX] && !got[GLO][G_PFXLEN] &&
+          !got[GLO][G_DREL] && !got[GLO][G_TWOW] && !got[GLO][G_TTONE];   /* (0.8 task 3: MASTER's AGE; DUCK TIME and TAPE's
+                                                         * five in MORE) */
     uxc_reach(SEC_FX, 1, got);
     ok &= got[GLO][G_SLP0] && got[GLO][G_SLP15] && got[GLO][G_SLT6] && got[TRK][P_APWAVE] && got[GLO][G_DPING] &&
-          got[GLO][G_RWIDE] && got[GLO][G_CSTER] && got[GLO][G_PFXRES] && !got[GLO][G_DJF];
+          got[GLO][G_RWIDE] && got[GLO][G_CSTER] && got[GLO][G_PFXRES] && !got[GLO][G_DJF] && got[GLO][G_DREL] &&
+          got[GLO][G_TWOW] && got[GLO][G_TFLUT] && got[GLO][G_TSAT] && got[GLO][G_THISS] && got[GLO][G_TTONE];
     uxc_reach(UXC_DRM, 0, got);                         /* (3b task 5: SOUND's LEVEL, every drum's; the kit's fields) */
     ok &= got[TRK][P_LN0] && got[TRK][P_LN7] && got[TRK][ID_DX_LANE] && !got[TRK][ID_DX_XRND];
     uxc_reach(UXC_DRM, 1, got);
@@ -1090,6 +1093,34 @@ int main(int argc, char **argv)
                      "a SAVE page's knob (ADD: SONG's OCT+) or a SAVE > MORE row", ok && NELEM(UXC_SAVE) == 27u);
     }
     bad += uxc_widths();
+    {   /* (Braindancer 0.8 task 3) TAPE's six in the sweep: AGE on FX > MASTER, the five FX > MORE's (and DUCK TIME there), their
+         * names and values at 0, 1, 50, 99, 100 through the knob row's form and MORE's row, fitting */
+        static const int16_t VS[5] = {0, 1, 50, 99, 100};
+        uint32_t id, w0 = uxc_wbad, nv = 0, nr = 0, r;
+        uxm_bits_t m = uxm_mask(&UXM_FX);
+        for (id = G_TAGE; id <= G_TTONE; id++)
+            for (i = 0; i < 5u; i++) {
+                int16_t keep = song.g[id];
+                char v[24], w[48];
+                uint8_t bar;
+                const char *nm;
+                song.g[id] = VS[i];
+                uxs_vtext(&GP[id], VS[i], 1, id, w, sizeof ((ux_knob_t *)0)->value);
+                uxc_wfit(uxs_label(SEC_FX, 1, id, GP[id].label), w);
+                nv++;
+                for (r = 0; r < UXM_FX.n; r++)
+                    if (UXM_FX.rows[r].kind == UXR_GLOBAL && UXM_FX.rows[r].id == id && uxm_pick_ok(&UXM_FX, &m, r)) {
+                        nm = uxm_row_text(&UXM_FX.rows[r], v, sizeof v, &bar);
+                        str_cpy(w, "MORE ", sizeof w);
+                        str_cpy(w + str_len(w), nm ? nm : "?", sizeof w - str_len(w));
+                        uxc_wfit(w, v);
+                        nr++;
+                    }
+                song.g[id] = keep;
+            }
+        bad += check("ux cover (0.8 task 3): TAPE's AGE (a page's knob) and its five (MORE's rows) fit at 0, 1, 50, 99, 100",
+                     uxc_wbad == w0 && nv == 30u && nr == 25u);
+    }
     printf("ux cover: %u settings JIANT reached, %u hidden on purpose, %u GLO's elsewhere (checked)\n", (unsigned)n, (unsigned)nh,
            (unsigned)ne);
     if (bad)

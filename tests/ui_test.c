@@ -12621,6 +12621,9 @@ static int test_param_knob_same(void)
                     uint32_t id = PAGES[i].id[sl];
                     if (id == G_TRKS || id == G_LOADP)
                         continue;                       /* (the device's settings, saved: moved verbatim, not run here) */
+                    if (PAGES[i].scope == SC_GLOBAL && id == G_TAGE)
+                        continue;                       /* (Braindancer 0.8: FX > MASTER's AGE sets TAPE's details with it,
+                                                         * JIANT had no such knob: test_t3_age) */
                     mod_ui_slot = (uint8_t)(n & 3u);
                     song.g[G_RTYPE] = (int16_t)(n % 5u); TSEL->p[P_APSYNC] = (int16_t)((n >> 1) & 1u);
                     TSEL->p[P_LPHASE] = (int16_t)(n % 3u == 0u ? -1 : (int16_t)(n % 100u));
@@ -12766,7 +12769,9 @@ static int test_m2_wide(void)
         uxk_engine(ENG[e]);
         for (i = 0; i < sizeof ALL / sizeof ALL[0]; i++) {
             uxm_bits_t b = uxm_mask(ALL[i]);
-            ok &= b.w[0] == m2_old_mask(ALL[i]) && (ALL[i]->n > 64u || b.w[1] == 0u);
+            uint64_t o = m2_old_mask(ALL[i]), h63 = ALL[i]->n > 64u && ALL[i]->rows[63].kind == UXR_HEAD ? 1ull << 63 : 0u;
+            ok &= (b.w[0] & ~h63) == (o & ~h63) && (ALL[i]->n > 64u || b.w[1] == 0u);   /* (0.8 task 3: past 64 rows a heading
+                                                         * on row 63 is shown by its rows below, which the old mask never saw) */
         }
     }
     bad += check("0.8 MORE: every list shows the rows the 64-bit mask showed", ok);
@@ -15338,8 +15343,8 @@ static int test_ux_more_rows_ok(void)
         if (PAGES[p].graph != GR_MORE)
             continue;
         nl++;
-        if (!m || !m->rows || m->n == 0u || m->n > 64u) {
-            printf("  page %s: no list, or over 64 rows\n", PAGES[p].title); ok = 0; continue;
+        if (!m || !m->rows || m->n == 0u || m->n > UXM_MAXROWS) {
+            printf("  page %s: no list, or over UXM_MAXROWS rows\n", PAGES[p].title); ok = 0; continue;
         }
         for (r = 0; r < m->n; r++, nr++) {
             const ux_row_t *rw = &m->rows[r];
@@ -16294,7 +16299,8 @@ typedef struct { const char *nm, *title; const char *lab[4]; uint16_t id[4]; uin
 static const uxt8_pg_t UXT8_PG[] = {
     {"SENDS", "FX", {"DISTORT", "CHORUS", "DELAY", "REVERB"}, {P_DIST, P_CHOR, P_DLY, P_REV}, 0},
     {"SPACE", "FX SPACE", {"DLY TIME", "DLY FDBK", "REV TYPE", "REV SIZE"}, {G_DTIME, G_DFDBK, G_RTYPE, G_RSIZE}, 1},
-    {"MASTER", "MASTER", {"CLIP", "PUNCH", "DUCK", "DUCK TIME"}, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}, 1},
+    {"MASTER", "MASTER", {"CLIP", "PUNCH", "DUCK", "AGE"}, {G_CLIP, G_PUNCH, G_DUCK, G_TAGE}, 1},   /* (0.8 task 3: AGE, DUCK TIME
+                                                         * MORE's) */
 };
 static void uxt8_open(uint32_t i)                        /* T1 (ANALOG, its first sound), FX's page i shown (3: MORE) */
 {
@@ -16330,6 +16336,7 @@ static const char *const UXT8_MORE_ECO =
     "SLICE T4|SLICE T5|SLICE T6|SLICE FX|[SLICE PITCH]|PITCH LOOP|PITCH SNAP|PITCH 1|PITCH 2|PITCH 3|PITCH 4|PITCH 5|PITCH 6|"
     "PITCH 7|PITCH 8|PITCH 9|PITCH 10|PITCH 11|PITCH 12|PITCH 13|PITCH 14|PITCH 15|PITCH 16|";
 static const char *const UXT8_MORE_LANE = "[PUNCH LANE]|LANE STEPS|LANE RATE|CLEAR LANE";
+static const char *const UXT8_MORE_TAPE = "|[MASTER]|DUCK TIME|[TAPE]|WOW|FLUTTER|TAPE SAT|HISS|TAPE TONE";   /* (0.8 task 3) */
 static int uxt8_eco_id(uint32_t id)                     /* (a global LOAD ECO takes out of the sound: the CHORUS's, the SLICER's) */
 {
     return id == G_CRATE || id == G_CDEPTH || id == G_CSTER || (id >= G_SLMODE && id <= G_SLP15);
@@ -16342,7 +16349,7 @@ static int test_t8_nav(void)
     static const char *const N[4] = {"SENDS", "SPACE", "MASTER", "MORE"}, *const T[4] = {"FX", "FX SPACE", "MASTER", "FX MORE"};
     static const char *const OLD[] = {"DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2", "CHORUS",
                                       "SLICER", "SL BUS", "SL BUS 2", "SL PITCH", "PUNCH", "TRACK"};
-    char want[700];
+    char want[900];
     int bad = 0, ok;
     uint32_t i, n = 0, pr;
     ui_power_on(); frame();
@@ -16383,7 +16390,7 @@ static int test_t8_nav(void)
     bad += check("ACID FM 3b task 8: FX's page left kept; PRESETS a sound, ALGORITHM the track there", ok);
     uxt8_open(3);                                       /* MORE: the list */
     song.g[G_RTYPE] = 0; frame();
-    snprintf(want, sizeof want, "%s%s%s", UXT8_MORE_A, UXT8_MORE_ECO, UXT8_MORE_LANE);
+    snprintf(want, sizeof want, "%s%s%s%s", UXT8_MORE_A, UXT8_MORE_ECO, UXT8_MORE_LANE, UXT8_MORE_TAPE);
     ok = cur_page()->graph == GR_MORE && cur_page()->scope == SC_TRACK && str_eq(uxe_more_list(&UXM_FX), want);
     if (!ok) printf("  MORE: %s\n", uxe_more_list(&UXM_FX));
     bad += check("ACID FM 3b task 8: FX's MORE lists DISTORT, AUTO PAN, DELAY, REVERB, CHORUS, SLICER, SLICE PITCH, PUNCH LANE "
@@ -16403,7 +16410,7 @@ static int test_t8_nav(void)
             }
         }
         ui_load = LOAD_ECO; rp_apply(); frame();
-        snprintf(want, sizeof want, "%s%s", UXT8_MORE_A, UXT8_MORE_LANE);
+        snprintf(want, sizeof want, "%s%s%s", UXT8_MORE_A, UXT8_MORE_LANE, UXT8_MORE_TAPE);
         ok = hid && back && nr == 3u + 11u + 18u && str_eq(uxe_more_list(&UXM_FX), want);
         if (!ok) printf("  ECO: %u rows, hidden %d, the others %d: %s\n", (unsigned)nr, hid, back, uxe_more_list(&UXM_FX));
         ui_load = LOAD_FULL; rp_apply(); frame();
@@ -16455,7 +16462,8 @@ static int uxt8_diff(const track_t *was, const int16_t *gw, uint32_t glo, uint32
         for (k = 0; k < P_COUNT; k++)
             odd += trk[o].p[k] != was[o].p[k] && !(!glo && o == 1u && k == id);
     for (k = 0; k < G_COUNT; k++)
-        odd += song.g[k] != gw[k] && !(glo && k == id);
+        odd += song.g[k] != gw[k] && !(glo && k == id) && !(glo && id == G_TAGE && k > G_TAGE && k <= G_TTONE);   /* (0.8 task 3:
+                                                         * AGE sets TAPE's five details with it) */
     return odd;
 }
 static int test_t8_knobs(void)
@@ -16531,7 +16539,13 @@ static int test_t8_knobs(void)
             {2, 0, 1, G_CLIP, 0, "OFF", "CLIP \xB7 OFF"}, {2, 0, 1, G_CLIP, 50, "50%", "CLIP \xB7 50%: DRIVE X2.5"},
             {2, 1, 1, G_PUNCH, 0, "OFF", "PUNCH \xB7 OFF"}, {2, 1, 1, G_PUNCH, 50, "50%", "PUNCH \xB7 50%: DRUMS +2.6DB"},
             {2, 2, 1, G_DUCK, 100, "-30DB", "DUCK \xB7 OTHERS -30DB ON A KICK"}, {2, 2, 1, G_DUCK, 0, "OFF", "DUCK \xB7 OFF"},
-            {2, 3, 1, G_DREL, 30, "208MS", "DUCK TIME \xB7 208MS"}, {2, 3, 1, G_DREL, 100, "600MS", "DUCK TIME \xB7 600MS"},
+            {3, 1, 1, G_DREL, 30, "208MS", "DUCK TIME \xB7 208MS"}, {3, 1, 1, G_DREL, 100, "600MS", "DUCK TIME \xB7 600MS"},
+            {2, 3, 1, G_TAGE, 0, "OFF", "AGE \xB7 OFF"}, {2, 3, 1, G_TAGE, 50, "50%", "AGE \xB7 50%: OLD TAPE"},
+            {2, 3, 1, G_TAGE, 100, "100%", "AGE \xB7 100%: WORN CASSETTE"},
+            {3, 1, 1, G_TWOW, 30, "30%", "WOW \xB7 30%: SLOW PITCH DRIFT"}, {3, 1, 1, G_TFLUT, 40, "40%", "FLUTTER \xB7 40%: 9.6HZ"},
+            {3, 1, 1, G_TSAT, 50, "50%", "TAPE SAT \xB7 50%: DRIVE X2.0"},
+            {3, 1, 1, G_THISS, 50, "50%", "HISS \xB7 50%: FOLLOWS THE MUSIC"},
+            {3, 1, 1, G_TTONE, 50, "50%", "TAPE TONE \xB7 50%: HIGHS OFF ABOVE 6.8KHZ"},
             {3, 1, 0, P_DTYPE, 4, "RECTIFY", "DIST TYPE \xB7 RECTIFY: AN OCTAVE UP"},
             {3, 1, 0, P_DTONE, -32, "-50%", "DIST TONE \xB7 50% DARKER"}, {3, 1, 0, P_DTONE, 0, "FLAT", "DIST TONE \xB7 FLAT"},
             {3, 1, 0, P_APWAVE, 4, "RAND", "PAN WAVE \xB7 RANDOM STEPS"}, {3, 1, 0, P_APDEP, 0, "OFF", "PAN DEPTH \xB7 OFF"},
@@ -16555,12 +16569,15 @@ static int test_t8_knobs(void)
         uint32_t k;
         ok = 1;
         for (k = 0; k < NELEM(V); k++) {
-            int16_t keep, *vp;
+            int16_t keep, *vp, tk[6];
             uxt8_open(V[k].pg);
             song.g[G_BPM] = 120;
             vp = uxt8_val(V[k].glo, V[k].id);
             keep = *vp;
+            memcpy(tk, &song.g[G_TAGE], sizeof tk);
             *vp = V[k].v;
+            if (V[k].glo && V[k].id == G_TAGE)          /* (0.8 task 3: AGE as its knob sets it, the details on its map) */
+                tape_age_apply(V[k].v);
             if (V[k].pg == 3u) uxt8_pick(V[k].glo ? UXR_GLOBAL : UXR_TRACK, V[k].id);
             frames(UX_HOT_MS + 50u);
             ux_knob_touch(V[k].knob);
@@ -16571,6 +16588,7 @@ static int test_t8_knobs(void)
                 ok = 0;
             }
             *vp = keep;
+            memcpy(&song.g[G_TAGE], tk, sizeof tk);
         }
         {   /* DLY TIME past what the line holds: its longest said */
             uxt8_open(1);
@@ -17261,6 +17279,195 @@ static int test_t8_fix(void)
     uxs_out_txt(UXS_MW, b, sizeof b); ok &= str_eq(b, "OUT 0DB");
     if (!ok) printf("  OUT \"%s\"\n", b);
     bad += check("ACID FM 3b task 8 fix: MASTER's OUT in whole dB (OUT -5DB, OUT 0DB, OUT OFF), never a decimal", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * Braindancer 0.8 task 3: TAPE's controls. FX > MASTER is CLIP PUNCH DUCK AGE (DUCK TIME FX > MORE's, under MASTER); FX > MORE's
+ * TAPE group (WOW FLUTTER TAPE SAT HISS TAPE TONE); AGE sets the five on its map, a detail turned after it overrides that one
+ * until AGE is turned again (fx.c tape_age_apply, tape_age_custom)
+ * ------------------------------------------------------------------------------------------------------------------------- */
+static int uxt3_on_map(int32_t age)                     /* TAPE's five details are AGE age's */
+{
+    int16_t m[5];
+    uint32_t k;
+    int ok = 1;
+    tape_age_map(age, m);
+    for (k = 0; k < 5u; k++)
+        ok &= song.g[G_TWOW + k] == m[k];
+    return ok;
+}
+static int test_t3_age(void)
+{
+    static int16_t g0[G_COUNT];
+    int bad = 0, ok;
+    uint32_t k;
+    int16_t m[5];
+    ui_power_on(); frame();
+    uxt8_open(2);
+    ok = str_eq(uxe_labels(), "CLIP|PUNCH|DUCK|AGE") && song.g[G_TAGE] == 0 && !tape_set();
+    frames(200);
+    turn(EN_K4, 50); frame();
+    ok &= song.g[G_TAGE] == 50 && tape_age_custom() == 0u && tape_set();
+    for (k = 0; k < 5u; k++)
+        ok &= song.g[G_TWOW + k] == TAPE_AGE_PT[1][k];
+    if (!ok) printf("  AGE %d: %d %d %d %d %d\n", song.g[G_TAGE], song.g[G_TWOW], song.g[G_TFLUT], song.g[G_TSAT], song.g[G_THISS],
+                    song.g[G_TTONE]);
+    bad += check("0.8 task 3: FX > MASTER KNOB 4 is AGE: 0 -> 50 sets AGE 50 and TAPE's five on its map (TAPE_AGE_PT[1])", ok);
+    nav_put(SEC_FX, "MORE"); frame();                   /* FX > MORE > TAPE: WOW to 10 by hand */
+    uxt8_pick(UXR_GLOBAL, G_TWOW);
+    frames(200);
+    turn(EN_K2, 10 - song.g[G_TWOW]); frame();
+    ok = song.g[G_TWOW] == 10 && song.g[G_TAGE] == 50 && tape_age_custom() == 1u;
+    for (k = 1; k < 5u; k++)
+        ok &= song.g[G_TWOW + k] == TAPE_AGE_PT[1][k];
+    nav_put(SEC_FX, "MASTER"); frame();
+    frames(UX_HOT_MS + 50u); ux_knob_touch(3); frame();
+    ok &= str_eq(uxt6_status(), "AGE \xB7 50%: OLD TAPE, 1 BY HAND") && str_eq(uxe_value(3), "50%");
+    if (!ok) printf("  WOW %d, custom %u: \"%s\"\n", song.g[G_TWOW], (unsigned)tape_age_custom(), uxt6_status());
+    bad += check("0.8 task 3: a detail turned after AGE (MORE > TAPE WOW 10) overrides that one alone; MASTER says AGE . 50%: "
+                 "OLD TAPE, 1 BY HAND", ok);
+    frames(200);
+    turn(EN_K4, 1); frame();                            /* AGE again: every detail back on its map */
+    ok = song.g[G_TAGE] == 51 && tape_age_custom() == 0u && uxt3_on_map(51);
+    frames(UX_HOT_MS + 50u); ux_knob_touch(3); frame();
+    ok &= str_eq(uxt6_status(), "AGE \xB7 51%: OLD TAPE");
+    frames(200);
+    turn(EN_K4, -51); frame();
+    ok &= song.g[G_TAGE] == 0 && !tape_set() && tape_age_custom() == 0u;
+    for (k = 0; k < 5u; k++)
+        ok &= song.g[G_TWOW + k] == 0;
+    if (!ok) printf("  AGE %d, custom %u, WOW %d: \"%s\"\n", song.g[G_TAGE], (unsigned)tape_age_custom(), song.g[G_TWOW], uxt6_status());
+    bad += check("0.8 task 3: AGE turned again puts every detail back on its map (one detent); AGE 0: all five 0, TAPE off", ok);
+    tape_age_map(25, m);
+    for (ok = 1, k = 0; k < 5u; k++)
+        ok &= m[k] == TAPE_AGE_PT[0][k] + (TAPE_AGE_PT[1][k] - TAPE_AGE_PT[0][k]) * 25 / 50;
+    tape_age_map(75, m);
+    for (k = 0; k < 5u; k++)
+        ok &= m[k] == TAPE_AGE_PT[1][k] + (TAPE_AGE_PT[2][k] - TAPE_AGE_PT[1][k]) * 25 / 50;
+    tape_age_map(100, m);
+    for (k = 0; k < 5u; k++)
+        ok &= m[k] == TAPE_AGE_PT[2][k] && TAPE_AGE_PT[0][k] == 0 && TAPE_AGE_PT[1][k] <= TAPE_AGE_PT[2][k];
+    bad += check("0.8 task 3: AGE's map: linear between AGE 0, 50 and 100 (25 the midpoint of 0's and 50's), 0 all off", ok);
+    tape_age_apply(30);                                 /* UNDO after an AGE turn: all six back */
+    song.g[G_TSAT] = 7;
+    undo_mark();
+    memcpy(g0, song.g, sizeof g0);
+    frames(200);
+    turn(EN_K4, 40); frame();
+    ok = song.g[G_TAGE] == 70 && uxt3_on_map(70) && !undo_do();
+    for (k = G_TAGE; k <= G_TTONE; k++)
+        ok &= song.g[k] == g0[k];
+    ok &= song.g[G_TAGE] == 30 && song.g[G_TSAT] == 7;
+    bad += check("0.8 task 3: UNDO after an AGE turn brings all six back (AGE 30, SAT 7 by hand)", ok);
+    ui_power_on();
+    return bad;
+}
+/* FX > MORE: MASTER (DUCK TIME) then TAPE after PUNCH LANE; DUCK TIME on no page; every key keeps its job on MASTER (OCT+/- the
+ * octave as on SENDS; SELECT the chain; the footer); the change signature of a list past 64 rows (ux_more.c uxm_sig_fold); a
+ * change on a row past 64 (TAPE TONE) redraws the list */
+static int test_t3_more(void)
+{
+    static const char *const N[4] = {"SENDS", "SPACE", "MASTER", "MORE"}, *const T[4] = {"FX", "FX SPACE", "MASTER", "FX MORE"};
+    int bad = 0, ok;
+    uint32_t i, c, r, rt;
+    const char *l;
+    ui_power_on(); frame();
+    uxt8_open(3);
+    l = uxe_more_list(&UXM_FX);
+    ok = strlen(l) > strlen(UXT8_MORE_TAPE) && str_eq(l + strlen(l) - strlen(UXT8_MORE_TAPE), UXT8_MORE_TAPE) &&
+         strstr(l, "CLEAR LANE|[MASTER]|DUCK TIME|[TAPE]") != 0;
+    for (i = 0; i < NPAGES; i++)
+        for (c = 0; c < 4u; c++)
+            ok &= !(PAGES[i].fam == FAM_FX && PAGES[i].scope == SC_GLOBAL && PAGES[i].id[c] == G_DREL);
+    ok &= uxt8_row(UXR_GLOBAL, G_DREL) < UXM_FX.n && uxt8_row(UXR_HEAD, UXM_H_TAPE) == uxt8_row(UXR_GLOBAL, G_DREL) + 1u &&
+          UXM_FX.n > 64u && uxt8_row(UXR_GLOBAL, G_TTONE) == UXM_FX.n - 1u;
+    if (!ok) printf("  MORE: %s\n", l);
+    bad += check("0.8 task 3: FX > MORE lists MASTER (DUCK TIME) then TAPE (WOW FLUTTER TAPE SAT HISS TAPE TONE) after PUNCH "
+                 "LANE; DUCK TIME on no FX page", ok);
+    ui_power_on(); frame();                             /* every key keeps its job */
+    press(B_FX); frame();
+    ok = uxt6_walk(B_FX, N, T, 4);
+    {
+        ux_knob_t k[4];
+        char b[48];
+        int8_t o0;
+        uxt8_open(2);
+        uxs_knobs(cur_page(), k);
+        uxs_foot(uxs_where(), k, uxs_count(), uxs_next(), b, sizeof b);
+        ok &= str_eq(b, "3 / 4 \xB7 NEXT MORE");
+        o0 = song.octave;
+        press(B_OCTUP); frame();
+        ok &= song.octave == o0 + 1 && str_eq(cur_page()->title, "MASTER") && song.g[G_TAGE] == 0;
+        press(B_OCTDN); frame();
+        ok &= song.octave == o0 && str_eq(cur_page()->title, "MASTER") && !tape_set();
+        if (!ok) printf("  footer \"%s\", octave %d\n", b, song.octave);
+    }
+    bad += check("0.8 task 3: every key keeps its job: SELECT walks SENDS SPACE MASTER MORE, footer 3 / 4 . NEXT MORE, OCT+/- the "
+                 "octave on MASTER", ok);
+    {   /* the change signature: rows i and i + 64 swapped (one shown, the other hidden) change it; w[1] 0 keeps the old fold */
+        uxm_bits_t a, b;
+        ok = 1;
+        for (r = 0; r < 64u; r++) {
+            memset(&a, 0, sizeof a); memset(&b, 0, sizeof b);
+            a.w[0] = 0x0123456789ABCDEFull | 1ull << r;   /* (row r shown, r + 64 hidden; b: the other way) */
+            b = a;
+            b.w[0] &= ~(1ull << r);
+            b.w[1] |= 1ull << r;
+            ok &= uxm_sig_fold(&a) != uxm_sig_fold(&b);
+            a.w[1] = 0;
+            ok &= uxm_sig_fold(&a) == (uint32_t)(a.w[0] ^ (a.w[0] >> 32));
+        }
+        bad += check("0.8 task 3 (task 2 review #2): MORE's change signature: rows i and i + 64 swapped change it; a list of 64 "
+                     "rows or less folds as before", ok);
+    }
+    uxt8_open(3);                                       /* a row past 64 changed: the list redrawn */
+    rt = uxt8_row(UXR_GLOBAL, G_TTONE);
+    uxt8_pick(UXR_GLOBAL, G_TWOW);
+    frames(400);
+    {
+        uint32_t n0 = uxs_panels;
+        frames(400);
+        ok = uxs_panels == n0 && rt >= 64u;
+        song.g[G_TTONE] = 40; frames(100);
+        ok &= uxs_panels != n0;
+        n0 = uxs_panels;
+        frames(400);
+        ok &= uxs_panels == n0;
+        if (!ok) printf("  row %u: %u panels\n", (unsigned)rt, (unsigned)(uxs_panels - n0));
+    }
+    bad += check("0.8 task 3 (task 2 review #1): TAPE TONE (FX > MORE's row past 64) changed redraws the list, once", ok);
+    {   /* MASTER's TAPE strip: drawn while TAPE is in the chain (none at AGE 0), clear of the kick's curves at every DUCK, DUCK
+         * TIME and PUNCH (the curves' rows over its columns all above its top) */
+        int32_t x0 = UXS_TX - 5 - text_w(&UF_LBL, UXS_MS_SAY[6]) - 2, x, du, dr, pu;
+        uint32_t h0;
+        ok = 1;
+        for (du = 0; du <= 100; du += 20)
+            for (dr = 0; dr <= 100; dr += 20)
+                for (pu = 0; pu <= 100; pu += 50) {
+                    song.g[G_DUCK] = (int16_t)du; song.g[G_DREL] = (int16_t)dr; song.g[G_PUNCH] = (int16_t)pu;
+                    uxs_kick_calc();
+                    for (x = x0 - 90; x < UXS_KW; x++)
+                        if (UXS_KY + uxs_kick.duck[x] + 1 >= UXS_TY || UXS_KY + uxs_kick.punch[x] + 1 >= UXS_TY) {
+                            printf("  DUCK %d TIME %d PUNCH %d: column %d at %d / %d\n", (int)du, (int)dr, (int)pu, (int)x,
+                                   UXS_KY + uxs_kick.duck[x], UXS_KY + uxs_kick.punch[x]);
+                            ok = 0;
+                            break;
+                        }
+                }
+        song.g[G_DUCK] = 0; song.g[G_DREL] = 30; song.g[G_PUNCH] = 0;
+        ok &= x0 > 90 + 2;
+        uxt8_open(2);
+        frames(400);
+        h0 = uxs_panel_crc();
+        tape_age_apply(60); frames(400);
+        ok &= uxs_panel_crc() != h0;
+        tape_age_apply(0); frames(400);
+        ok &= uxs_panel_crc() == h0;
+        bad += check("0.8 task 3: MASTER's TAPE strip drawn while TAPE is on (AGE 60), gone at AGE 0; clear of the kick's curves at "
+                     "every DUCK, DUCK TIME and PUNCH", ok);
+    }
     ui_power_on();
     return bad;
 }
@@ -22021,6 +22228,8 @@ int main(void)
     bad += test_t8_pace();
     bad += test_t8_names();
     bad += test_t8_fix();                               /* (ACID FM 3b task 8 fix) */
+    bad += test_t3_age();                               /* (Braindancer 0.8 task 3) */
+    bad += test_t3_more();
     bad += test_t9_look();                              /* (ACID FM 3b task 9) */
     bad += test_c9_glo();                               /* (ACID FM 3c-1 task 9) */
     bad += test_c5_layers();                            /* (ACID FM 3c-1 task 5) */

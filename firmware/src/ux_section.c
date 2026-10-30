@@ -118,6 +118,12 @@ static const uxs_name_t UXS_NAME[] = {
     {UXS_ALL, UXS_ALL, 1, G_PFXLEN, "LANE STEPS"},      /* (JIANT's PUNCH LEN: the punch-in lane's steps, */
     {UXS_ALL, UXS_ALL, 1, G_PFXRES, "LANE RATE"},       /* .. RES a step's length: as LFO's STEP RATE) */
     {UXS_ALL, UXS_ALL, 1, G_DREL, "DUCK TIME"},         /* (JIANT's REL: DUCK's release, how long the others take back) */
+    {UXS_ALL, UXS_ALL, 1, G_TWOW, "WOW"},               /* (Braindancer 0.8) TAPE (fx.c tape_block): FX > MORE's five, */
+    {UXS_ALL, UXS_ALL, 1, G_TFLUT, "FLUTTER"},
+    {UXS_ALL, UXS_ALL, 1, G_TSAT, "TAPE SAT"},          /* (TAPE's: CLIP's own drive is MASTER's) */
+    {UXS_ALL, UXS_ALL, 1, G_THISS, "HISS"},
+    {UXS_ALL, UXS_ALL, 1, G_TTONE, "TAPE TONE"},        /* (.. TONE alone: the DISTORT's, the delay's, the reverb's) */
+    {UXS_ALL, UXS_ALL, 1, G_TAGE, "AGE"},               /* (.. and the macro setting them: FX > MASTER KNOB 4) */
     {UXS_ALL, UXS_ALL, 1, G_MRSEL, "KEYBOARD"},         /* (3c-1 task 8) KEYBOARD PLAYS SELECTED (ux_more.c uxm_list_name: the list's) */
 };
 /* (3b task 8) REVERB's fourth setting by its TYPE (params.c param_ref: ROOM / SPRING the pre-delay, SHIMMER / CLOUD AIR, RESO its
@@ -539,11 +545,13 @@ static const char *const UXS_FX_SAY[] = {"FLAT", "OPEN", "MONO", "% DARKER", "% 
                                          ": DRUMS ", " SCALE STEPS", "TUNED TO ", "FREE: RATE IN HZ", "BEAT: IN TIME",
                                          ": LEFT RIGHT LEFT", "ANALOG: WARM REPEATS", "DIGITAL: EXACT REPEATS",
                                          ": THE FX RETURNS TOO", "ANY: EVERY SEMITONE", "SCALE: ONTO THE SCALE", " NOTE", ": GROWS",
-                                         ": ONE ECHO", ": NO CHORUS IN ECO", ": OFF", "ANY", "SCALE"};
+                                         ": ONE ECHO", ": NO CHORUS IN ECO", ": OFF", "ANY", "SCALE",
+                                         ": A LITTLE TAPE", ": OLD TAPE", ": WORN CASSETTE", " BY HAND", ": SLOW PITCH DRIFT",
+                                         "HZ", ": FOLLOWS THE MUSIC", ": HIGHS OFF ABOVE ", "KHZ"};
 enum { UXF_FLAT, UXF_OPEN, UXF_MONO, UXF_DARK, UXF_BRIGHT, UXF_THIN, UXF_NARROW, UXF_WIDE, UXF_STEPS, UXF_AS, UXF_LONGEST,
        UXF_COLON, UXF_OTHERS, UXF_KICK, UXF_DRIVE, UXF_DRUMS, UXF_SCLSTEPS, UXF_TUNED, UXF_AP_FREE, UXF_AP_BEAT, UXF_PING,
        UXF_ANALOG, UXF_DIGITAL, UXF_SLFX, UXF_SNAP0, UXF_SNAP1, UXF_NOTE, UXF_GROWS, UXF_ONE, UXF_NOCHO, UXF_OFFIN, UXF_ANY,
-       UXF_SCALE, UXF_N };
+       UXF_SCALE, UXF_TAPE1, UXF_TAPE2, UXF_TAPE3, UXF_BYHAND, UXF_WOW, UXF_HZ, UXF_HISS, UXF_HIGHS, UXF_KHZ, UXF_N };
 typedef char uxs_fx_say_ok[NELEM(UXS_FX_SAY) == UXF_N ? 1 : -1];
 /* a bipolar amount v (0 at w: below to w - 64, above to w + 63) as the knob shows it, "-50%" / "+50%" / zero's word; in full
  * "50% DARKER" */
@@ -780,6 +788,55 @@ static int uxs_fx_val(uint32_t glo, uint32_t id, int32_t v, char *b, uint32_t nb
     case G_DREL:                                        /* (.. its release, 40 .. 600 ms: dv_kb(40000 + REL x 5600) us) */
         uxs_mstxt(b, nb, 40u + (uint32_t)clamp(v, 0, 100) * 56u / 10u);
         return 1;
+    case G_TAGE: case G_TWOW: case G_TFLUT: case G_TSAT: case G_THISS: case G_TTONE: {   /* (Braindancer 0.8) TAPE (fx.c) */
+        uint32_t c = id == G_TAGE ? tape_age_custom() : 0u;   /* (AGE: the details turned by hand after it) */
+        v = clamp(v, 0, 100);
+        if (v)
+            uxs_pct(v, 100, b, nb);
+        else
+            str_cpy(b, N_ONOFF[0], nb);
+        if (!full || (!v && !c))                        /* (every one OFF at 0; AGE's by hand said even then) */
+            return 1;
+        switch (id) {
+        case G_TAGE:                                    /* (the words for AGE's thirds; the details turned by hand after it) */
+            if (v)
+                uxs_cat(b, nb, UXS_FX_SAY[v < 35 ? UXF_TAPE1 : v < 70 ? UXF_TAPE2 : UXF_TAPE3]);
+            if (c) {
+                uxs_cat(b, nb, ", ");
+                fmt_int(t, (int32_t)((c & 1u) + (c >> 1 & 1u) + (c >> 2 & 1u) + (c >> 3 & 1u) + (c >> 4 & 1u)));
+                uxs_cat(b, nb, t);
+                uxs_cat(b, nb, UXS_FX_SAY[UXF_BYHAND]);
+            }
+            break;
+        case G_TWOW:                                    /* (a smoothed random drift, 0.3 .. 2 Hz) */
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_WOW]);
+            break;
+        case G_TFLUT:                                   /* (its rate: 6 .. 15 Hz with the amount) */
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_COLON]);
+            uxs_fix1(t, sizeof t, 60 + 90 * v / 100);
+            uxs_cat(b, nb, t);
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_HZ]);
+            break;
+        case G_TSAT:                                    /* (the soft clip driven x1 .. x3, its level kept) */
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_DRIVE]);
+            uxs_fix1(t, sizeof t, 10 + 20 * v / 100);
+            uxs_cat(b, nb, t);
+            break;
+        case G_THISS:                                   /* (its level follows the music's: none over silence) */
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_HISS]);
+            break;
+        default: {                                      /* TONE: the one-pole's corner (fx.c TAPE_TONE_HZ100, between tens) */
+            uint32_t i = (uint32_t)v / 10u, f = (uint32_t)v % 10u;
+            uint32_t hz = (TAPE_TONE_HZ100[i] * (10u - f) + (i < 10u ? TAPE_TONE_HZ100[i + 1u] : 0u) * f + 5u) / 10u;
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_HIGHS]);
+            uxs_fix1(t, sizeof t, (int32_t)hz);
+            uxs_cat(b, nb, t);
+            uxs_cat(b, nb, UXS_FX_SAY[UXF_KHZ]);
+            break;
+        }
+        }
+        return 1;
+    }
     default:
         return 0;
     }
@@ -2799,7 +2856,24 @@ static void uxs_kick_calc(void)
         uxs_kick.punch[x] = (uint8_t)uxs_gain_y(uxs_db10((uint32_t)punch_gain(to, pu), 32768u));
     }
 }
-static const char *const UXS_MS_SAY[] = {"", "CLIPS", "CLIP", "AFTER A KICK", "DRUMS", "OTHERS"};
+static const char *const UXS_MS_SAY[] = {"", "CLIPS", "CLIP", "AFTER A KICK", "DRUMS", "OTHERS", "TAPE"};
+/* (Braindancer 0.8) TAPE's five details (WOW FLUTTER SAT HISS TONE) as bars, 4 x 20 px each, lit to their value, "TAPE" beside
+ * them: in the kick's box low on its right, under its curves (the deepest DUCK at the longest DUCK TIME is back above it there) */
+#define UXS_TX 202               /* the strip: its left, its top (the bars' foot: + 20) */
+#define UXS_TY 94
+static void uxs_tape_strip(int32_t x, int32_t y)
+{
+    int32_t k, h;
+    for (k = 0; k < 5; k++) {
+        h = clamp(song.g[G_TWOW + k], 0, 100) * 20 / 100;
+        cv_rect(x + k * 5, y, 4, 20 - h, UX_EMPTY);
+        if (h)
+            cv_rect(x + k * 5, y + 20 - h, 4, h, UX_ACID);
+    }
+    k = x - 5 - text_w(&UF_LBL, UXS_MS_SAY[6]);
+    GFX_HOOK_ALIGN(0, y + 10 + UF_LBL_CAP_Y, 0, y + 10 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "MASTER's TAPE");
+    cv_text_on(k, y + 10, &UF_LBL, UXS_MS_SAY[6], UX_MID, ux_under(k, y + 14));
+}
 static void uxs_master_draw(const track_t *t, const char *name, int32_t lvl)
 {
     int32_t lim = uxs_meter_px(uxs_db10((uint32_t)softclip(LIM_T), 32767u)), i, x, y, py = 0;
@@ -2863,6 +2937,8 @@ static void uxs_master_draw(const track_t *t, const char *name, int32_t lvl)
         x = gx + UXS_KW - text_w(&UF_LBL, UXS_MS_SAY[5]);
         cv_text_on(x, gy - 10, &UF_LBL, UXS_MS_SAY[5], du ? UX_VIOLET : UX_MID, ux_under(x, gy - 6));
     }
+    if (tape_set())                                     /* (Braindancer 0.8) TAPE in the chain: its five */
+        uxs_tape_strip(UXS_TX, UXS_TY);
 }
 
 /* the page's picture: MORE its list; EDIT's its engine's, ENV's, ARP's, SCL's, LFO's, FX's (above). (3b task 8: the fallback,
@@ -2994,7 +3070,8 @@ static void ux_section_draw(void)
     if (pg->graph == GR_MORE && pg->more) {             /* (MORE: the pick, the scroll, the rows shown and their values) */
         uxm_bits_t m = uxm_mask(pg->more);
         uint32_t i;
-        sig = sig * 131u + uxm_at[uxm_key()].sel * 7u + uxm_at[uxm_key()].top + (uint32_t)((m.w[0] ^ (m.w[0] >> 32)) ^ (m.w[1] ^ (m.w[1] >> 32)));   /* (a list of 64 rows or less: w[1] is 0) */
+        sig = sig * 131u + uxm_at[uxm_key()].sel * 7u + uxm_at[uxm_key()].top + uxm_sig_fold(&m);   /* (0.8: rows i and i + 64
+                                                         * apart; a list of 64 rows or less as before) */
         for (i = 0; i < uxm_n(pg->more); i++)
             if (uxm_on(&m, i) && pg->more->rows[i].kind != UXR_HEAD) {
                 int16_t *vp;
@@ -3107,8 +3184,10 @@ static void ux_section_draw(void)
                                                          * the tempo, the output: below) */
         static const uint8_t F[] = {P_DIST, P_CHOR, P_DLY, P_REV, P_DTYPE};
         static const uint8_t G[] = {G_DTIME, G_DFDBK, G_DMIX, G_DTYPE, G_DPING, G_DPIT, G_DSPRY, G_RTYPE, G_RSIZE, G_RDAMP, G_RMOD,
-                                    G_RPRE, G_CLIP, G_PUNCH, G_DUCK, G_DREL};   /* (fix: only the globals the pictures read: not
-                                                         * the DJ FILTER, which recorded automation writes every step) */
+                                    G_RPRE, G_CLIP, G_PUNCH, G_DUCK, G_DREL, G_TAGE, G_TWOW, G_TFLUT, G_TSAT, G_THISS,
+                                    G_TTONE};   /* (fix: only the globals the pictures read: not the DJ FILTER, which
+                                                         * recorded automation writes every step; 0.8: TAPE's six, MASTER's
+                                                         * strip: AGE's records move the details at most once a step) */
         for (c = 0; c < sizeof F; c++)
             sig = sig * 31u + (uint16_t)TSEL->p[F[c]];
         for (c = 0; c < sizeof G; c++)

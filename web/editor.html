@@ -2773,7 +2773,10 @@ const LAYOUT = (pe0) => [
     ...[0, 1, 2, 3].map((k) => [`OP${k + 1}`, 0, [61 + 5 * k, 62 + 5 * k, 63 + 5 * k, 64 + 5 * k]]),
     ["OP LVL", 0, [65, 70, 75, 80]]] }] : []),
   { t: "VOICE", pages: [["LEVEL", 0, [0]], ["VOICE", 0, [37, 38, 41, 42]]] },   /* (JIANT 0.4: no VOICE 2: PAN on MIXER, MUTE there and GLO) */
-  { t: "FX", pages: [["FX", 0, [33, 34, 35, 36]], ["MASTER", 1, [21, 25, 26, 13]], ...(dev && dev.gdesc && dev.gdesc[17] && dev.gdesc[17].label === "DJ FILT" ? [["DJ FILTER", 1, [17]]] : []),   /* (0.9.1, as the device names it) */ ...(pe0 >= 112 ? [["DIST", 0, [33, 91, 92]]] : []), ...(dev && dev.info && dev.info.gcount >= 66 ? [["AUTO PAN", 0, [45, 46, 48, 47]], ["SLICER", 1, [37, 38, 39, 40]], ["SL BUS", 1, [41, 42, 43, 44]],
+  { t: "FX", pages: [["FX", 0, [33, 34, 35, 36]], ["MASTER", 1, [21, 25, 26, dev && dev.info && dev.info.gcount >= 102 ? 96 : 13]],
+    ...(dev && dev.info && dev.info.gcount >= 102 ? [["TAPE", 1, [97, 98, 99, 100]], ["TAPE 2", 1, [101, 13]]] : []),   /* (Braindancer 0.8)
+                                                    MASTER's AGE (96), TAPE's WOW FLUTTER SAT HISS, TONE with DUCK TIME (13) */
+    ...(dev && dev.gdesc && dev.gdesc[17] && dev.gdesc[17].label === "DJ FILT" ? [["DJ FILTER", 1, [17]]] : []),   /* (0.9.1, as the device names it) */ ...(pe0 >= 112 ? [["DIST", 0, [33, 91, 92]]] : []), ...(dev && dev.info && dev.info.gcount >= 66 ? [["AUTO PAN", 0, [45, 46, 48, 47]], ["SLICER", 1, [37, 38, 39, 40]], ["SL BUS", 1, [41, 42, 43, 44]],
       ["SL BUS 2", 1, [45, 46, 47]], ["SL PITCH", 1, [48, 49]], ...[0, 1, 2, 3].map((k) => [`PITCH ${4 * k + 1}-${4 * k + 4}`, 1,
       [50 + 4 * k, 51 + 4 * k, 52 + 4 * k, 53 + 4 * k]])] : [["SLICER", 0, [45, 46, 47, 48]]]),   /* (0.6.3: one, on a bus) */
     ["DLY", 1, [4, 5, 6, 7]], ...(pe0 >= 112 ? [["DLY 2", 1, [28, 34, 35, ...(dev && dev.info && dev.info.gcount >= 67 ? [66] : [])]],

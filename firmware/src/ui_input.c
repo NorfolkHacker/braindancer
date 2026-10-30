@@ -1325,6 +1325,11 @@ static void param_knob(track_t *t, uint32_t id, int32_t steps, uint32_t knob)
         if (t && id == P_AMODE && v == AM_ORD)          /* .. and steps over it (a stored ORD still plays) */
             v += v > from ? 1 : -1;
     }
+    if (!t && id == G_TAGE) {                           /* (Braindancer 0.8) FX > MASTER's AGE: TAPE's five details on its map
+                                                         * with it (fx.c; a detail row: the plain write below) */
+        tape_age_apply(v);
+        return;
+    }
     *vp = (int16_t)v;
     if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
         trks_put(v);

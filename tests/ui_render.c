@@ -617,7 +617,8 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_LAYER_EDIT, S_LAYER_MACRO, S_LAYER_FX, S_LAYER_SCL, S_LAYER_FX_STATE, S_ROLL_LOCK_MORE, S_HOME_BPM, S_SEQ_STEPS,
        S_SEQ_STEPS_64, S_SEQ_STEPS_DRUM, S_SEQ_EXTRAS, S_SEQ_EXTRAS_DRUM, S_SEQ_PATTERN, S_SEQ_PATTERN_32, S_SEQ_MORE,
        S_SEQ_MORE_END, S_SEQ_MORE_DRUM, S_SEQ_LOCK, S_SEQ_EXTRAS_ECHO, S_GLO_MIX, S_GLO_MORE_END, S_GLO_MIDI, S_GLO_MORE_MIDI,
-       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_SAVE_SONG, S_SAVE_SONG_EMPTY, S_DLG_LOAD_PROJ, S_LAYER_SAVE, S_SEQ_MORE_PLAYS, S_COUNT };
+       S_SAVE_SOUND_EMPTY, S_SAVE_MORE, S_SAVE_SONG, S_SAVE_SONG_EMPTY, S_DLG_LOAD_PROJ, S_LAYER_SAVE, S_SEQ_MORE_PLAYS,
+       S_FX_MASTER_AGE, S_FX_MORE_TAPE, S_FX_MORE_MASTER, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", "home_visual_idle", "home_play", "home_demo",
     "home_t5", "home_turn", "home_rec", "home_batt0", "message", "message_key", "message_nofile", "phrases",
     "song_empty", "song", "step", "pattern", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image",
@@ -663,7 +664,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "layer_lfo", "layer_fx", "layer_scl", "layer_fx_state", "roll_lock_more", "home_bpm", "seq_steps", "seq_steps_64",
     "seq_steps_drum", "seq_extras", "seq_extras_drum", "seq_pattern", "seq_pattern_32", "seq_more", "seq_more_end",
     "seq_more_drum", "seq_lock", "seq_extras_echo", "glo_mix", "glo_more_end", "glo_midi", "glo_more_midi", "save_sound_empty",
-    "save_more", "save_song", "save_song_empty", "dlg_load_proj", "layer_save", "seq_more_plays"};
+    "save_more", "save_song", "save_song_empty", "dlg_load_proj", "layer_save", "seq_more_plays",
+    "fx_3_age", "fx_more_tape", "fx_more_master"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's); (ACID FM 3c-1 task 6)
  * the ux pages: LIVE idle (stopped, nothing live); with tricks (T2 THIN 70 %, T3 x2 RATCH x3, T4 LOOP 8, T5 2/3; black key 3 held:
@@ -1813,6 +1815,11 @@ static void setup(int s)
     case S_FXL_DELAY2: fx_more_at(G_DMIX, UXR_GLOBAL); break;
     case S_FXL_REVERB: fx_more_at(G_RPRE, UXR_GLOBAL); song.g[G_RTYPE] = 3; song.g[G_RPRE] = 4; song.g[G_RDAMP] = 2; break;
     case S_FXL_SLICER: fx_more_at(G_SLPAT, UXR_GLOBAL); break;
+    /* (Braindancer 0.8 task 3) TAPE: MASTER at AGE 60 (its strip drawn), FX > MORE's TAPE (TAPE TONE picked, AGE 60's), its
+     * MASTER group (DUCK TIME picked) */
+    case S_FX_MASTER_AGE: fx_scene(); fx_scope(11600); tape_age_apply(60); nav_scene(SEC_FX, "MASTER"); break;
+    case S_FX_MORE_TAPE: fx_more_at(G_TTONE, UXR_GLOBAL); tape_age_apply(60); break;
+    case S_FX_MORE_MASTER: fx_more_at(G_DREL, UXR_GLOBAL); break;
     /* (0.8.5) SAVE's lens as the mock-up's data (3c-2 task 9: its names in English): projects NIGHT RUN (A B C), ACID 03; the
      * song B16 C16 A32 D8 C16 A32 (scenes on 2 and 4, END LOOP); seven user sounds. (ACID FM 3c-2 task 2) SOUND on U05 (WOBBLE,
      * used) and on U08 (empty), SAVE armed; MORE with ENGINE picked; (task 3) SONG: the song, section B picked, A playing, ROW 3

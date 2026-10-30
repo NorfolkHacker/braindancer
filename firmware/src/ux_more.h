@@ -26,8 +26,9 @@ enum { UXM_H_ARP, UXM_H_VOICE, UXM_H_FILTER, UXM_H_TONE, UXM_H_MOD, UXM_H_MSEQ, 
        UXM_H_SLICER, UXM_H_WORDS, UXM_H_KIT, UXM_H_OP, UXM_H_DRUM, UXM_H_MLFO, UXM_H_PATCH, UXM_H_LFO, UXM_H_DIST, UXM_H_APAN,
        UXM_H_SLPIT, UXM_H_LANE, UXM_H_TRACK, UXM_H_STEP, UXM_H_MUTATE, UXM_H_SHAPE, UXM_H_HEADS, UXM_H_AUTO, UXM_H_LIVE,
        UXM_H_SYSTEM, UXM_H_TEMPO, UXM_H_UNDO, UXM_H_MIDI, UXM_H_SOUND, UXM_H_TOOLS, UXM_H_SONG, UXM_H_SCREEN, UXM_H_LEDS,
-       UXM_H_USB, UXM_H_ABOUT, UXM_H_N };   /* (3c-2 task 2) SAVE's SOUND, TOOLS; (task 3) its SONG; (task 5) MENU's SCREEN, LEDS,
-                                                         * USB, ABOUT (with SYSTEM, MIDI) */
+       UXM_H_USB, UXM_H_ABOUT, UXM_H_MASTER, UXM_H_TAPE, UXM_H_N };   /* (3c-2 task 2) SAVE's SOUND, TOOLS; (task 3) its SONG;
+                                                         * (task 5) MENU's SCREEN, LEDS, USB, ABOUT (with SYSTEM, MIDI);
+                                                         * (Braindancer 0.8) FX's MASTER (DUCK TIME) and TAPE */
 /* the actions (UXR_ACTION rows' ids; ux_more.c UXM_ACT): (3b task 8) FX's CLEAR LANE, the punch-in lane emptied, asking first;
  * (3c-1 task 4) SEQ's CLEAR, the track's automation, asking; (task 7) GLO's UNDO, the GLO layer's G4; (task 8) GLO's LEARN CLEAR,
  * MENU's until 0.5 */

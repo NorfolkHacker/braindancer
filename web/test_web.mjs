@@ -416,6 +416,14 @@ async function editorMock() {
       "editor: TAPE (globals 96..101: AGE WOW FLUTTER SAT HISS TONE, 0..100), 102 globals in DUMP, a known layout");
   }
   {
+    /* (Braindancer 0.8 task 3) the FX LAYOUT: MASTER is CLIP PUNCH DUCK AGE with 102 globals, then TAPE (WOW FLUTTER SAT HISS) and
+       TAPE 2 (TONE, DUCK TIME); with 96 as before (MASTER CLIP PUNCH DUCK DUCK TIME, no TAPE) */
+    const fxp = (g) => layoutEval(g, "JSON.stringify(LAYOUT(115).find((x) => x.t === 'FX').pages.filter((p) => ['MASTER', 'TAPE', 'TAPE 2'].includes(p[0])))");
+    ok(fxp(102) === JSON.stringify([["MASTER", 1, [21, 25, 26, 96]], ["TAPE", 1, [97, 98, 99, 100]], ["TAPE 2", 1, [101, 13]]]) &&
+       fxp(96) === JSON.stringify([["MASTER", 1, [21, 25, 26, 13]]]),
+      "editor: FX LAYOUT with TAPE (102 globals: MASTER ends on AGE, TAPE, TAPE 2 with DUCK TIME); 96 as before");
+  }
+  {
     /* (ACID FM 0.6) the editor's MIDI section: T1..T6 IN OUT CHANNEL, KEYBOARD PLAYS SELECTED; none on 0.4 firmware; ROUTE shown nowhere */
     const m = layoutEval(96, "LAYOUT(115).filter((x) => x.t === 'MIDI')"), old = layoutEval(71, "LAYOUT(115).filter((x) => x.t === 'MIDI')");
     const pg = m.length === 1 && m[0].tab === "setgroups" ? m[0].pages : [];

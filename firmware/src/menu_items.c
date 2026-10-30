@@ -59,6 +59,8 @@ static const ux_row_t UXM_MENU_ROWS[] = {
 #undef MR
 #undef MH
 static const ux_more_t UXM_MENU = {UXM_MENU_ROWS, (uint8_t)NELEM(UXM_MENU_ROWS)};
+typedef char uxm_menu_fits64[NELEM(UXM_MENU_ROWS) <= 64u ? 1 : -1];   /* (Braindancer 0.8) ux_menu.c uxn_sig folds the rows shown
+                                                         * from w[0] alone: MENU's MORE stays within 64 rows */
 static uint32_t mi_tab(uint32_t row)                   /* the page a row is on (MN_*): MORE's rows, and those on none, MN_MORE */
 {
     uint32_t p, c;

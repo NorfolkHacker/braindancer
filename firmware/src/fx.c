@@ -411,6 +411,42 @@ static int tape_set(void)                               /* a detail not 0 (AGE a
 {
     return (song.g[G_TWOW] | song.g[G_TFLUT] | song.g[G_TSAT] | song.g[G_THISS] | song.g[G_TTONE]) != 0;
 }
+/* (Braindancer 0.8) AGE (FX > MASTER KNOB 4): one turn sets the five details on its map, linear between AGE 0 (off), 50 (the
+ * RETROBOC tape: a clear wobble) and 100 (a worn cassette: WOW and FLUTTER at their deepest); a detail turned after it (FX >
+ * MORE > TAPE) overrides that one until AGE is turned again. WOW is 30 / 75 on the plan's map: raised to 60 / 100, the line
+ * being ~4 ms (WOW 100 is 8.7 cents at most), to be tuned by ear on the device */
+static const uint8_t TAPE_AGE_PT[3][5] = {{0, 0, 0, 0, 0}, {60, 20, 30, 20, 35}, {100, 50, 65, 50, 80}};
+                                        /* AGE 0, 50, 100 -> WOW FLUTTER SAT HISS TONE (linear between) */
+_Static_assert(G_TWOW == G_TAGE + 1 && G_TTONE == G_TWOW + 4, "TAPE: AGE, then its five details in a row");
+static uint32_t motion_guard(void);                     /* (motion.c, after this file: the ISR held off over a few writes) */
+static void motion_unguard(uint32_t f);
+static void tape_age_map(int32_t age, int16_t d[5])     /* AGE's five (0..100) */
+{
+    uint32_t k, s = age > 50 ? 1u : 0u;
+    int32_t a = clamp(age, 0, 100) - (int32_t)s * 50;
+    for (k = 0; k < 5u; k++)
+        d[k] = (int16_t)(TAPE_AGE_PT[s][k] + (TAPE_AGE_PT[s + 1u][k] - TAPE_AGE_PT[s][k]) * a / 50);
+}
+static void tape_age_apply(int32_t age)                 /* song.g[G_TAGE] = age and the five from its map */
+{
+    int16_t d[5];
+    uint32_t k, f;
+    tape_age_map(age, d);
+    f = motion_guard();                                 /* (the block reads the six together) */
+    song.g[G_TAGE] = (int16_t)clamp(age, 0, 100);
+    for (k = 0; k < 5u; k++)
+        song.g[G_TWOW + k] = d[k];
+    motion_unguard(f);
+}
+static uint32_t tape_age_custom(void)                   /* the details that differ from AGE's map, a bit each (0: none) */
+{
+    int16_t d[5];
+    uint32_t k, b = 0;
+    tape_age_map(song.g[G_TAGE], d);
+    for (k = 0; k < 5u; k++)
+        b |= (uint32_t)(song.g[G_TWOW + k] != d[k]) << k;
+    return b;
+}
 /* the block's targets from the globals and the safety net; entering: the line and the states cleared, the fade held */
 static __attribute__((noinline)) void tape_begin(void)
 {

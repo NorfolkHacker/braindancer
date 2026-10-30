@@ -16,7 +16,7 @@ static const char *const UXM_HEAD[UXM_H_N] = {"ARP", "VOICE", "FILTER", "TONE", 
                                               "SLICER", "WORDS", "KIT", "OP ", "DRUM \xB7 ", "MORPH LFO", "PATCH", "LFO", "DISTORT",
                                               "AUTO PAN", "SLICE PITCH", "PUNCH LANE", "TRACK", "STEP ", "MUTATE", "SHAPE",
                                               "PLAYHEADS", "AUTOMATION", "LIVE", "SYSTEM", "TEMPO", "UNDO", "MIDI", "SOUND",
-                                              "TOOLS", "SONG", "SCREEN", "LEDS", "USB", "ABOUT"};   /* (3b task 7: JIANT's MSEQ, the
+                                              "TOOLS", "SONG", "SCREEN", "LEDS", "USB", "ABOUT", "MASTER", "TAPE"};   /* (3b task 7: JIANT's MSEQ, the
                                                          * modulation sequence, its STEPS; task 8: FX's, PUNCH LANE JIANT's PUNCH
                                                          * page, the punch-in lane: PUNCH alone is MASTER's, the drums') */
 /* heading h's words: OP and DRUM with the operator or the drum picked after them ("OP 3", "DRUM . SD") */
@@ -215,6 +215,14 @@ static uxm_bits_t uxm_mask(const ux_more_t *m)
     return sh;
 }
 static uint32_t uxm_n(const ux_more_t *m) { return m->n < UXM_MAXROWS ? m->n : UXM_MAXROWS; }
+/* (Braindancer 0.8) the rows shown folded to 32 bits for a change signature (ux_section.c): the high word turned a bit
+ * further (rotated by one) before the fold, so rows i and i + 64 swapped (one shown, the other hidden) change it; a list of
+ * 64 rows or less (w[1] 0) folds as before */
+static uint32_t uxm_sig_fold(const uxm_bits_t *sh)
+{
+    uint64_t x = sh->w[0] ^ (sh->w[1] << 1 | sh->w[1] >> 63);
+    return (uint32_t)(x ^ (x >> 32));
+}
 static int uxm_on(const uxm_bits_t *sh, uint32_t i) { return i < UXM_MAXROWS && ((sh->w[i >> 6] >> (i & 63u)) & 1u); }
 static int uxm_pick_ok(const ux_more_t *m, const uxm_bits_t *sh, uint32_t i) { return uxm_on(sh, i) && m->rows[i].kind != UXR_HEAD; }
 static uint32_t uxm_vis(const uxm_bits_t *sh, uint32_t i)       /* shown rows before row i */
