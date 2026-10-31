@@ -2,9 +2,9 @@
 
 *Formerly ACID FM.*
 
-**IDM / braindance firmware for the M-VAVE FM-1**. Braindancer is becoming a firmware with virtual analog, FM, chopped
-breakbeats you load yourself, and a generator that writes whole songs on the device. Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and
-the Rephlex catalogue.
+**IDM / braindance firmware for the M-VAVE FM-1**. Braindancer is becoming a firmware with virtual analog, FM and a generator that
+writes whole songs on the device. Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and the Rephlex
+catalogue.
 
 **[Install](https://norfolkhacker.github.io/braindancer/webapp/installer/)** (Chrome or Edge, over USB) ·
 **[Try it in the browser](https://norfolkhacker.github.io/braindancer/emu/)** ·
@@ -126,9 +126,8 @@ The Braindancer features arrive in steps (see `docs/superpowers/specs/2026-10-24
 1. Pipeline (0.1)
 2. Trim (0.2): engines for IDM, the voice ceiling measured, room made for samples
 3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c-1 in 0.5: SEQ, GLO, MIDI; 3c-2 in 0.6: SAVE, MENU, dialogs, PLAYS)
-4. BREAK: load breakbeats from the web page, chop and rearrange them
-5. Sound (0.8): TAPE (wow, flutter, saturation), 303-style accent and slide, new presets and drum kits
-6. The song generator (0.9): GENERATE picks a style, blends, recent pieces, TAPE in GEN, the AGE retune
+4. Sound (0.8): TAPE (wow, flutter, saturation), 303-style accent and slide, new presets and drum kits
+5. The song generator (0.9): GENERATE picks a style, blends, recent pieces, TAPE in GEN, the AGE retune
 
 The manual is Braindancer's own; it grows as Braindancer's features land.
 

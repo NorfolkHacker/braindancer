@@ -38,6 +38,7 @@ const FW_ROOT = process.env.FELUCCA_ROOT || join(HERE, "..");
  * tracks and v0.x, Felucca (four tracks, 1.x) and anything else not */
 function installerCheck() {
   const html = readFileSync(join(HERE, "index_pkg.html"), "utf8");
+  ok(!html.includes('data-t="dual"') && !/\bdual:/.test(html), "installer: no two-core warning (0.9.1: two cores proven since 0.1)");
   const isJiantInfo = D.isJiantInfo;
   const info = (ver, ntrk, ext) => [...Buffer.from(ver), 0, 2, 0, 0, 0, 0, ...Buffer.from("A"), 0, ...Buffer.from("B"), 0, ntrk, 8, ...ext];
   ok(isJiantInfo(info("FELUCCA v0.6.62", 6, [0x56, 1, 32, 0x4A, 1, 1])), "installer: JIANT (its tag) may be written over");
