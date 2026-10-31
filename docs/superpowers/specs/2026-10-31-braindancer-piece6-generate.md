@@ -71,12 +71,17 @@ the RANDOM / mutant code and the EXPLORE fitter; no per-role rewrite).
   rung (chord step components, below), a piece on AUTO that is still over budget **with** TAPE takes AGE to 0 before
   any other thinning (TAPE is a fixed cost in the model, so a smaller AGE saves nothing); only then is the music thinned.
   An AGE set with the knob is kept, the music is thinned around it, and the safety net stays the last resort.
+- **Except the tape styles** (user decision 2026-10-31): for **RETROBOC** and **AMBIENT**, and blends whose main style
+  is one of them, TAPE is part of the sound: on AUTO their AGE is kept and the music is thinned around it, as for a
+  knob-set AGE. The other styles' AUTO TAPE (IDM, MICRO, AMB TECHNO, WILD) gives way as above.
+- **Every section is fitted**: a PARTS or SONG piece's sections B..D are fitted as section A is (none may come back
+  over the budget the piece was fitted to).
 - **Aim**: a generated piece does not need the safety net to pause TAPE (`safety_tape` stays 0 while it plays on the
   device), including the heavy-GEN case of the 0.8 device session.
 - **Recalibration** (user decision 2026-10-31, from 15 GEN pieces measured on the FM-1 running 0.8, 2 CORES, CPU TEST
   74 %; analysis in `.superpowers/sdd/2026-10-31-braindancer-piece6-generate/calibration.md`). 0.8's model ranked the
   device's pieces backwards: it overcharged FM6 and missed chord steps whose ECHO / ARP step notes pile up voices. So:
-  - Two cores: the style pieces' device factor `GC_GEN_X100` 150 → **118** (budget at CPU TEST 74 %: 588 → 751); WILD
+  - Two cores: the style pieces' device factor `GC_GEN_X100` 150 → **118** (budget at CPU TEST 74 %: 588 → ≈ 750; 746 with the stored integer ratio); WILD
     keeps its own, **155**; with no CPU TEST stored, `GC_DEV2_X100` scaled the same way (styles ≈ **150**, WILD
     ≈ **196**). One core: unchanged (no one-core data).
   - FM6 (engine 12, and DIGITAL which plays as FM6): `GC_ENG` 79 → **40**, `GC_VOX` 26 → **13**.
@@ -119,8 +124,8 @@ the RANDOM / mutant code and the EXPLORE fitter; no per-role rewrite).
 - Host:
   - GENERATE: same identity → same piece; partners only from §2's table; WILD about 10 % over many presses; never the
     same main style twice in a row; the panel name.
-  - Budget: over hundreds of seeds and every style, the estimate including TAPE is within budget; AUTO lowers AGE only
-    after the thinning; a knob-set AGE is never changed.
+  - Budget: over hundreds of seeds and every style, the estimate including TAPE is within budget; AUTO's AGE gives way
+    before the thinning (but RETROBOC / AMBIENT keep theirs); a knob-set AGE is never changed.
   - Recent pieces: 9 presses keep 8; stepping back rebuilds each exactly; a restart clears them.
   - GEN page: the four knobs and their values; OCT+, PRESETS, OCT−, SELECT; GENRE / SEED gone; HOME's hints.
   - AGE map: §5's figures on a host render of a held sine.
