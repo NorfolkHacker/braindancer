@@ -2602,6 +2602,41 @@ static void gen_blend(ggenre_t *m, uint32_t pi)
     m->scale[1] = m->scale[3] = c->scale[0];
     m->tex = c->tex;
 }
+/* (0.9.1 item 16) the song's globals a piece leaves as they are: the setup NEW PROJECT keeps (project.c system_init:
+ * CLOCK, TUNE, MIDI, ROUTE, the project slot, the MIDI routing) and the tempo (GEN's own, but BPM LOCK's or the outside
+ * clock's when those hold it) */
+static int gen_g_kept(uint32_t i)
+{
+    return i == G_BPM || i == G_CLOCK || i == G_TUNE || i == G_MIDI || i == G_ROUTE || i == G_SLOT ||
+           (i >= G_MRIN1 && i <= G_MRSEL);
+}
+/* (0.9.1 item 16) a piece depends on its identity alone, whatever music the press finds (NEW PROJECT's, a project
+ * loaded, the CPU TEST song, UNDO's): what the piece does not write itself is first put as NEW PROJECT leaves it. On
+ * every track the sequencer's settings a sound keeps (ui.c param_kept: ARP, QUANT, TRANS, CHANCE, the OFS / PIT
+ * offsets, HUMAN, CHORD, the SLICER insert ..; the rest a part's sound sets); the song's globals but gen_g_kept's (the
+ * DJ FILTER, the master SLICER, PLAYS, the stereo width ..), no record moving the DJ FILTER or TAPE (as system_init,
+ * in the same guard); the macros at 0; no punch-in lane; VOICE's words its own; the kit's mutes, X-MOD, TONE, HANDS
+ * off. The power-on's music already is so: a piece made from it unchanged */
+static void gen_clean(void)
+{
+    uint32_t k, i, f;
+    for (k = 0; k < NTRK; k++)
+        for (i = 0; i < P_E0; i++)
+            if (param_kept(i)) trk[k].p[i] = track_desc(&trk[k], i)->def;
+    f = motion_guard();
+    motion_globals_drop();
+    for (i = 0; i < G_COUNT; i++)
+        if (!gen_g_kept(i)) song.g[i] = GP[i].def;
+    motion_unguard(f);
+    for (i = 0; i < 4u; i++) macro_v[i] = 0;
+    memset(pfx_lane, 0, sizeof pfx_lane);
+    for (k = 0; k < NTRK; k++)
+        if (lyr_get(k)[0]) lyr_set(k, "");
+    dx_mute_set(0);
+    memset(dx_mot, 0, sizeof dx_mot);
+    dx_tone = 0;
+    dx_hands = 0;
+}
 static void gen_make(void)
 {
     const ggenre_t *g;
@@ -2612,6 +2647,7 @@ static void gen_make(void)
      * cleared first (gs as at the power-on: its kick, which a drumless piece's bass followed; its voicings ..), and on
      * the tracks what a part reads before it writes it (below: each part's LEN, AUTO PAN, DIV, PLAYHEADS) */
     memset(&gs, 0, sizeof gs);
+    gen_clean();                                        /* (0.9.1 item 16) and what the music before held */
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
         t->p[P_SDIV] = track_desc(t, P_SDIV)->def;      /* (was: only after an EXPLORE piece, gx.dirty) */
@@ -2655,7 +2691,9 @@ static void gen_make(void)
     gen_pick();
     gs.fm6 = 0;
     /* the orchestration: the drums (unless the genre or the knob leaves them out), then the melodic roles with an
-     * amount, the most important first; the drums on the DRUM track (none: the fourth, or the last live) */
+     * amount, the most important first; the drums on the fourth track, or the last live (0.9.1 item 16: always; was
+     * the first DRUM track the music had, so a piece rebuilt after NEW PROJECT, its DRUM part T1, or a project or the
+     * CPU TEST song with it elsewhere, was another piece: a piece depends on its identity alone) */
     {
         static const uint8_t PRI[GP_N] = {RL_DRUM, RL_BASS, RL_PAD, RL_ARP, RL_LEAD};
         uint8_t pri[5];
@@ -2670,8 +2708,9 @@ static void gen_make(void)
             if (np < 2u && !gs.act[RL_PAD]) { gs.act[RL_PAD] = 1; gs.amt[GP_CHORDS] = 60; pri[np++] = RL_PAD; }
         }
         for (k = 0; k < GP_N - 1u; k++) if (!gs.act[PRI[k + 1u]]) pri[np++] = PRI[k + 1u];   /* (the silent ones after) */
-        for (k = 0; k < NTRK && dr == NTRK; k++) if (drum_track(&trk[k])) dr = k;
-        if (dr == NTRK) { dr = nlive > 3u ? 3u : nlive - 1u; set_engine_of(&trk[dr], ENGI_DRUM); }
+        dr = nlive > 3u ? 3u : nlive - 1u;
+        set_engine_of(&trk[dr], ENGI_DRUM);             /* (its sound DRUM's first, as at the power-on: not a DRUM
+                                                         * track's own the kit leaves) */
         for (k = 0; k < RL_N; k++) gs.trk_of[k] = NTRK;
         next = 0;
         for (k = 0; k < NTRK; k++) {

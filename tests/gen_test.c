@@ -65,14 +65,16 @@ static void gen_with(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t fo
 }
 /* (0.9.1 fix round 1) the console's identity round trip: a piece of the kind asked for (a seed searched: WILD or not,
  * AGE above 0 or not; the one core / two cores are the caller's), its id printed (gen_id_fmt), parsed, rebuilt
- * (gen_build): the same name, cost, budget and AGE. 0 when no seed gives the kind (the case would prove nothing) */
+ * (gen_build): the same name, cost, budget and AGE. 0 when no seed gives the kind (the case would prove nothing).
+ * (0.9.1 item 16) rebuilt after the harness's power-on and again after NEW PROJECT (DRILL'N'BASS 0001 was 734 there,
+ * 720 after NEW PROJECT, its drums on T1) */
 static int gen_rt(uint32_t genre, int wild, int age)
 {
     genid_t x;
     char b[64], nm[28];
     unsigned f[9];
-    uint32_t sd, c0, bud0, age0;
-    int ok;
+    uint32_t sd, c0, bud0, age0, pass;
+    int ok = 1;
     for (sd = 1; sd < 400u; sd++) {
         gen_with(genre, sd, 60, 1);
         if ((gp.id.main == GID_WILD) == (wild != 0) && (gs.age > 0u) == (age != 0)) break;
@@ -80,13 +82,18 @@ static int gen_rt(uint32_t genre, int wild, int age)
     if (sd == 400u) return 0;
     gen_id_fmt(&gp.id, b, sizeof b);
     str_cpy(nm, gp.last, sizeof nm); c0 = gc_cost(1); bud0 = gc_budget(); age0 = gs.age;
-    gen_reset();                                        /* (a clean start: the harness's, TRACKS 6 as the piece was made) */
-    memset(&x, 0, sizeof x);
-    ok = sscanf(b, "%u %u %u %u %u %u %u %u %u", &f[0], &f[1], &f[2], &f[3], &f[4], &f[5], &f[6], &f[7], &f[8]) == 9;
-    x.seed = f[0]; x.two = f[1]; x.dev = f[2]; x.form = f[3]; x.tape = f[4];
-    x.main = (uint8_t)f[5]; x.part = (uint8_t)f[6]; x.energy = (uint8_t)f[7]; x.complex = (uint8_t)f[8];
-    gen_build(&x);
-    return ok && str_eq(gp.last, nm) && gc_cost(1) == c0 && gc_budget() == bud0 && gs.age == age0;
+    for (pass = 0; pass < 2u; pass++) {
+        gen_reset();                                    /* (a clean start: the harness's, TRACKS 6 as the piece was made) */
+        if (pass) system_init();                        /* (then NEW PROJECT) */
+        memset(&x, 0, sizeof x);
+        ok &= sscanf(b, "%u %u %u %u %u %u %u %u %u", &f[0], &f[1], &f[2], &f[3], &f[4], &f[5], &f[6], &f[7], &f[8]) == 9;
+        x.seed = f[0]; x.two = f[1]; x.dev = f[2]; x.form = f[3]; x.tape = f[4];
+        x.main = (uint8_t)f[5]; x.part = (uint8_t)f[6]; x.energy = (uint8_t)f[7]; x.complex = (uint8_t)f[8];
+        gen_build(&x);
+        if (gc_cost(1) != c0) printf("  %s rebuilt%s: cost %u, made %u\n", gp.last, pass ? " after NEW PROJECT" : "", gc_cost(1), c0);
+        ok &= str_eq(gp.last, nm) && gc_cost(1) == c0 && gc_budget() == bud0 && gs.age == age0;
+    }
+    return ok;
 }
 /* (0.9.1 review I2) a song played as the firmware plays it: the ISR's sequencer (events_block) between main-loop passes
  * pass_ms apart, each pass main.c's autosave_poll, mutate_poll, song_poll; worst: the net's poll also forced right
@@ -498,6 +505,86 @@ int main(void)
         printf("gen: (0.9) %u rebuilds after another piece: %u differ (tracks %u, steps %u, project %u, ARRANGE %u, LOOP/SONG %u, messages %u)\n",
                n, diff, why[0], why[1], why[2], why[3], why[4], why[5]);
         bad += gcheck("(0.9) a piece depends only on its identity: the same after any piece before it (every parameter, ARRANGE, LOOP)", !diff && n == 120u);
+        /* (0.9.1 item 16) and from the other music a press can find (RECALL on the device, the calibration's host
+         * rebuilds): after NEW PROJECT (system_init: its tracks TRK_DEF's, the DRUM part on T1, not the harness's T4)
+         * and each piece above built on it; NEW PROJECT alone; a project loaded (the DRUM part on T3, other engines,
+         * the delay WIDE and PING-PONG, a macro, MONO); the CPU TEST song (the DRUM part on the last track); UNDO back to
+         * a piece. The same snapshot, cost and budget as fresh */
+        n = diff = 0;
+        memset(why, 0, sizeof why);
+        for (c = 0; c < 2u; c++)
+            for (t = 0; t < NELEM(TG); t++) {
+                genid_t id;
+                snap_t s0;
+                uint32_t c0, b0;
+                gen_reset(); mc_host_v12 = (uint8_t)c;
+                gid_set(&id, TG[t].wild ? GID_WILD : gt_style(TG[t].m), TG[t].p ? gt_style(TG[t].p) : GID_SOLO, TG[t].seed);
+                id.form = TG[t].form;
+                gen_build(&id); snap_take(&s0); c0 = gc_cost(1); b0 = gc_budget();
+                for (v = 0; v < NELEM(PV) + 4u; v++) {
+                    static const char *const SN[4] = {"NEW PROJECT", "a loaded project", "the CPU TEST song", "UNDO"};
+                    genid_t pv;
+                    snap_t s1;
+                    uint32_t w;
+                    char pn[40];
+                    gen_reset(); mc_host_v12 = (uint8_t)c;
+                    if (v < NELEM(PV)) {                /* (NEW PROJECT, then a piece) */
+                        system_init();
+                        gid_set(&pv, PV[v].wild ? GID_WILD : gt_style(PV[v].m), PV[v].p ? gt_style(PV[v].p) : GID_SOLO, PV[v].seed);
+                        pv.form = PV[v].form;
+                        gen_build(&pv); snprintf(pn, sizeof pn, "NEW PROJECT + %s", gp.last);
+                    } else {
+                        uint32_t st = v - NELEM(PV);
+                        str_cpy(pn, SN[st], sizeof pn);
+                        if (st == 0u) system_init();
+                        else if (st == 1u) {            /* (a project of the user's: NEW PROJECT, then LOAD) */
+                            uint32_t q;
+                            system_init();
+                            set_engine_of(&trk[0], ENGI_ANALOG); set_engine_of(&trk[2], ENGI_DRUM); set_engine_of(&trk[5], ENGI_FM6);
+                            for (q = 0; q < NTRK; q++) {   /* (what a sound keeps: ARP, TRANS, CHANCE, ROTATE, HUMAN ..) */
+                                track_t *u = &trk[q];
+                                u->p[P_AMODE] = 3; u->p[P_TRANS] = 5; u->p[P_QUANT] = 3; u->p[P_TCHAN] = 40; u->p[P_SOFS] = 3;
+                                u->p[P_POFS] = -7; u->p[P_HVEL] = 60; u->p[P_CHRD] = 2; u->p[P_SLCR] = 1; u->p[P_VOICE] = V_MONO;
+                                u->p[P_M1SRC] = 1; u->p[P_M1DST] = 2; u->p[P_M1AMT] = 50; u->p[P_LEVEL] = 40; u->p[P_PAN] = 30;
+                            }
+                            set_engine_of(&trk[3], ENGI_DRUM);   /* (T4 DRUM too, a sound of the user's: GEN's drum
+                                                         * track, its engine not set again) */
+                            trk[3].p[P_ATK] = 90; trk[3].p[P_DIST] = 70; trk[3].p[P_FCUT] = 20; trk[3].p[P_REV] = 90;
+                            for (q = 0; q < 8u; q++) trk[3].p[P_E0 + q] = (int16_t)clamp(trk[3].p[P_E0 + q] + 9, -64, 127);
+                            song.g[G_BPM] = 97; song.g[G_WIDTH] = 100; song.g[G_DPING] = 1; song.g[G_RTYPE] = 4;
+                            song.g[G_DJF] = -30; song.g[G_SLMODE] = 2; song.g[G_PLAYS1 + 2] = 3; song.g[G_TAGE] = 40;
+                            macro_v[0] = 90; pfx_lane_put(3, 2); lyr_set(1, "HELLO WORLD");
+                            dx_mute_set(5); dx_tone = 1; dx_hands = 2; dx_mot[0] = 3;
+                            project_save(2);
+                            system_init();
+                            project_load(2);
+                            memset(proj_slot[2].raw, 0, 4);   /* (the slot empty again: a section of the user's stored
+                                                         * keeps a FORM's ARRANGE off, its own rule (gen_form), not this) */
+                        } else if (st == 2u) cpu_test_song();
+                        else {
+                            gid_set(&pv, gt_style("BREAKS"), gt_style("ELECTRO"), 6060); gen_build(&pv);
+                            system_init();
+                            gid_set(&pv, gt_style("ACID"), GID_SOLO, 5); gen_build(&pv);
+                            undo_do();                  /* (back to NEW PROJECT's music) */
+                        }
+                    }
+                    gen_build(&id); snap_take(&s1);
+                    n++;
+                    w = snap_diff(&s0, &s1) | (uint32_t)(gc_cost(1) != c0 || gc_budget() != b0) << 6;
+                    if (w) {
+                        diff++;
+                        if (diff <= 8u) printf("  %s (%s) after %s: differs (%s%s), cost %u / %u, budget %u / %u\n", gp.last,
+                                               c ? "two cores" : "one core", pn, snap_what(&s0, &s1), w >> 6 ? " cost" : "",
+                                               c0, gc_cost(1), b0, gc_budget());
+                        for (; w; w &= w - 1u) why[__builtin_ctz(w)]++;
+                    }
+                }
+            }
+        mc_host_v12 = 0; rng_state = rng0;
+        printf("gen: (0.9.1) %u rebuilds after NEW PROJECT, a load, CPU TEST, UNDO: %u differ (tracks %u, steps %u, project %u, "
+               "ARRANGE %u, LOOP/SONG %u, messages %u, cost %u)\n", n, diff, why[0], why[1], why[2], why[3], why[4], why[5], why[6]);
+        bad += gcheck("(0.9.1 item 16) ... and after NEW PROJECT, a project loaded, the CPU TEST song, UNDO (the snapshot, cost)",
+                      !diff && n == 200u);
     }
     {   /* (0.9 re-review N1) the mutes live when GENERATE is pressed: a section's (B playing: the drums and the bass muted)
          * or the user's MUTE on a track. Neither changes the piece nor its fit; no MUTE left on any track. Two cores, CPU
@@ -2163,7 +2250,7 @@ int main(void)
         ok_age = gen_rt(1u + GEN_SHOWN[7], 0, 1) && gs.age > 0u;
         mc_host_v12 = 0; gt_cpt = 74; gen_reset();      /* one core */
         ok_one = gen_rt(1u + GEN_SHOWN[3], 0, 0) && gp.id.two == 0u && gen_rt(1u + GEN_SHOWN[7], 0, 1) && gp.id.two == 0u;
-        bad += gcheck("(0.9.1 fix) the printed identity rebuilds the piece: WILD, one core, AGE above 0, two cores",
+        bad += gcheck("(0.9.1 fix) the printed identity rebuilds the piece: WILD, one core, AGE above 0, two cores; after NEW PROJECT too",
                       ok_w && ok_one && ok_age && ok_two);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
