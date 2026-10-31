@@ -63,6 +63,31 @@ static void gen_with(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t fo
     gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;
     gen_go();
 }
+/* (0.9.1 fix round 1) the console's identity round trip: a piece of the kind asked for (a seed searched: WILD or not,
+ * AGE above 0 or not; the one core / two cores are the caller's), its id printed (gen_id_fmt), parsed, rebuilt
+ * (gen_build): the same name, cost, budget and AGE. 0 when no seed gives the kind (the case would prove nothing) */
+static int gen_rt(uint32_t genre, int wild, int age)
+{
+    genid_t x;
+    char b[64], nm[28];
+    unsigned f[9];
+    uint32_t sd, c0, bud0, age0;
+    int ok;
+    for (sd = 1; sd < 400u; sd++) {
+        gen_with(genre, sd, 60, 1);
+        if ((gp.id.main == GID_WILD) == (wild != 0) && (gs.age > 0u) == (age != 0)) break;
+    }
+    if (sd == 400u) return 0;
+    gen_id_fmt(&gp.id, b, sizeof b);
+    str_cpy(nm, gp.last, sizeof nm); c0 = gc_cost(1); bud0 = gc_budget(); age0 = gs.age;
+    gen_reset();                                        /* (a clean start: the harness's, TRACKS 6 as the piece was made) */
+    memset(&x, 0, sizeof x);
+    ok = sscanf(b, "%u %u %u %u %u %u %u %u %u", &f[0], &f[1], &f[2], &f[3], &f[4], &f[5], &f[6], &f[7], &f[8]) == 9;
+    x.seed = f[0]; x.two = f[1]; x.dev = f[2]; x.form = f[3]; x.tape = f[4];
+    x.main = (uint8_t)f[5]; x.part = (uint8_t)f[6]; x.energy = (uint8_t)f[7]; x.complex = (uint8_t)f[8];
+    gen_build(&x);
+    return ok && str_eq(gp.last, nm) && gc_cost(1) == c0 && gc_budget() == bud0 && gs.age == age0;
+}
 /* (0.9.1 review I2) a song played as the firmware plays it: the ISR's sequencer (events_block) between main-loop passes
  * pass_ms apart, each pass main.c's autosave_poll, mutate_poll, song_poll; worst: the net's poll also forced right
  * after each block, before song_poll sees a section that went in. Until ms run out or the song is over (its end taken
@@ -2127,6 +2152,19 @@ int main(void)
         ok &= str_eq(gp.last, nm) && gc_cost(1) == c0;
         bad += gcheck("(0.9.1 spec 1) status: gen_piece (the panel's name, '-' without a piece), gen_cost / gen_budget "
                       "of the music now, gen_age, gen_id that rebuilds the piece", ok);
+        mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (0.9.1 fix round 1) the identity round trip also for a WILD piece, a one-core piece and a piece with AGE above
+         * 0 (a RETROBOC / AMBIENT style on AUTO), besides the two-core case above */
+        int ok_w, ok_one, ok_age, ok_two;
+        mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+        ok_two = gen_rt(1u + GEN_SHOWN[3], 0, 0) && gp.id.two == 1u;
+        ok_w = gen_rt(GEN_EXPLORE, 1, 0) && gp.id.main == GID_WILD;
+        ok_age = gen_rt(1u + GEN_SHOWN[7], 0, 1) && gs.age > 0u;
+        mc_host_v12 = 0; gt_cpt = 74; gen_reset();      /* one core */
+        ok_one = gen_rt(1u + GEN_SHOWN[3], 0, 0) && gp.id.two == 0u && gen_rt(1u + GEN_SHOWN[7], 0, 1) && gp.id.two == 0u;
+        bad += gcheck("(0.9.1 fix) the printed identity rebuilds the piece: WILD, one core, AGE above 0, two cores",
+                      ok_w && ok_one && ok_age && ok_two);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* (0.9.1 review I2) the GEN piece's own song played through its sections (the ISR's sequencer, the main loop's

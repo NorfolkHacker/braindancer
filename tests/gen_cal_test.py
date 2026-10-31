@@ -50,5 +50,23 @@ with tempfile.TemporaryDirectory() as d:
                          capture_output=True, text=True).stdout
     check("ids: the rows with a piece and no hand-set AGE, for tests/gen_terms.c",
           ids == "G01|7692 1 117 1 0 37 36 50 50|702|655|RETROBOC+AMBIENT 7692\n")
+BAD = LOG.splitlines(True)
+BAD.insert(2, "16:41:10 G03:s |\n")                  # an empty serial read: "TAG |" and nothing else
+BAD.insert(3, "16:41:11 G03:e |uptime_ms 1|cpu_pct 5|audio_late 3|\n")   # and one cut short
+with tempfile.TemporaryDirectory() as d:
+    log, out = Path(d) / "bad.log", Path(d) / "bad.csv"
+    log.write_text("".join(BAD))
+    p = subprocess.run([sys.executable, str(ROOT / "tools/gen_cal.py"), "csv", str(log), str(out)], capture_output=True,
+                       text=True)
+    got = list(csv.DictReader(out.open())) if out.exists() else []
+    check("a truncated snapshot: csv warns on stderr, skips that row, keeps the others", p.returncode == 0 and
+          "G03" in p.stderr and "skipped" in p.stderr and [g["tag"] for g in got] == ["G01", "G02-AGE0"])
+    p = subprocess.run([sys.executable, str(ROOT / "tools/gen_cal.py"), "delta", str(log), "G03"], capture_output=True,
+                       text=True)
+    check("a truncated snapshot: delta says so, no traceback", p.returncode != 0 and "Traceback" not in p.stderr and
+          "skipped" in p.stderr)
+    p = subprocess.run([sys.executable, str(ROOT / "tools/gen_cal.py"), "delta", str(log), "G01"], capture_output=True,
+                       text=True)
+    check("  and the other rows still work", p.returncode == 0 and p.stdout.startswith("G01 RETROBOC+AMBIENT 7692:"))
 print("gen_cal: all ok" if not bad else f"gen_cal: {bad} FAILED")
 sys.exit(bad != 0)

@@ -62,7 +62,15 @@ def num(f, k):
 
 
 def row(tag, s, e):
+    """the row of one tag; None, a warning on stderr, when a snapshot lacks a counter (an empty or cut serial read)"""
+    miss = sorted({k for k in ("uptime_ms", "cpu_pct", *DELTA) for f in (s, e) if num(f, k) is None})
+    if miss:
+        print(f"gen_cal: {tag}: a snapshot lacks {', '.join(miss)} (a truncated read?): row skipped", file=sys.stderr)
+        return None
     secs = (num(e, "uptime_ms") - num(s, "uptime_ms")) / 1000.0
+    if secs <= 0:
+        print(f"gen_cal: {tag}: the window is {secs} s (a reboot between the snapshots?): row skipped", file=sys.stderr)
+        return None
     d = {k: num(e, k) - num(s, k) for k in DELTA}
     ident = e.get("gen_id", "-").split()
     r = {"tag": tag, "piece": e.get("gen_piece", "-"), "secs": f"{secs:.1f}", "cpu_s": num(s, "cpu_pct"),
@@ -87,7 +95,11 @@ def row(tag, s, e):
 def main(argv):
     if len(argv) >= 3 and argv[0] == "delta":
         rows, _ = snaps(open(argv[1]))
+        if argv[2] not in rows:
+            sys.exit(f"gen_cal: {argv[2]}: no :s and :e snapshots in {argv[1]}")
         r = row(argv[2], *rows[argv[2]])
+        if r is None:
+            sys.exit(1)
         print(f"{r['tag']} {r['piece']}: late20 {r['late20']} shed20 {r['shed20']} lost {r['lost']} cpu {r['cpu_s']}->"
               f"{r['cpu_e']} cost {r['cost_s']}/{r['cost_e']} budget {r['budget']} age {r['age']} {r['note']}")
     elif len(argv) == 3 and argv[0] == "csv":
@@ -96,7 +108,9 @@ def main(argv):
             w = csv.DictWriter(f, fieldnames=COLS, lineterminator="\n")
             w.writeheader()
             for t in order:
-                w.writerow(row(t, *rows[t]))
+                r = row(t, *rows[t])
+                if r is not None:
+                    w.writerow(r)
     elif len(argv) == 2 and argv[0] == "ids":
         for r in csv.DictReader(open(argv[1])):
             if not r["note"] and not r["age_live"]:
