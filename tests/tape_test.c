@@ -1055,6 +1055,70 @@ static void test_age_09(void)
     tape_reset();
 }
 
+/* ---- (0.9 final review I1) a 0.8 project loads onto the new map: spec 5 "projects saved in 0.8 with AGE above 0 sound
+ * more worn". The format is 0.8's ('T' 'P' unchanged, no version mark), so a 0.8 save is packed here from its six ---- */
+static void age08_map(int32_t age, int16_t d[5])         /* 0.8's map (AGE_PT_08, linear as tape_age_map) */
+{
+    uint32_t k, s = age > 50 ? 1u : 0u;
+    int32_t a = age - (int32_t)s * 50;
+    for (k = 0; k < 5u; k++)
+        d[k] = (int16_t)(AGE_PT_08[s][k] + (AGE_PT_08[s + 1u][k] - AGE_PT_08[s][k]) * a / 50);
+}
+static int age08_trip(int32_t age, const int16_t d[5], project_store_t *st)   /* AGE and five packed, loaded, restored */
+{
+    project_t a, c;
+    uint32_t k;
+    tape_reset();
+    song.g[G_TAGE] = (int16_t)age;
+    for (k = 0; k < 5u; k++)
+        song.g[G_TWOW + k] = d[k];
+    project_capture(&a);
+    if (!proj_pack(st, &a)) return 0;
+    for (k = G_TAGE; k <= G_TTONE; k++)
+        song.g[k] = 0;
+    return proj_import(&c, st, sizeof *st) && !project_restore_runtime(&c);
+}
+static void test_age_08_load(void)
+{
+    static project_store_t st, st2;
+    project_t c;
+    int16_t d[5], m[5];
+    int32_t ages[] = {1, 25, 50, 77, 100};
+    uint32_t i;
+    int ok = 1;
+    char what[200];
+    ui_power_on();
+    for (i = 0; i < sizeof ages / sizeof ages[0]; i++) {
+        age08_map(ages[i], d);
+        tape_age_map(ages[i], m);
+        ok &= age08_trip(ages[i], d, &st) && song.g[G_TAGE] == ages[i] && !memcmp(&song.g[G_TWOW], m, sizeof m) &&
+              !tape_age_custom();
+    }
+    snprintf(what, sizeof what, "(0.9) a 0.8 project at AGE 1 25 50 77 100 on 0.8's map: loads onto the new map (AGE 100: %d %d %d "
+             "%d %d), none by hand", song.g[G_TWOW], song.g[G_TFLUT], song.g[G_TSAT], song.g[G_THISS], song.g[G_TTONE]);
+    ck(what, ok);
+    project_capture(&c);
+    ok = proj_pack(&st2, &c) && proj_import(&c, &st2, sizeof st2) && !project_restore_runtime(&c);
+    tape_age_map(100, m);
+    ck("(0.9) the migrated project (AGE 100) saved again and loaded: the new map kept (the migration once)",
+       ok && song.g[G_TAGE] == 100 && !memcmp(&song.g[G_TWOW], m, sizeof m));
+    age08_map(50, d);
+    d[4] = (int16_t)(d[4] + 1);                         /* (TONE turned by hand: 36) */
+    ok = age08_trip(50, d, &st) && song.g[G_TAGE] == 50 && !memcmp(&song.g[G_TWOW], d, sizeof d) && tape_age_custom() != 0;
+    ck("(0.9) a 0.8 project at AGE 50 with a detail by hand: its five kept as stored", ok);
+    age08_map(50, d);
+    ok = age08_trip(0, d, &st) && !song.g[G_TAGE] && !memcmp(&song.g[G_TWOW], d, sizeof d);
+    ck("(0.9) AGE 0 with details (by hand): kept as stored", ok);
+    for (ok = 1, i = 0; i < sizeof ages / sizeof ages[0]; i++) {
+        tape_age_map(ages[i], m);
+        ok &= age08_trip(ages[i], m, &st) && song.g[G_TAGE] == ages[i] && !memcmp(&song.g[G_TWOW], m, sizeof m) &&
+              proj_import(&c, &st, sizeof st) && proj_pack(&st2, &c) && !memcmp(&st, &st2, sizeof st);
+    }
+    ck("(0.9) a 0.9 project on the new map (AGE 1 25 50 77 100): loads unchanged, byte for byte", ok);
+    ui_power_on();
+    tape_reset();
+}
+
 int main(void)
 {
     test_off();
@@ -1069,6 +1133,7 @@ int main(void)
     test_age_auto();
     test_new_project_motion();
     test_age_09();
+    test_age_08_load();
     printf(bad ? "tape: %d FAILED\n" : "tape: all checks ok\n", bad);
     return bad != 0;
 }

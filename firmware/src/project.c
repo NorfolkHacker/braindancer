@@ -894,6 +894,26 @@ static int proj_pl_used(const project_t *q)
  * all 0 and no AGE record: its bytes as before): all six 0, TAPE off (proj_unpack_c's G_NSTORE .. G_COUNT loop gives
  * GP[].def), no AGE record */
 #define PROJ_TP_N 7u
+/* (Braindancer 0.9, final review I1) spec 5: "projects saved in 0.8 with AGE above 0 sound more worn". 'T' 'P' is 0.8's,
+ * with no version mark, so a load tells a 0.8 save by its six: AGE above 0 and all five exactly 0.8's map at that AGE
+ * (this table, fx.c's TAPE_AGE_PT before the retune; kept for this comparison only) are put on the new map
+ * (tape_age_map). Five any other way (a detail by hand) stay as stored. The new map is never 0.8's at AGE 1..100 (WOW is
+ * 2 x AGE up to 50 where 0.8's is 1.2 x; FLUTTER is 55 and up past 50 where 0.8's is 50 at most), so a 0.9 save on the
+ * new map loads unchanged and a migrated project is migrated once; the only false take is a 0.9 save whose five were
+ * set by hand to 0.8's map exactly */
+static const uint8_t PROJ_AGE_PT_08[3][5] = {{0, 0, 0, 0, 0}, {60, 20, 30, 20, 35}, {100, 50, 65, 50, 80}};
+static void proj_tp_from_08(int16_t *g)                 /* g: AGE and its five (q->g + G_TAGE) */
+{
+    int32_t age = g[0], a;
+    uint32_t k, s;
+    if (age <= 0 || age > 100) return;
+    s = age > 50 ? 1u : 0u;
+    a = age - (int32_t)s * 50;
+    for (k = 0; k < 5u; k++)
+        if (g[1u + k] != PROJ_AGE_PT_08[s][k] + (PROJ_AGE_PT_08[s + 1u][k] - PROJ_AGE_PT_08[s][k]) * a / 50)
+            return;
+    tape_age_map(age, g + 1);
+}
 static uint32_t proj_tp_byte(const project_t *q, uint32_t k)
 {
     return (uint32_t)clamp(q->g[G_TAGE + k], 0, 100);
@@ -1428,6 +1448,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         uint32_t n = b[pos + 2u + 6u], k;               /* (its count: AGE's records, as 'M' 'G''s) */
         for (t = 0; t < 6u; t++)
             q->g[G_TAGE + t] = (int16_t)(b[pos + 2u + t] > 100u ? 100u : b[pos + 2u + t]);
+        proj_tp_from_08(&q->g[G_TAGE]);                 /* (0.9: a 0.8 save's AGE onto the new map) */
         pos += 2u + PROJ_TP_N;
         if (q->motion.count + n > MOTION_MAX || pos + n * sizeof q->motion.event[0] > room) return 0;
         memcpy(q->motion.event + q->motion.count, b + pos, n * sizeof q->motion.event[0]);
