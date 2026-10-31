@@ -449,11 +449,18 @@ static uint32_t tape_age_custom(void)                   /* the details that diff
         b |= (uint32_t)(song.g[G_TWOW + k] != d[k]) << k;
     return b;
 }
-/* the block's targets from the globals and the safety net; entering: the line and the states cleared, the fade held */
+static int tape_idle(void);
+/* the block's targets from the globals and the safety net; entering: the line and the states cleared, the fade held;
+ * off and at rest: out of the chain at once */
 static __attribute__((noinline)) void tape_begin(void)
 {
     int32_t s, o, i, f;
     tape.gt = tape_set() && !(fx_safe & SAFE_TAPE) ? TAPE_FULL : 0;
+    if (!tape.gt && tape.on && tape_idle()) {           /* off at rest (the silence path runs no tape_block): out now,
+                                                         * the line silent, nothing to fade */
+        tape.on = 0;
+        return;
+    }
     if (!tape.on) {
         if (!tape.gt)
             return;

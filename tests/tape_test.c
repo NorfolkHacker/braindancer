@@ -9,7 +9,8 @@
  *    right apart), SAT's level kept and its peaks held, the line's delay exact, TONE's roll-off, HISS under the music
  *    and none over silence.
  * 3. in and out of the chain without a click; out again within its fade, and not run after.
- * 4. at rest after a note: tape_idle, its states exactly 0, the silence path taken.
+ * 4. at rest after a note: tape_idle, its states exactly 0, the silence path taken; turned off there, out of the chain
+ *    at once: the first hit after PLAY bit for bit as never on.
  * 5. stored: no block when all 0 (the bytes as before), 'T' 'P' the last block, the round trip, old projects, 255
  *    clamped, NEW PROJECT, UNDO.
  * 6. AGE's automation (MOT_AGE, as the DJ FILTER's): recorded, played back (the five with it), the six back at a stop,
@@ -593,6 +594,101 @@ static void test_rest(void)
     tape_reset();
 }
 
+/* TAPE turned off while the mix is at rest (the silence path: tape_block not run), then PLAY: the first hit as if TAPE
+ * had never been on. A child of this process per variant (both from the same state): the mix TAPE gives the master,
+ * a hash a block, for RP_HIT blocks after PLAY, through the pipe; the child's exit: TAPE out of the chain before PLAY
+ * and tape_block not run after it */
+#define RP_HIT 64u
+static uint32_t rp_hit(int was_on, uint32_t *hm, uint32_t *rest)
+{
+    static int32_t o[2u * CTL];
+    uint32_t b, i, r0, before = 0;
+    track_t *t = &trk[3];
+    ui_power_on();
+    load_depth++; fm6_init(); power_on_parts(); load_depth--;
+    song.master_q12 = 4096;
+    mc_host = 1;
+    trk_live = NTRK;
+    tape_reset();
+    set_engine_of(t, ENGI_DRUM);                        /* T4 DRUM: a kick on step 0 alone */
+    t->engine = t->eng_req;
+    t->p[P_MUTE] = 0; t->p[P_SLEN] = 16;
+    for (i = 0; i < 16u; i++) {
+        memset(&t->step[i], 0, sizeof t->step[i]);
+        t->step[i].time = i ? ST_REST : ST_NOTE;
+        t->step[i].vel = 100;
+        t->step[i].hit = i ? 0u : 1u;
+    }
+    if (was_on) tape_g(40, 0, 0, 50, 50);
+    transport_req = 1; ui_input();
+    for (b = 0; b < 600u; b++) mix_block(o, CTL);       /* (the kick through TAPE, when on) */
+    transport_req = 2; ui_input();
+    r0 = prf_cur.fxrest;
+    for (b = 0; b < 40000u; b++) {                      /* stopped: to rest (the silence path) */
+        if (b % 32u == 0u) { ui_input(); song_poll(); host_ticks += 20000u; fm1_ms += 20u; }
+        mix_block(o, CTL);
+    }
+    *rest = prf_cur.fxrest - r0;
+    tape_age_apply(0);                                  /* at rest: AGE 0 (every detail 0) */
+    for (b = 0; b < 200u; b++) {
+        if (b % 32u == 0u) { ui_input(); song_poll(); host_ticks += 20000u; fm1_ms += 20u; }
+        mix_block(o, CTL);
+    }
+    before = tape.on;
+    tape_runs = 0;
+    transport_req = 1; ui_input();                      /* PLAY: the first hit */
+    for (b = 0; b < RP_HIT; b++) {
+        uint32_t h = 2166136261u;
+        mix_block(o, CTL);
+        for (i = 0; i < CTL; i++)
+            h = (((h ^ (uint32_t)mix_l[i]) * 16777619u) ^ (uint32_t)mix_r[i]) * 16777619u;
+        hm[b] = h;
+    }
+    transport_req = 2; ui_input();
+    return before || tape_runs;
+}
+static int rp_fork(int was_on, uint32_t *hm, uint32_t *rest)
+{
+    int fd[2], st = 0;
+    pid_t pid;
+    uint32_t buf[RP_HIT + 1u];
+    size_t got = 0;
+    if (pipe(fd)) return -1;
+    fflush(stdout);
+    pid = fork();
+    if (pid < 0) return -1;
+    if (!pid) {
+        uint32_t r;
+        close(fd[0]);
+        r = rp_hit(was_on, buf, &buf[RP_HIT]);
+        if (write(fd[1], buf, sizeof buf) != (ssize_t)sizeof buf) _exit(3);
+        _exit(r ? 2 : 0);
+    }
+    close(fd[1]);
+    while (got < sizeof buf) {
+        ssize_t r = read(fd[0], (uint8_t *)buf + got, sizeof buf - got);
+        if (r <= 0) break;
+        got += (size_t)r;
+    }
+    close(fd[0]);
+    waitpid(pid, &st, 0);
+    memcpy(hm, buf, RP_HIT * sizeof *hm);
+    *rest = buf[RP_HIT];
+    return got == sizeof buf && WIFEXITED(st) ? WEXITSTATUS(st) : -1;
+}
+static void test_rest_off_play(void)
+{
+    uint32_t ref[RP_HIT], got[RP_HIT], r_ref = 0, r_on = 0, b, diff = 0;
+    int e_ref, e_on;
+    char what[220];
+    e_ref = rp_fork(0, ref, &r_ref);
+    e_on = rp_fork(1, got, &r_on);
+    for (b = 0; b < RP_HIT; b++) diff += got[b] != ref[b];
+    snprintf(what, sizeof what, "TAPE on, the mix at rest (%u silent blocks), AGE 0, PLAY: TAPE out of the chain before it (%d) and the "
+             "first hit bit for bit as never on (%u of %u blocks differ)", r_on, e_on, diff, RP_HIT);
+    ck(what, !e_ref && !e_on && r_on > 100u && r_ref > 100u && !diff);
+}
+
 /* ---- 5. stored ---- */
 static void test_store(void)
 {
@@ -867,6 +963,7 @@ int main(void)
     test_rung_click();
     test_huge();
     test_rest();
+    test_rest_off_play();
     test_store();
     test_age_auto();
     test_new_project_motion();
