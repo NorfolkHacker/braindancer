@@ -1741,6 +1741,9 @@ static void gen_parts(void)
     uint8_t pdeg[4], pq[4], pn = gs.pn;
     uint8_t ord[GF_MAXROWS], mul[GF_MAXROWS];
     uint32_t nord;
+    int16_t a_rel[NTRK], a_rtype;                       /* (0.9 final review M4) what A's fit left: each later section */
+    fg_set_t a_fg[NTRK][FG_HEADS];                      /* fitted from it, never from the section before (its thinning */
+    uint8_t a_nmax;                                     /* its own) */
     for (k = 0; k < 4u; k++)
         if (project_used(k) && !((dice_secs >> k) & 1u)) return;   /* (a section of yours: kept) */
     if (form == FM_LOOP) {                              /* (0.9, review I1) a LOOP: the piece before's song gone (PLAY
@@ -1755,14 +1758,17 @@ static void gen_parts(void)
     section_store(0);                                   /* A: the whole piece */
     if (live.cur != 0) return;
     dice_secs |= 1u;
+    for (k = 0; k < NTRK; k++) a_rel[k] = trk[k].p[P_REL];
+    memcpy(a_fg, fg_set, sizeof a_fg); a_rtype = song.g[G_RTYPE]; a_nmax = gx.nmax;
     memcpy(pdeg, gs.pdeg, sizeof pdeg); memcpy(pq, gs.pq, sizeof pq);
     if (dr < NTRK) memcpy(gen_keep, trk[dr].step, sizeof gen_keep);
     n = form == FM_CLUB ? 4u : form == FM_ARC ? 4u : 3u;
     for (k = 1; k < n; k++) {
         uint32_t rot = 0;
         int32_t lift = 0;
-        /* back to the whole piece, then this section's cut */
-        for (i = 0; i < NTRK; i++) trk[i].p[P_MUTE] = 0;
+        /* back to the whole piece (A's fit: its releases, PLAYHEADS, reverb, chord cap), then this section's cut */
+        for (i = 0; i < NTRK; i++) { trk[i].p[P_MUTE] = 0; trk[i].p[P_REL] = a_rel[i]; }
+        memcpy(fg_set, a_fg, sizeof a_fg); song.g[G_RTYPE] = a_rtype; gx.nmax = a_nmax;
         memcpy(gs.pdeg, pdeg, sizeof pdeg); memcpy(gs.pq, pq, sizeof pq); gs.pn = pn;
         if (dr < NTRK) { load_begin(&trk[dr], LOAD_PAT); memcpy(trk[dr].step, gen_keep, sizeof gen_keep); motion_clear(&trk[dr]); load_end(&trk[dr]); }
         if (dr < NTRK && gs.act[RL_DRUM]) {             /* (0.6.97) each section its own fill (the BUILD: a roll; the
@@ -2230,9 +2236,11 @@ static uint32_t gen_busy(void)                           /* the piece's parts pl
     for (r = 0; r < 6u; r++) n += gs.act[r] && gs.trk_of[r] < trk_live;
     return n >= 5u;
 }
-static int gen_dly_long_ok(void)                         /* the piece may keep its quarter-rate delay */
+static int gen_dly_long_ok(void)                         /* the piece may keep its quarter-rate delay ((0.9 final review
+                                                         * M1) the piece's stored CPU TEST, not the device's now: a recall
+                                                         * after CPU TEST changed builds the same piece) */
 {
-    return gc_cost(1) <= gc_budget() && (cpt_res || !gen_busy());
+    return gc_cost(1) <= gc_budget() && (gp.id.dev || !gen_busy());
 }
 static void gen_dly_shorter(void)                      /* the delay's TIME a step shorter (a free time: DTIME_MS's six
                                                          * steps, about half) */

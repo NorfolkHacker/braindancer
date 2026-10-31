@@ -318,6 +318,69 @@ int main(void)
             }
             mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
         }
+        {   /* (0.9 final review M1) the quarter-rate delay's keep (gen_dly_long_ok) is the identity's too: a busy piece
+             * whose quarter-rate line fits (AMBIENT's 1/4 under BPM LOCK 40: 1.5 s; ENERGY 100: five parts) made with a
+             * CPU TEST stored (30 %: the budget room for it), then recalled with it forgotten; and made with none, then
+             * recalled with one stored: each time the same piece, its delay as made */
+            uint32_t s0, s1, s2, s3, ok, dl0, st0, nr0 = gen_nrecent, rng0 = rng_state;
+            genid_t rk[GEN_NRECENT];
+            memcpy(rk, gen_recent, sizeof rk);          /* (the ring, the last piece and the session's random numbers as
+                                                         * they were, after: as the blocks below do) */
+            a = gp.id;
+            mc_host_v12 = 1; gt_cpt = 30; gen_reset();
+            ui_prefs |= PREF_BPM_LOCK; song.g[G_BPM] = 40;
+            gid_set(&d, gt_style("AMBIENT"), GID_SOLO, 131); d.energy = 100;
+            gen_build(&d); s0 = piece_sig(); dl0 = (uint32_t)song.g[G_DTIME]; st0 = gc_dly_stage();
+            ok = st0 == 2u && gen_busy() && d.dev;         /* (the setting this decision turns on) */
+            cpt_res = 0; cpt_cores = 0;
+            gen_recall(0); s1 = piece_sig();
+            ok &= s1 == s0 && (uint32_t)song.g[G_DTIME] == dl0 && gc_dly_stage() == st0;
+            gt_cpt = 0; gen_reset();
+            ui_prefs |= PREF_BPM_LOCK; song.g[G_BPM] = 40;
+            gid_set(&d, gt_style("AMBIENT"), GID_SOLO, 131); d.energy = 100;
+            gen_build(&d); s2 = piece_sig(); dl0 = (uint32_t)song.g[G_DTIME];
+            ok &= !d.dev;
+            cpt_res = 30; cpt_cores = 2;
+            gen_recall(0); s3 = piece_sig();
+            ok &= s3 == s2 && (uint32_t)song.g[G_DTIME] == dl0;
+            bad += gcheck("  (0.9) the quarter-rate delay's keep: the stored CPU TEST's, a recall after it changed the same piece", ok);
+            ui_prefs &= ~PREF_BPM_LOCK;
+            mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+            memcpy(gen_recent, rk, sizeof rk); gen_nrecent = (uint8_t)nr0; gp.id = a; rng_state = rng0;
+        }
+        {   /* (0.9 final review M4) each section after A is fitted from what A's fit left (its releases, PLAYHEADS, reverb,
+             * chord cap), never from the section before it. IDM 0211 SONG at ENERGY 100 made with room (CPU TEST 30 %);
+             * then its sections made again (gen_parts, A as made) on a tighter budget (the factor 1.32): the drop (C) is
+             * over and thinned, the break after it (D) fits as it is, and so is not thinner than A */
+            uint32_t ok, h, nr0 = gen_nrecent, rng0 = rng_state;
+            int16_t rel[NTRK], rt;
+            uint8_t fg[NTRK][FG_HEADS];
+            genid_t rk[GEN_NRECENT];
+            memcpy(rk, gen_recent, sizeof rk);
+            a = gp.id;
+            mc_host_v12 = 1; gt_cpt = 30; gen_reset();
+            gid_set(&d, gt_style("IDM"), GID_SOLO, 211); d.energy = 100; d.form = 2;
+            gen_build(&d);
+            for (i = 0; i < NTRK; i++) { rel[i] = trk[i].p[P_REL]; for (h = 0; h < FG_HEADS; h++) fg[i][h] = fg_set[i][h].rate; }
+            rt = song.g[G_RTYPE];
+            ok = (dice_secs & 15u) == 15u && !section_load(0);
+            gcf.dev = 132;
+            gen_parts();
+            ok &= !section_load(2);                     /* (C: thinned on its own) */
+            for (h = 0, i = 0; i < NTRK; i++) h |= trk[i].p[P_REL] != rel[i];
+            ok &= h || song.g[G_RTYPE] != rt;
+            ok &= !section_load(3);                     /* (D: fits as made, A's state) */
+            gs.in_sec = 1; ok &= gc_cost(1) <= gc_budget(); gs.in_sec = 0;
+            for (i = 0; i < NTRK; i++) {
+                ok &= trk[i].p[P_REL] == rel[i];
+                for (h = 0; h < FG_HEADS; h++) ok &= fg_set[i][h].rate == fg[i][h];
+            }
+            ok &= song.g[G_RTYPE] == rt;
+            bad += gcheck("  (0.9) a section after one thinned, fitting as made: not thinner than A (releases, PLAYHEADS, reverb)", ok);
+            section_load(0);
+            mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+            memcpy(gen_recent, rk, sizeof rk); gen_nrecent = (uint8_t)nr0; gp.id = a; rng_state = rng0;
+        }
         {   /* the tools' way in: gen_go with gp.genre 0 draws from the seed (the same seed, the same draw) */
             uint32_t s1, s2;
             gen_reset();
