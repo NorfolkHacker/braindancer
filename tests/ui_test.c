@@ -17435,6 +17435,45 @@ static int test_t3_age(void)
     ui_power_on();
     return bad;
 }
+/* (0.8 final review M4) FX > MASTER while the safety net holds TAPE out (fx_safe's SAFE_TAPE): the strip's bars dim and its
+ * word is "TAPE PAUSED . CPU" in red; the rung released: the bars lit and "TAPE" again. The ink of each in the strip's box and
+ * in the word's row left of it (LCD: the picture at UX_Y_PANEL) */
+static uint32_t u1_count(uint32_t y0, uint32_t y1, uint32_t x0, uint32_t x1, uint16_t c);   /* (below) */
+static uint32_t uxt3_ink(uint32_t x0, uint32_t x1, uint32_t y0, uint32_t y1, uint16_t c)
+{
+    uint32_t x, y, n = 0;
+    for (y = y0; y < y1; y++)
+        for (x = x0; x < x1; x++)
+            n += ux_px(x, y) == c;
+    return n;
+}
+static int test_t3_paused(void)
+{
+    int bad = 0, ok;
+    uint32_t ty = UX_Y_PANEL + UXS_TY, lit, red, lit_p, red_p, lit_r, red_r, w = (uint32_t)text_w(&UF_LBL, UXS_MS_SAY[7]);
+    ui_power_on(); frame();
+    uxt8_open(2);
+    tape_age_apply(100);                                /* (every bar full: 20 px lit) */
+    fx_safe = 0;
+    frames(100);
+    lit = uxt3_ink(UXS_TX, UXS_TX + 25u, ty, ty + 20u, UX_ACID);
+    red = u1_count(ty + 8u, ty + 22u, UXS_TX - 6u - w, UXS_TX - 4u, UX_ACCENT);
+    fx_safe |= SAFE_TAPE;                               /* (as audio.c fx_safety_tick's rung) */
+    frames(100);
+    lit_p = uxt3_ink(UXS_TX, UXS_TX + 25u, ty, ty + 20u, UX_ACID);
+    red_p = u1_count(ty + 8u, ty + 22u, UXS_TX - 6u - w, UXS_TX - 4u, UX_ACCENT);
+    fx_safe &= (uint8_t)~SAFE_TAPE;                     /* the rung released */
+    frames(100);
+    lit_r = uxt3_ink(UXS_TX, UXS_TX + 25u, ty, ty + 20u, UX_ACID);
+    red_r = u1_count(ty + 8u, ty + 22u, UXS_TX - 6u - w, UXS_TX - 4u, UX_ACCENT);
+    ok = str_eq(UXS_MS_SAY[7], "TAPE PAUSED \xB7 CPU") && lit >= 90u && !red && !lit_p && red_p > 20u && lit_r == lit && !red_r;
+    if (!ok) printf("  lit %u red %u; paused: lit %u red %u; released: lit %u red %u\n", lit, red, lit_p, red_p, lit_r, red_r);
+    bad += check("0.8 M4: FX > MASTER with the safety net holding TAPE out: its bars dim, TAPE PAUSED . CPU in red; the rung "
+                 "released: lit again, TAPE", ok);
+    fx_safe = 0;
+    ui_power_on();
+    return bad;
+}
 /* FX > MORE: MASTER (DUCK TIME) then TAPE after PUNCH LANE; DUCK TIME on no page; every key keeps its job on MASTER (OCT+/- the
  * octave as on SENDS; SELECT the chain; the footer); the change signature of a list past 64 rows (ux_more.c uxm_sig_fold); a
  * change on a row past 64 (TAPE TONE) redraws the list */
@@ -22317,6 +22356,7 @@ int main(void)
     bad += test_t8_names();
     bad += test_t8_fix();                               /* (ACID FM 3b task 8 fix) */
     bad += test_t3_age();                               /* (Braindancer 0.8 task 3) */
+    bad += test_t3_paused();                            /* (0.8 final review M4) */
     bad += test_t3_more();
     bad += test_t9_look();                              /* (ACID FM 3b task 9) */
     bad += test_c9_glo();                               /* (ACID FM 3c-1 task 9) */

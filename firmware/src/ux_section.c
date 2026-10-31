@@ -2856,23 +2856,26 @@ static void uxs_kick_calc(void)
         uxs_kick.punch[x] = (uint8_t)uxs_gain_y(uxs_db10((uint32_t)punch_gain(to, pu), 32768u));
     }
 }
-static const char *const UXS_MS_SAY[] = {"", "CLIPS", "CLIP", "AFTER A KICK", "DRUMS", "OTHERS", "TAPE"};
+static const char *const UXS_MS_SAY[] = {"", "CLIPS", "CLIP", "AFTER A KICK", "DRUMS", "OTHERS", "TAPE", "TAPE PAUSED \xB7 CPU"};
 /* (Braindancer 0.8) TAPE's five details (WOW FLUTTER SAT HISS TONE) as bars, 4 x 20 px each, lit to their value, "TAPE" beside
- * them: in the kick's box low on its right, under its curves (the deepest DUCK at the longest DUCK TIME is back above it there) */
+ * them: in the kick's box low on its right, under its curves (the deepest DUCK at the longest DUCK TIME is back above it there).
+ * While the safety net holds TAPE out (fx_safe's SAFE_TAPE, audio.c fx_safety_tick: a byte the main loop only reads) the bars
+ * dim and the word is "TAPE PAUSED . CPU", until its rung releases */
 #define UXS_TX 202               /* the strip: its left, its top (the bars' foot: + 20) */
 #define UXS_TY 94
 static void uxs_tape_strip(int32_t x, int32_t y)
 {
-    int32_t k, h;
+    int32_t k, h, paused = (fx_safe & SAFE_TAPE) != 0;
+    const char *w = UXS_MS_SAY[paused ? 7 : 6];
     for (k = 0; k < 5; k++) {
         h = clamp(song.g[G_TWOW + k], 0, 100) * 20 / 100;
         cv_rect(x + k * 5, y, 4, 20 - h, UX_EMPTY);
         if (h)
-            cv_rect(x + k * 5, y + 20 - h, 4, h, UX_ACID);
+            cv_rect(x + k * 5, y + 20 - h, 4, h, paused ? ux_mix(UX_BG, UX_ACID, 40) : UX_ACID);
     }
-    k = x - 5 - text_w(&UF_LBL, UXS_MS_SAY[6]);
+    k = x - 5 - text_w(&UF_LBL, w);
     GFX_HOOK_ALIGN(0, y + 10 + UF_LBL_CAP_Y, 0, y + 10 + UF_LBL_CAP_Y + UF_LBL_CAP_H, AL_V | AL_PASS, "MASTER's TAPE");
-    cv_text_on(k, y + 10, &UF_LBL, UXS_MS_SAY[6], UX_MID, ux_under(k, y + 14));
+    cv_text_on(k, y + 10, &UF_LBL, w, paused ? UX_ACCENT : UX_MID, ux_under(k, y + 14));
 }
 static void uxs_master_draw(const track_t *t, const char *name, int32_t lvl)
 {
@@ -3193,6 +3196,7 @@ static void ux_section_draw(void)
         for (c = 0; c < sizeof G; c++)
             sig = sig * 31u + (uint16_t)song.g[G[c]];
         sig = sig * 31u + sys_load * 7u + (uint32_t)LOAD_EFF() * 13u;
+        sig = sig * 31u + (fx_safe & SAFE_TAPE);        /* (0.8: MASTER's strip, TAPE PAUSED . CPU while the net holds it) */
         if (pg->id[0] == G_DTIME) {                     /* SPACE: the delay's time at the tempo (an outside clock moves it 4
                                                          * times a beat): redrawn as the load allows, as LFO's window */
             spw = uxs_dly_smp() * 2654435761u ^ beat_samples();
