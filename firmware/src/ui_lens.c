@@ -2,15 +2,16 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * Portions Copyright (C) 2026 NorfolkHacker */
-/* (ACID FM 3a) HOME is three pages, TRACKS -> VISUAL -> GEN (ux_nav.c; GEN JIANT's GEN 1..3 until piece 6): a HOME tap
- * from elsewhere the one last shown (GEN too), on HOME the next one, round; SELECT walks TRACKS VISUAL GEN 1..3 as one chain;
- * HOME + SELECT straight to GEN 1; OCT- in GEN: TRACKS. Every other section as below. */
+/* (ACID FM 3a) HOME is three pages, TRACKS -> VISUAL -> GEN (ux_nav.c; GEN one page since Braindancer 0.9, JIANT's GEN
+ * 1..3 before): a HOME tap from elsewhere the one last shown (GEN too), on HOME the next one, round; SELECT walks TRACKS
+ * VISUAL GEN as one chain (on GEN it does nothing); HOME + SELECT straight to GEN; OCT- in GEN: TRACKS. Every other
+ * section as below. */
 /* (0.9.2) The navigation, as the approved mock-up (navegacion.html): six rules, the same in every section.
  *   1 SELECT walks the section's pages as one chain (no levels, no zoom), stopping at its first and last page.
  *   2 The section's button: from another section, the page last shown there; already inside, the first page of the
  *     next group (round).
- *   3 PRESETS loads presets: the sounds everywhere, the patterns in SEQ (the PHRASES loader), the genre in GEN; never a
- *     page, a track or a module (ui_input.c presets_turn).
+ *   3 PRESETS loads presets: the sounds everywhere, the patterns in SEQ (the PHRASES loader), the recent pieces in GEN;
+ *     never a page, a track or a module (ui_input.c presets_turn).
  *   4 A page that picks something picks it with KNOB 1 (the step, the bar, the slot, the kit's sound ..); the track is
  *     ALGORITHM's.
  *   5 A button held is its layer, as before (ui_layer.c); held + SELECT: HOME GEN, EDIT SEQ LFO FX their dice, GLO the
@@ -46,8 +47,7 @@ typedef struct { const char *nm, *tab; } ng_t;                /* a group: its na
 typedef struct { const nv_t *e; const ng_t *g; uint8_t n, ng; } ch_t;
 #define NV(t, nm, g, lv) {t, nm, g, lv}
 static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV(0, "VISUAL", 1, 0),   /* (ACID FM 3a: ux_nav.h UXH_*; was 0.9.2's */
-                               NV(0, "GEN 1", 2, 2), NV(0, "GEN 2", 2, 2), NV(0, "GEN 3", 2, 2)};   /* ECO MACROS BEING ROUTES
-                                                         * then GEN) */
+                               NV(0, "GEN", 2, 2)};     /* ECO MACROS BEING ROUTES then GEN; Braindancer 0.9: GEN one page) */
 static const ng_t CG_HOME[] = {{"TRACKS", 0}, {"VISUAL", 0}, {"GEN", 0}};
 /* (ACID FM 3b) a synth's EDIT (ANALOG PHASE LOFI NOISE VOICE), on the ux pages (ux_section.c): SOUND (E1..E4), TONE (E5..E8),
  * ANALOG's VOICE or the others' FILTER (one group: a track shows one of them), MORE; a page a group, so EDIT steps them
@@ -138,7 +138,6 @@ static uint32_t sec_of_fam(uint32_t f)
 }
 static int gen_on(void) { return ui.confirm == CF_DICE_ALL; }   /* GEN: HOME's last group (the generator's screen) */
 static int dlg_on(void) { return ui.confirm && ui.confirm != CF_DICE_ALL; }   /* a dialog over the page */
-static uint32_t gen_page(void);                         /* (gen.c) */
 static uint32_t nav_sec(void) { return ui.home || gen_on() ? SEC_HOME : sec_of_fam(PAGES[ui.page].fam); }
 /* entry e of section sec: its PAGES index shown now (NPAGES: not on this track, LOAD ECO's, HOME's own) */
 static uint32_t nv_page(uint32_t sec, uint32_t e)
@@ -162,7 +161,7 @@ static uint32_t nav_cur(void)
     uint32_t sec = nav_sec(), key = nav_key(sec), e = nav_mem(key), k, pass, s;
     const ch_t *c = &CHAINS[key];
     if (sec == SEC_HOME)
-        return gen_on() ? UXH_GEN0 + gen_page() : ux_home_page();
+        return gen_on() ? UXH_GEN0 : ux_home_page();
     s = ((((ui.page * 31u + key) * 131u + e) * 257u + TSEL->eng_req) * 8191u + (uint32_t)(uint16_t)TSEL->p[P_E1]) * 7u +
         sys_load + 1u;
     if (s == ui.nav_sig)
@@ -227,7 +226,6 @@ static void page_entered(void);
 static void page_flash(void);
 static void confirm_open(uint32_t kind, uint32_t trk);
 static void gen_open(void);
-static void gen_page_put(uint32_t p);
 static int chain_busy(void);
 static void ui_message(const char *s);
 /* entry e of section sec shown (one that is not here: the nearest after it, else before); outside: from another
@@ -257,7 +255,6 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
                 confirm_open(CF_DICE_ALL, song.sel);
                 gen_open();
             }
-            gen_page_put(e - UXH_GEN0);
         } else if (gen_on()) {
             ui.confirm = 0;
         }

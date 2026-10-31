@@ -989,10 +989,8 @@ static int32_t crumb_count(char *b)
     if (lz_fam() == LZ_LAYER) {
         k = layer_lv();
         n = 3;
-    } else if (gen_on() && lz_fam() == LZ_HOME) {      /* (ACID FM 3a) GEN: "GEN 2/3" */
-        str_cpy(b, "GEN ", 5);
-        fmt_int(b + 4, (int32_t)gen_page() + 1);
-        str_cpy(b + str_len(b), "/3", 3);
+    } else if (gen_on() && lz_fam() == LZ_HOME) {      /* (ACID FM 3a) GEN: "GEN" (0.9: one page, no n/3) */
+        str_cpy(b, "GEN", 4);
         return text_w(&AF_X, b);
     } else {
         uint8_t cnt[8], gi[8];

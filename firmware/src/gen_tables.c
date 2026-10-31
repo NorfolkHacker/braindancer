@@ -586,17 +586,16 @@ static const ggenre_t GENRE[] = {
 #define NGENRE (sizeof GENRE / sizeof GENRE[0])
 
 /* ------------------------------------------------------------------------------------------- (0.8.6) EXPLORE --- */
-/* GENRE's first choice and the dice's default: no genre's template, every one of its rules thrown (gen.c gx_genre).
- * gp.genre keeps its values (0 RANDOM, 1 + a genre's index) and EXPLORE comes after them, so every number that names a
- * genre (the web emulator's web_gen, the tests, the tools) still names it; the knob shows it first (gen_knob) */
+/* No genre's template, every one of its rules thrown (gen.c gx_genre; WILD on the screen since 0.9). gp.genre keeps
+ * its values (0 RANDOM, 1 + a genre's index) and EXPLORE comes after them, so every number that names a genre (the web
+ * emulator's web_gen, the tests, the tools) still names it; since 0.9 gp.genre is only the tools' and tests' way in
+ * (gen.c gid_legacy): the GEN page has no GENRE knob */
 #define GEN_EXPLORE ((uint32_t)NGENRE + 1u)
-#define GEN_NPOS ((uint32_t)NGENRE + 2u)                /* the knob's places: EXPLORE, RANDOM, the genres */
 /* (ACID FM 3b) Until the generator is rewritten, GENRE shows ten IDM-fitting genres: indices into GENRE[] in the order the
  * knob walks them, their names on the GEN screen, EXPLORE and RANDOM before them. Stored values (1 + the GENRE index),
  * GENRE[]'s order and the seed hashing are JIANT's, as they were: a stored hidden genre still generates, and its name
  * shows as JIANT's. Only the walk, the name, the gauge and the random draws are filtered. */
 #define GEN_NSHOWN 10u
-#define GEN_NSPOS (GEN_NSHOWN + 2u)                     /* the knob's places now: EXPLORE, RANDOM, the ten */
 static const uint8_t GEN_SHOWN[GEN_NSHOWN] = {41 /* IDM */, 42 /* BROKEN */, 30 /* BREAKS */, 31 /* DRUM & BASS */, 4 /* ACID HOUSE */,
                                               11 /* ELECTRO */, 2 /* MICRO HOUSE */, 26 /* BOOM BAP */, 37 /* AMBIENT */,
                                               7 /* DUB TECHNO */};

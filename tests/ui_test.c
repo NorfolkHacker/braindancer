@@ -7752,20 +7752,16 @@ static int test_dice_all(void)
     ok &= !ui.confirm && steps_sig(&trk[0]) == sig0[0];
     bad += check("DICE ALL: HOME + SELECT asks first (OCT- NO: nothing changed)", ok);
     fm1_ms += 1200u;
-    gp.page = 0;                                        /* (0.9.2: GEN opens at its page left: from GEN 1 here) */
     held_turn(B_HOME, 1); frames(64);
-    {   /* (0.7.4) GEN's knobs and SELECT repaint their cards, never the whole body (it flickered on every turn) */
-        uint32_t f0 = host_big_fills, e0 = gp.energy, p0 = gp.page;
+    {   /* (0.7.4) GEN's knobs repaint their cards, never the whole body (it flickered on every turn); (0.9) SELECT
+         * nothing (one page) */
+        uint32_t f0 = host_big_fills, e0 = gp.complex;
         for (i = 0; i < 6u; i++) { turn(EN_K3, e0 >= 50u ? -1 : 1); frames(32); }
-        ok = gp.energy != e0 && host_big_fills == f0;
+        ok = gp.complex != e0 && host_big_fills == f0;
         fm1_ms += 500u;                                 /* (past the SELECT turn that opened it) */
-        turn(EN_SELECT, 1); frames(32);                 /* (0.9.2: SELECT GEN's next page; was a HOME tap) */
-        ok &= gp.page != p0 && host_big_fills == f0;
-        turn(EN_SELECT, 5); frames(32);                 /* (right: GEN 3, the chain's end) */
-        ok &= ui.confirm == CF_DICE_ALL && gp.page == 2u;
-        turn(EN_SELECT, -2); frames(8);                 /* (GEN 1 again) */
-        ok &= gp.page == p0;
-        bad += check("GEN: a knob or SELECT (its page) repaints the cards, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
+        turn(EN_SELECT, 1); frames(32);
+        ok &= gen_on() && host_big_fills == f0;
+        bad += check("GEN: a knob repaints the cards, SELECT nothing, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
     }
     press(B_OCTUP); frames(4);
     ok = ui.confirm == CF_DICE_ALL && undo_ok;         /* (0.6.91: GEN stays open for another throw; OCT- is done) */
@@ -10777,7 +10773,7 @@ static int test_ux_nav_home(void)
     press(B_HOME); frame();                                         /* HOME again: VISUAL, GEN (GEN 1), TRACKS */
     ok &= ux_home_at(UXH_VISUAL);
     press(B_HOME); frame();
-    ok &= ux_home_at(UXH_GEN) && gen_page() == 0u && nav_cur() == UXH_GEN0;
+    ok &= ux_home_at(UXH_GEN) && nav_cur() == UXH_GEN0;
     press(B_HOME); frame();
     ok &= ux_home_at(UXH_TRACKS);
     ux_home_flip(); frame();
@@ -10794,21 +10790,19 @@ static int test_ux_nav_home(void)
     ok &= ux_home_at(UXH_VISUAL);
     press(B_ENV); frame(); press(B_HOME); frame();
     ok &= ux_home_at(UXH_VISUAL);
-    press(B_HOME); frame();                                         /* GEN; SELECT to GEN 2; ENV leaves it; HOME: GEN 2 */
-    fm1_ms += 1000u;
-    turn(EN_SELECT, 1); frame();
-    ok &= ux_home_at(UXH_GEN) && gen_page() == 1u;
+    press(B_HOME); frame();                                         /* GEN; ENV leaves it; HOME: GEN */
+    ok &= ux_home_at(UXH_GEN);
     press(B_ENV); frame();
     ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV");
     press(B_HOME); frame();
-    ok &= ux_home_at(UXH_GEN) && gen_page() == 1u && nav_cur() == UXH_GEN0 + 1u;
+    ok &= ux_home_at(UXH_GEN) && nav_cur() == UXH_GEN0;
     press(B_HOME); frame();                                         /* round: TRACKS; FX, HOME: TRACKS */
     press(B_FX); frame(); press(B_HOME); frame();
     ok &= ux_home_at(UXH_TRACKS);
     bad += check("3a HOME: from another section the page last shown on HOME (VISUAL, GEN at its page, TRACKS)", ok);
     ui_power_on(); frame();
-    ok = nav_groups(cnt, gi, &g, &p, &i, &m) == 3u && m == 5u && g == 0u && i == 0u && cnt[0] == 1u && cnt[1] == 1u &&
-         cnt[2] == 3u && lz_tabs() == 3u && lz_level() == 0u && str_eq(nav_group_name(0), "TRACKS") &&
+    ok = nav_groups(cnt, gi, &g, &p, &i, &m) == 3u && m == 3u && g == 0u && i == 0u && cnt[0] == 1u && cnt[1] == 1u &&
+         cnt[2] == 1u && lz_tabs() == 3u && lz_level() == 0u && str_eq(nav_group_name(0), "TRACKS") &&
          str_eq(nav_group_name(1), "VISUAL") && str_eq(nav_group_name(2), "GEN");
     ok &= str_eq(nav_page_name(), "TRACKS") && str_eq(ux_home_where(), "HOME \xB7 TRACKS") && str_eq(ux_home_count(), "1 / 3") &&
           str_eq(ux_home_hint(), "HOME AGAIN: VISUAL");
@@ -10821,44 +10815,39 @@ static int test_ux_nav_home(void)
     ok &= g == 2u && lz_tabs() == 3u && lz_level() == 2u && lz_tab_lit(2) && str_eq(ux_home_where(), "HOME \xB7 GEN") &&
           str_eq(ux_home_count(), "3 / 3") && str_eq(ux_home_hint(), "HOME AGAIN: TRACKS");
     foot_crumbs(b, sizeof b);
-    ok &= str_eq(b, "HOME \xB7 GEN") && lz_count_is("GEN 1/3");
+    ok &= str_eq(b, "HOME \xB7 GEN") && lz_count_is("GEN");
     ok &= msg_is("HOME AGAIN: TRACKS");                             /* (GEN's hint: JIANT's screen, a message) */
     fm1_ms += 1000u;
     turn(EN_SELECT, 1); frame();
-    ok &= lz_count_is("GEN 2/3");
-    bad += check("3a HOME: three pages (tabs TRACKS VISUAL GEN; footer HOME . page, n / 3; GEN's HOME . GEN, GEN n/3; the hints)", ok);
+    ok &= lz_count_is("GEN");
+    bad += check("3a HOME: three pages (tabs TRACKS VISUAL GEN; footer HOME . page, n / 3; GEN's HOME . GEN, GEN (one page); the hints)", ok);
     ui_power_on(); frame();
-    turn(EN_SELECT, 1); frame();                                    /* SELECT: TRACKS VISUAL GEN 1 GEN 2 GEN 3, stops */
+    turn(EN_SELECT, 1); frame();                                    /* SELECT: TRACKS VISUAL GEN, stops */
     ok = ux_home_at(UXH_VISUAL);
     fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
-    ok &= ux_home_at(UXH_GEN) && gen_page() == 0u;
+    ok &= ux_home_at(UXH_GEN) && nav_cur() == UXH_GEN0;
     fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
-    ok &= gen_page() == 1u;
-    fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
-    ok &= gen_page() == 2u;
-    fm1_ms += 1000u; turn(EN_SELECT, 1); frame();
-    ok &= ux_home_at(UXH_GEN) && gen_page() == 2u;                  /* (the last page: no wrap) */
-    fm1_ms += 1000u; turn(EN_SELECT, -3); frame();
+    ok &= ux_home_at(UXH_GEN) && nav_cur() == UXH_GEN0;            /* (the last page: no wrap; on GEN SELECT does nothing) */
+    fm1_ms += 1000u; turn(EN_SELECT, -1); frame();
+    ok &= ux_home_at(UXH_GEN) && nav_cur() == UXH_GEN0;            /* (0.9: both ways) */
+    press(B_OCTDN); frame(); press(B_HOME); frame();                /* (OCT-: TRACKS; HOME: VISUAL) */
     ok &= ux_home_at(UXH_VISUAL);
     turn(EN_SELECT, -1); frame();
     ok &= ux_home_at(UXH_TRACKS);
     turn(EN_SELECT, -1); frame();
     ok &= ux_home_at(UXH_TRACKS);
-    bad += check("3a HOME: SELECT walks TRACKS VISUAL GEN 1..3, stopping at both ends (as every chain)", ok);
+    bad += check("3a HOME: SELECT walks TRACKS VISUAL GEN, stopping at both ends (as every chain; on GEN nothing)", ok);
     ui_power_on(); frame();
-    held_turn(B_HOME, 1); frame(); frames(600);                     /* HOME + SELECT: GEN 1 */
-    ok = ux_home_at(UXH_GEN) && gen_page() == 0u && !ui.menu && str_eq(nav_page_name(), "GEN 1");
-    fm1_ms += 1000u;
-    turn(EN_SELECT, 2); frame();
-    ok &= gen_page() == 2u;
+    held_turn(B_HOME, 1); frame(); frames(600);                     /* HOME + SELECT: GEN */
+    ok = ux_home_at(UXH_GEN) && nav_cur() == UXH_GEN0 && !ui.menu && str_eq(nav_page_name(), "GEN");
     press(B_OCTDN); frame();                                        /* OCT-: TRACKS */
     ok &= ux_home_at(UXH_TRACKS);
-    press(B_HOME); frame();                                         /* VISUAL; HOME + SELECT: GEN 1 (not GEN 3) */
+    press(B_HOME); frame();                                         /* VISUAL; HOME + SELECT: GEN */
     held_turn(B_HOME, 1); frame(); frames(600);
-    ok &= ux_home_at(UXH_GEN) && gen_page() == 0u;
+    ok &= ux_home_at(UXH_GEN) && nav_cur() == UXH_GEN0;
     press(B_OCTDN); frame();
     ok &= ux_home_at(UXH_TRACKS);
-    bad += check("3a HOME: HOME + SELECT straight to GEN 1; OCT- in GEN: TRACKS", ok);
+    bad += check("3a HOME: HOME + SELECT straight to GEN; OCT- in GEN: TRACKS", ok);
     hold(B_HOME); frame();                                          /* HOME held: MENU (unchanged) */
     ok = ui.menu == 1u;
     press(B_HOME); frame();
@@ -11022,7 +11011,7 @@ static int test_ux_tracks(void)
     ok &= str_eq(ux_home_hint(), "HOME AGAIN: GENERATE");           /* (stopped: as before) */
     ui_power_on(); frame(); press(B_HOME); frame();
     press(B_HOME); frame();
-    ok &= ux_home_at(UXH_GEN);                                      /* (stopped: GEN) */
+    ok &= ux_home_at(UXH_GEN) && str_eq(gen_oct_label(), "OCT+ GENERATE");   /* (stopped: GEN; the hint true: OCT+ GENERATE) */
     bad += check("3a TRACKS: GEN refused while a song plays: VISUAL stays (HOME, SELECT), STOP TO EDIT in UX_ACCENT; then the hint STOP, THEN HOME: GENERATE", ok);
     ui_power_on();
     return bad;
@@ -11962,7 +11951,7 @@ static int test_lz_reach(void)
                         if (j == NPAGES) { seen_old[i][k] |= 2u; continue; }   /* (not this engine's, this LOAD's) */
                         if (rv_has(OLD_LV[i].t[k], OLD_LV[i].fam, OLD_LV[i].lv)) seen_old[i][k] |= 1u;
                     }
-            {   /* HOME (ACID FM 3a): TRACKS VISUAL GEN 1..3, by SELECT alone */
+            {   /* HOME (ACID FM 3a): TRACKS VISUAL GEN (0.9: one page), by SELECT alone */
                 uint32_t n = 0;
                 go_home(); frames(32); press(B_HOME); frames(32);
                 turn(EN_SELECT, -10); frames(2);
@@ -11972,7 +11961,7 @@ static int test_lz_reach(void)
                     turn(EN_SELECT, 1); frames(2);
                 }
                 for (k = 0; k < UXH_NGEN; k++) {
-                    n += nav_cur() == UXH_GEN0 + k && home_level() == 2u && gen_on() && gen_page() == k;
+                    n += nav_cur() == UXH_GEN0 + k && home_level() == 2u && gen_on();
                     fm1_ms += 1000u;
                     turn(EN_SELECT, 1); frames(2);
                 }

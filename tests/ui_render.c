@@ -584,7 +584,7 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_FM6_ALG22, S_FM6_ALG32, S_DRUMX, S_DRUMX_HIT, S_DX_SOUND, S_DX_SOUND2, S_DLG_CLEAR_SEQ, S_DLG_CLEAR_TRK,
        S_DLG_CLEAR_ALL, S_DLG_CLEAR_MOTION, S_DLG_CLEAR_PFX, S_DLG_CLEAR_SONG, S_DLG_DEL_ROW, S_DLG_INIT_SOUND,
        S_DLG_INIT_SOUND_DRUM, S_DLG_INIT_SYS, S_DLG_CPU_TEST, S_DLG_LIVE_COMMIT, S_DLG_LOAD_PAT, S_DLG_OVR_PROJ,
-       S_DLG_OVR_USER, S_DLG_ERASE_USER, S_DLG_RECALL_SOUND, S_GEN, S_GEN_PARTS, S_MENU, S_MENU_CLICK, S_ABOUT, S_MENU_CONTROLS,
+       S_DLG_OVR_USER, S_DLG_ERASE_USER, S_DLG_RECALL_SOUND, S_GEN, S_GEN_RECENT, S_MENU, S_MENU_CLICK, S_ABOUT, S_MENU_CONTROLS,
        S_ABOUT_CREDITS, S_ABOUT_END, S_ABOUT_PROFILE, S_ABOUT_PROFILE2, S_UBOOT, S_CALIBRATION, S_SPLASH, S_BATT0, S_BATT1,
        S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME, S_FX_PEEK, S_FX_HELD, S_FX_WAIT,
        S_FX_HARM, S_FX_GLT, S_FX_SCR, S_FX_SHUF, S_FX_FRZ, S_MENU_MORE, S_MENU_MORE_END, S_REVERB, S_REVERB_RESO, S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE,
@@ -600,14 +600,14 @@ enum { S_HOME, S_HOME_IDLE, S_HOME_VISUAL, S_HOME_VISUAL_IDLE, S_HOME_PLAY, S_HO
        S_COUNTIN2, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK, S_HEAD_BPM_LOCKED,
        S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2, S_SAVE_PROJECT, S_SAVE_MORE_END, S_SAVE_SOUND,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
-       S_GEN_LEAD, S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_OPERATOR, S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE,
+       S_GEN_TAPE, S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_OPERATOR, S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE,
        S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_SCL_MORE, S_SCL_WHITE, S_ARP_CHORD,
        S_GLO_SENDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND,
        S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_DICE_KIT, S_DLG_DICE_LFO, S_DLG_MUT_BACK, S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP,
-       S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP, S_GEN_EXPLORE, S_GLO_LIVE,
+       S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP, S_GEN_WILD, S_GLO_LIVE,
        S_GLO_LIVE_TRICKS, S_GLO_LIVE_LATCH, S_GLO_MORE, S_MIXER_T4, S_MOCK_HOME, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER,
        S_MOCK_DIALOG, S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS,
-       S_TOAST_PUNCH, S_TOAST_AUTO_LIST, S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_GEN_BEAT, S_GEN_DNB, S_GEN_RETRO,
+       S_TOAST_PUNCH, S_TOAST_AUTO_LIST, S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_UX_THEME, S_UX_DEMO, S_UX_DEMO_WARN, S_SPLASH_MID, S_GEN_LONG,
        S_EDIT_ANALOG_1, S_EDIT_ANALOG_2, S_EDIT_ANALOG_3, S_EDIT_ANALOG_MORE, S_EDIT_PHASE_1, S_EDIT_PHASE_2, S_EDIT_PHASE_3,
        S_EDIT_PHASE_MORE, S_EDIT_LOFI_1, S_EDIT_LOFI_2, S_EDIT_LOFI_3, S_EDIT_LOFI_MORE, S_EDIT_NOISE_1, S_EDIT_NOISE_2,
        S_EDIT_NOISE_3, S_EDIT_NOISE_MORE, S_EDIT_VOICE_1, S_EDIT_VOICE_2, S_EDIT_VOICE_3, S_EDIT_VOICE_MORE,
@@ -629,7 +629,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "dlg_clear_seq", "dlg_clear_trk",
     "dlg_clear_all", "dlg_clear_motion", "dlg_clear_pfx", "dlg_clear_song", "dlg_del_row", "dlg_init_sound",
     "dlg_init_sound_drum", "dlg_init_sys", "dlg_cpu_test", "dlg_live_commit", "dlg_load_pat", "dlg_ovr_proj", "dlg_ovr_user",
-    "dlg_erase_user", "dlg_recall_sound", "gen", "gen_parts", "menu", "menu_click", "about", "menu_controls", "about_credits",
+    "dlg_erase_user", "dlg_recall_sound", "gen", "gen_recent", "menu", "menu_click", "about", "menu_controls", "about_credits",
     "about_end", "about_profile", "about_profile2", "uboot", "calibration", "splash", "batt_0", "batt_1", "batt_2", "batt_3",
     "batt_usb", "motion_rec", "motion_off", "motion_card", "song_home", "perform_peek", "perform_held", "perform_wait",
     "perform_harm", "perform_glitch", "perform_scratch", "perform_shuffle", "perform_freeze", "menu_more", "menu_more_end",
@@ -647,14 +647,14 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "home_visual", 
     "countin_2bars", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock", "head_bpm_locked",
     "head_glo_turn", "head_downbeat", "head_beat_2", "save_project", "save_more_end",
     "save_sound", "fx_1", "fx_more", "fx_more_lane", "fx_2", "fx_2_ping", "fx_more_delay", "fx_more_reso", "fx_more_slicer",
-    "fx_3", "gen_lead", "ed_filter", "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop",
+    "fx_3", "gen_tape", "ed_filter", "ed_filter_bp", "ed_voice2", "ed_operator", "env_loop", "env_turn", "env_2_loop",
     "env_first", "lfo_more_end", "scl_2", "scl_2_off", "arp_1", "arp_2", "scl_more", "scl_white", "arp_chord", "glo_sends",
     "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx",
     "dlg_dice_kit", "dlg_dice_lfo", "dlg_mut_back", "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam",
-    "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum", "comp_jump", "gen_explore", "glo_live", "glo_live_tricks",
+    "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum", "comp_jump", "gen_wild", "glo_live", "glo_live_tricks",
     "glo_live_latch", "glo_more", "mixer_tracks4", "mock_home", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog",
     "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch",
-    "toast_auto_list", "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "ux_theme", "ux_demo", "ux_demo_warn", "splash_mid", "gen_broken_beat", "gen_drill_n_bass", "gen_retroboc",
+    "toast_auto_list", "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "ux_theme", "ux_demo", "ux_demo_warn", "splash_mid", "gen_long",
     "edit_analog_1", "edit_analog_2", "edit_analog_3", "edit_analog_more", "edit_phase_1", "edit_phase_2", "edit_phase_3",
     "edit_phase_more", "edit_lofi_1", "edit_lofi_2", "edit_lofi_3", "edit_lofi_more", "edit_noise_1", "edit_noise_2",
     "edit_noise_3", "edit_noise_more", "edit_voice_1", "edit_voice_2", "edit_voice_3", "edit_voice_more", "edit_lofi_byte_1",
@@ -1005,6 +1005,24 @@ static void seq_more_at(uint32_t kind, uint32_t id)
         uxm_at[uxm_key()].top = (uint8_t)t;
     }
 }
+/* (0.9) the GEN page after a piece (its identity and name as gen_build gives them; nothing built): the knobs as at
+ * power-on, PRESETS on NEW, no recent piece but the ones a scene pushes */
+static void gen_piece(uint32_t main, uint32_t part, uint32_t seed)
+{
+    char m[40];
+    gid_now(&gp.id);
+    gp.id.main = (uint8_t)main; gp.id.part = (uint8_t)part; gp.id.seed = (uint16_t)seed;
+    gid_name(&gp.id, gp.last, sizeof gp.last, 0);
+    str_cpy(m, "GEN: ", sizeof m); str_cpy(m + 5, gp.last, sizeof m - 5);
+    if (text_w(&UF_HDR, m) > 232) gid_name(&gp.id, gp.last, sizeof gp.last, 1);
+}
+static void gen_scene(uint32_t main, uint32_t part, uint32_t seed)
+{
+    ui.confirm = CF_DICE_ALL;
+    gen_recent_clear();
+    gp.energy = 50; gp.form = 1; gp.complex = 50; gp.tape = GT_AUTO; gp.hot = 0xFF;
+    gen_piece(main, part, seed);
+}
 static void setup(int s)
 {
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
@@ -1342,16 +1360,9 @@ static void setup(int s)
         nav_scene(SEC_SCL, "KEY");
         break;
     case S_ED_OPERATOR: eng(ENGI_FM6); TSEL->engine = TSEL->eng_req; nav_scene(SEC_EDIT, "OPERATOR"); break;   /* (3b task 5) */
-    case S_GEN_EXPLORE:                                 /* (0.8.6) GEN 1/3 on EXPLORE, where it opens, after a piece */
-        ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = GEN_EXPLORE; gp.seed = 421;
-        str_cpy(gp.last, "EXPLORE 0421", sizeof gp.last);
-        break;
-    case S_GEN_BEAT: case S_GEN_DNB: case S_GEN_RETRO:  /* (3b) the long genre names: the card's short one, the full one across the panel */
-        ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.seed = 421;
-        gp.genre = (uint8_t)(1u + (s == S_GEN_BEAT ? 42u : s == S_GEN_DNB ? 31u : 26u));
-        str_cpy(gp.last, "HOUSE 0421", sizeof gp.last);
-        break;
-    case S_GEN_LEAD: ui.confirm = CF_DICE_ALL; gp.page = 2; gp.hot = 1; gp.form = 2; break;   /* (0.8.5) GEN 3/3, SONG */
+    case S_GEN_WILD: gen_scene(GID_WILD, GID_SOLO, 421); break;   /* (0.9) GEN after a WILD piece (0.8.6's EXPLORE) */
+    case S_GEN_LONG: gen_scene(30, 31, 8888); break;   /* (0.9) the longest blend: BREAKS+DRILL'N'BASS 8888, its line fitted */
+    case S_GEN_TAPE: gen_scene(4, GID_SOLO, 421); gp.hot = 3; gp.tape = 7; break;   /* (0.9) TAPE just turned: 60 % */
     case S_MIXER_PAN:                            /* PAN just turned, the ends of each knob, OFF, armed while stopped */
         go_page(GR_MIX); song.playing = 0; song.sel = 1;
         trk[0].p[P_LEVEL] = 127; trk[1].p[P_LEVEL] = 0; trk[2].p[P_LEVEL] = 1; trk[3].p[P_LEVEL] = 104;
@@ -1498,8 +1509,13 @@ static void setup(int s)
         ui.confirm = s == S_DLG_OVR_USER ? CF_OVR_USER : CF_ERASE_USER; ui.confirm_trk = 6;
         break;
     case S_DLG_RECALL_SOUND: song.sel = 0; go_title("EDIT 1"); ui.confirm = CF_RECALL_SOUND; ui.confirm_trk = 0; break;
-    case S_GEN: ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = (uint8_t)(1u + GEN_SHOWN[4]); gp.seed = 421; str_cpy(gp.last, "ACID 0421", sizeof gp.last); break;   /* (0.6.91) GEN (3b: a shown genre, ACID) */
-    case S_GEN_PARTS: ui.confirm = CF_DICE_ALL; gp.page = 1; gp.hot = 2; gp.amt[GP_CHORDS] = 70; gp.amt[GP_ARP] = 0; break;
+    case S_GEN: gen_scene(26, 37, 421); break;          /* (0.9) GEN on NEW after RETROBOC+AMBIENT 0421 */
+    case S_GEN_RECENT:                                  /* (0.9) three recent pieces, PRESETS on the second (RECENT 2) */
+        gen_scene(41, 2, 1234); gen_recent_push(&gp.id);
+        gen_piece(11, GID_SOLO, 77); gen_recent_push(&gp.id);
+        gen_piece(26, 37, 421); gen_recent_push(&gp.id);
+        gp.at = 2; gp.hot = 0xFF;
+        break;
     /* (ACID FM 3c-2 task 5) MENU on the section engine (ux_menu.c): AUDIO (SPEAKER EQ just turned to BASS+, recording armed: the
      * header's mark), CLICK (CLICK REC, COUNT-IN 1 BAR), CONTROLS (CALIBRATION armed), MORE (SCREEN SLEEP 15 MIN picked), MORE
      * scrolled to its end (ABOUT picked) */

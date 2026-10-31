@@ -209,7 +209,7 @@ keyAlone: "Plays the note on the selected track (27 keys, F3 to G5). On a DRUM t
 // ------------------------------------------------------------------------------------------- every page's four knobs
 pages: {
   "HOME/TRACKS": ["LEVEL", "LEVEL", "LEVEL", "BPM"], "HOME/VISUAL": ["M1", "M2", "M3", "M4"],
-  "HOME/GEN 1": ["GENRE", "SEED", "ENERGY", "FORM"], "HOME/GEN 2": ["DRUMS", "BASS", "CHORDS", "ARP"], "HOME/GEN 3": ["LEAD", "COMPLEX", "SWING", "HUMAN"],
+  "HOME/GEN": ["ENERGY", "FORM", "COMPLEX", "TAPE"],
   "EDIT/EDIT 1": ["E1", "E2", "E3", "E4"], "EDIT/EDIT 2": ["E5", "E6", "E7", "E8"], "EDIT/FILTER": ["TYPE", "CUT", "RES", "DISTORT"],
   "EDIT/VOICE": ["VOICE", "GLIDE", "MODE", "PRIO"], "EDIT/VOICE 2": ["ALLOC", "DETUNE", "—", "—"],
   "CE_SYN/SOUND": ["E1", "E2", "E3", "E4"], "CE_SYN/TONE": ["E5", "E6", "E7", "E8"], "CE_SYN/VOICE": ["VOICE", "GLIDE", "PRIORITY", "SPREAD"],
@@ -266,13 +266,13 @@ commands: [
    d: "Hold HOME ~0.7 s. SELECT walks AUDIO, CLICK, CONTROLS and MORE, a knob changes the setting under it, OCT± step the one turned last; HOME closes (and saves)."},
 
   // GEN
-  {s: "gen", k: "HOME+SELECT", shot: 'gen_explore', t: "Generate a whole song (GEN)",
+  {s: "gen", k: "HOME+SELECT", shot: 'gen_wild', t: "Generate a whole song (GEN)",
    d: "HOME held + SELECT from any page (or HOME, HOME to GEN). It opens on EXPLORE; OCT+ writes the piece: engines, sounds, parts, scale, tempo and effects. PLAY plays it."},
   {s: "gen", k: "OCT+", shot: 'gen', t: "Another seed, or the same piece with one change",
    d: "OCT+ with nothing changed: a new seed, a new piece. Turn a knob and OCT+: the same piece with that changed (each part has its own random stream). Screen: LAST: EXPLORE 0421."},
   {s: "gen", k: "PRESETS", shot: 'gen', t: "Pick a genre (or EXPLORE / RANDOM)",
    d: "GEN 1: KNOB 1 GENRE (or PRESETS): EXPLORE (no genre, every rule broken), RANDOM or one of the ten (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO); KNOB 2 SEED, KNOB 3 ENERGY, KNOB 4 FORM (LOOP, PARTS, SONG)."},
-  {s: "gen", k: "SELECT", shot: 'gen_parts', t: "Weigh the parts (GEN 2 / GEN 3)",
+  {s: "gen", k: "SELECT", shot: 'gen_recent', t: "Weigh the parts (GEN 2 / GEN 3)",
    d: "GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % or AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Lower DRUMS and OCT+: the same piece, fewer drums."},
   {s: "gen", k: "OCT-", t: "Leave GEN / go back to before",
    d: "OCT− goes back to TRACKS (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and the song, but never overwrites sections you stored."},
@@ -562,7 +562,7 @@ recipes: [
     "Make a variation; SAVE › SONG KNOB 1 to B, then save it the same way. (While playing: SAVE + C4–F4 stores quickly.)",
     "SAVE › SONG: KNOB 1 the section, OCT+ adds a row after the one picked, KNOB 2 the row, KNOB 3 its bars; KNOB 4 a scene.",
     "SAVE › MORE › END: STOP, X2–X8 or LOOP. PLAY plays the song. Or record it live: SAVE + E5 and SAVE + F3–B3."]},
-  {id: "gen", s: "gen", shots: ['gen_explore', 'gen_parts'], t: "Use GEN / EXPLORE", steps: [
+  {id: "gen", s: "gen", shots: ['gen_wild', 'gen_recent'], t: "Use GEN / EXPLORE", steps: [
     "HOME held + SELECT: GEN opens on EXPLORE (no genre, breaks the rules).",
     "OCT+: a whole piece. PLAY. OCT+ again: another seed.",
     "Or pick a genre (ten) or RANDOM with PRESETS; FORM PARTS / SONG builds sections and the song.",

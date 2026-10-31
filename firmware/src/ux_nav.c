@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Copyright (C) 2026 NorfolkHacker */
 /* ACID FM's HOME navigation (ux_nav.h): HOME's three pages as a table and the page-memory rule. The memory is JIANT's byte,
- * ui.nmem[SEC_HOME] (the chain's entry ^ NAV_DEF, ui_lens.c nav_mem): 0 TRACKS, 1 VISUAL, 2..4 GEN on its page 1..3 (spec
- * rule 1: a section opens on the page last used there, GEN too); a value past the chain reads as TRACKS. While GEN is shown
- * the page is GEN whatever the byte says; a GEN closed by other means (its own OK) shows TRACKS. Included by ui.c after
+ * ui.nmem[SEC_HOME] (the chain's entry ^ NAV_DEF, ui_lens.c nav_mem): 0 TRACKS, 1 VISUAL, 2 GEN (one page since 0.9; spec
+ * rule 1: a section opens on the page last used there, GEN too); a value past the chain (0.8's 3, 4: GEN 2, GEN 3) reads
+ * as TRACKS. While GEN is shown the page is GEN whatever the byte says; a GEN closed by other means (its own OK) shows TRACKS. Included by ui.c after
  * ui_lens.c (nav_go / nav_mem / CE_HOME). */
 #include "ux_nav.h"
 

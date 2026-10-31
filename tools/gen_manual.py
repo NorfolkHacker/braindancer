@@ -30,7 +30,7 @@ SHOTS = OUT / 'shots'
 # the screen each page of the map opens (tests/ui_render.c's scene names; the breadcrumb of each checked by hand)
 PAGE_SHOT = {
     'HOME': {'TRACKS': 'home', 'VISUAL': 'home_visual',   # (ACID FM 3a: was ECO MACROS BEING ROUTES)
-             'GEN 1': 'gen_explore', 'GEN 2': 'gen_parts', 'GEN 3': 'gen_lead'},
+             'GEN': 'gen'},   # (Braindancer 0.9: GEN one page; was GEN 1..3)
     'CE_SYN': {'SOUND': 'edit_analog_1', 'TONE': 'edit_analog_2', 'VOICE': 'edit_analog_3', 'FILTER': 'edit_phase_3',
                'MORE': 'edit_analog_more'},   # (3b task 4: a synth's EDIT on the ux pages)
     'CE_FM6': {'SOUND': 'edit_fm6_1', 'OPERATOR': 'edit_fm6_2', 'OP ENV': 'edit_fm6_3', 'MORE': 'edit_fm6_more'},

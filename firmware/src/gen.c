@@ -50,8 +50,7 @@ static struct {
     uint8_t energy, form;                               /* 0..100; 0 LOOP, 1 PARTS, 2 SONG */
     uint8_t amt[GP_N];                                  /* 0 OFF .. 100, GA_AUTO the genre's */
     uint8_t complex, swing, human;                      /* 0..100 (swing: GA_AUTO the genre's) */
-    uint8_t page, hot;                                  /* the GEN screen's page, its last knob */
-    uint32_t sig;                                       /* the settings of the last piece made (OCT+ again: a new seed) */
+    uint8_t hot;                                        /* the GEN screen's last knob turned (0xFF none) */
     uint8_t tape;                                       /* (0.9) the TAPE knob, GT_* */
     uint8_t at;                                         /* (0.9) PRESETS on GEN: 0 NEW, k the recent piece k - 1 */
     genid_t id;                                         /* (0.9) the piece being made / made last */
@@ -2930,14 +2929,6 @@ static void gen_build(const genid_t *id)
     gen_recent_push(&gp.id);
 }
 static void gen_go(void) { genid_t id; gid_legacy(&id); gen_build(&id); }   /* the piece the settings name (the tools) */
-static uint32_t gen_sig(void)                           /* the settings that make the piece */
-{
-    uint32_t h = 2166136261u, k;
-    h = (h ^ gp.genre) * 16777619u; h = (h ^ gp.seed) * 16777619u; h = (h ^ gp.energy) * 16777619u; h = (h ^ gp.form) * 16777619u;
-    for (k = 0; k < GP_N; k++) h = (h ^ gp.amt[k]) * 16777619u;
-    h = (h ^ gp.complex) * 16777619u; h = (h ^ gp.swing) * 16777619u; h = (h ^ gp.human) * 16777619u;
-    return h ^ (trk_live << 28);
-}
 static uint16_t gseed_last[8];                          /* (0.9.17) the last seeds thrown */
 static void gen_new_seed(void)
 {
@@ -2981,23 +2972,25 @@ static void gen_recall(uint32_t k)                      /* recent piece k (0 new
     id = gen_recent[k];                                 /* (a copy: gen_build's push moves the ring under it) */
     gen_ui_defaults();
     gen_build(&id);
+    gp.energy = id.energy; gp.form = (uint8_t)id.form;  /* (Task 4 review) the page shows the piece brought back: its */
+    gp.complex = id.complex; gp.tape = (uint8_t)id.tape;   /* four knobs, PRESETS on it (now the newest, RECENT 1) */
+    gp.at = 1;
 }
-/* OCT+ on the GEN screen: the piece; the same settings again: a new seed first */
+/* OCT+ on the GEN screen (ui_input.c: refused while ARRANGE runs, chain_busy(), GENERATE and RECALL alike): at NEW a new
+ * piece (GENERATE), on a recent one that piece again (RECALL) */
 static void gen_press(void)
 {
-    if (gp.sig == gen_sig()) gen_new_seed();
-    gen_go();
-    gp.sig = gen_sig();
+    if (gp.at && gp.at <= gen_nrecent) gen_recall(gp.at - 1u);
+    else gen_generate();
 }
-/* (the old name: tests, the films, the renders) a new throw: any genre (RANDOM, as it always was: the screen's dice is
- * EXPLORE), a new seed (the screen's settings otherwise) */
+/* (the old name: tests, the films, the renders) a new throw without the screen: a seed's draw (gp.genre 0, as RANDOM
+ * always was), a new seed, the knobs as they are */
 static void dice_all(void)
 {
     uint8_t g = gp.genre;
     gp.genre = 0;
     gen_new_seed();
     gen_go();
-    gp.sig = gen_sig();
     gp.genre = g;
 }
 static uint32_t dice_print(void)                        /* a fingerprint of the piece (the tests) */
@@ -3072,144 +3065,106 @@ static const char *dice_seq(track_t *t)
 }
 
 /* ------------------------------------------------------------------------------------------- the GEN screen --- */
-static const char *const GEN_LBL[3][4] = {{"GENRE", "SEED", "ENERGY", "FORM"}, {"DRUMS", "BASS", "CHORDS", "ARP"},
-                                          {"LEAD", "COMPLEX", "SWING", "HUMAN"}};
+/* (Braindancer 0.9, spec 1) one page: ENERGY FORM COMPLEX TAPE on the knobs, OCT+ GENERATE (or RECALL), PRESETS the
+ * recent pieces (NEW first), SELECT nothing */
+static const char *const GEN_LBL[4] = {"ENERGY", "FORM", "COMPLEX", "TAPE"};
 static const char *const GEN_FORM[3] = {"LOOP", "PARTS", "SONG"};
 static uint8_t gen_fresh;                               /* (0.6.96) the screen's first frame: the body cleared once */
-static void gen_open(void)
+static void gen_open(void)                              /* (0.9: the knobs as left; PRESETS on NEW) */
 {
     gp.hot = 0xFF;
     gen_fresh = 1;
-    gp.genre = GEN_EXPLORE;                             /* (0.6.93) opens on RANDOM: a genre is this visit's choice;
-                                                         * (0.8.6) on EXPLORE: the dice always starts there */
+    gp.at = 0;
 }
-static void gen_amt_turn(uint8_t *v, int32_t s)         /* OFF, 10 .. 100, AUTO (above 100) */
+static void gen_knob(uint32_t k, int32_t s)             /* ENERGY +-5, FORM a place, COMPLEX +-5, TAPE a place (stops) */
 {
-    int32_t x = *v == GA_AUTO ? 110 : (int32_t)*v;
-    x = clamp(x + s * 10, 0, 110);
-    *v = (uint8_t)(x > 100 ? GA_AUTO : x);
-}
-/* (3b) GENRE's place on the knob: EXPLORE 0, RANDOM 1, the ten 2..11; a stored hidden genre sits at RANDOM's place */
-static uint32_t gen_pos(void)
-{
-    uint32_t si = gen_shown_index(gp.genre);
-    return gp.genre == GEN_EXPLORE ? 0u : si == 255u ? 1u : si + 2u;
-}
-static void gen_knob(uint32_t k, int32_t s)
-{
-    uint32_t p = gp.page;
     gp.hot = (uint8_t)k;
-    if (p == 0u) {
-        if (k == 0u) {                                  /* (0.8.6) EXPLORE first, then RANDOM, then the genres */
-            uint32_t pos = gen_pos();
-            pos = (pos + (s > 0 ? 1u : GEN_NSPOS - 1u)) % GEN_NSPOS;
-            gp.genre = (uint8_t)(!pos ? GEN_EXPLORE : pos == 1u ? 0u : 1u + GEN_SHOWN[pos - 2u]);
-        }
-        else if (k == 1u) gp.seed = (uint16_t)((gp.seed + 10000u + (uint32_t)clamp(accel(EN_K2, s, 9999), -9999, 9999)) % 10000u);
-        else if (k == 2u) gp.energy = (uint8_t)clamp((int32_t)gp.energy + s * 5, 0, 100);
-        else gp.form = (uint8_t)clamp((int32_t)gp.form + (s > 0 ? 1 : -1), 0, 2);
-    } else if (p == 1u) {
-        gen_amt_turn(&gp.amt[k], s);
-    } else {
-        if (k == 0u) gen_amt_turn(&gp.amt[GP_LEAD], s);
-        else if (k == 1u) gp.complex = (uint8_t)clamp((int32_t)gp.complex + s * 5, 0, 100);
-        else if (k == 2u) { int32_t x = gp.swing == GA_AUTO ? 105 : (int32_t)gp.swing; x = clamp(x + s * 5, 0, 105); gp.swing = (uint8_t)(x > 100 ? GA_AUTO : x); }
-        else gp.human = (uint8_t)clamp((int32_t)gp.human + s * 5, 0, 100);
+    if (k == 0u) gp.energy = (uint8_t)clamp((int32_t)gp.energy + s * 5, 0, 100);
+    else if (k == 1u) gp.form = (uint8_t)clamp((int32_t)gp.form + (s > 0 ? 1 : -1), 0, 2);
+    else if (k == 2u) gp.complex = (uint8_t)clamp((int32_t)gp.complex + s * 5, 0, 100);
+    else gp.tape = (uint8_t)clamp((int32_t)gp.tape + (s > 0 ? 1 : -1), 0, (int32_t)GT_N - 1);
+    ui.force = 1;
+}
+static void gen_recent_turn(int32_t s)                  /* (0.9) PRESETS: a detent a piece, back older, on to NEW (stops) */
+{
+    gp.at = (uint8_t)clamp((int32_t)gp.at + (s < 0 ? 1 : -1), 0, (int32_t)gen_nrecent);
+    ui.force = 1;
+}
+static void gen_value(uint32_t k, char *b)              /* "50%", "LOOP", "AUTO" / "OFF" / "60%" */
+{
+    uint32_t v = k == 0u ? gp.energy : gp.complex;
+    if (k == 1u) { str_cpy(b, GEN_FORM[gp.form % 3u], 16); return; }
+    if (k == 3u) {
+        if (gp.tape == GT_AUTO) { str_cpy(b, "AUTO", 16); return; }
+        if (gp.tape == GT_OFF) { str_cpy(b, "OFF", 16); return; }
+        v = (gp.tape - 1u) * 10u;
     }
-    ui.force = 1;
-}
-static uint32_t gen_page(void) { return gp.page % 3u; }
-static void gen_page_put(uint32_t p)                     /* (0.9.2) GEN 1..3: HOME's pages (ui_lens.c nav_go) */
-{
-    if (gp.page != p % 3u)
-        gp.hot = 0xFF;
-    gp.page = (uint8_t)(p % 3u);
-    ui.force = 1;
-}
-static void gen_value(uint32_t p, uint32_t k, char *b)
-{
-    uint32_t v;
-    b[0] = 0;
-    if (p == 0u) {
-        if (k == 0u) { str_cpy(b, gp.genre == GEN_EXPLORE ? "EXPLORE" : gp.genre ? gen_shown_index(gp.genre) != 255u ? GEN_SHOWN_CARD[gen_shown_index(gp.genre)] : GENRE[(gp.genre - 1u) % NGENRE].name : "RANDOM", 16); return; }
-        if (k == 1u) { b[0] = (char)('0' + gp.seed / 1000u % 10u); b[1] = (char)('0' + gp.seed / 100u % 10u); b[2] = (char)('0' + gp.seed / 10u % 10u); b[3] = (char)('0' + gp.seed % 10u); b[4] = 0; return; }
-        if (k == 3u) { str_cpy(b, GEN_FORM[gp.form % 3u], 16); return; }
-        v = gp.energy;
-    } else if (p == 1u) v = gp.amt[k];
-    else if (k == 0u) v = gp.amt[GP_LEAD];
-    else if (k == 1u) v = gp.complex;
-    else if (k == 2u) v = gp.swing;
-    else v = gp.human;
-    if (v == GA_AUTO) { str_cpy(b, "AUTO", 16); return; }
-    if (!v && (p == 1u || (p == 2u && k == 0u))) { str_cpy(b, "OFF", 16); return; }
-    b[0] = (char)('0' + v / 100u); b[1] = (char)('0' + v / 10u % 10u); b[2] = (char)('0' + v % 10u); b[3] = '%'; b[4] = 0;
-    if (b[0] == '0') { b[0] = b[1]; b[1] = b[2]; b[2] = b[3]; b[3] = 0; if (b[0] == '0' && v < 10u) { b[0] = b[1]; b[1] = b[2]; b[2] = 0; } }
+    fmt_int(b, (int32_t)v);
+    str_cpy(b + str_len(b), "%", 2);
 }
 /* (0.8.5) GEN in HOME's lens (ui_lens.c, the mock-up's GEN level): its four settings on the cards, the panel the five
- * parts as rows (the ones the page's knobs weigh lit), each a preview of its density (its amount) and heat (ENERGY)
- * from the seed, the FORM's sections as chips, the last piece and OCT+ MAKE */
+ * parts as rows, each a preview of its density and heat (ENERGY) from the piece's seed, the FORM's sections as chips,
+ * the piece's name and OCT+ GENERATE / RECALL */
 static void gen_cards(void)
 {
     uint32_t k;
     char v[16];
     for (k = 0; k < 4u; k++) {
-        uint32_t p = gp.page % 3u, a;
-        int32_t r;
-        gen_value(p, k, v);
-        a = p == 1u ? gp.amt[k] : p == 2u && k == 0u ? gp.amt[GP_LEAD] : p == 2u && k == 2u ? gp.swing : 0u;
-        r = p == 0u ? (k == 0u ? (int32_t)gen_pos() * 1000 / (int32_t)(GEN_NSPOS - 1u) :   /* (0.8.7:
-                                                         * KNOB 1's order, EXPLORE at the left) */ k == 1u ? gp.seed / 10 : k == 2u ? gp.energy * 10 :
-                       gp.form * 500) :
-            (p == 1u || (p == 2u && (k == 0u || k == 2u))) ? (a == GA_AUTO ? 1000 : (int32_t)a * 10) :
-            (int32_t)(k == 1u ? gp.complex : gp.human) * 10;
-        draw_column(k, GEN_LBL[p][k], v, "", VAL(k), r, ICON_NONE);
+        int32_t r = k == 0u ? gp.energy * 10 : k == 1u ? gp.form * 500 : k == 2u ? gp.complex * 10 :
+                    (int32_t)gp.tape * 1000 / (int32_t)(GT_N - 1u);
+        gen_value(k, v);
+        draw_column(k, GEN_LBL[k], v, "", VAL(k), r, ICON_NONE);
     }
 }
 static uint32_t gen_draw_sig(void)
 {
-    return gen_sig() * 31u + gp.page * 7u + str_hash(gp.hot * 977u, gp.last) + ux.gen;
+    uint32_t h = ((((uint32_t)gp.energy * 131u + gp.form) * 131u + gp.complex) * 131u + gp.tape) * 131u + gp.at;
+    return (h * 131u + gen_nrecent) * 31u + str_hash(gp.hot * 977u, gp.last) + ux.gen;
 }
 static uint32_t gen_hash(uint32_t x) { x *= 2654435761u; x ^= x >> 15; x *= 2246822519u; x ^= x >> 13; return x % 1000u; }
-/* the GEN panel's last line: "LAST: ACID 0421"; a mutant's two names without the "LAST: " when it would not fit */
-#define GEN_LAST_W 150
-static void gen_last_line(char *v, uint32_t n)
+static const genid_t *gen_shown_id(void) { return gp.at && gp.at <= gen_nrecent ? &gen_recent[gp.at - 1u] : &gp.id; }
+static const char *gen_oct_label(void) { return gp.at && gp.at <= gen_nrecent ? "OCT+ RECALL" : "OCT+ GENERATE"; }   /* (as gen_press) */
+/* the panel's last line: "LAST: RETROBOC+AMBIENT 0421" / "RECENT 2: WILD 0421"; too wide beside OCT+'s label: the name
+ * alone, then the cards' short names (spec 1: "RETRO+AMBIENT 0421") */
+static void gen_panel_line(char *v, uint32_t n)
 {
-    str_cpy(v, "LAST: ", n);
-    str_cpy(v + 6, gp.last[0] ? gp.last : "-", n - 6u);
-    if (text_w(&AF_X, v) > GEN_LAST_W)
-        str_cpy(v, gp.last, n);
+    int32_t w = 228 - text_w(&AF_X, gen_oct_label()) - 8;
+    char nm[32];
+    if (!gp.at && !gp.last[0]) { str_cpy(v, "LAST: -", n); return; }
+    gid_name(gen_shown_id(), nm, sizeof nm, 0);
+    if (gp.at) { str_cpy(v, "RECENT ", n); fmt_int(v + 7, gp.at); str_cpy(v + str_len(v), ": ", n - str_len(v)); }
+    else str_cpy(v, "LAST: ", n);
+    str_cpy(v + str_len(v), nm, n - str_len(v));
+    if (text_w(&AF_X, v) > w) str_cpy(v, nm, n);                 /* (too wide: the name alone) */
+    if (text_w(&AF_X, v) > w) gid_name(gen_shown_id(), v, n, 1); /* (still: the cards' short names) */
 }
 static void gen_panel(void)
 {
     static const char *const ROLE[5] = {"DRUMS", "BASS", "CHORDS", "ARP", "LEAD"};
     uint8_t ord[GF_MAXROWS], mul[GF_MAXROWS];
-    uint32_t k, i, p = gp.page % 3u, n;
+    const genid_t *sh = gen_shown_id();
+    genid_t f = *sh;
+    uint32_t k, i, n;
     int32_t bw;
-    char v[32];
-    for (k = 0; k < 5u; k++) {
-        int32_t y = 4 + (int32_t)k * 19, dn;
-        uint32_t a = gp.amt[k];
-        int on = (p == 1u && k < 4u) || (p == 2u && k == 4u);
-        uint16_t bg = on ? T_TINT : T_RAISE;               /* (the mock-up's selection: a tint) */
+    char v[40];
+    for (k = 0; k < 5u; k++) {                          /* (0.9: no amounts on the page; the rows never lit) */
+        int32_t y = 4 + (int32_t)k * 19;
+        uint16_t bg = T_RAISE;
         cv_rect(4, y, 232, 16, bg);
         GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "GEN part name centred up/down");
-        cv_text_on(8, y + CAP_IN(X, 16), &AF_X, ROLE[k], on ? T_TEXT : T_MID, bg);
-        str_cpy(v, a == GA_AUTO ? "AUTO" : a ? "" : "OFF", sizeof v);
-        if (a && a != GA_AUTO) { fmt_int(v, (int32_t)a); str_cpy(v + str_len(v), "%", 2); }
-        GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "GEN part name centred up/down");
-        cv_text_r(232, y + CAP_IN(X, 16), &AF_X, v, T_DIM, bg);
-        dn = a == GA_AUTO ? 550 : (int32_t)a * 10;
+        cv_text_on(8, y + CAP_IN(X, 16), &AF_X, ROLE[k], T_MID, bg);
         for (i = 0; i < 32u; i++) {
-            uint32_t h = gen_hash(gp.seed * 13u + k * 101u + i + (i > 15u ? gp.complex * 3u / 100u : 0u)), vv = gen_hash(i * 7u + k);
-            if ((int32_t)h < dn * (k ? 8 : 10) / 10) {
+            uint32_t h = gen_hash(sh->seed * 13u + k * 101u + i + (i > 15u ? sh->complex * 3u / 100u : 0u)), vv = gen_hash(i * 7u + k);
+            if ((int32_t)h < 550 * (k ? 8 : 10) / 10) {
                 int32_t x = 52 + (int32_t)i * 49 / 10, yy = y + 3 + (k == 1u || k == 4u ? (int32_t)(1000u - vv) * 8 / 1000 : 0);
-                cv_rect(x, yy, k == 2u ? 9 : 3, k == 2u ? 10 : 3, heat_col(64 + (int32_t)gp.energy * 154 / 100 + (int32_t)vv * 38 / 1000));
+                cv_rect(x, yy, k == 2u ? 9 : 3, k == 2u ? 10 : 3, heat_col(64 + (int32_t)sh->energy * 154 / 100 + (int32_t)vv * 38 / 1000));
             }
         }
     }
-    if (gp.form % 3u == 0u) { ord[0] = 0; n = 1; }      /* the FORM's sections, in the order this seed makes */
-    else n = gform_order(&gp.id, gp.form == 2u ? (gp.genre && GENRE[(gp.genre - 1u) % NGENRE].form == FM_ARC ? FM_ARC : FM_CLUB) :
-                         FM_PARTS, ord, mul);   /* (0.9: the piece made last's; Task 5's panel) */
+    if (!gp.at) f.form = gp.form % 3u;                  /* (NEW: the FORM the knob sets; a recent piece: its own) */
+    if (f.form == 0u) { ord[0] = 0; n = 1; }            /* the FORM's sections, in the order this seed makes */
+    else n = gform_order(&f, f.form == 2u ? (f.main < NGENRE && GENRE[f.main].form == FM_ARC ? FM_ARC : FM_CLUB) : FM_PARTS,
+                         ord, mul);
     bw = 228 / (int32_t)n;
     for (i = 0; i < n; i++) {
         uint32_t sc = ord[i];
@@ -3219,13 +3174,7 @@ static void gen_panel(void)
         GFX_HOOK_ALIGN(x, 102, x + bw - 2, 116, AL_HV, "GEN section letter centred");
         cv_text_in(x, 102 + CAP_IN(X, 14), bw - 2, &AF_X, l, T_INK, sec_col(sc));
     }
-    if (p == 0u && gp.hot == 0u) {                      /* (3b) the genre's card turned: its full name across the panel */
-        str_cpy(v, "GENRE: ", sizeof v);
-        k = gen_shown_index(gp.genre);
-        str_cpy(v + 7, gp.genre == GEN_EXPLORE ? "EXPLORE" : !gp.genre ? "RANDOM" : k != 255u ? GEN_SHOWN_NAME[k] :
-                GENRE[(gp.genre - 1u) % NGENRE].name, sizeof v - 7);
-    } else
-        gen_last_line(v, sizeof v);
-    cv_clip_text(6, 126, &AF_X, v, T_MID, T_SURF, GEN_LAST_W);
-    cv_text_r(234, 126, &AF_X, "OCT+ MAKE", T_ACCENT, T_SURF);
+    gen_panel_line(v, sizeof v);
+    cv_clip_text(6, 126, &AF_X, v, T_MID, T_SURF, 228 - text_w(&AF_X, gen_oct_label()) - 8);
+    cv_text_r(234, 126, &AF_X, gen_oct_label(), T_ACCENT, T_SURF);
 }

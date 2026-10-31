@@ -470,7 +470,6 @@ EXPORT void web_gen(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t for
     gp.energy = (uint8_t)(energy > 100u ? 100u : energy);
     gp.form = (uint8_t)(form % 3u);
     gen_go();
-    gp.sig = gen_sig();
 }
 EXPORT const char *web_gen_last(void) { return gp.last; }
 EXPORT uint32_t web_gen_count(void) { return NGENRE; }

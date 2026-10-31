@@ -186,7 +186,8 @@ int main(int argc, char **argv)
             uint32_t us;
             dm_wait();
             clock_gettime(CLOCK_MONOTONIC, &t0);
-            gen_press();
+            if (p) gen_new_seed();                      /* (0.8's OCT+ on a set GENRE: the seed set, then a new one a */
+            gen_go();                                   /* press; 0.9's OCT+ is GENERATE, any style) */
             clock_gettime(CLOCK_MONOTONIC, &t1);
             us = (uint32_t)((t1.tv_sec - t0.tv_sec) * 1000000 + (t1.tv_nsec - t0.tv_nsec) / 1000);
             cost_sum += us; if (us > cost_max) cost_max = us;
@@ -238,7 +239,7 @@ int main(int argc, char **argv)
             rng_state = 0x1234567u;
             host_ticks = 1000000u + i * 7777777u;
             session_dice(host_ticks ^ (i * 3u) << 16);   /* (main.c: the ticks and the battery's ADC) */
-            gp.genre = GEN_EXPLORE; gp.sig = 0;   /* (gp as at power-on: its SEED session_dice's) */
+            gp.genre = GEN_EXPLORE;             /* (gp as at power-on: its SEED session_dice's) */
             gen_press();
             h[i] = dice_print();
             for (j = 0; j < i; j++) same += h[j] == h[i];

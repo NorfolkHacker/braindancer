@@ -2249,7 +2249,7 @@ static void ui_input_frame(void)
             if (f == FAM_COUNT) {                       /* HOME held: GEN, HOME's generator */
                 ui.home_t0 |= 2u;
                 if (!pj_sel_ms || fm1_ms - pj_sel_ms > 400u)
-                    nav_go(SEC_HOME, UXH_GEN0, 1);      /* (ACID FM 3a: GEN 1; was GEN's page last shown) */
+                    nav_go(SEC_HOME, UXH_GEN0, 1);      /* (ACID FM 3a: GEN; 0.9: one page) */
             } else if (k) {
                 part_dice(k);
                 btn_used(FAM_BTN[f]);
@@ -2447,8 +2447,8 @@ static void ui_input_frame(void)
                     undo_mark();
                     if (song.playing) transport_req = 2;
                     system_init();
-                    hints_reset();                      /* (0.9.5) the teaching hints start over */
-                    gp.genre = GEN_EXPLORE;             /* (0.8.6) GEN's GENRE as at power-on: EXPLORE */
+                    hints_reset();                      /* (0.9.5) the teaching hints start over (0.9: GEN's knobs and
+                                                         * recent pieces are the session's: kept) */
                     ui_message("NEW PROJECT");
                 }
             } else if (kind == CF_CLEAR_ALL) {          /* SEQ + REC: every track's steps and automation, the lane */
@@ -2603,8 +2603,8 @@ static void ui_input_frame(void)
     for (id = 0; b; id++, b >>= 1)
         if (b & 1u)
             page_tap(panel_btn_of(id));
-    if (gen_on() && (oct & 2u)) {                       /* (0.9.2) GEN, HOME's pages: OCT+ the piece (the screen stays, */
-        if (!chain_busy()) gen_press();                 /* OCT+ again: another), OCT- back to TRACKS */
+    if (gen_on() && (oct & 2u)) {                       /* (0.9.2) GEN, HOME's page: OCT+ GENERATE or RECALL (the screen */
+        if (!chain_busy()) gen_press();                 /* stays; not while ARRANGE runs, both alike), OCT- back to TRACKS */
     } else if (gen_on() && (oct & 1u)) {
         nav_go(SEC_HOME, UXH_TRACKS, 0);
     } else if (act_cols() && (oct & 2u)) {              /* action pages: OCT+ does the picked action, */
@@ -2639,7 +2639,7 @@ static void ui_input_frame(void)
     kq |= lay;
     if (!lay && (s = panel_enc(EN_PRESET)) != 0) {
         if (gen_on())
-            gen_knob(0, s);                             /* (GEN: its GENRE, the generator's preset) */
+            gen_recent_turn(s);                         /* (0.9) GEN: the recent pieces */
         else
             presets_turn(s);
     }
@@ -2652,8 +2652,10 @@ static void ui_input_frame(void)
             ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
         }
     } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.9.2, rule 1) SELECT alone: the section's
-                                                        * chain, a page a detent (HOME's: TRACKS VISUAL GEN 1..3) */
-        if (lock_held())                                /* (0.9.12) a step held on STEP: the page its locks take */
+                                                        * chain, a page a detent (HOME's: TRACKS VISUAL GEN) */
+        if (gen_on())                                   /* (0.9) GEN is one page: SELECT does nothing there */
+            ;
+        else if (lock_held())                           /* (0.9.12) a step held on STEP: the page its locks take */
             lock_select(s);
         else if (uxq_select(s))                         /* (ACID FM 3c-1 task 2) STEPS: on the strip's last cell the next 16 */
             ;

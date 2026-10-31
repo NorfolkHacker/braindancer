@@ -1267,7 +1267,8 @@ int main(void)
             for (k = 0; k < NTRK; k++) lastsnd[k] = 0xFFFF;
             for (pr = 0; pr < 24u; pr++) {
                 host_ticks += 1300000u + pr * 777u;
-                gen_press();
+                gen_new_seed(); gen_go();               /* (0.9: the style's own press, a new seed: 0.8's OCT+ on a set
+                                                         * GENRE; OCT+ on the page is GENERATE now, any style) */
                 for (k = 0; k < NTRK; k++) {
                     const track_t *t = &trk[k];
                     uint32_t r = gs.role[k], len = dlen(t), eq = 0, any = 0;
@@ -1312,8 +1313,8 @@ int main(void)
         mc_host_v12 = 0; gt_cpt = 0;
         {   /* the power-on: the first OCT+ of two sessions */
             uint32_t h0;
-            gen_reset(); session_dice(111u); gp.genre = GEN_EXPLORE; gp.sig = 0; gen_press(); h0 = dice_print();
-            gen_reset(); session_dice(222u); gp.genre = GEN_EXPLORE; gp.sig = 0; gen_press(); po_same = dice_print() == h0;
+            gen_reset(); session_dice(111u); gen_press(); h0 = dice_print();
+            gen_reset(); session_dice(222u); gen_press(); po_same = dice_print() == h0;
             bad += gcheck("  the power-on's SEED its session's: the first OCT+ another piece every session (0.9.17: SEED 0001)", !po_same);
         }
         {   /* SEQ + SELECT on a HOUSE piece's lead, 20 times */
@@ -1340,50 +1341,95 @@ int main(void)
             bad += gcheck("  EDIT + SELECT: never the same preset twice running (FM6 x 30)", !sd_rep);
         }
     }
-    {   /* NEW PROJECT (SAVE > TOOLS 5): GENRE back to EXPLORE */
-        gen_reset();
-        gp.genre = 5;
+    {   /* (0.9 spec 1) the GEN page: one page, ENERGY FORM COMPLEX TAPE; OCT+ GENERATE; PRESETS NEW then the recent
+         * pieces (OCT+ brings one back); SELECT nothing; OCT- TRACKS; no GENRE, no SEED; NEW PROJECT keeps it */
+        static const char *const LBL[4] = {"ENERGY", "FORM", "COMPLEX", "TAPE"};
+        static const char *const TV[13] = {"AUTO", "OFF", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%", "100%"};
+        char v[40], n0[32];
+        uint32_t k, ok = 1, s1, s2, e1, f1, c1, t1;
+        gen_reset(); session_dice(9u);
+        go_home(); frames(16); fm1_ms += 1200u;
+        held_turn(B_HOME, 1);
+        ok &= ui.confirm == CF_DICE_ALL && gp.at == 0u && !strcmp(gen_oct_label(), "OCT+ GENERATE");
+        for (k = 0; k < 4u; k++) ok &= !strcmp(GEN_LBL[k], LBL[k]) && strcmp(GEN_LBL[k], "GENRE") && strcmp(GEN_LBL[k], "SEED");
+        bad += gcheck("(0.9) HOME + SELECT: GEN, one page: ENERGY FORM COMPLEX TAPE (no GENRE, no SEED), PRESETS on NEW, OCT+ GENERATE", ok);
+        frames(800);
+        gp.tape = GT_AUTO;
+        for (ok = 1, k = 0; k < 13u; k++) { gen_value(3, v); ok &= !strcmp(v, TV[k]); turn(EN_K4, 1); }
+        for (k = 0; k < 13u; k++) turn(EN_K4, -1);
+        gen_value(3, v); ok &= !strcmp(v, "AUTO") && gp.tape == GT_AUTO;
+        gp.energy = 50; turn(EN_K1, 2); ok &= gp.energy == 60u; gen_value(0, v); ok &= !strcmp(v, "60%");
+        gp.form = 0; turn(EN_K2, 1); gen_value(1, v); ok &= !strcmp(v, "PARTS"); turn(EN_K2, 5); gen_value(1, v); ok &= !strcmp(v, "SONG");
+        gp.complex = 50; turn(EN_K3, -1); ok &= gp.complex == 45u;
+        bad += gcheck("  KNOB 4 TAPE: AUTO, OFF, 10 .. 100 %, stops; KNOB 1 ENERGY +-5, KNOB 2 FORM, KNOB 3 COMPLEX", ok);
+        turn(EN_K2, -1); turn(EN_K2, -1); gp.tape = GT_AUTO;   /* (FORM a place a turn: back to LOOP) */
+        press(B_OCTUP); frames(4);
+        str_cpy(n0, gp.last, sizeof n0); s1 = piece_sig();
+        e1 = gp.id.energy; f1 = gp.id.form; c1 = gp.id.complex; t1 = gp.id.tape;
+        ok = ui.confirm == CF_DICE_ALL && !strncmp(ui.msg, "GEN: ", 5) && gen_nrecent == 1u;
+        gp.energy = 85; gp.form = 2; gp.complex = 15; gp.tape = 7;   /* (the second piece made on other knobs) */
+        press(B_OCTUP); frames(4); s2 = piece_sig();
+        ok &= gen_nrecent == 2u && s2 != s1 && strcmp(gp.last, n0);
+        bad += gcheck("  OCT+: GENERATE (GEN: name seed), the screen stays; again: another piece", ok);
+        frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
+        turn(EN_PRESET, -1);
+        gen_panel_line(v, sizeof v);
+        ok = gp.at == 1u && !strncmp(v, "RECENT 1: ", 10) && !strcmp(gen_oct_label(), "OCT+ RECALL");
+        turn(EN_PRESET, -1); turn(EN_PRESET, -1);
+        ok &= gp.at == 2u;                              /* (clamped at the oldest) */
+        {   /* (Task 4 review) RECALL while ARRANGE runs: refused as GENERATE is (OCT+ does nothing; the ring as it was) */
+            genid_t r0 = gen_recent[0];
+            chain.running = 1;
+            press(B_OCTUP); frames(4);
+            ok &= piece_sig() == s2 && gp.at == 2u && gen_nrecent == 2u && gid_eq(&gen_recent[0], &r0);
+            gp.at = 0;
+            press(B_OCTUP); frames(4);
+            ok &= piece_sig() == s2 && gen_nrecent == 2u && gid_eq(&gen_recent[0], &r0);
+            chain.running = 0; gp.at = 2;
+        }
+        press(B_OCTUP); frames(4);
+        ok &= piece_sig() == s1 && gp.at == 1u && gen_nrecent == 2u && !strcmp(gp.last, n0);
+        gen_panel_line(v, sizeof v);
+        ok &= str_len(v) > 5u && !strcmp(v + str_len(v) - 5u, n0 + str_len(n0) - 5u) && !strcmp(gen_oct_label(), "OCT+ RECALL");
+        ok &= gp.energy == e1 && gp.form == f1 && gp.complex == c1 && gp.tape == t1;   /* (the knobs show the piece's) */
+        frames(800);
+        turn(EN_PRESET, 5);
+        ok &= gp.at == 0u && !strcmp(gen_oct_label(), "OCT+ GENERATE");
+        bad += gcheck("  PRESETS back: RECENT 1, 2 (stops at the oldest), OCT+ RECALL brings it back (the same piece, its knobs; refused while ARRANGE runs); on: NEW", ok);
+        fm1_ms += 1000u;
+        k = nav_cur();
+        turn(EN_SELECT, 1); frame(); turn(EN_SELECT, -1); frame();
+        bad += gcheck("  SELECT: nothing (GEN is one page)", gen_on() && nav_cur() == k && k == UXH_GEN0 && gp.at == 0u);
+        press(B_OCTDN);
+        bad += gcheck("  OCT-: back to TRACKS, the piece stays", !ui.confirm && ui.home && home_level() == 0u && piece_sig() == s1);
         tools_run(5); press(B_OCTUP);
-        bad += gcheck("NEW PROJECT: GENRE back to EXPLORE", gp.genre == GEN_EXPLORE && msg_is("NEW PROJECT"));
+        bad += gcheck("  NEW PROJECT: GEN's knobs and recent pieces kept", msg_is("NEW PROJECT") && gen_nrecent == 2u && gp.form == 0u);
+    }
+    {   /* every name fits: the status line (232 px) and the panel's line beside its label, for every style and blend */
+        uint32_t i, j, wide = 0;
+        genid_t id;
+        char v[40];
+        gen_reset();
+        for (i = 0; i <= GEN_NSHOWN; i++)
+            for (j = 0; j <= (i < GEN_NSHOWN ? GEN_NPARTNER[i] : 0u); j++) {
+                gid_now(&id); id.seed = 8888;
+                id.main = i < GEN_NSHOWN ? GEN_SHOWN[i] : GID_WILD;
+                id.part = i < GEN_NSHOWN && j < GEN_NPARTNER[i] ? GEN_SHOWN[GEN_PARTNER[i][j]] : GID_SOLO;
+                gen_build(&id);
+                gen_panel_line(v, sizeof v);
+                wide += text_w(&UF_HDR, ui.msg) > 232 || text_w(&AF_X, v) > 228 - text_w(&AF_X, gen_oct_label()) - 8 || !strstr(v, " 8888");
+            }
+        bad += gcheck("(0.9) every style, blend and WILD: the name and seed whole on the status line and the panel", !wide);
     }
     /* ---- the screen: HOME + SELECT opens GEN, the knobs set, SELECT pages, OCT+ makes, OCT- is done */
     {
         gen_reset();
-        gp.genre = 7; gp.energy = 50; gp.page = 0; gp.form = 0;   /* (0.6.93) a genre left from before: the screen opens
-                                                         * on RANDOM; (0.8.6) on EXPLORE */
-        for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
         go_home(); frames(16);
         fm1_ms += 1200u;
         held_turn(B_HOME, 1);
-        bad += gcheck("HOME + SELECT: the GEN screen (ui.confirm CF_DICE_ALL), page 1, GENRE EXPLORE (0.8.6)", ui.confirm == CF_DICE_ALL && gp.page == 0u && gp.genre == GEN_EXPLORE);
-        {   /* (0.8.6) the knob's order: EXPLORE first, RANDOM, the genres; back from EXPLORE the last genre */
-            char v[16];
-            uint8_t g0 = gp.genre;
-            int ok = 1;
-            static const char *const WALK[12] = {"EXPLORE", "RANDOM", "IDM", "GLITCH", "BREAKS", "D'N'BASS", "ACID",
-                                                 "ELECTRO", "MICRO", "RETRO", "AMBIENT", "AMBTECH"};
-            static const char *const FULL[10] = {"IDM", "GLITCH HOP", "BREAKS", "DRILL'N'BASS", "ACID", "ELECTRO", "MICRO",
-                                                 "RETROBOC", "AMBIENT", "AMB TECHNO"};
-            uint32_t w;
-            gp.genre = GEN_EXPLORE;
-            for (w = 0; w < 24u; w++) {                 /* (3b) ten genres shown: forward twice round, then back twice */
-                gen_value(0, 0, v); ok &= !strcmp(v, WALK[w % 12u]);   /* (the card's names) */
-                if (w % 12u > 1u) ok &= !strcmp(GEN_SHOWN_NAME[w % 12u - 2u], FULL[w % 12u - 2u]);
-                ok &= w % 12u < 2u ? gp.genre == (w % 12u ? 0u : GEN_EXPLORE) : gp.genre == 1u + GEN_SHOWN[w % 12u - 2u];
-                gen_knob(0, 1);
-            }
-            ok &= gp.genre == GEN_EXPLORE;
-            for (w = 0; w < 24u; w++) {
-                gen_knob(0, -1);
-                gen_value(0, 0, v); ok &= !strcmp(v, WALK[(36u - 1u - w) % 12u]);
-            }
-            ok &= gp.genre == GEN_EXPLORE;
-            gp.genre = g0; gp.hot = 0xFF;
-            bad += gcheck("  GENRE's order: EXPLORE, RANDOM, the ten (IDM .. DRIFT), wrapping both ways", ok);
-        }
+        bad += gcheck("HOME + SELECT: the GEN screen (ui.confirm CF_DICE_ALL)", ui.confirm == CF_DICE_ALL);
         {   /* (3b) the ten shown genres: no random draw reaches a hidden one; a stored hidden genre generates as before */
             uint32_t sd, hid = 0, hh;
-            char v[16];
             for (sd = 0; sd < 2500u; sd++) {
                 gen_with(0, sd, 50, 0);
                 hid += gp.id.main != GID_WILD && gen_shown_index(gs.gi + 1u) == 255u;
@@ -1402,8 +1448,6 @@ int main(void)
                               hh == GEN_HOUSE_HASH && hx == GEN_HOUSE_HASH_X1);
                 if (hh != GEN_HOUSE_HASH || hx != GEN_HOUSE_HASH_X1) printf("  HOUSE 0421: %u, at x1.00 %u\n", hh, hx);
             }
-            gp.genre = 1; gen_value(0, 0, v);
-            bad += gcheck("  (3b) ... and its name shows as JIANT's", !strcmp(v, "HOUSE"));
             gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF;
         }
         {   /* (0.5.1) each shown genre plays its own tempo range and swing (docs/braindancer/genre-research.md): RETROBOC 68..100,
@@ -1459,25 +1503,7 @@ int main(void)
         press(B_PLAY); frames(4);
         bad += gcheck("  PLAY again: stopped, the screen stays", (!song.playing || transport_req == 2) && ui.confirm == CF_DICE_ALL);
         frames(8);
-        frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
-        turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K3, 2);
-        bad += gcheck("  KNOB 1 the genre (EXPLORE -> RANDOM -> IDM), KNOB 3 the energy (+10)", gp.genre == 1u + GEN_SHOWN[0] && gp.energy == 60u);
-        turn(EN_SELECT, 1); frames(800);                /* (0.9.2: SELECT GEN's next page, GEN 2; a HOME tap: on to ECO) */
-        turn(EN_K1, -1); turn(EN_K2, 1);
-        bad += gcheck("  SELECT: page 2 (PARTS); DRUMS AUTO -> 100 %, BASS AUTO stays AUTO above 100", gp.page == 1u && gp.amt[GP_DRUMS] == 100u && gp.amt[GP_BASS] == GA_AUTO);
-        {
-            uint32_t sig0 = steps_sig(&trk[0]), sig1;
-            uint16_t seed0;
-            press(B_OCTUP); frames(4);
-            seed0 = gp.seed;
-            sig1 = steps_sig(&trk[0]);
-            bad += gcheck("  OCT+: a piece (GEN: IDM nnnn), the screen stays", ui.confirm == CF_DICE_ALL && !strncmp(ui.msg, "GEN: IDM ", 9) && sig1 != sig0);
-            press(B_OCTUP); frames(4);
-            bad += gcheck("  OCT+ again with the same settings: a new seed, another piece", gp.seed != seed0 && steps_sig(&trk[0]) != sig1);
-            press(B_OCTDN);
-            bad += gcheck("  OCT-: done (0.9.2: HOME's ECO), the piece stays", !ui.confirm && ui.home && home_level() == 0u &&
-                          steps_sig(&trk[0]) != sig0);
-        }
+        press(B_OCTDN);                                 /* (OCT+ and OCT- on the page: the block before) */
     }
     {   /* (0.9.18) the drums' rolls on their lanes (x2 / x4), never the step's RATCH: a kick under a rolled hat, a hit
          * recorded into the step, never roll with it */
