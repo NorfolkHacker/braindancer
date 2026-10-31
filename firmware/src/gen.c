@@ -2909,6 +2909,37 @@ static int gid_eq(const genid_t *a, const genid_t *b)
     return a->seed == b->seed && a->two == b->two && a->dev == b->dev && a->form == b->form && a->tape == b->tape &&
            a->main == b->main && a->part == b->part && a->energy == b->energy && a->complex == b->complex;
 }
+/* (0.9.1 spec 1) the serial console's status (console.c): the GEN piece playing, named as the panel names it, or "-"
+ * (another project, a section of yours, NEW PROJECT, UNDO, CPU TEST: voice.c safe_live), and the CPU model's figures:
+ * the cost of the music now (the section playing, its muted tracks free, as a section's fit counts them), the piece's
+ * budget and AGE, its identity (to rebuild it on the host: tests/gen_terms.c). Main loop */
+typedef struct { const char *piece; int32_t cost, budget, age; genid_t id; uint8_t on; } gen_stat_t;
+static void gen_status(gen_stat_t *s)
+{
+    uint8_t sec = gs.in_sec;
+    s->on = (uint8_t)(safe_live && gs.g);
+    s->piece = s->on ? gp.last : "-";
+    s->id = gp.id;
+    gs.in_sec = 1;
+    s->cost = s->on ? (int32_t)gc_cost(1) : -1;
+    gs.in_sec = sec;
+    s->budget = s->on ? (int32_t)gc_budget() : -1;
+    s->age = s->on ? (int32_t)gs.age : -1;
+}
+static void gen_id_fmt(const genid_t *id, char *b, uint32_t n)   /* "seed two dev form tape main part energy complex" */
+{
+    const uint32_t f[9] = {id->seed, id->two, id->dev, id->form, id->tape, id->main, id->part, id->energy, id->complex};
+    uint32_t k, l = 0;
+    char d[12];
+    b[0] = 0;
+    for (k = 0; k < 9u; k++) {
+        fmt_int(d, (int32_t)f[k]);
+        if (l + str_len(d) + 2u > n) break;
+        if (k) b[l++] = ' ';
+        str_cpy(b + l, d, n - l);
+        l += str_len(d);
+    }
+}
 static void gen_recent_push(const genid_t *id)          /* to the front; already there: moved; a ninth: the oldest out */
 {
     uint32_t k, n = gen_nrecent;

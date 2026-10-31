@@ -2088,6 +2088,47 @@ int main(void)
                       "on it; the piece's other sections still armed", ok);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
+    {   /* (0.9.1 spec 1) the console's status names the GEN piece playing and the model's figures for it (console.c),
+         * and the identity it prints rebuilds the same piece on the host (the calibration's way: tests/gen_terms.c) */
+        gen_stat_t st;
+        genid_t x;
+        char b[64], w[64], nm[28];
+        unsigned f[9];
+        uint32_t c1, c0;
+        int ok;
+        mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+        gen_status(&st);
+        ok = !st.on && str_eq(st.piece, "-") && st.cost < 0 && st.budget < 0 && st.age < 0;   /* (power-on: none) */
+        gen_with(1, 421, 50, 1);
+        gen_status(&st);
+        gen_id_fmt(&gp.id, b, sizeof b);
+        snprintf(w, sizeof w, "%u %u %u %u %u %u %u %u %u", gp.id.seed, gp.id.two, gp.id.dev, gp.id.form, gp.id.tape,
+                 gp.id.main, gp.id.part, gp.id.energy, gp.id.complex);
+        ok &= st.on && str_eq(st.piece, gp.last) && st.cost == (int32_t)gc_cost(1) && st.budget == (int32_t)gc_budget() &&
+              st.age == (int32_t)gs.age && gid_eq(&st.id, &gp.id) && str_eq(b, w);
+        if (!section_load(1)) {                         /* a section of the piece: its own cost, its muted tracks free */
+            gs.in_sec = 1; c1 = gc_cost(1); gs.in_sec = 0;
+            gen_status(&st);
+            ok &= st.on && st.cost == (int32_t)c1 && !gs.in_sec;
+        } else ok = 0;
+        system_init();                                  /* another music: none */
+        gen_status(&st);
+        ok &= !st.on && str_eq(st.piece, "-");
+        system_init();                                  /* the identity printed, read back: the same piece */
+        gen_with(1u + GEN_SHOWN[3], 77, 60, 1);
+        gen_id_fmt(&gp.id, b, sizeof b);
+        str_cpy(nm, gp.last, sizeof nm); c0 = gc_cost(1);
+        system_init();
+        memset(&x, 0, sizeof x);
+        ok &= sscanf(b, "%u %u %u %u %u %u %u %u %u", &f[0], &f[1], &f[2], &f[3], &f[4], &f[5], &f[6], &f[7], &f[8]) == 9;
+        x.seed = f[0]; x.two = f[1]; x.dev = f[2]; x.form = f[3]; x.tape = f[4];
+        x.main = (uint8_t)f[5]; x.part = (uint8_t)f[6]; x.energy = (uint8_t)f[7]; x.complex = (uint8_t)f[8];
+        gen_build(&x);
+        ok &= str_eq(gp.last, nm) && gc_cost(1) == c0;
+        bad += gcheck("(0.9.1 spec 1) status: gen_piece (the panel's name, '-' without a piece), gen_cost / gen_budget "
+                      "of the music now, gen_age, gen_id that rebuilds the piece", ok);
+        mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
     {   /* (0.9.1 review I2) the GEN piece's own song played through its sections (the ISR's sequencer, the main loop's
          * passes: an FM6 part's SLOT adopted by song_poll after a section went in, MUTATE as the piece set it): no part
          * of it leaves the net without an edit. 12 styles x 3 seeds, the third seed's song with the net's poll forced

@@ -213,6 +213,25 @@ static void con_status(void)
     con_kv("voices_given_up", (int32_t)voice_kills);    /* (0.8.9) events, one a voice: the three below */
     con_kv("voices_trimmed", (int32_t)voice_trims);     /* the load budget: a tail already under -50 dB, inaudible */
     con_kv("voices_stolen", (int32_t)voices_stolen());      /* for a new note, the 8 all busy */
+    {   /* (0.9.1 spec 1) the GEN piece playing and the model's figures for it, so every calibration row is named
+         * (tools/cal_snap.sh, docs/braindancer/gen-calibration-0.9.1.md); "-" without a piece */
+        gen_stat_t g;
+        char b[48];
+        gen_status(&g);
+        con_puts("gen_piece ");
+        con_puts(g.piece);
+        con_puts("\r\n");
+        if (g.on) {
+            con_kv("gen_cost", g.cost);
+            con_kv("gen_budget", g.budget);
+            con_kv("gen_age", g.age);
+            gen_id_fmt(&g.id, b, sizeof b);
+            con_puts("gen_id ");
+            con_puts(b);
+            con_puts("\r\n");
+        } else
+            con_puts("gen_cost -\r\ngen_budget -\r\ngen_age -\r\ngen_id -\r\n");
+    }
     con_puts("cpu2 ");                                  /* (0.6.72) the second core (fx.c mc_status) */
     con_puts(mc_status());
     con_puts("\r\n");
