@@ -173,20 +173,45 @@ PNG/PDF and navigation-map.png were not re-rendered, because playwright is not i
 
 Release prep done (version v0.9; the manual's nav.js and its service-worker cache, and the cheat sheets' HTML,
 regenerated). The cheat-sheet PNG/PDF, docs/navigation-map.png and tools/gen_readme_hero.py's hero image were not
-re-rendered, because playwright is not installed here: still to be rendered. The device session is **pending**.
+re-rendered, because playwright is not installed here: still to be rendered.
 
-- Backup before: **pending**.
-- Release built on the clean HEAD (`./build.sh --release 0.9`): **pending**.
-- Install: `tools/fm1_install.py build/braindancer-0.9.fwsc --port "BRAINDANCER" --yes`: **pending**.
-- Console `status`: `braindancer v0.9`, idle cpu, audio_lost, safety_tape 0: **pending**.
-- About 20 GENERATE presses (console counters read after each few: no lost audio, safety_tape 0; the names seen, WILD
-  and blends among them): **pending**.
-- The heavy-GEN case of the 0.8 session (a dense blend or WILD at ENERGY 90+), safety_tape 0: **pending**.
-- PRESETS back through the recent pieces, and two brought back (the same piece heard): **pending**.
-- A RETROBOC piece on AUTO sounds worn: **pending**.
-- AGE 50 and 100 on SINE KEY A3 judged by ear (over USB SysEx: `ED_SET 1 96 50`, then 100): **pending**.
-- If the measuring setup of 2026-10-31 is at hand, pitch sd and noise at AGE 0 / 50 / 100 against spec §5: **pending**.
-- The calibration's chord-step rule confirmed: the counters per piece as in the 2026-10-31 calibration: **pending**.
-- AMBIENT pieces with their tape: do they sound too bare (texture thinned)?: **pending**.
-- Merge ff to main and push, on the user's go-ahead: **pending**.
-- Proven commit: **pending**.
+Before the release, the same day on 0.8: 15 GEN pieces measured for the CPU model's calibration (2 CORES, CPU TEST
+74 %; `.superpowers/sdd/2026-10-31-braindancer-piece6-generate/calibration.md`): the model ranked the device's pieces
+backwards; recalibrated (spec §3).
+
+- Backup before: `~/fm1-backups/2026-10-31-braindancer-0.8/fm1-recovery-20261031-163637` (full 1 MiB, 0 of 143 app
+  sectors blank, sha256 588d8e5c…).
+- Release built on the clean HEAD d0b79b1: braindancer-0.9.fwsc, 610,126 B, identity FM-1_909, sha256 efa195da…;
+  image 563,140 B (21,196 B free). (A first 0.9 build at 5bc0fce was installed and tested before the WOW start fix.)
+- Install: `tools/fm1_install.py build/braindancer-0.9.fwsc --port "BRAINDANCER" --yes`: FM-1_908 -> FM-1_909.
+- Console `status`: `braindancer v0.9`, idle cpu_pct 6, audio_lost 0, safety_tape 0.
+- GENERATE presses (pressed by the user, ~20 s each, counters over the serial console; at 5bc0fce, AGE on AUTO):
+
+  | Piece | AGE | cpu % | late | dropped | lost |
+  | --- | --- | --- | --- | --- | --- |
+  | (unnamed) | 0 | 58 | 58 | 150 | 0 |
+  | (unnamed) | ? | 69 | 19 | 52 | 0 |
+  | (unnamed: DRUM PHASE FM6 ANALOG ANALOG NOISE) | 0 | 71 | 51 | 149 | 0 |
+  | WILD 6323 | ? | 59 | 0 | 0 | 0 |
+  | WILD 0580 | ? | 62 | 6 | 32 | 0 |
+  | IDM+MICRO 1499 | ? | 61 | 14 | 43 | 0 |
+  | AMBIENT 4144 | 40 | 73 | 68 | 118 | 0 |
+  | GLITCH HOP+ELECTRO 4739 (?) | ? | 64 | 5 | 59 | 0 |
+  | AMBIENT+AMB TECHNO 9213 | 52 | 57 | 0 | 31 | 0 |
+  | RETROBOC+AMBIENT 7692 | 70 | 73 | 118 | 157 | 0 |
+
+  No audio lost on any piece; the safety net never paused TAPE during a piece. About half the pieces still run the FM-1
+  past its deadline (late blocks, voices dropped): the recalibrated model still lets some heavy pieces through (the
+  tape styles among them). **The user heard no clicks** (RETROBOC+AMBIENT 7692, the worst): the overload is inaudible so
+  far. Follow-up: a second calibration on 0.9's own pieces (deferred list).
+- RETROBOC+AMBIENT 7692 on AUTO (AGE 70) sounds worn, no clicks: pass. AMBIENT 4144 with its tape (AGE 40): "sounds good"
+  (not too bare): pass.
+- PRESETS back to RECENT 2 and RECALL: the same piece came back: pass.
+- AGE measured over USB (SINE KEY A3, sends off, other tracks muted). A first reading suggested WOW did nothing; the
+  debug (`wow-debug.md`) found the measurement at fault (its window sat in WOW's flat 3.3 s first segment; SINE KEY's
+  own 0.75 Hz beat) and the device equal to the host to 0.02 cents (WOW 100: sd 3.5 cents, peak-to-peak 14 over 10 s;
+  AGE 100's FLUTTER 7.3 cents rms at 15 Hz). Fixed for the release: WOW's first segment from rest is 0.5–0.67 s
+  (d0b79b1); on the device WOW 100 now moves +2.5 cents within 0.4 s of the note (host +2.56): pass.
+- AGE 50 / 100 by ear: RETROBOC and AMBIENT pieces judged worn by the user; not judged on a held note.
+- Merge ff to main and push: pending the user's go-ahead.
+- Proven commit: d0b79b1.

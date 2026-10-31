@@ -54,3 +54,11 @@ CHECKS NOT RUN HERE
 38. The browser emulator (emcc wasm build, web/emu/emu_test.mjs) was never built; web/emu/native_check.c is the only compile check. (Tasks 2-6)
 39. The manual page in Chromium through Playwright, and the valgrind CPU check, were skipped (tools absent). (Tasks 2-6)
 40. The V15 restore test was skipped because its input file is absent. (Tasks 2, 3)
+
+From the 0.9 device session (2026-10-31):
+- About half of 0.9's GEN pieces still run the FM-1 late (51–118 late blocks / 20 s), the tape styles among them;
+  inaudible so far (no clicks heard, no audio lost). Do a second calibration on 0.9's own pieces with names noted, and
+  re-fit the model (device session).
+- TAPE's WOW is modest (about ±7 cents at most, steps between segments): a deeper or smoother WOW (a longer line,
+  ~2 KB RAM) if the user wants a more seasick tape (device session).
+- tape_block's cost sits exactly at its budget (780): no headroom for TAPE changes (WOW start fix).
