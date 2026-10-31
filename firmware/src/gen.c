@@ -2828,9 +2828,11 @@ static void gen_make(void)
         rng_state ^= keep * 2654435761u;
         if (!rng_state) rng_state = 0x1234567u;
     }
-    for (k = 0; k < NTRK; k++) trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0;   /* (0.6.96) a new piece: MUTATE off on every
-                                                         * track, its anchor the piece (a reroll kept the lanes and
-                                                         * orbited the old piece's sounds) */
+    for (k = 0; k < NTRK; k++)                          /* (0.6.96) a new piece: MUTATE off on every track, its anchor */
+        trk[k].p[P_MSND] = trk[k].p[P_MPAT] = trk[k].p[P_MAMT] = trk[k].p[P_MMODE] = 0;   /* the piece (a reroll kept the
+                                                         * lanes and orbited the old piece's sounds); (0.9 final fix) its
+                                                         * AMOUNT and MODE too (0 %, ORBIT: the defaults), so a WILD
+                                                         * piece's gx_mutate leaves nothing for the next piece */
     if (gx.on) { gx_mutate(); gx_heads(); }             /* (0.8.6) EXPLORE: MUTATE, PLAYHEADS (before the sections:
                                                          * each holds them) */
     gx_fit_piece();                                     /* (0.9) every piece: the full fitter, TAPE counted (AUTO's

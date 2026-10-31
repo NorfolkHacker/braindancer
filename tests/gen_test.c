@@ -390,6 +390,29 @@ int main(void)
             bad += gcheck("  gen_go, genre 0 (the tools'): a draw from the seed, deterministic", s1 == s2 && gid_eq_t(&a, &gp.id));
         }
     }
+    {   /* (0.9 final fix) MUTATE's AMOUNT and MODE are the piece's: a WILD piece that sets them (gx_mutate: AMOUNT 20..60,
+         * MODE DRIFT now and then) does not leave them on the tracks of the piece after it. IDM 0421 built fresh and
+         * after such a WILD piece: the same snapshot (every track parameter, P_MAMT / P_MMODE among them) */
+        genid_t w, x, rk[GEN_NRECENT];
+        snap_t s0, s1;
+        uint32_t sd, k, set = 0, nr0 = gen_nrecent, rng0 = rng_state, ok;
+        genid_t id0 = gp.id;
+        memcpy(rk, gen_recent, sizeof rk);
+        gen_reset();
+        gid_set(&x, gt_style("IDM"), GID_SOLO, 421);
+        gen_build(&x); snap_take(&s0);
+        for (sd = 1; sd < 400u && !set; sd++) {         /* (a WILD piece with MUTATE's AMOUNT and MODE DRIFT set) */
+            gid_set(&w, GID_WILD, GID_SOLO, sd);
+            gen_build(&w);
+            for (k = 0; k < NTRK; k++) set |= trk[k].p[P_MAMT] && trk[k].p[P_MMODE] == 1;
+        }
+        gen_build(&x); snap_take(&s1);
+        for (ok = set, k = 0; k < NTRK; k++) ok &= !trk[k].p[P_MSND] && !trk[k].p[P_MPAT] && !trk[k].p[P_MAMT] && !trk[k].p[P_MMODE];
+        if (snap_diff(&s0, &s1)) printf("  after WILD %04u: differs (%s)\n", sd - 1u, snap_what(&s0, &s1));
+        bad += gcheck("(0.9) MUTATE's AMOUNT and MODE reset with the piece: IDM 0421 after a WILD piece that set them, as fresh",
+                      ok && !snap_diff(&s0, &s1));
+        memcpy(gen_recent, rk, sizeof rk); gen_nrecent = (uint8_t)nr0; gp.id = id0; rng_state = rng0;
+    }
     {   /* (0.9 spec 2, review I1) a piece depends only on its identity: built fresh (after the power-on) and after
          * other pieces of every kind (drums or none, LOOP / PARTS / SONG, a blend, WILD), the same tracks to the last
          * parameter (AUTO PAN's too), the same steps, the same project as stored, ARRANGE, LOOP / SONG, the messages */
