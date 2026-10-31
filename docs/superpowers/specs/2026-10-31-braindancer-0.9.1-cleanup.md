@@ -39,6 +39,13 @@ open), which gives each item's evidence (file:line). Release: Braindancer **0.9.
 13. Comments and docs tidy: the emulator.yml JIANT comment, baseline.md's SPDX header, long lines in flash-map.md,
     editor.c, felucca.c.
 14. Golden hashes for the 45 renders that have none (only these lines added to tests/golden.txt).
+15. **English only** (user decision 2026-10-31): the Japanese and Spanish translations and their language switches come
+    out of the web pages (the installer `web/index_pkg.html`, the editor `web/editor.html`, `web/404.html`); every
+    user-facing page is English, like the manual.
+16. **A piece depends only on its identity, after NEW PROJECT too**: a rebuild after `system_init` gave a different
+    cost for some pieces (DRILL'N'BASS: 720 vs 734) where a rebuild after `gen_reset` matched. Find what NEW PROJECT
+    leaves that GEN reads, clear it in `gen_make`, and pin it in the rebuild snapshot test (needed by RECALL and by the
+    calibration's host rebuilds).
 
 ## 4. Limits
 
