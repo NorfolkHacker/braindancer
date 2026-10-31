@@ -1419,12 +1419,13 @@ int main(void)
                 st0 = gt_dly_stage();
                 slow_kept += st0 == 1u && dt == gs.g->dtime;
                 if (dt != gs.g->dtime) {                /* shortened: a quarter-rate delay, over the budget with it or busy
-                                                         * (0.9: the budget as the fitter saw it, TAPE at the AGE the piece
-                                                         * asked for: AUTO lowers AGE after the thinning, gen_fit_tape) */
-                    uint32_t why, a = gs.age;
-                    gs.age = (uint8_t)gen_age();
-                    why = st0 == 2u && (gc_cost(1) > gc_budget() || (busy && !gt_cpt));
-                    gs.age = (uint8_t)a;
+                                                         * (0.9: AUTO's AGE already given way: the piece's AGE as it is) */
+                    uint32_t why = st0 == 2u && (gc_cost(1) > gc_budget() || (busy && !gt_cpt)), stg;
+                    song.g[G_DPIT] = 1; stg = gt_dly_stage(); song.g[G_DPIT] = 0;   /* (its line with the grain on) */
+                    /* (0.9 fix round 1, controller ruling B) or to keep the full rate when the fitter turned the grain
+                     * off: PING-PONG then doubles the line it had (full with the grain) to the half rate, the fitter's
+                     * side effect: straight back to the full rate */
+                    why |= gs.grain_off && st0 == 1u && !stg && !st;
                     cut++;
                     if (!why && ++cut_bad < 6u)
                         printf("  %s seed %u: TIME %s shortened, its line at 1/%u rate, %u of %u with it\n", gs.g->name, gp.seed,
@@ -1436,7 +1437,8 @@ int main(void)
         printf("gen: (0.5.2) %u pieces: %u delays shortened, %u quarter-rate kept, %u half-rate kept; EXPLORE + RANDOM %u of %u "
                "over the budget (EXPLORE %u, RANDOM %u)\n", n, cut, kept_q, slow_kept, xr_over, xr_n, x_over, r_over);
         bad += gcheck("  ~1000 pieces: none over the budget, nor busy with the CPU TEST unset, with a quarter-rate delay", !over_q && !busy_q);
-        bad += gcheck("  .. a delay shortened only from the quarter rate, over the budget or busy; half / full rate ones kept",
+        bad += gcheck("  .. a delay shortened only from the quarter rate, over the budget or busy, or to keep the full rate when the "
+                      "fitter turns the grain off; half / full rate ones kept",
                       !cut_bad && slow_kept >= 10u);
         /* (0.9 ruling) 0.8's own EXPLORE measured 11..21 of 400 over the budget on valid seeds (0..9999); the old 4 %
          * passed only because most of its seeds were out of range (up to 35,824). The threshold is 0.8's measured rate,
@@ -1467,6 +1469,8 @@ int main(void)
             }
         }
         bad += gcheck("(0.9) AUTO AGE: RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15, the rest 0; blends main + half, <= 70", ok && !cut);
+        cpt_res = GT_X1;                                /* (WILD at x1.00, the budget 1030: its pieces fit with TAPE; at
+                                                         * 63 % WILD's x1.55, AUTO gives AGE way on many: fix round 1) */
         for (sd = 0; sd < 200u; sd++) {
             gid_set(&id, GID_WILD, GID_SOLO, sd * 37u + 1u); gen_build(&id);
             a = (uint32_t)song.g[G_TAGE];
@@ -1522,8 +1526,10 @@ int main(void)
         mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* every style, blends and WILD, CPU TEST unset and 74 %, one core and two, TAPE on AUTO: the estimate with TAPE
-         * within the budget (4 % over at most: the fitter's floor, AGE already 0), never over with AGE on; AUTO lowered
-         * AGE only after the thinning: still over then, and the same identity with the knob at 100 has the same parts.
+         * within the budget (4 % over at most: the fitter's floor, AGE already 0), never over with AGE on. (0.9 spec 3,
+         * "AUTO gives way before the music") AUTO took AGE to 0 before the music was thinned: over with TAPE after the
+         * first rung (the chord steps' ECHO / ARP NOTES), AGE and its five 0, the parts those of the same identity with
+         * TAPE OFF (that first rung aside: it counted TAPE); with the knob at 100 the AGE kept.
          * (0.9 spec 3's recalibration) The 4 % bound on two cores only: the model is calibrated there (15 pieces on an
          * FM-1, two cores, CPU TEST 74 %). One core is fitted the same way but carries no bound, its figure printed: its
          * budget (gen.c gc_budget, 714 / dev - 120) has no device measurement behind it and no template piece reaches it */
@@ -1545,10 +1551,12 @@ int main(void)
                 over_on += gc_cost(1) > gc_budget() && song.g[G_TAGE];
                 if (gs.age_cut) {
                     cuts++;
-                    ps = parts_sig();
-                    cut_bad += gs.cost_thin <= gc_budget();
+                    cut_bad += gs.cost_thin <= gc_budget() || song.g[G_TAGE] || tape_set();
+                    gen_fit_ccomp(); ps = parts_sig();  /* (the first rung as if over: the same on both) */
+                    id.tape = GT_OFF; gen_build(&id); gen_fit_ccomp();
+                    cut_bad += parts_sig() != ps;       /* (no part thinned for TAPE) */
                     id.tape = GT_N - 1u; gen_build(&id);   /* (the knob at 100) */
-                    cut_bad += parts_sig() != ps || song.g[G_TAGE] != 100;
+                    cut_bad += song.g[G_TAGE] != 100;
                 }
             }
         printf("gen: (0.9) %u pieces (TAPE AUTO): %u over the budget, %u with AGE on; AUTO lowered AGE on %u\n", pieces, over, over_on, cuts);
@@ -1556,7 +1564,7 @@ int main(void)
                over2, p2, cuts2, over - over2, pieces - p2, cuts - cuts2);
         bad += gcheck("(0.9) every piece fitted with TAPE counted: two cores over the budget 4 % at most, none with AGE on",
                       over2 * 25u <= p2 && !over_on);
-        bad += gcheck("  AUTO lowered AGE only after the thinning (still over then; the parts those of AGE kept)", cuts && !cut_bad);
+        bad += gcheck("  AUTO took AGE to 0 before the music was thinned (over with TAPE then; the parts those of TAPE OFF)", cuts && !cut_bad);
         mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* (ACID FM 0.5.2 review I1, M1) the parts the safety net may hush (audio.c fx_safety_tick: safe_part) are the GEN

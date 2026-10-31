@@ -108,8 +108,10 @@ static struct {
     uint8_t mutant;                                     /* (0.6.95) RANDOM: a hybrid of two or three genres; (0.9) a blend */
     uint8_t pi;                                         /* (0.9) the partner (GENRE index) or GID_SOLO */
     uint16_t snd[NTRK]; uint8_t nsnd;                   /* (0.9.17) the piece's sounds so far (engine << 8 | preset) */
-    uint8_t age, age_cut;                               /* (0.9) the piece's AGE (gen_age); AUTO lowered it (gen_fit_tape) */
-    uint16_t cost_thin;                                 /* (0.9) gc_cost(1) after the thinning, before AGE was looked at */
+    uint8_t age, age_cut;                               /* (0.9) the piece's AGE (gen_age); AUTO took it to 0 (gen_fit_tape) */
+    uint16_t cost_thin;                                 /* (0.9) gc_cost(1) when AGE was looked at: after the first rung,
+                                                         * before the music was thinned */
+    uint8_t grain_off;                                  /* (0.9) the fitter turned the delay's grain off (gx_fit_piece) */
 } gs;
 #define GKICK(i) ((uint32_t)(gs.kick >> ((i) & 63u)) & 1u)
 static uint32_t gseed_mix(uint32_t part)                /* (0.9) a blend's partner in every stream but GS_PICK's */
@@ -2184,7 +2186,9 @@ static uint32_t gsnd(uint32_t r)                        /* a role's recipe */
 }
 static void gx_fit_sounds(void)
 {
-    uint32_t n, k;
+    uint32_t n, k, age = gs.age;
+    if (gp.id.tape == GT_AUTO) gs.age = 0;              /* (0.9) AUTO: TAPE gives way before the music (gen_fit_tape):
+                                                         * the estimate's thinning only for the music's own cost */
     for (n = 0; n < NTRK && gc_cost(0) > gc_budget(); n++) {
         uint32_t best = NTRK, r, e;
         for (k = 0; k < NTRK && k < trk_live; k++)
@@ -2203,6 +2207,7 @@ static void gx_fit_sounds(void)
     if (gc_cost(0) > gc_budget() && gs.act[RL_ARP] && gs.act[RL_BASS] + gs.act[RL_PAD] + gs.act[RL_LEAD] >= 2u) gs.act[RL_ARP] = 0;
     if (gc_cost(0) > gc_budget() && gs.act[RL_BASS] && gs.act[RL_PAD]) gs.act[RL_LEAD] = 0;   /* (one core: the drums,
                                                          * the bass and the chords) */
+    gs.age = (uint8_t)age;
 }
 /* (ACID FM 0.5.2) every piece (EXPLORE, RANDOM, the genres): a delay on the quarter-rate line (TIME past ~1.48 s) costs
  * ~10 % of an FM-1's CPU whatever the voices (measured: EXPLORE 3423, 2.0 lost halves a second with its 2 s delay, none
@@ -2275,6 +2280,19 @@ static void gen_fit_rest(void)
     if (gc_cost(1) > gc_budget() && gs.act[RL_LEAD] && gs.act[RL_BASS] && gs.act[RL_PAD])
         gen_leave_out(RL_LEAD);
 }
+/* (0.9 spec 3, "AUTO gives way before the music") after the first rung (gen_fit_ccomp), still over the budget with TAPE:
+ * on AUTO, AGE to 0 before any other thinning (TAPE a fixed cost while AGE is above 0, GC_TAPE1 / 2: a smaller AGE saves
+ * nothing); only then the music is thinned. An AGE set with the knob is kept, the music thinned around it (the safety
+ * net's TAPE rung the last resort) */
+static void gen_fit_tape(void)
+{
+    gs.cost_thin = (uint16_t)gc_cost(1);
+    gs.age_cut = 0;
+    if (gp.id.tape != GT_AUTO || !gs.age || gs.cost_thin <= gc_budget()) return;
+    gs.age = 0;
+    gs.age_cut = 1;
+    tape_age_apply(0);
+}
 static void gen_fit_ccomp(void)                         /* (0.9 recalibration) over the budget: the chord steps' ECHO and
                                                          * ARP NOTES cleared (those components only: no part lost) */
 {
@@ -2297,10 +2315,21 @@ static void gx_fit_piece(void)
 {
     int16_t dt = song.g[G_DTIME];
     if (gc_cost(1) > gc_budget()) gen_fit_ccomp();      /* (0.9) the first rung: the chord steps' ECHO / ARP NOTES */
+    gen_fit_tape();                                     /* (0.9) AUTO, still over with TAPE: AGE 0, before the music */
     gen_fit_delay();                                    /* (0.5.2) a quarter-rate delay at the full rate before the notes */
     if (gc_cost(1) <= gc_budget()) return;
-    song.g[G_DPIT] = song.g[G_DSPRY] = 0;
-    gen_fit_delay();                                    /* (PING-PONG without the grain: twice TIME) */
+    {   /* (PING-PONG without the grain: twice TIME) a quarter-rate line shortened (gen_fit_delay); (0.9 fix round 1,
+         * controller ruling B) a line the grain's removal doubled past the rate it had: straight back to the full
+         * rate (the doubling the fitter's side effect, not the piece's) */
+        uint32_t s0 = gc_dly_stage(), n, g, gr = song.g[G_DPIT] || song.g[G_DSPRY];
+        song.g[G_DPIT] = song.g[G_DSPRY] = 0;
+        gs.grain_off = (uint8_t)gr;
+        gen_fit_delay();
+        for (n = 0; gr && !s0 && n < 12u && gc_dly_stage(); n++) {
+            g = (uint32_t)song.g[G_DTIME];
+            song.g[G_DTIME] = (int16_t)(g < DT_FREE ? DT_SHORTER[g] : g >= DT_FREE + 6u ? g - 6u : DT_FREE);
+        }
+    }
     gen_fit_rest();
     if (song.g[G_DTIME] != dt) {                        /* (0.5.2) the rest made room for the delay's TIME after all: back */
         int16_t cut = song.g[G_DTIME];
@@ -2326,20 +2355,6 @@ static uint32_t gen_age(void)
     j = id->part == GID_SOLO ? 255u : gen_shown_index(id->part + 1u);
     a = (i < GEN_NSHOWN ? GEN_AUTO_AGE[i] : 0u) + (j < GEN_NSHOWN ? GEN_AUTO_AGE[j] / 2u : 0u);
     return a > GEN_AGE_MAX ? GEN_AGE_MAX : a;
-}
-/* (0.9 spec 3) still over the budget after the thinning (gx_fit_piece): on AUTO, AGE down 10 at a time, to 0 at the last;
- * an AGE set with the knob is kept (the safety net's TAPE rung is the last resort). TAPE is a fixed cost while AGE is
- * above 0 (GC_TAPE1 / 2), so today the steps end at 0 once they start */
-static void gen_fit_tape(void)
-{
-    gs.cost_thin = (uint16_t)gc_cost(1);
-    gs.age_cut = 0;
-    if (gp.id.tape != GT_AUTO) return;
-    while (gs.age && gc_cost(1) > gc_budget()) {
-        gs.age = (uint8_t)(gs.age > 10u ? gs.age - 10u : 0u);
-        gs.age_cut = 1;
-    }
-    if (gs.age_cut) tape_age_apply((int32_t)gs.age);
 }
 
 /* --------------------------------------------------------------------------------------------- the piece --- */
@@ -2774,8 +2789,8 @@ static void gen_make(void)
     tape_age_apply((int32_t)gs.age);                    /* (0.9) TAPE: the knob's AGE, or AUTO the style's (gen_age) */
     if (gx.on) { gx_mutate(); gx_heads(); }             /* (0.8.6) EXPLORE: MUTATE, PLAYHEADS (before the sections:
                                                          * each holds them) */
-    gx_fit_piece();                                     /* (0.9) every piece: the full fitter, TAPE counted */
-    gen_fit_tape();                                     /* (0.9) AUTO, still over: AGE lowered */
+    gx_fit_piece();                                     /* (0.9) every piece: the full fitter, TAPE counted (AUTO's
+                                                         * AGE given way first, gen_fit_tape) */
     mut_keep();
     gen_parts();
 }
