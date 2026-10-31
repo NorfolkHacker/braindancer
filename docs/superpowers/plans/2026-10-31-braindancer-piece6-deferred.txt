@@ -1,0 +1,56 @@
+Braindancer piece 6 (release 0.9): what was parked, deferred or left "for later"
+================================================================================
+One plain line per item, grouped by area, each naming the task it came from.
+"cal" is the 2026-10-31 device calibration (.superpowers/sdd/.../calibration.md, kept out of git).
+
+FEATURES AND REACH
+ 1. A quicker way to reach TAPE / AGE from outside GEN (it still takes three taps on FX; the 0.8 user did not find it). (Task 8 brief; 0.8 device log)
+ 2. Mixing styles per role (approach B: each role of a blend from its own style) instead of main plus partner. (Task 8 brief)
+ 3. More styles in the GENERATE pool. (Task 8 brief)
+
+TAPE AND AGE
+ 4. Widen TAPE's delay line so WOW can go deeper than the 8.7 cents the 256-sample line allows (costs latency and GC_TAPE). (Task 8 brief; Task 1)
+ 5. Measure GC_TAPE from the device: GC_TAPE2 92 rests on one snapshot pair. (Task 8 brief; Task 3 concerns; cal)
+ 6. Make TAPE's cost in the model depend on AGE (today it is a fixed cost while AGE > 0, so AUTO's lowering ends at 0). (Task 8 brief; Task 3)
+ 7. Judge AGE 75 and 100 by ear: the measured noise falls from AGE 50 to 100 (TONE darkens it) and must not sound cleaner. (Task 1 review)
+ 8. AGE 50's noise margin over its test floor is only 0.2 dB, so a later change near HISS or SAT trips that check first. (Task 1 review)
+ 9. The device's pitch window under-reads slow wow, so the host sd targets are a bridge, not a device measurement. (Task 1; pre-flight 13)
+10. tape_test: the "each detail rising" label overstates what the memcmp pins; the rising property is not asserted. (Task 1 review)
+11. tape_test: the wobble sd includes hiss jitter, and the "darker at 100" checks are near-tautologies; a weak guard for "mangled". (Task 1 review)
+
+CPU MODEL AND FITTING
+12. One-core mode is uncalibrated: the fitter pushes 297 of 300 pieces to the floor and loses texture, arp and most leads. (Task 3; cal)
+13. Replay pieces 1751, 1174 and 8794 with the chord track's step components off (SEQ > COMP off on T2): settles the chord-step rule and GC_CCOMP 70, which rests on one piece. (cal; Task 3)
+14. Run 2-3 FM6-heavy clean pieces for 40 s each: settles how much FM6 was overweighted (halved on a clear direction, uncertain size). (cal)
+15. Run one GEN piece at AGE 0 vs 50 in 20 s windows: settles TAPE's device cost. (cal)
+16. Repeat each device window twice to measure the run-to-run spread; the calibration had one session and one CPU TEST value. (cal)
+17. The styles factor (about x1.18), WILD x1.55 and 7848's "bad" label rest on few points; re-check them with more pieces. (cal)
+18. Textures and arps go first when the fit is tight (61 of 150 pieces at CPU TEST 74 % on two cores), partly to pay for TAPE. (Task 3 concerns)
+19. AMBIENT and RETROBOC keep their tape and lose texture or arp in 32/40 and 17/40 pieces at 74 %: listen for "too bare". (Task 3 round 2; Task 8 log)
+20. A WILD piece can lose its arp or lead to TAPE at estimate time, before the real fit (e.g. EXPLORE 6527 at 63 %). (Task 3 concerns)
+21. gc_cost skips muted tracks inside a section fit, so a muted-then-unmuted live track's cost is not counted. (Task 3 ruling)
+22. A piece has one AGE: later sections keep section A's, and 5 of 549 later sections stay over budget where A is at its floor. (Task 3)
+23. The 0.5.2 EXPLORE over-budget bound is 6 % (measured 18 of 400, 4.5 %); tighten it if the model improves. (Task 2 ruling; Task 3)
+24. The one-core "TAPE counted" test is weak and asserts an over-budget state as fact; it will flip when one core is calibrated. (Task 3 review M7)
+25. gs.grain_off and gs.cost_thin sit in firmware RAM only for tests; move or compile them out. (Task 3 review M8)
+
+GENERATOR AND IDENTITY
+26. gen_make's head clears (fg_set memset, DIV, AUTO PAN stores) run outside load_begin, so a torn read can put the playheads off for a moment (already true for EXPLORE). (Task 2 review)
+27. Seeds fold to % 10000, so some sweeps (the NOISE sweep, dice_metrics "EXPLORE x 1200", the 0.5.2 RANDOM leg) now hold collisions; their printed numbers moved. (Task 2 review M2)
+28. The 0.5.2 over-budget print shows gp.seed, not gp.id.seed, so a printed seed may not be the piece built. (Task 2 review M2)
+29. hush_test prints a session state hash that no stored value is compared with. (Task 2 report)
+30. A rebuilt recent piece follows the tracks as the user left them (TRACKS 4/6, BPM LOCK, an outside clock, changed engines or QUANT are not in the identity). (pre-flight 2)
+31. Tool paths (gen_go, gen_press) also push the recent ring; a tool run fills the user's list. (Task 4 review)
+
+UI AND DOCS
+32. The GEN panel's preview density is fixed at 550 now that the amounts are gone. (Task 5 report)
+33. The panel rows that never light make it look less alive (a design note). (Task 5 report)
+34. docs/MANUAL.md internals still say "genre" in lower case (deliberate, not a control name). (Task 7 review)
+35. tools/gen_readme_hero.py is a legacy tool that names shots that no longer exist (save_arrange, gen_explore); its hero image was not regenerated. (Task 5; Task 7; Task 8)
+36. The cheat-sheet PNG and PDF were not rendered (no Playwright); the HTML is current at v0.9. (Task 8)
+37. docs/navigation-map.png was not rendered (no Playwright); docs/navigation-map.svg is current. (Task 5; Task 8)
+
+CHECKS NOT RUN HERE
+38. The browser emulator (emcc wasm build, web/emu/emu_test.mjs) was never built; web/emu/native_check.c is the only compile check. (Tasks 2-6)
+39. The manual page in Chromium through Playwright, and the valgrind CPU check, were skipped (tools absent). (Tasks 2-6)
+40. The V15 restore test was skipped because its input file is absent. (Tasks 2, 3)

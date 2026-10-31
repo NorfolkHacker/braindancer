@@ -168,3 +168,25 @@ PNG/PDF and navigation-map.png were not re-rendered, because playwright is not i
   muted): the accent climb and the slides without a new attack heard. Pass.
 - AGE by ear (50 / 100): not judged.
 - Proven commit: 439fefd.
+
+## 2026-10-31 — Braindancer 0.9 (GENERATE, blends, TAPE in GEN, AGE)
+
+Release prep done (version v0.9; the manual's nav.js and its service-worker cache, and the cheat sheets' HTML,
+regenerated). The cheat-sheet PNG/PDF, docs/navigation-map.png and tools/gen_readme_hero.py's hero image were not
+re-rendered, because playwright is not installed here: still to be rendered. The device session is **pending**.
+
+- Backup before: **pending**.
+- Release built on the clean HEAD (`./build.sh --release 0.9`): **pending**.
+- Install: `tools/fm1_install.py build/braindancer-0.9.fwsc --port "BRAINDANCER" --yes`: **pending**.
+- Console `status`: `braindancer v0.9`, idle cpu, audio_lost, safety_tape 0: **pending**.
+- About 20 GENERATE presses (console counters read after each few: no lost audio, safety_tape 0; the names seen, WILD
+  and blends among them): **pending**.
+- The heavy-GEN case of the 0.8 session (a dense blend or WILD at ENERGY 90+), safety_tape 0: **pending**.
+- PRESETS back through the recent pieces, and two brought back (the same piece heard): **pending**.
+- A RETROBOC piece on AUTO sounds worn: **pending**.
+- AGE 50 and 100 on SINE KEY A3 judged by ear (over USB SysEx: `ED_SET 1 96 50`, then 100): **pending**.
+- If the measuring setup of 2026-10-31 is at hand, pitch sd and noise at AGE 0 / 50 / 100 against spec §5: **pending**.
+- The calibration's chord-step rule confirmed: the counters per piece as in the 2026-10-31 calibration: **pending**.
+- AMBIENT pieces with their tape: do they sound too bare (texture thinned)?: **pending**.
+- Merge ff to main and push, on the user's go-ahead: **pending**.
+- Proven commit: **pending**.
