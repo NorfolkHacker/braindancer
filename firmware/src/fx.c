@@ -413,11 +413,12 @@ static int tape_set(void)                               /* a detail not 0 (AGE a
 {
     return (song.g[G_TWOW] | song.g[G_TFLUT] | song.g[G_TSAT] | song.g[G_THISS] | song.g[G_TTONE]) != 0;
 }
-/* (Braindancer 0.8) AGE (FX > MASTER KNOB 4): one turn sets the five details on its map, linear between AGE 0 (off), 50 (the
- * RETROBOC tape: a clear wobble) and 100 (a worn cassette: WOW and FLUTTER at their deepest); a detail turned after it (FX >
- * MORE > TAPE) overrides that one until AGE is turned again. WOW is 30 / 75 on the plan's map: raised to 60 / 100, the line
- * being ~4 ms (WOW 100 is 8.7 cents at most), to be tuned by ear on the device */
-static const uint8_t TAPE_AGE_PT[3][5] = {{0, 0, 0, 0, 0}, {60, 20, 30, 20, 35}, {100, 50, 65, 50, 80}};
+/* (Braindancer 0.8) AGE (FX > MASTER KNOB 4): one turn sets the five details on its map, linear between AGE 0 (off), 50 and 100;
+ * a detail turned after it (FX > MORE > TAPE) overrides that one until AGE is turned again.
+ * (Braindancer 0.9) The map, steeper (spec 5): at 50 a clearly worn tape (WOW at the line's limit, a quick flutter, hiss and
+ * highs off above 6.8 kHz), at 100 a mangled cassette; WOW reaches 100 at AGE 50 because the line (TAPE_LEN) holds 8.7 cents
+ * at most; measured by tests/tape_test.c test_age_09 (0.8: {60 20 30 20 35}, {100 50 65 50 80}) */
+static const uint8_t TAPE_AGE_PT[3][5] = {{0, 0, 0, 0, 0}, {100, 55, 45, 78, 50}, {100, 100, 85, 100, 90}};
                                         /* AGE 0, 50, 100 -> WOW FLUTTER SAT HISS TONE (linear between) */
 _Static_assert(G_TWOW == G_TAGE + 1 && G_TTONE == G_TWOW + 4, "TAPE: AGE, then its five details in a row");
 static uint32_t motion_guard(void);                     /* (motion.c, after this file: the ISR held off over a few writes) */

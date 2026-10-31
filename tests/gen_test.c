@@ -1277,7 +1277,7 @@ int main(void)
                     for (k = 0; k < NTRK; k++) for (h = 0; h < FG_HEADS; h++) sig[j] = sig[j] * 3u + (fg_set[k][h].rate != 0);
                     est[j] = gc_cost(1);
                     if (j) {
-                        kept &= song.g[G_TAGE] == 50 && song.g[G_THISS] == 20 && tape_set();
+                        kept &= song.g[G_TAGE] == 50 && song.g[G_THISS] == TAPE_AGE_PT[1][3] && tape_set();
                         over += est[j] > gc_budget();
                         for (k = 0; k < 6u; k++) song.g[G_TAGE + k] = 0;
                     }

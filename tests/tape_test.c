@@ -954,6 +954,107 @@ static void test_new_project_motion(void)
     tape_reset();
 }
 
+/* ---- 9. (Braindancer 0.9) the AGE retune: AGE 50 a clearly worn tape (spec 5) ----
+ * The device (docs/braindancer/device-log.md, 2026-10-31; SINE KEY A3 held, its own vibrato 2.25 cents sd): AGE 0 / 50
+ * / 100 gave pitch sd 2.25 / 2.42 / 6.95 cents, non-harmonic noise -53 / -50 / -49 dB. Spec 5 at AGE 50: sd >= 2 x AGE
+ * 0's (4.50) and noise >= AGE 0's + 6 dB (-47). A host sine has no vibrato and no floor: the targets are TAPE's own
+ * share, AGE 0's taken out (in quadrature / in power):
+ *   sd     sqrt(4.50^2 - 2.25^2) = 3.90 cents          -> AGE50_SD_MIN 4.0
+ *   noise  10 log10(10^-4.7 - 10^-5.3) = -48.3 dB     -> AGE50_NZ_MIN -48.0
+ * The bridge between the two trackers: 0.8's AGE 100 row (WOW 100, FLUTTER 50, HISS 50) had 6.58 cents and -51.2 dB of
+ * TAPE's own on the device (its AGE 50 reading, 0.89 cents of its own, is far under what the same WOW gives here: the
+ * device's window under-reads a slow wow), so AGE 50 must also wobble at least as that row does here and hiss 3 dB more */
+#define AGE50_SD_MIN 4.0
+#define AGE50_NZ_MIN (-48.0)
+static const uint8_t AGE_PT_08[3][5] = {{0, 0, 0, 0, 0}, {60, 20, 30, 20, 35}, {100, 50, 65, 50, 80}};
+static const uint8_t AGE_PT_09[3][5] = {{0, 0, 0, 0, 0}, {100, 55, 45, 78, 50}, {100, 100, 85, 100, 90}};
+#define AGE_NB (44100u * 20u / CTL)                     /* 20 s */
+#define AGE_FFT 32768u
+static double age_re[AGE_FFT], age_im[AGE_FFT], age_c[AGE_NB * CTL / 2205u + 2u];
+static void age_fft(double *re, double *im, uint32_t n)   /* in place, radix 2 */
+{
+    uint32_t i, j = 0, k, m;
+    for (i = 1; i < n; i++) {
+        uint32_t b = n >> 1;
+        for (; j & b; b >>= 1) j ^= b;
+        j ^= b;
+        if (i < j) { double t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+    }
+    for (m = 2; m <= n; m <<= 1) {
+        double a = -2.0 * M_PI / (double)m;
+        for (k = 0; k < n; k += m)
+            for (i = 0; i < m / 2u; i++) {
+                uint32_t p = k + i, q = p + m / 2u;
+                double wr = cos(a * i), wi = sin(a * i);
+                double xr = re[q] * wr - im[q] * wi, xi = re[q] * wi + im[q] * wr;
+                re[q] = re[p] - xr; im[q] = im[p] - xi;
+                re[p] += xr; im[p] += xi;
+            }
+    }
+}
+/* TAPE's own wobble and noise on a held A3 (220 Hz, -12 dBFS), the five details d: the pitch's sd in cents over 50 ms
+ * windows (20 s, the first 0.5 s left out, its mean removed); the non-harmonic share (dB of the whole, 50 Hz .. 16 kHz:
+ * the bins further than 40 Hz from every harmonic; a Hann window of 32768 from 1 s); the share above 3 kHz */
+static void age_measure(const uint8_t *d, double *sd, double *nz, double *hi)
+{
+    uint32_t n = AGE_NB * CTL, nw, i;
+    double m = 0, v = 0, tot = 0, non = 0, up = 0;
+    tape_reset();
+    tape_g(d[0], d[1], d[2], d[3], d[4]);
+    tape_tone(220, 8000, AGE_NB);
+    nw = cents_of(out_l, n, 22050u, 2205u, 220, age_c);
+    for (i = 0; i < nw; i++) m += age_c[i];
+    m /= nw;
+    for (i = 0; i < nw; i++) v += (age_c[i] - m) * (age_c[i] - m);
+    *sd = sqrt(v / nw);
+    for (i = 0; i < AGE_FFT; i++) {
+        age_re[i] = out_l[44100u + i] * (0.5 - 0.5 * cos(2.0 * M_PI * i / AGE_FFT));
+        age_im[i] = 0;
+    }
+    age_fft(age_re, age_im, AGE_FFT);
+    for (i = 1; i < AGE_FFT / 2u; i++) {
+        double hz = (double)i * FS / AGE_FFT, p = age_re[i] * age_re[i] + age_im[i] * age_im[i], h = fmod(hz, 220.0);
+        if (hz < 50.0 || hz > 16000.0) continue;
+        tot += p;
+        if (h > 40.0 && h < 180.0) non += p;
+        if (hz > 3000.0) up += p;
+    }
+    *nz = 10.0 * log10(non / tot + 1e-30);
+    *hi = 10.0 * log10(up / tot + 1e-30);
+}
+static void test_age_09(void)
+{
+    char what[260];
+    uint8_t d50[5], d100[5];
+    int16_t m[5];
+    double sdr, nzr, hir, sd5, nz5, hi5, sd50, nz50, hi50, sd100, nz100, hi100;
+    uint32_t k;
+    age_measure(AGE_PT_08[1], &sd5, &nz5, &hi5);       /* (0.8's AGE 50, for the record) */
+    age_measure(AGE_PT_08[2], &sdr, &nzr, &hir);       /* (0.8's AGE 100: the bridge) */
+    tape_age_map(50, m); for (k = 0; k < 5u; k++) d50[k] = (uint8_t)m[k];
+    tape_age_map(100, m); for (k = 0; k < 5u; k++) d100[k] = (uint8_t)m[k];
+    age_measure(d50, &sd50, &nz50, &hi50);
+    age_measure(d100, &sd100, &nz100, &hi100);
+    printf("tape: (0.9) host figures, sd cents / noise dB / above 3 kHz dB: 0.8 AGE 50 %.2f / %.1f / %.1f, 0.8 AGE 100 %.2f / "
+           "%.1f / %.1f; 0.9 AGE 50 %.2f / %.1f / %.1f, AGE 100 %.2f / %.1f / %.1f\n",
+           sd5, nz5, hi5, sdr, nzr, hir, sd50, nz50, hi50, sd100, nz100, hi100);
+    snprintf(what, sizeof what, "(0.9) AGE 50: pitch sd %.2f cents (>= %.1f and >= 0.8's AGE 100 %.2f), noise %.1f dB (>= %.1f "
+             "and >= %.1f + 3)", sd50, AGE50_SD_MIN, sdr, nz50, AGE50_NZ_MIN, nzr);
+    ck(what, sd50 >= AGE50_SD_MIN && sd50 >= sdr && nz50 >= AGE50_NZ_MIN && nz50 >= nzr + 3.0);
+    /* (ruling: AGE 100's TONE 90 darkens the noise it adds, so its non-harmonic level is not above AGE 50's: "mangled"
+     * means more wobble and a darker tape, hence sd and TONE rise and the share above 3 kHz falls) */
+    ck("(0.9) AGE 100 more worn than AGE 50 (sd up, TONE up, above 3 kHz down), AGE 50 darker than 0.8's (TONE >= 50)",
+       sd100 >= sd50 && hi100 < hi50 && d100[4] >= d50[4] && d50[4] >= 50u);
+    ck("(0.9) the map pinned: TAPE_AGE_PT is the retuned one, row 0 all 0, each detail rising",
+       !memcmp(TAPE_AGE_PT, AGE_PT_09, sizeof AGE_PT_09));
+    tape_reset();
+    tape_age_apply(0);
+    tape_tone(220, 8000, 400);
+    ck("(0.9) AGE 0: every detail 0, TAPE out of the chain, the output the input bit for bit",
+       !tape_set() && !tape.on && !memcmp(out_l, in_l, 400u * CTL * sizeof out_l[0]));
+    tape_reset();
+}
+
 int main(void)
 {
     test_off();
@@ -967,6 +1068,7 @@ int main(void)
     test_store();
     test_age_auto();
     test_new_project_motion();
+    test_age_09();
     printf(bad ? "tape: %d FAILED\n" : "tape: all checks ok\n", bad);
     return bad != 0;
 }
