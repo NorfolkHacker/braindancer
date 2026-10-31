@@ -79,6 +79,15 @@ static void motion_age_off(uint32_t k)
     if (!motion_age_on)
         memcpy(&song.g[G_TAGE], motion_age_base, sizeof motion_age_base);
 }
+/* (Braindancer 0.8) NEW PROJECT (project.c system_init): no record moves the DJ FILTER or TAPE's six any more, and the
+ * values from before them (the old project's knobs) are not put back. The caller holds motion_guard over this and the
+ * globals' reset together, so the audio ISR (motion_step, still playing: the stop is only asked for) cannot take the
+ * old values as a new base in between; a record after the guard takes the power-on values as its base */
+static void motion_globals_drop(void)
+{
+    motion_djf_on = 0;
+    motion_age_on = 0;
+}
 static int motion_valid(const motion_store_t *m)
 {
     uint32_t i, j;

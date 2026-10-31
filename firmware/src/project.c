@@ -2037,16 +2037,22 @@ static void system_init(void)
 {
     static const uint8_t KEEP[5] = {G_CLOCK, G_TUNE, G_MIDI, G_ROUTE, G_SLOT};
     int16_t kept[5], mr[G_MRSEL + 1 - G_MRIN1];         /* (ACID FM 0.5) and the MIDI routing (G_MRIN1 .. G_MRSEL) */
-    uint32_t i;
+    uint32_t i, f;
     cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST's CLOCK back, then kept (KEEP) */
     demo_end();                                         /* (ACID FM 3b) NEW PROJECT is empty, no demo */
     safe_clear();                                       /* (ACID FM 0.5.2) the safety net: no GEN part, its levers off
                                                          * (byte stores: the ISR reads each once a half) */
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     memcpy(mr, &song.g[G_MRIN1], sizeof mr);
+    f = motion_guard();                                 /* (Braindancer 0.8) records playing (the stop is only asked for):
+                                                         * they stop moving the DJ FILTER and TAPE in the same guard as
+                                                         * the reset, so motion_clear below puts back the power-on values,
+                                                         * not the old project's knobs */
+    motion_globals_drop();
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
     memcpy(&song.g[G_MRIN1], mr, sizeof mr);
+    motion_unguard(f);
     chain_defaults(&chain_config);
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
     memset(pfx_lane, 0, sizeof pfx_lane);

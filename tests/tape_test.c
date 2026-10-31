@@ -13,7 +13,8 @@
  * 5. stored: no block when all 0 (the bytes as before), 'T' 'P' the last block, the round trip, old projects, 255
  *    clamped, NEW PROJECT, UNDO.
  * 6. AGE's automation (MOT_AGE, as the DJ FILTER's): recorded, played back (the five with it), the six back at a stop,
- *    no lock; its records in 'T' 'P' alone (every byte before as without them), a crafted / oversize block refused. */
+ *    no lock; its records in 'T' 'P' alone (every byte before as without them), a crafted / oversize block refused;
+ *    NEW PROJECT while AGE and DJ FILTER records play: the power-on values, not the old knobs. */
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -821,6 +822,42 @@ static void test_age_auto(void)
     tape_reset();
 }
 
+/* NEW PROJECT (system_init) while AGE and DJ FILTER records play: the power-on values, not the old project's knob
+ * values put back by the records' end (motion_age_off / motion_djf_off after the globals' reset) */
+static void test_new_project_motion(void)
+{
+    track_t *t;
+    uint32_t k;
+    int ok;
+    char what[200];
+    ui_power_on();
+    tape_reset();
+    t = &trk[0];
+    song.sel = 0;
+    tape_age_apply(20);                                 /* the knobs before: AGE 20, DJ FILTER 30 */
+    song.g[G_DJF] = 30;
+    song.rec = 1;
+    seq_start();
+    seq_tick(t, CTL);
+    motion_age_set(t, 60);                              /* step 0: an AGE record and a DJ FILTER record, playing */
+    motion_djf_set(t, -20);
+    ok = song.playing && motion_age_on && motion_djf_on;
+    transport_req = 2;                                  /* (as CF_INIT_SYS: the stop is asked for, not done yet) */
+    system_init();
+    for (k = G_TAGE; k <= G_TTONE; k++)
+        ok &= song.g[k] == GP[k].def;
+    snprintf(what, sizeof what, "NEW PROJECT while AGE and DJ FILTER records play: TAPE all 0 (AGE %d WOW %d TONE %d), DJ FILTER %d "
+             "(power-on %d)", song.g[G_TAGE], song.g[G_TWOW], song.g[G_TTONE], song.g[G_DJF], GP[G_DJF].def);
+    ck(what, ok && song.g[G_DJF] == GP[G_DJF].def && !motion_age_on && !motion_djf_on);
+    song.rec = 0;
+    seq_stop();
+    transport_req = 0;
+    ck("NEW PROJECT then the stop: still TAPE all 0, DJ FILTER the power-on's",
+       !song.g[G_TAGE] && !song.g[G_TWOW] && song.g[G_DJF] == GP[G_DJF].def);
+    ui_power_on();
+    tape_reset();
+}
+
 int main(void)
 {
     test_off();
@@ -832,6 +869,7 @@ int main(void)
     test_rest();
     test_store();
     test_age_auto();
+    test_new_project_motion();
     printf(bad ? "tape: %d FAILED\n" : "tape: all checks ok\n", bad);
     return bad != 0;
 }
