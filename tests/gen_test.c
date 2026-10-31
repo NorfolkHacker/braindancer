@@ -19,6 +19,10 @@ static int gcheck(const char *what, int ok)
     return ok ? 0 : 1;
 }
 static uint8_t gt_cpt;                                   /* (0.9.14) the CPU TEST result the pieces are made for (gen.c gc_dev) */
+/* (0.9 spec 3, pre-flight 20) the model's x1.00 on two cores for every piece: a style's 41 / 63 x 1.18 (0.77) and WILD's
+ * 41 / 63 x 1.55 (1.00), both 1.00 at the floor; the budget 1030. Where a check measures music, not the budget: every
+ * piece is fitted now (TAPE counted), and on one core no style's piece fits at all (gen.c gc_budget: 594 at most) */
+#define GT_X1 41u
 static uint32_t gt_dly_stage(void)                     /* (ACID FM 0.5.2) the rate the piece's delay line runs at (fx.c
                                                          * fx_buses, dly_rate): 0 full, 1 half, 2 a quarter; the full
                                                          * rate whatever the line ran at before (dly_stage's hysteresis) */
@@ -212,7 +216,12 @@ static uint32_t hits_all(const track_t *t)
     return c;
 }
 
-#define GEN_HOUSE_HASH 2027450874u   /* (all_sig of HOUSE 0421, energy 50, captured on the base commit a4fcac7) */
+#define GEN_HOUSE_HASH 153064764u    /* (all_sig of HOUSE 0421, energy 50, one core, CPU TEST unset; 0.9: re-recorded at
+                                     * 7568d5c: every piece fitted, spec 6: the base's piece with its chords at two notes,
+                                     * the arp, the lead and the texture left out, the texture's REL 84, a chord's ARP
+                                     * NOTES cleared) */
+#define GEN_HOUSE_HASH_X1 2027450874u   /* (the same at the model's x1.00, two cores: nothing to fit, the piece captured on
+                                         * the base commit a4fcac7 unchanged) */
 int main(void)
 {
     int bad = 0;
@@ -297,7 +306,7 @@ int main(void)
             cpt_res = 0; cpt_cores = 0;
             gen_build(&d);
             bad += gcheck("  the CPU factor in the identity: CPU TEST forgotten, the same piece and budget rebuilt", piece_sig() == s0 &&
-                          gc_budget() == b0 && gc_dev() != d.dev);
+                          gc_budget() == b0 && gc_dev_base() != d.dev);
             mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
         }
         {   /* the tools' way in: gen_go with gp.genre 0 draws from the seed (the same seed, the same draw) */
@@ -440,6 +449,7 @@ int main(void)
         uint32_t nn = 0, out_appr = 0, out_ct = 0, out_bad = 0, page_bad = 0, chord_bad = 0;
         uint32_t ls = 0, lct = 0, liv = 0, lrep = 0, lstep = 0, loct = 0, l5 = 0, l5r = 0, lend = 0, lend_ok = 0, lbars = 0, lbars_r = 0;
         uint32_t pmov = 0, pmot = 0, bch = 0, broot = 0;
+        mc_host_v12 = 1; cpt_res = GT_X1; cpt_cores = 2;   /* (0.9, pre-flight 20: the music measured, not the budget) */
         for (g = 0; g < NGENRE; g++)
             for (s = 0; s < 12u; s++) {
                 uint32_t pd;
@@ -546,6 +556,7 @@ int main(void)
                         }
                 }
             }
+        mc_host_v12 = 0; cpt_res = 0; cpt_cores = 0;
         printf("gen: music: %u notes: %u approaches, %u borrowed/secondary/raised chord tones, %u off the rules\n", nn, out_appr, out_ct, out_bad);
         printf("gen: music: lead beats on chord tones %u of %u, steps %u of %u moving intervals, %u past an octave, leaps back %u of %u\n",
                lct, ls, lstep, liv - lrep, loct, l5r, l5);
@@ -797,9 +808,10 @@ int main(void)
         }
         bad += gcheck("EXPLORE (0.8.6): GENRE EXPLORE at power-on", genre0 == GEN_EXPLORE);
         gen_reset();
-        gt_cpt = 63;                                    /* (0.9.14) the device as the model holds it (gen.c gc_dev x1.00): the
-                                                         * pieces 0.9.13 made; the default's (x1.60) after these */
-        cpt_res = 63; cpt_cores = 2;
+        gt_cpt = GT_X1;                                 /* (0.9.14) the device as the model holds it (gen.c gc_dev x1.00): the
+                                                         * pieces 0.9.13 made; the default's (x1.60) after these. (0.9:
+                                                         * GT_X1, CPU TEST 63 % is x1.18 / x1.55 on two cores) */
+        cpt_res = GT_X1; cpt_cores = 2;
         mc_host_v12 = 1;                                /* (0.9.13: two cores, the FM-1's default: the CPU budget's, 12 voices) */
         for (g = 0; g < 3u * NGENRE; g++) {             /* (the voices the genres' pieces reach at once, the budget's
                                                          * own overshoot included: the reference) */
@@ -955,8 +967,9 @@ int main(void)
              * chords), lighter than at x1.00 on average, still two melodic parts and sound; a CPU TEST measured at 63 %
              * gives x1.00 again, at 126 % x2.00, never under x1.00. (ACID FM 0.5.2) Two cores: x1.90 unset (the budget
              * 1030 / 1.9, 542: 0.5.1's 543), a CPU TEST x1.50 its own ratio (GC_GEN_X100, measured on an FM-1): x1.00 at
-             * 42 %, the pieces compared against it; one core as before */
-            uint32_t est[2] = {0}, over = 0, mel_bad = 0, quiet2 = 0, d0, d1, d2, d3, d4;
+             * 42 %, the pieces compared against it; one core as before. (0.9 spec 3's recalibration) Two cores unset: a
+             * style's piece x1.50 (gc_dev), WILD's x1.96 (these pieces); a CPU TEST x1.18 its ratio a style's, x1.55 WILD's */
+            uint32_t est[2] = {0}, over = 0, mel_bad = 0, quiet2 = 0, d0, d1, d2, d3, d4, w0;
             cpt_res = 0;
             mc_host_v12 = 1;
             d0 = gc_dev();
@@ -985,18 +998,19 @@ int main(void)
                 gx_listen(400u, &rms, &peak, &clip, &vmax);
                 quiet2 += rms < 150.0;
             }
+            w0 = gcf.dev;                               /* (the last piece: WILD, two cores, unset) */
             cpt_res = 42; cpt_cores = 2; d4 = gc_dev();
             mc_host_v12 = 0;
             cpt_res = 63; d1 = gc_dev(); cpt_res = 126; d2 = gc_dev(); cpt_res = 30; d3 = gc_dev();
-            cpt_res = 0; cpt_cores = 0; gt_cpt = 63;
+            cpt_res = 0; cpt_cores = 0; gt_cpt = GT_X1;
             printf("gen: (0.9.14) EXPLORE x 60 at COMPLEX 50, two cores: the device x%u.%02u by default: CPU %u thousandths of CPU TEST\n"
                    "gen:   on average (x1.00: %u), %u at the floor over the budget %u; x%u.%02u at 63 %%, x%u.%02u at 126 %%, x%u.%02u at 30 %%\n",
                    d0 / 100u, d0 % 100u, est[1] / 60u, est[0] / 60u, over, (uint32_t)(1030u * 100u / d0), d1 / 100u, d1 % 100u,
                    d2 / 100u, d2 % 100u, d3 / 100u, d3 % 100u);
-            bad += gcheck("  (0.9.14) the device factor: x1.90 without a CPU TEST (two cores; one: x1.00 at 63 %, x2.00 at 126 %), "
-                          "lighter pieces, still two melodic parts and sound",
-                          d0 == 190u && d4 == 100u && d1 == 100u && d2 == 200u && d3 == 100u && est[1] < est[0] * 3u / 4u && !mel_bad && !quiet2);
-            cpt_res = 63; cpt_cores = 2;
+            bad += gcheck("  (0.9.14) the device factor: x1.50 / WILD x1.96 without a CPU TEST (two cores; one: x1.00 at 63 %, "
+                          "x2.00 at 126 %), lighter pieces, still two melodic parts and sound",
+                          d0 == 150u && w0 == 196u && d4 == 100u && d1 == 100u && d2 == 200u && d3 == 100u && est[1] < est[0] * 3u / 4u && !mel_bad && !quiet2);
+            cpt_res = GT_X1; cpt_cores = 2;
         }
         gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
@@ -1116,6 +1130,7 @@ int main(void)
         uint32_t gi, pr, near = 0, parts = 0, sndrep = 0, snd = 0, ml_pre[24], nml = 0, liv = 0, lstep = 0, lleap = 0, lon = 0,
                  loff = 0, lflat = 0, lfull = 0, nl = 0, seq_ct = 0, seq_st = 0, seq_same = 0, sd_rep = 0, po_same = 0;
         uint16_t lastsnd[NTRK];
+        mc_host_v12 = 1; gt_cpt = GT_X1;                /* (0.9, pre-flight 20: the lead measured, not the budget) */
         for (gi = 0; gi < 6u; gi++) {
             gen_reset();
             gen_with(GG[gi], 4321u + gi, 50, 0);
@@ -1165,6 +1180,7 @@ int main(void)
         bad += gcheck("  MICRO HOUSE's lead: 8 sounds at least in 24 presses (0.9.17: 7 in 40)", nml >= 8u);
         bad += gcheck("  the lead by steps (40 % at least), leaps past a fifth under 5 %, 12 % at least off the eighths", lstep * 100u >= liv * 40u && lleap * 100u < liv * 5u && loff * 100u >= lon * 12u);
         bad += gcheck("  the lead's envelope: no release at full sustain never, held at 79 % or more under 15 %", !lflat && lfull * 100u < nl * 15u);
+        mc_host_v12 = 0; gt_cpt = 0;
         {   /* the power-on: the first OCT+ of two sessions */
             uint32_t h0;
             gen_reset(); session_dice(111u); gp.genre = GEN_EXPLORE; gp.sig = 0; gen_press(); h0 = dice_print();
@@ -1249,7 +1265,14 @@ int main(void)
                           gen_shown_index(1u + GEN_SHOWN[9]) == 9u && gen_shown_index(1u) == 255u && gen_shown_index(0u) == 255u &&
                           gen_shown_index(GEN_EXPLORE) == 255u);
             gen_with(1, 421, 50, 0); hh = all_sig();
-            bad += gcheck("  (3b) a stored hidden genre (HOUSE 0421): the piece as at the base commit", hh == GEN_HOUSE_HASH);
+            {   uint32_t m0 = mc_host_v12, c0 = cpt_res, k0 = cpt_cores, hx;
+                mc_host_v12 = 1; cpt_res = GT_X1; cpt_cores = 2;
+                gen_with(1, 421, 50, 0); hx = all_sig();
+                mc_host_v12 = (uint8_t)m0; cpt_res = (uint8_t)c0; cpt_cores = (uint8_t)k0;
+                bad += gcheck("  (3b) a stored hidden genre (HOUSE 0421): the piece as at the base commit; fitted (0.9) at the default",
+                              hh == GEN_HOUSE_HASH && hx == GEN_HOUSE_HASH_X1);
+                if (hh != GEN_HOUSE_HASH || hx != GEN_HOUSE_HASH_X1) printf("  HOUSE 0421: %u, at x1.00 %u\n", hh, hx);
+            }
             gp.genre = 1; gen_value(0, 0, v);
             bad += gcheck("  (3b) ... and its name shows as JIANT's", !strcmp(v, "HOUSE"));
             gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF;
@@ -1349,14 +1372,15 @@ int main(void)
          * the defaults made a 2 s grain delay on the quarter-rate line (fx.c dly_lo), ~10 % of the device's CPU whatever
          * the voices: 2 lost halves a second, none with its TIME short. EXPLORE 9641 (its delay short) lost ~4.5 a second
          * at 75-80 %. Both fitted 0.5.1's budget (780 at 74 %): the device runs GEN pieces x1.45 .. x1.6 heavier against
-         * the CPU TEST song than the model says (gen.c GC_GEN_X100). Now: the budget 65 % of the device's half, 588 at 74 %
-         * (542 unset, as 0.5.1's 543); a quarter-rate delay only on a piece under it with it, and not on a busy one
+         * the CPU TEST song than the model says (gen.c GC_WILD_X100). Now: the budget 65 % of the device's half, 588 at 74 %
+         * (542 unset, as 0.5.1's 543; 0.9 recalibration: EXPLORE x1.55, 569 and 525); a quarter-rate delay only on a piece under it with it, and not on a busy one
          * (5 parts or more) with the CPU TEST unset; delays at the full or half rate never shortened (a slow genre's 1/4
          * echo stays); EXPLORE fitted under the budget. Then ~1000 pieces (EXPLORE, RANDOM, every genre; the CPU TEST
-         * unset and 74 %). (review I2) RANDOM and the genres keep their parts: only a quarter-rate delay is budgeted */
+         * unset and 74 %). (0.9 spec 3) every piece fitted with the full fitter: 0.8's "RANDOM and the genres keep their
+         * parts" withdrawn */
         static const uint8_t CPT[2] = {0, 74};
         uint32_t c, g, sd, k, n = 0, over_q = 0, busy_q = 0, cut_bad = 0, cut = 0, kept_q = 0, st3423[2], ov[2][2], bud[2];
-        uint32_t xr_n = 0, xr_over = 0, slow_kept = 0, x_over = 0, r_over = 0, r_diff = 0, r_n = 0, r_dly = 0;
+        uint32_t xr_n = 0, xr_over = 0, slow_kept = 0, x_over = 0, r_over = 0;
         mc_host_v12 = 1;
         for (c = 0; c < 2u; c++) {
             static const uint16_t SEED[2] = {3423, 9641};
@@ -1372,8 +1396,8 @@ int main(void)
                        gc_cost(1), gc_budget());
             }
         }
-        bad += gcheck("(0.5.2) the budget, two cores: 588 at CPU TEST 74 % (65 % of the FM-1's half), 542 unset",
-                      bud[1] == 588u && bud[0] == 542u);
+        bad += gcheck("(0.5.2) the budget, two cores, EXPLORE: 569 at CPU TEST 74 % (65 % of the FM-1's half), 525 unset (0.9: WILD x1.55)",
+                      bud[1] == 569u && bud[0] == 525u);
         bad += gcheck("  EXPLORE 3423 (CPU TEST unset, 74 %): its delay at the full rate", !st3423[0] && !st3423[1]);
         bad += gcheck("  EXPLORE 3423 and 9641 (CPU TEST unset, 74 %): under the budget", !ov[0][0] && !ov[0][1] && !ov[1][0] && !ov[1][1]);
         for (g = 0; g <= GEN_EXPLORE; g++)
@@ -1394,8 +1418,13 @@ int main(void)
                 song.g[G_DTIME] = gs.g->dtime;
                 st0 = gt_dly_stage();
                 slow_kept += st0 == 1u && dt == gs.g->dtime;
-                if (dt != gs.g->dtime) {                /* shortened: a quarter-rate delay, over the budget with it or busy */
-                    uint32_t why = st0 == 2u && (gc_cost(1) > gc_budget() || (busy && !gt_cpt));
+                if (dt != gs.g->dtime) {                /* shortened: a quarter-rate delay, over the budget with it or busy
+                                                         * (0.9: the budget as the fitter saw it, TAPE at the AGE the piece
+                                                         * asked for: AUTO lowers AGE after the thinning, gen_fit_tape) */
+                    uint32_t why, a = gs.age;
+                    gs.age = (uint8_t)gen_age();
+                    why = st0 == 2u && (gc_cost(1) > gc_budget() || (busy && !gt_cpt));
+                    gs.age = (uint8_t)a;
                     cut++;
                     if (!why && ++cut_bad < 6u)
                         printf("  %s seed %u: TIME %s shortened, its line at 1/%u rate, %u of %u with it\n", gs.g->name, gp.seed,
@@ -1409,34 +1438,126 @@ int main(void)
         bad += gcheck("  ~1000 pieces: none over the budget, nor busy with the CPU TEST unset, with a quarter-rate delay", !over_q && !busy_q);
         bad += gcheck("  .. a delay shortened only from the quarter rate, over the budget or busy; half / full rate ones kept",
                       !cut_bad && slow_kept >= 10u);
-        for (g = 0; g < GEN_EXPLORE; g++)              /* (review I2) RANDOM, a genre: the same piece whatever the budget */
-            for (sd = 0; sd < (g ? 4u : 100u); sd++) {
-                uint32_t sig[2], act[2], rt[2], dt2[2], j, q, hh;
-                for (j = 0; j < 2u; j++) {
-                    gt_cpt = CPT[j]; gen_reset();
-                    gen_with(1, 7, 50, 0);              /* (the press before the same for both: GEN keeps away from it) */
-                    gen_with(g, sd * 61u + g * 13u + 3u, 30u + (sd * 23u) % 60u, sd % 3u);
-                    sig[j] = all_sig(); dt2[j] = (uint32_t)song.g[G_DTIME]; rt[j] = (uint32_t)song.g[G_RTYPE] << 8 | (uint32_t)(song.g[G_DPIT] != 0);
-                    for (act[j] = 0, q = 0; q < 6u; q++) act[j] |= (uint32_t)(gs.act[q] != 0) << q;
-                    for (q = 0; q < NTRK; q++) for (hh = 0; hh < FG_HEADS; hh++) act[j] += (fg_set[q][hh].rate != 0) << 8;
-                }
-                if (!g && gp.id.main == GID_WILD) continue;   /* (0.9: a seed's draw may be WILD, EXPLORE's: fitted, as EXPLORE) */
-                if (dt2[0] != dt2[1]) { r_dly++; continue; }   /* (the delay rule: its TIME, then the rest drawn after it) */
-                r_n++;
-                if (sig[0] != sig[1] || act[0] != act[1] || rt[0] != rt[1]) {
-                    r_diff++;
-                    if (r_diff < 4u) printf("  %s seed %u: another piece at CPU TEST 74 %% than unset\n", gs.g->name, gp.seed);
-                }
-            }
-        printf("gen: (0.5.2) RANDOM and the genres at CPU TEST unset and 74 %%: %u pieces with the same TIME, %u of them differ; "
-               "%u with a quarter-rate delay shortened at one of them\n", r_n, r_diff, r_dly);
         /* (0.9 ruling) 0.8's own EXPLORE measured 11..21 of 400 over the budget on valid seeds (0..9999); the old 4 %
          * passed only because most of its seeds were out of range (up to 35,824). The threshold is 0.8's measured rate,
          * 6 % (24 of 400); Task 3 re-examines it when it fits every piece */
         bad += gcheck("  .. EXPLORE under the budget (6 % over at most: at the floor, the fit's steps run out)", x_over <= 24u);
-        bad += gcheck("  .. (review I2) RANDOM and the genres keep their parts, sounds, reverb, grain and PLAYHEADS whatever the "
-                      "budget: only a quarter-rate delay changes", !r_diff);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (0.9 spec 3) TAPE on AUTO: the style's AGE; a blend the main's + half the partner's, 70 at most; WILD 0..50 from
+         * its seed. On a budget every piece fits: two cores, CPU TEST 63 % (a style's piece x1.18, the budget 872; WILD
+         * x1.55, 664). (0.9: the plan's "x1.00 at 63 %, two cores" was 0.8's EXPLORE factor read wrong: x1.50 then) */
+        static const struct { const char *m, *p; uint8_t age; } AA[] = {
+            {"RETROBOC", 0, 60}, {"AMBIENT", 0, 40}, {"AMB TECHNO", 0, 25}, {"IDM", 0, 20}, {"MICRO", 0, 15},
+            {"ACID", 0, 0}, {"ELECTRO", 0, 0}, {"BREAKS", 0, 0}, {"GLITCH HOP", 0, 0}, {"DRILL'N'BASS", 0, 0},
+            {"RETROBOC", "AMBIENT", 70}, {"IDM", "RETROBOC", 50}, {"AMBIENT", "IDM", 50}, {"ACID", "AMB TECHNO", 12},
+            {"MICRO", "IDM", 25}, {"BREAKS", "ACID", 0}};
+        uint8_t seen[GEN_AGE_WILD + 1u] = {0};
+        uint32_t n, ok = 1, cut = 0, sd, a, lo = 100, hi = 0, nseen = 0, w1;
+        genid_t id;
+        int16_t d[5];
+        mc_host_v12 = 1; gt_cpt = 63; gen_reset();
+        for (n = 0; n < NELEM(AA); n++) {
+            gid_set(&id, gt_style(AA[n].m), AA[n].p ? gt_style(AA[n].p) : GID_SOLO, 300u + n);
+            gen_build(&id);
+            tape_age_map(AA[n].age, d);
+            cut += gs.age_cut;
+            if (!gs.age_cut && (song.g[G_TAGE] != AA[n].age || memcmp(&song.g[G_TWOW], d, sizeof d))) {
+                ok = 0; printf("  %s: AGE %d, want %u\n", gp.last, song.g[G_TAGE], AA[n].age);
+            }
+        }
+        bad += gcheck("(0.9) AUTO AGE: RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15, the rest 0; blends main + half, <= 70", ok && !cut);
+        for (sd = 0; sd < 200u; sd++) {
+            gid_set(&id, GID_WILD, GID_SOLO, sd * 37u + 1u); gen_build(&id);
+            a = (uint32_t)song.g[G_TAGE];
+            if (gs.age_cut) continue;
+            lo = a < lo ? a : lo; hi = a > hi ? a : hi;
+            if (a <= GEN_AGE_WILD && !seen[a]) { seen[a] = 1; nseen++; }
+        }
+        gid_set(&id, GID_WILD, GID_SOLO, 41); gen_build(&id); w1 = (uint32_t)song.g[G_TAGE];
+        gid_set(&id, GID_WILD, GID_SOLO, 42); gen_build(&id);
+        gid_set(&id, GID_WILD, GID_SOLO, 41); gen_build(&id);
+        bad += gcheck("  WILD: AGE 0..50 from its seed (20 values at least over 200 seeds), the same seed the same AGE",
+                      hi <= GEN_AGE_WILD && nseen >= 20u && (uint32_t)song.g[G_TAGE] == w1);
+        {   /* gc_cost counts TAPE while the piece's AGE is above 0 (two cores: GC_TAPE2; one: GC_TAPE1). Two cores, CPU TEST
+             * 63 % (the budget 872): the piece fits with TAPE, the same parts. One core: no style's piece fits with TAPE (the
+             * budget 594 at most, x1.00; the lightest of 1200 style pieces 525 + 76), so the cost is compared on the same
+             * piece, AGE 50 against 0, and the knob's AGE kept over the budget */
+            uint32_t e0, e1, p0, p1, a;
+            mc_host_v12 = 1; mc_off = 0; gt_cpt = 63; gen_reset();
+            gp.tape = GT_OFF; gid_set(&id, gt_style("ACID"), GID_SOLO, 1234); gen_build(&id); e0 = gc_cost(1); p0 = parts_sig();
+            id.tape = 6u; gen_build(&id); e1 = gc_cost(1); p1 = parts_sig();   /* (50) */
+            bad += gcheck("  TAPE counted, two cores: AGE 50 costs GC_TAPE2 more, the same parts (under the budget)",
+                          p0 == p1 && e1 == e0 + GC_TAPE2 && e1 <= gc_budget() && song.g[G_TAGE] == 50);
+            mc_host_v12 = 0; mc_off = 1; gen_reset();
+            gid_set(&id, gt_style("ACID"), GID_SOLO, 1234); id.tape = 6u; gen_build(&id); e1 = gc_cost(1);
+            a = gs.age; gs.age = 0; e0 = gc_cost(1); gs.age = (uint8_t)a;
+            bad += gcheck("  TAPE counted, one core: AGE 50 costs GC_TAPE1 more (the same piece); the knob's AGE kept, over the budget",
+                          e1 == e0 + GC_TAPE1 && e1 > gc_budget() && song.g[G_TAGE] == 50 && !gs.age_cut);
+            gp.tape = GT_AUTO;
+        }
+        mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* the TAPE knob: OFF -> AGE 0 on every piece whatever was set (UNDO brings it back); an amount -> that AGE and its
+         * five, never lowered, even over the budget (one core, CPU TEST 74 %: the tightest) */
+        uint32_t sd, okoff = 1, okset = 1, okundo = 1, over = 0;
+        genid_t id;
+        int16_t d[5];
+        mc_off = 1; gt_cpt = 74; gen_reset();
+        tape_age_map(70, d);
+        for (sd = 0; sd < 60u; sd++) {
+            tape_age_apply(50);
+            gp.tape = GT_OFF; gid_set(&id, GEN_SHOWN[sd % GEN_NSHOWN], sd & 1u ? GEN_SHOWN[GEN_PARTNER[sd % GEN_NSHOWN][0]] : GID_SOLO, sd * 53u + 7u);
+            gen_build(&id);
+            okoff &= !song.g[G_TAGE] && !tape_set() && !gs.age_cut;
+            if (sd == 0u) okundo = !undo_do() && song.g[G_TAGE] == 50 && tape_set();
+            id.tape = 8u; gen_build(&id);                 /* (70) */
+            okset &= song.g[G_TAGE] == 70 && !memcmp(&song.g[G_TWOW], d, sizeof d) && !gs.age_cut;
+            over += gc_cost(1) > gc_budget();
+        }
+        gp.tape = GT_AUTO;
+        printf("gen: (0.9) the TAPE knob at 70 on 60 pieces, one core, CPU TEST 74 %%: %u over the budget (the knob's AGE kept)\n", over);
+        bad += gcheck("(0.9) TAPE OFF: AGE 0 and its five 0 on every piece (whatever was set); UNDO: TAPE back", okoff && okundo);
+        bad += gcheck("  TAPE 70: AGE 70 and its five on every piece, never lowered", okset);
+        mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* every style, blends and WILD, CPU TEST unset and 74 %, one core and two, TAPE on AUTO: the estimate with TAPE
+         * within the budget (4 % over at most: the fitter's floor, AGE already 0), never over with AGE on; AUTO lowered
+         * AGE only after the thinning: still over then, and the same identity with the knob at 100 has the same parts.
+         * (0.9 spec 3's recalibration) The 4 % bound on two cores only: the model is calibrated there (15 pieces on an
+         * FM-1, two cores, CPU TEST 74 %). One core is fitted the same way but carries no bound, its figure printed: its
+         * budget (gen.c gc_budget, 714 / dev - 120) has no device measurement behind it and no template piece reaches it */
+        static const uint8_t CPT[2] = {0, 74};
+        uint32_t c, n, pieces = 0, over = 0, over_on = 0, cuts = 0, cut_bad = 0, p2 = 0, over2 = 0, cuts2 = 0;
+        for (c = 0; c < 4u; c++)
+            for (n = 0; n < 150u; n++) {
+                genid_t id;
+                uint32_t ps, s = n * 2654435761u + c + 1u;
+                mc_host_v12 = (uint8_t)(c & 1u); mc_off = (uint8_t)!(c & 1u); gt_cpt = CPT[c >> 1]; gen_reset();
+                gid_now(&id);
+                gid_pick(&id, &s, GID_SOLO);
+                id.seed = (uint16_t)((n * 89u + c * 7u + 5u) % 10000u); id.energy = (uint8_t)(30u + (n * 17u) % 60u);
+                id.form = (uint16_t)(n % 3u); id.tape = GT_AUTO;
+                gen_build(&id);
+                pieces++;
+                over += gc_cost(1) > gc_budget();
+                p2 += c & 1u; over2 += (c & 1u) && gc_cost(1) > gc_budget(); cuts2 += (c & 1u) && gs.age_cut;
+                over_on += gc_cost(1) > gc_budget() && song.g[G_TAGE];
+                if (gs.age_cut) {
+                    cuts++;
+                    ps = parts_sig();
+                    cut_bad += gs.cost_thin <= gc_budget();
+                    id.tape = GT_N - 1u; gen_build(&id);   /* (the knob at 100) */
+                    cut_bad += parts_sig() != ps || song.g[G_TAGE] != 100;
+                }
+            }
+        printf("gen: (0.9) %u pieces (TAPE AUTO): %u over the budget, %u with AGE on; AUTO lowered AGE on %u\n", pieces, over, over_on, cuts);
+        printf("gen:   two cores: %u of %u over, AGE lowered on %u; one core (no bound: uncalibrated): %u of %u over, AGE lowered on %u\n",
+               over2, p2, cuts2, over - over2, pieces - p2, cuts - cuts2);
+        bad += gcheck("(0.9) every piece fitted with TAPE counted: two cores over the budget 4 % at most, none with AGE on",
+                      over2 * 25u <= p2 && !over_on);
+        bad += gcheck("  AUTO lowered AGE only after the thinning (still over then; the parts those of AGE kept)", cuts && !cut_bad);
+        mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* (ACID FM 0.5.2 review I1, M1) the parts the safety net may hush (audio.c fx_safety_tick: safe_part) are the GEN
          * piece's texture and arp only while that piece is the music, and only if it plays them: UNDO, NEW PROJECT, a
@@ -1485,46 +1606,6 @@ int main(void)
                       "on the track; GEN again: back", ok_undo && ok_new && ok_sec && ok_dice && ok_regen);
         bad += gcheck("  (3c-2 final review 8) none, the levers off, after CPU TEST (its load the real one)", ok_cpt);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
-    }
-    {   /* (Braindancer 0.8, review ruling 1) TAPE and GEN: GEN never cuts the music to pay for TAPE (TAPE is the safety
-         * net's first rung: it goes before any part). With TAPE on (AGE 50, set before GEN), the same piece as with it off:
-         * every part's steps and engine, the parts played (texture, arp, lead ...), the reverb, the delay's TIME and
-         * grain, the PLAYHEADs, GEN's estimate; TAPE's six as they were. EXPLORE 3423 and others, RANDOM, a genre; one
-         * core and two (CPU TEST 74 %, and unset) */
-        static const struct { uint8_t g; uint16_t sd; } PC[] = {{GEN_EXPLORE, 3423}, {GEN_EXPLORE, 9641}, {GEN_EXPLORE, 77},
-                                                                 {GEN_EXPLORE, 1234}, {0, 31}, {2, 97}};
-        uint32_t c, n, k, q, h, same = 0, total = 0, kept = 1, over = 0;
-        for (c = 0; c < 4u; c++)
-            for (n = 0; n < sizeof PC / sizeof PC[0]; n++) {
-                uint32_t sig[2], est[2], j;
-                for (j = 0; j < 2u; j++) {
-                    mc_host_v12 = (uint8_t)(c & 1u); mc_off = (uint8_t)!(c & 1u);   /* (one core: CORES 1) */
-                    gt_cpt = c & 2u ? 0u : 74u; gen_reset();
-                    if (j) tape_age_apply(50);
-                    gen_with(PC[n].g, PC[n].sd, 50, 1);
-                    sig[j] = all_sig() ^ (uint32_t)song.g[G_DTIME] * 0x9e3779b9u ^ (uint32_t)song.g[G_RTYPE] << 20 ^
-                             (uint32_t)(song.g[G_DPIT] != 0) << 27 ^ (uint32_t)(song.g[G_DSPRY] != 0) << 28;
-                    for (q = 0; q < 6u; q++) sig[j] = sig[j] * 31u + (gs.act[q] != 0);
-                    for (k = 0; k < NTRK; k++) for (h = 0; h < FG_HEADS; h++) sig[j] = sig[j] * 3u + (fg_set[k][h].rate != 0);
-                    est[j] = gc_cost(1);
-                    if (j) {
-                        kept &= song.g[G_TAGE] == 50 && song.g[G_THISS] == TAPE_AGE_PT[1][3] && tape_set();
-                        over += est[j] > gc_budget();
-                        for (k = 0; k < 6u; k++) song.g[G_TAGE + k] = 0;
-                    }
-                }
-                total++;
-                same += sig[0] == sig[1] && est[0] == est[1];
-                if (sig[0] != sig[1] || est[0] != est[1])
-                    printf("gen:   (0.8) TAPE on changed the piece: genre %u seed %u, cores %u, CPU TEST %u: estimate %u -> %u\n",
-                           PC[n].g, PC[n].sd, (c & 1u) + 1u, c & 2u ? 0u : 74u, est[0], est[1]);
-            }
-        printf("gen: (0.8) TAPE on (AGE 50) before GEN: %u of %u pieces the same as with TAPE off (%u over the budget either way: "
-               "the net's TAPE rung carries TAPE)\n", same, total, over);
-        bad += gcheck("(0.8) GEN doesn't pay for TAPE: with it on, the same piece (parts, delay, reverb, heads), the same estimate",
-                      same == total && total == 24u);
-        bad += gcheck("  .. TAPE's six as they were (GEN never changes TAPE)", kept);
-        mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;
