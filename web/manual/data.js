@@ -11,7 +11,7 @@ window.JMAN = {
 sections: [
   {id: "basic", t: "Basics"},
   {id: "home", t: "HOME"},
-  {id: "gen", t: "GEN / EXPLORE"},
+  {id: "gen", t: "GEN / GENERATE"},
   {id: "edit", t: "EDIT (engines)"},
   {id: "drum", t: "DRUM-X"},
   {id: "seq", t: "SEQ"},
@@ -33,7 +33,7 @@ controls: {
   "SELECT": {kind: "knob", sec: "basic", shot: 'lente_bar',
     alone: "Walks the section's pages, one a detent, as one chain; stops at the first and the last. In the MENU: AUDIO, CLICK, CONTROLS, MORE.",
     combos: [
-      {k: "HOME+SELECT", t: "GEN, the song generator (opens on EXPLORE)"},
+      {k: "HOME+SELECT", t: "GEN, the song generator (OCT+ GENERATE)"},
       {k: "EDIT+SELECT", t: "the track's sound dice"},
       {k: "SEQ+SELECT", t: "the sequence dice"},
       {k: "LFO+SELECT", t: "the LFO dice"},
@@ -43,7 +43,7 @@ controls: {
       {k: "STEP+SELECT", t: "with a step held on SEQ › STEPS: the EDIT page the knobs lock"}
     ]},
   "PRESETS": {kind: "knob", sec: "basic", shot: 'save_sound',
-    alone: "Always loads presets: the track's sounds (factory, then yours); on the SEQ pages the patterns (PHRASES, OCT+ loads); on GEN the genre. Never changes page or track."},
+    alone: "Always loads presets: the track's sounds (factory, then yours); on the SEQ pages the patterns (PHRASES, OCT+ loads); on GEN the recent pieces. Never changes page or track."},
   "ALGORITHM": {kind: "knob", sec: "basic", shot: 'home',
     alone: "Picks the track T1–T6 from any page (T1–T4 with TRACKS 4; the default is 6). Does nothing in the MENU.",
     held: "With a layer held: its view, MAP · KNOBS · STATE."},
@@ -266,16 +266,18 @@ commands: [
    d: "Hold HOME ~0.7 s. SELECT walks AUDIO, CLICK, CONTROLS and MORE, a knob changes the setting under it, OCT± step the one turned last; HOME closes (and saves)."},
 
   // GEN
-  {s: "gen", k: "HOME+SELECT", shot: 'gen_wild', t: "Generate a whole song (GEN)",
-   d: "HOME held + SELECT from any page (or HOME, HOME to GEN). It opens on EXPLORE; OCT+ writes the piece: engines, sounds, parts, scale, tempo and effects. PLAY plays it."},
-  {s: "gen", k: "OCT+", shot: 'gen', t: "Another seed, or the same piece with one change",
-   d: "OCT+ with nothing changed: a new seed, a new piece. Turn a knob and OCT+: the same piece with that changed (each part has its own random stream). Screen: LAST: EXPLORE 0421."},
-  {s: "gen", k: "PRESETS", shot: 'gen', t: "Pick a genre (or EXPLORE / RANDOM)",
-   d: "GEN 1: KNOB 1 GENRE (or PRESETS): EXPLORE (no genre, every rule broken), RANDOM or one of the ten (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO); KNOB 2 SEED, KNOB 3 ENERGY, KNOB 4 FORM (LOOP, PARTS, SONG)."},
-  {s: "gen", k: "SELECT", shot: 'gen_recent', t: "Weigh the parts (GEN 2 / GEN 3)",
-   d: "GEN 2: DRUMS, BASS, CHORDS, ARP (OFF, 10–100 % or AUTO). GEN 3: LEAD, COMPLEX, SWING, HUMAN. Lower DRUMS and OCT+: the same piece, fewer drums."},
+  {s: "gen", k: "HOME+SELECT", shot: 'gen', t: "Generate a whole song (GEN)",
+   d: "HOME held + SELECT from any page (or HOME, HOME to GEN). GEN is one page with four knobs: ENERGY, FORM (LOOP, PARTS, SONG), COMPLEX and TAPE (AUTO, OFF, or 10–100 %). SELECT does nothing there. The generator picks everything else itself."},
+  {s: "gen", k: "OCT+", shot: 'gen_wild', t: "GENERATE: a new piece, picked for you",
+   d: "OCT+ (it reads OCT+ GENERATE) writes a whole new piece, then you press PLAY: engines, sounds, parts, scale, tempo and effects. Each press picks a style itself, out of ten (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO), never the same one twice in a row. About one press in ten is WILD, a piece that follows no style and breaks the rules. About 45 % of the others are blends: the style mixed with a partner that goes well with it, and the style sets the tempo and the feel. The panel names the piece: RETROBOC+AMBIENT 0421, or WILD 0421. It is refused while a song (ARRANGE) is playing."},
+  {s: "gen", k: "KNOB 1", shot: 'gen', t: "ENERGY, FORM, COMPLEX, TAPE",
+   d: "KNOB 1 ENERGY: how busy and hot the piece is. KNOB 2 FORM: LOOP (one loop), PARTS (sections A to D) or SONG (the sections and the song, never over sections you stored). KNOB 3 COMPLEX: how adventurous the piece is, and for a WILD piece how far it breaks the rules. KNOB 4 TAPE: AUTO lets the style decide how worn the tape sounds, OFF has none, 10 to 100 % sets AGE yourself for every piece. Turning a knob puts PRESETS back on NEW; OCT+ then makes a new piece."},
+  {s: "gen", k: "PRESETS", shot: 'gen_recent', t: "The recent pieces",
+   d: "PRESETS starts on NEW. Turn it back to step through the last 8 pieces, newest first (RECENT 1 to RECENT 8); the panel names each one, and OCT+ then reads RECALL: it brings that piece back exactly as it was. The list is cleared at power-off, and nothing of GEN is saved in a project or in the settings. RECALL is refused while a song (ARRANGE) is playing."},
+  {s: "gen", k: "KNOB 4", shot: 'gen', t: "TAPE on AUTO, and the CPU",
+   d: "On AUTO each style brings its own AGE: RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15, the others 0. A blend gets the main style's AGE plus half the partner's, at most 70; WILD gets 0 to 50. Every piece, and every section of a PARTS or SONG piece, is fitted to what the FM-1 can play. RETROBOC and AMBIENT (and blends they lead) keep their tape, and the music is thinned around it if the FM-1 needs room. For the other styles the tape gives way first when a piece is too heavy. A TAPE amount you set with the knob is never changed. The first thing trimmed is the extra ECHO and ARP step notes on chord steps; only then the delay, chords, textures, arp and lead. A new piece ignores whatever was muted when you pressed OCT+."},
   {s: "gen", k: "OCT-", t: "Leave GEN / go back to before",
-   d: "OCT− goes back to TRACKS (the piece stays). To get back what was there: GLO + G4 (UNDO). FORM PARTS / SONG fills the sections and the song, but never overwrites sections you stored."},
+   d: "OCT− goes back to TRACKS (the piece stays). To get back what was there: GLO + G4 (UNDO), after a recalled piece too. FORM PARTS / SONG fills the sections and the song, but never overwrites sections you stored."},
 
   // EDIT
   {s: "edit", k: "EDIT", shot: 'edit_analog_1', t: "Edit the engine (SOUND / TONE)",
@@ -407,11 +409,11 @@ commands: [
   {s: "fx", k: "FX", shot: 'fx_2', t: "SPACE: delay and reverb",
    d: "DLY TIME (synced or free; the status line says how long at the tempo), DLY FDBK (past 100 % it grows and saturates), REV TYPE (ROOM, SPRING, SHIMMER, RESO, CLOUD), REV SIZE. The picture: the note, the delay's echoes where they sound, each as loud as MIX and FDBK say, and the reverb's tail falling 60 dB over its length."},
   {s: "fx", k: "FX", shot: 'fx_3', t: "MASTER: CLIP, PUNCH, DUCK, AGE",
-   d: "CLIP saturates without raising the volume, PUNCH fattens the drums, DUCK makes the kick pull the rest down (in dB). AGE is old tape in one knob: it sets TAPE's five details (WOW, FLUTTER, TAPE SAT, HISS, TAPE TONE) together, from OFF at 0 through a clear wobble at the middle to a worn cassette at the top. Turn a detail by hand in MORE › TAPE and it stays where you put it until AGE is turned again; the status line then says how many are by hand (AGE · OFF, 2 BY HAND). While recorded AGE automation plays, each AGE record sets all five again, so a detail turned by hand meanwhile is overwritten, put back at a stop and not saved. The picture: the output's meter with the point where it clips (CLIPS), CLIP's curve, after a kick the drums and the rest, and, while TAPE is on, its five details as small bars (dimmed, with TAPE PAUSED · CPU, while the overload safety has paused it). AGE can be automated like the DJ FILTER."},
+   d: "CLIP saturates without raising the volume, PUNCH fattens the drums, DUCK makes the kick pull the rest down (in dB). AGE is old tape in one knob: it sets TAPE's five details (WOW, FLUTTER, TAPE SAT, HISS, TAPE TONE) together, from OFF at 0, through a clearly worn tape at 50 (audible wobble, some hiss, a darker tone), to a mangled, darker tape at 100. Since 0.9 the map is steeper: a project from 0.8 with AGE above 0 sounds more worn. Turn a detail by hand in MORE › TAPE and it stays where you put it until AGE is turned again; the status line then says how many are by hand (AGE · OFF, 2 BY HAND). While recorded AGE automation plays, each AGE record sets all five again, so a detail turned by hand meanwhile is overwritten, put back at a stop and not saved. The picture: the output's meter with the point where it clips (CLIPS), CLIP's curve, after a kick the drums and the rest, and, while TAPE is on, its five details as small bars (dimmed, with TAPE PAUSED · CPU, while the overload safety has paused it). AGE can be automated like the DJ FILTER."},
   {s: "fx", k: "FX", shot: 'fx_more', t: "MORE: the rest of the effects",
    d: "KNOB 1 picks, KNOB 2 sets. DISTORT (DIST TYPE, DIST TONE), AUTO PAN (PAN DEPTH, RATE, SYNC, WAVE), DELAY (TONE, MIX, WIDE, PITCH, SPRAY, MOD, TYPE, PING), REVERB (DAMP, PRE / AIR / PITCH by the TYPE, MOD, RATE, TONE, WIDE; on RESO DAMP is FOLLOW), CHORUS, SLICER (MODE, PAT, RATE, DEPTH, T1–T6, FX) and its 16 pitches, PUNCH LANE (CLEAR LANE asks first), MASTER (DUCK TIME, how long the kick takes to let go) and TAPE (WOW, FLUTTER, TAPE SAT, HISS, TAPE TONE: the five details AGE sets together). With LOAD ECO there is no CHORUS or SLICER."},
   {s: "fx", k: "FX", shot: 'fx_more', t: "TAPE: old tape on the master",
-   d: "TAPE comes after CLIP and PUNCH on the whole mix and is off until you use it (AGE 0 and every detail 0: the sound is exactly as without it). WOW is a slow, uneven pitch drift; FLUTTER a quick pitch tremble; TAPE SAT a soft tape saturation; HISS a tape hiss that follows the music and stays silent over silence; TAPE TONE rolls the highs off. AGE (FX › MASTER KNOB 4) sets all five at once. While TAPE is on, everything you hear is about 4 ms later (the tape's own delay). TAPE is saved with the project and older projects load with it off. Under overload the safety first thins the voices; only then does it start its last-resort steps, and TAPE is the first of those (FX › MASTER then shows TAPE PAUSED · CPU). It comes back by itself without changing your settings."},
+   d: "TAPE comes after CLIP and PUNCH on the whole mix and is off until you use it (AGE 0 and every detail 0: the sound is exactly as without it). WOW is a slow, uneven pitch drift; FLUTTER a quick pitch tremble; TAPE SAT a soft tape saturation; HISS a tape hiss that follows the music and stays silent over silence; TAPE TONE rolls the highs off. AGE (FX › MASTER KNOB 4) sets all five at once. While TAPE is on, everything you hear is about 4 ms later (the tape's own delay). TAPE is saved with the project and older projects load with it off; since 0.9 AGE 50 is clearly worn and AGE 100 mangled, so a 0.8 project with AGE above 0 sounds more worn. GEN can set AGE too (see GEN). Under overload the safety first thins the voices; only then does it start its last-resort steps, and TAPE is the first of those (FX › MASTER then shows TAPE PAUSED · CPU). It comes back by itself without changing your settings."},
   {s: "fx", k: "FX+SELECT", shot: 'dlg_dice_fx', t: "Effects dice",
    d: "FX + SELECT: drive, chorus/delay/reverb sends, sometimes AUTO PAN, and the reverb's kind and size and the delay's time. BEFORE and NOW side by side: OCT+ KEEP, OCT− NO puts it back, SELECT another."},
 
@@ -562,11 +564,11 @@ recipes: [
     "Make a variation; SAVE › SONG KNOB 1 to B, then save it the same way. (While playing: SAVE + C4–F4 stores quickly.)",
     "SAVE › SONG: KNOB 1 the section, OCT+ adds a row after the one picked, KNOB 2 the row, KNOB 3 its bars; KNOB 4 a scene.",
     "SAVE › MORE › END: STOP, X2–X8 or LOOP. PLAY plays the song. Or record it live: SAVE + E5 and SAVE + F3–B3."]},
-  {id: "gen", s: "gen", shots: ['gen_wild', 'gen_recent'], t: "Use GEN / EXPLORE", steps: [
-    "HOME held + SELECT: GEN opens on EXPLORE (no genre, breaks the rules).",
-    "OCT+: a whole piece. PLAY. OCT+ again: another seed.",
-    "Or pick a genre (ten) or RANDOM with PRESETS; FORM PARTS / SONG builds sections and the song.",
-    "SELECT to GEN 2 / GEN 3, lower or raise a part and OCT+: the same piece changed. OCT− leaves; GLO + G4 goes back."]},
+  {id: "gen", s: "gen", shots: ['gen_wild', 'gen_recent'], t: "Use GEN / GENERATE", steps: [
+    "HOME held + SELECT: GEN opens on NEW. Set ENERGY, FORM (LOOP, PARTS, SONG), COMPLEX and TAPE (AUTO, OFF, 10–100 %) with KNOB 1–4, or leave them.",
+    "OCT+ GENERATE: a whole piece, in a style picked for you (sometimes WILD, often a blend of two: RETROBOC+AMBIENT 0421). PLAY.",
+    "OCT+ again: another piece. PRESETS back steps through the last 8; OCT+ RECALL brings one back exactly as it was.",
+    "OCT− leaves for TRACKS; GLO + G4 goes back to what was there. GENERATE and RECALL are refused while a song (ARRANGE) is playing."]},
   {id: "mutate", s: "mutate", shots: ['mutate', 'dlg_mut_back'], t: "MUTATE and REVERT", steps: [
     "SEQ › MORE, the MUTATE rows (KNOB 1 picks, KNOB 2 sets): SOUND and/or PATTERN every N bars, AMOUNT, MODE ORBIT or DRIFT.",
     "PLAY: the track changes on the one of each marked bar. OCT+ KEEP sets the anchor; OCT− (or GLO + A4) FREEZE.",
@@ -613,6 +615,13 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.9", items: [
+    "0.9: GEN is one button. OCT+ GENERATE picks a style itself, out of ten (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO), never the same one twice in a row. About one press in ten is WILD, with no style; about 45 % of the rest are blends of the style with a partner that goes well with it. The panel names the piece, for example RETROBOC+AMBIENT 0421.",
+    "GEN is a single page: ENERGY, FORM (LOOP, PARTS, SONG), COMPLEX and TAPE (AUTO, OFF, 10–100 %). The GENRE and SEED knobs and GEN pages 2 and 3 are gone; the generator makes its own choices for the parts. SELECT does nothing on GEN, OCT− goes back to TRACKS.",
+    "Recent pieces: PRESETS steps from NEW back through the last 8 pieces, and OCT+ (RECALL) brings one back exactly as it was. Turning a knob goes back to NEW. GENERATE and RECALL are refused while a song (ARRANGE) is playing. The list is cleared at power-off; nothing of GEN is saved in projects or settings.",
+    "TAPE in GEN: on AUTO each style sets AGE (RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15, the others 0; a blend gets the main style's plus half the partner's, at most 70; WILD 0 to 50). RETROBOC and AMBIENT, and blends they lead, keep their tape and the music is thinned around it if needed; for the other styles the tape gives way first when a piece is too heavy. An amount you set with the knob is never changed.",
+    "Every piece and every section is now fitted to what the FM-1 can play, with a budget calibrated on the device (2 CORES). The first thing trimmed is the extra ECHO and ARP step notes on chord steps; only then the delay, chords, textures, arp and lead. One-core mode is fitted too, but not calibrated. A new piece ignores whatever was muted when you pressed GENERATE. Because of the fitting, a style and seed make a different piece than in 0.8.",
+    "The AGE knob is retuned: 50 is clearly worn (audible wobble, some hiss, a darker tone) and 100 is mangled and darker. Projects from 0.8 with AGE above 0 sound more worn. AGE 0 is unchanged."]},
   {v: "0.8", items: [
     "0.8 is about the sound. TAPE is a new master effect after CLIP, PUNCH and DUCK: WOW, FLUTTER, TAPE SAT, HISS and TAPE TONE, with one AGE knob (FX › MASTER KNOB 4) that sets them together. It is off at first, saved with the project, and AGE can be automated. FX › MASTER is now CLIP · PUNCH · DUCK · AGE; DUCK TIME moved to FX › MORE › MASTER, and TAPE has its own group in FX › MORE.",
     "While TAPE is on, everything you hear is about 4 ms later. If the sound engine is overloaded, it first thins the voices; TAPE is then the first of its last-resort steps (FX › MASTER shows TAPE PAUSED · CPU). It comes back by itself when the load is gone, and your settings are never changed.",

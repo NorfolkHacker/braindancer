@@ -3,16 +3,35 @@
 *Formerly ACID FM.*
 
 **IDM / braindance firmware for the M-VAVE FM-1**. Braindancer is becoming a firmware with virtual analog, FM, chopped
-breakbeats you load yourself, and a generator that writes whole songs on the device (planned, see Status). Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and
+breakbeats you load yourself, and a generator that writes whole songs on the device. Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and
 the Rephlex catalogue.
 
 **[Install](https://norfolkhacker.github.io/braindancer/webapp/installer/)** (Chrome or Edge, over USB) ·
 **[Try it in the browser](https://norfolkhacker.github.io/braindancer/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/braindancer/manual/)**
 
-## Status: 0.8
+## Status: 0.9
 
-0.8 is about the sound (piece 5), on top of 0.7:
+0.9 is about the generator (piece 6), on top of 0.8:
+
+- **GENERATE**: GEN is one page now (ENERGY, FORM, COMPLEX, TAPE) and **OCT+ GENERATE** picks a style itself, out of ten.
+  About one press in ten is WILD (no style); about 45 % of the rest are **blends** of the style with a partner that goes
+  well with it, named on the panel, for example RETROBOC+AMBIENT 0421. It never picks the same style twice in a row.
+  The GENRE and SEED knobs and GEN pages 2 and 3 are gone.
+- **Recent pieces**: PRESETS steps from NEW back through the last 8 pieces, and OCT+ RECALL brings one back exactly as it
+  was. GENERATE and RECALL are refused while a song (ARRANGE) is playing. The list is cleared at power-off; nothing of GEN
+  is saved in projects or settings.
+- **TAPE in GEN**: on AUTO each style sets AGE (RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15, the others 0; a
+  blend gets the main style's plus half the partner's, at most 70; WILD 0 to 50). RETROBOC and AMBIENT keep their tape and
+  the music is thinned around it; for the other styles the tape gives way first when a piece is too heavy. A TAPE amount
+  set with the knob is never changed. OFF and 10 to 100 % set AGE for every piece.
+- **Every piece is fitted** to what the FM-1 can play, with a budget calibrated on the device (2 CORES); one core is fitted
+  too but not calibrated. A new piece ignores what was muted when GENERATE was pressed.
+- **The AGE retune**: 50 is clearly worn (audible wobble, some hiss, a darker tone) and 100 is mangled and darker. Projects
+  from 0.8 with AGE above 0 sound more worn.
+- Projects, presets and settings load as before.
+
+Before that, 0.8 was about the sound (piece 5), on top of 0.7:
 
 - **TAPE**, a new master effect after CLIP, PUNCH and DUCK: WOW, FLUTTER, TAPE SAT, HISS and TAPE TONE, with one **AGE** knob that
   sets them together. FX › MASTER is now CLIP · PUNCH · DUCK · AGE; DUCK TIME moved to FX › MORE › MASTER and TAPE has its
@@ -109,7 +128,7 @@ The Braindancer features arrive in steps (see `docs/superpowers/specs/2026-10-24
 3. The ACID screen theme (3a in 0.3: look, HOME, splash; 3b in 0.4: the sound sections; 3c-1 in 0.5: SEQ, GLO, MIDI; 3c-2 in 0.6: SAVE, MENU, dialogs, PLAYS)
 4. BREAK: load breakbeats from the web page, chop and rearrange them
 5. Sound (0.8): TAPE (wow, flutter, saturation), 303-style accent and slide, new presets and drum kits
-6. The song generator: ACID, BRAINDANCE, DRILL'N'BASS, RETROBOC, AMBIENT, GLITCH
+6. The song generator (0.9): GENERATE picks a style, blends, recent pieces, TAPE in GEN, the AGE retune
 
 The manual is Braindancer's own; it grows as Braindancer's features land.
 

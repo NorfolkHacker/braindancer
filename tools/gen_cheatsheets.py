@@ -132,8 +132,8 @@ def controls():
          'No levels, no zoom.', 'FX: SENDS → SPACE → MASTER → MORE'),
         ('2', 'THE BUTTON: IN, OR ON', 'From another section: the page you were last on there. Already inside: the '
          'next page (round).', 'SEQ › STEPS: SEQ → STEP EXTRAS · GLO › LIVE: GLO → MIX'),
-        ('3', 'PRESETS LOADS PRESETS', 'Always: the track\'s sounds; SEQ the patterns (PHRASES, OCT+ loads); GEN the '
-         'genre. Never a page, a track or a module.', 'FX › SPACE: PRESETS ▶ the next sound'),
+        ('3', 'PRESETS LOADS PRESETS', 'Always: the track\'s sounds; SEQ the patterns (PHRASES, OCT+ loads); GEN the recent '
+         'pieces. Never a page, a track or a module.', 'FX › SPACE: PRESETS ▶ the next sound'),
         ('4', 'KNOB 1 PICKS', 'The step, the slot, the stage, the operator, the kit\'s sound, the row. The track: '
          'always ALGORITHM.', 'SEQ › STEPS: K1 = all 64 steps · MORE: K1 = the row, K2 its value'),
         ('5', 'HOLD = THE LAYER', 'Held + SELECT: HOME GEN · EDIT SEQ LFO FX their dice · GLO the tempo · ENV SCL ARP '
@@ -148,7 +148,7 @@ def controls():
         ('MASTER', 'Master volume.'),
         ('SELECT', '<b>Walks the section\'s pages</b>, a page a detent, stopping at the ends (the MENU: its pages). Held with a button: '
                    'HOME <b>GEN</b>; EDIT · SEQ · LFO · FX their <b>dice</b> (OCT+ keeps, OCT− back); GLO the tempo; ENV · SCL · ARP · SAVE their chain.'),
-        ('PRESETS', '<b>Always presets</b>: the sounds (factory and user) on every page; SEQ: the patterns (PHRASES); GEN: the genre. '
+        ('PRESETS', '<b>Always presets</b>: the sounds (factory and user) on every page; SEQ: the patterns (PHRASES); GEN: the recent pieces. '
                     'Nothing in the MENU or with a button held.'),
         ('ALGORITHM', 'Selects the track from any page: T1–T6 (T1–T4 with TRACKS 4). MENU: nothing. A layer held: MAP · KNOBS · STATE.'),
         ('KNOB 1–4', 'The four knobs on screen, in their colours; KNOB 1 picks (step, slot, row). Fast sweeps the whole range, slow fine-tunes. '
@@ -161,7 +161,7 @@ def controls():
     ]
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
-        ('HOME', 'TRACKS · VISUAL · GEN 1 · GEN 2 · GEN 3', 'MENU'),
+        ('HOME', 'TRACKS · VISUAL · GEN (ENERGY · FORM · COMPLEX · TAPE; OCT+ GENERATE; PRESETS RECENT)', 'MENU'),
         ('EDIT', 'SOUND · TONE · VOICE or FILTER · MORE (FM6: SOUND · OPERATOR · OP ENV · MORE; DRUM-X: KIT · SOUND · SOUND 2 · MORE)', 'INIT · RECALL · sound mutes'),
         ('SEQ', 'STEPS · STEP EXTRAS · PATTERN · MORE (TRACK · STEP · MUTATE · SHAPE · PLAYHEADS · AUTOMATION)', 'SEQ TOOLS'),
         ('FX', 'SENDS · SPACE · MASTER · MORE (DISTORT · AUTO PAN · DELAY · REVERB · CHORUS · SLICER · SLICE PITCH · PUNCH LANE · MASTER · TAPE)',
@@ -356,9 +356,10 @@ def sound():
     b.append(card('DICE · GEN', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'setting moved up to a quarter of its range (DRUM-X: both sides of every sound around the factory kit). Heard at once: '
                   'OCT+ keeps it, OCT− brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. '
-                  '<b>HOME + SELECT</b>: GEN, HOME\'s last three pages: GENRE (EXPLORE, RANDOM, or IDM, GLITCH HOP, BREAKS, '
-                  'DRILL\'N\'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP; '
-                  'LEAD · COMPLEX · SWING · HUMAN. OCT+ makes the piece, OCT− back to TRACKS. GLO + G4 undoes.</p>'))
+                  '<b>HOME + SELECT</b>: GEN, HOME\'s last page: ENERGY · FORM (LOOP, PARTS, SONG) · COMPLEX · TAPE (AUTO, OFF, 10–100). '
+                  'OCT+ GENERATE picks a style itself (sometimes WILD, often a blend: RETROBOC+AMBIENT 0421); PRESETS steps back through '
+                  'the last 8 pieces and OCT+ RECALL brings one back. OCT− back to TRACKS. '
+                  'GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))

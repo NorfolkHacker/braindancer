@@ -62,11 +62,12 @@ files.
 
 ### Your first song (5 minutes)
 
-1. Hold **HOME** and turn **SELECT** (or on HOME tap **HOME** twice: TRACKS → VISUAL → **GEN**). The **GENERATOR** opens on
-   **EXPLORE** (no genre, every rule broken): press **OCT+** as it is, or pick RANDOM or one of the ten genres with KNOB 1
-   or PRESETS first. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
-2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** one detent right for GEN 2 and lower
-   **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **OCT−** goes back to TRACKS. To go back to what was there before: hold **GLO** and press **G4** (UNDO).
+1. Hold **HOME** and turn **SELECT** (or on HOME tap **HOME** twice: TRACKS → VISUAL → **GEN**). The **GENERATOR** is one
+   page. Press **OCT+** (it reads **OCT+ GENERATE**): a whole song idea appears, in a style the generator picks itself
+   (sometimes a blend of two, named like **RETROBOC+AMBIENT 0421**): engines, sounds, parts, scale, tempo and effects.
+   Press **PLAY**.
+2. Not your thing? Press **OCT+** again: another piece. Too busy? Turn **KNOB 1** (ENERGY) down, then OCT+. Turn
+   **PRESETS** back to hear a recent piece again (OCT+ then reads RECALL). **OCT−** goes back to TRACKS. To go back to what was there before: hold **GLO** and press **G4** (UNDO).
 3. Like it? **Stop** (PLAY), then press **SAVE** (it opens SOUND, the user sounds) and press **SAVE** twice more:
    **PROJECT**. The section it saves into is the one **SONG** picks (**A** at first). Turn **KNOB 3** (SAVE) to the right so
    its card says **OCT+**, then press **OCT+**. Type a name with the keys (or keep the one offered) and press **OCT+** again.
@@ -91,7 +92,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | --- | --- |
 | **SELECT** (encoder) | Alone: **walks the section's pages**, one page a detent, as one chain, stopping at its first and last page (no levels, no zoom; see [How navigation works](#how-navigation-works-six-rules)). In the MENU: its pages. With a button held: **HOME** + SELECT **GEN**, **EDIT / SEQ / LFO / FX** + SELECT that part's **dice**, **GLO** + SELECT the **tempo**, **ENV / SCL / ARP / SAVE** + SELECT walk that section's chain from wherever you are. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T6 (T1–T4 if TRACKS is set to 4; the default is 6). The track is always ALGORITHM's. In the MENU: nothing. With a layer held: its view, MAP ↔ KNOBS ↔ STATE. |
-| **PRESETS** (encoder) | **Always presets**: the selected track's sounds (every engine's factory presets, then your user presets) on every page; on the **SEQ** pages the **patterns** (it opens the PHRASES loader with the next pattern picked: OCT+ loads it, OCT− back to the SEQ page); on **GEN** the GENRE. In the MENU and with a button held it does nothing. It never changes page, track, module or row. |
+| **PRESETS** (encoder) | **Always presets**: the selected track's sounds (every engine's factory presets, then your user presets) on every page; on the **SEQ** pages the **patterns** (it opens the PHRASES loader with the next pattern picked: OCT+ loads it, OCT− back to the SEQ page); on **GEN** the recent pieces (NEW first). In the MENU and with a button held it does nothing. It never changes page, track, module or row. |
 | **KNOB 1–4** | The four cards (columns) on screen. A page that picks something picks it with **KNOB 1** (the step, the bar, the slot, the stage, the operator, the kit's sound, the row). With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU › CONTROLS › KNOB SPEEDUP turns this off). In the MENU: KNOB n the setting on card n. |
 | **MASTER** | The output volume. |
 
@@ -193,7 +194,7 @@ Every section is driven the same way: learn it once and every section is known.
 2. **The section's button: in, or on.** From another section it brings you back to the page you were last on there.
    Already inside, it goes to the **next page** (and goes round). On SEQ › STEPS, SEQ goes to STEP EXTRAS.
 3. **PRESETS loads presets.** Always: the track's sounds in every section, the **patterns** in SEQ (the PHRASES
-   loader), the **genre** in GEN. It never changes page, track or module (in the MENU it does nothing).
+   loader), the **recent pieces** in GEN. It never changes page, track or module (in the MENU it does nothing).
 4. **KNOB 1 picks.** When a page picks something (a step, a bar, a slot, a stage, an operator, the kit's sound, a
    row) KNOB 1 is the one that picks it. The track is always **ALGORITHM**'s. SEQ › STEPS: KNOB 1 walks all 64 steps;
    on MORE, KNOB 1 the row.
@@ -207,7 +208,7 @@ Every section is driven the same way: learn it once and every section is known.
 - Each section remembers the page it was left on (EDIT one for the synths and one each for FM6 and DRUM); at power-on
   SEQ opens on STEPS, GLO on LIVE, the others on their first page.
 - **SCL and ARP are two sections**: SCL is KEY · CHORD · MORE, ARP is ARP · ARP 2.
-- **GEN is three HOME pages** (GEN 1–3): the section buttons work there, OCT+ makes the piece, OCT− goes back to
+- **GEN is one HOME page**: the section buttons work there, OCT+ makes the piece, OCT− goes back to
   TRACKS. HOME + SELECT opens it from anywhere.
 - **SAVE from outside** comes back to the SAVE page you left; **SOUND** comes with its SAVE already picked, so SAVE,
   OCT+, OCT+ still stores the sound.
@@ -224,7 +225,7 @@ SELECT goes down each row from left to right; the button goes to the next page.
 
 | Section | Groups (the button) · pages (SELECT) | Pages |
 | --- | --- | --- |
-| **HOME** | **TRACKS**: TRACKS — **VISUAL**: VISUAL — **GEN**: GEN 1 · GEN 2 · GEN 3 | 5 |
+| **HOME** | **TRACKS**: TRACKS — **VISUAL**: VISUAL — **GEN**: GEN | 3 |
 | **EDIT** (a synth) | **SOUND**: SOUND — **TONE**: TONE — **PAGE 3**: VOICE or FILTER (by engine) — **MORE**: MORE | 4 |
 | **EDIT** (FM6) | **SOUND**: SOUND — **OPERATOR**: OPERATOR — **OP ENV**: OP ENV — **MORE**: MORE | 4 |
 | **EDIT** (DRUM) | **KIT**: KIT — **SOUND**: SOUND — **SOUND 2**: SOUND 2 — **MORE**: MORE | 4 |
@@ -256,8 +257,9 @@ SELECT goes down each row from left to right; the button goes to the next page.
   ([11](#live-tricks-glo--live)). **MIX**: six columns, T1–T6, each a level bar in dB with its pan mark.
   **MIDI**: a table, a row per track (**T3 IN ● OUT ● CH 3**), the clock above it ([14](#14-midi-and-usb)).
   **MORE**: LIVE (the rails), SYSTEM, TEMPO, MIDI and UNDO rows.
-- **GEN 1–3** are the generator (as HOME held + SELECT, from any page): **SELECT** turns its page (left of GEN 1:
-  VISUAL), **PRESETS** the GENRE, **OCT+** makes the piece, **OCT−** back to TRACKS, a **HOME** tap on to TRACKS.
+- **GEN** is the generator (as HOME held + SELECT, from any page): the four knobs are ENERGY, FORM, COMPLEX and TAPE,
+  **SELECT** does nothing, **PRESETS** steps through the recent pieces, **OCT+** makes (or brings back) a piece,
+  **OCT−** goes back to TRACKS, a **HOME** tap on to TRACKS.
 
 ### Every page and its four knobs
 
@@ -1018,36 +1020,63 @@ Hold **SAVE**:
 
 ### GEN — the song generator (HOME + SELECT)
 
-Hold **HOME** and turn **SELECT**, from any page, or on HOME walk the chain with **SELECT** (TRACKS · VISUAL ·
-**GEN 1 · GEN 2 · GEN 3**) or tap HOME to its next page (TRACKS → VISUAL → GEN). The **GENERATOR** is
-HOME's last group, three ordinary pages, no longer a screen of its own: **SELECT** turns the page, **KNOB 1–4** set the
-four values shown (**PRESETS**: the GENRE, the generator's preset), **OCT+** makes the piece and **OCT−** goes back to
-TRACKS (the piece stays; **UNDO**, GLO + G4, brings back what was there before); every section button works from there. The panel shows the five parts as rows (the ones the page's knobs weigh lit) with a preview of
-their density and heat, the FORM's sections as coloured chips, the last piece and **OCT+ MAKE**. **PLAY** runs and stops
-the transport without leaving the screen.
+Hold **HOME** and turn **SELECT**, from any page, or on HOME walk the chain with **SELECT** (TRACKS · VISUAL · **GEN**)
+or tap HOME to its next page (TRACKS → VISUAL → GEN). The **GENERATOR** is HOME's last page: **one page**, no screen of
+its own. **KNOB 1–4** set the four values shown, **OCT+** makes a piece, **PRESETS** steps through the recent pieces,
+**SELECT** does nothing there, and **OCT−** goes back to TRACKS (the piece stays; **UNDO**, GLO + G4, brings back what
+was there before). Every section button works from there. The panel shows the five parts as rows with a preview of their
+density and heat, the FORM's sections as coloured chips, the piece's name and **OCT+ GENERATE**. **PLAY** runs and
+stops the transport without leaving the screen.
 
-| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
-|---|---|---|---|---|
-| GEN 1 | **GENRE**: **EXPLORE** (the screen always opens on it: no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B from the two genres' names) or one of the ten, in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
-| GEN 2 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's) |
-| GEN 3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
+| KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+|---|---|---|---|
+| **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG | **COMPLEX** 0–100 % | **TAPE**: AUTO, OFF, 10–100 % |
 
-The piece is **deterministic**: the same settings make the same piece every time, so a seed you like can be dialled
-back. **OCT+ with the settings unchanged throws a new seed** (another piece); turn a knob and press OCT+ and you get
-the **same piece with that one thing changed** — every part draws its random numbers from its own stream, so BASS
-turned leaves the drums and the lead as they were. The screen shows **LAST: ACID 0421** (the genre and the seed).
+**GENERATE.** There is no genre to choose: **OCT+** picks a style itself, from a fresh seed, and writes the piece.
+- Out of every ten presses about one is **WILD**: a piece that follows no style and breaks the rules on purpose (below).
+- Otherwise it draws one of the ten styles evenly (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO,
+  RETROBOC, AMBIENT, AMB TECHNO), and **never the same style twice in a row**.
+- About 45 % of those pieces are **blends**: the style mixed with a **partner** that goes well with it. The style
+  sets the tempo and the feel (and keeps its drums); the partner brings its bass, and often its chords, arp, lead,
+  space, scales and texture. The partners are: IDM with GLITCH HOP, MICRO, RETROBOC, AMBIENT, DRILL'N'BASS or
+  ELECTRO; GLITCH HOP with IDM, BREAKS, MICRO or ELECTRO; BREAKS with GLITCH HOP, DRILL'N'BASS, ACID or ELECTRO;
+  DRILL'N'BASS with IDM or BREAKS; ACID with BREAKS, ELECTRO or AMB TECHNO; ELECTRO with IDM, GLITCH HOP, BREAKS
+  or ACID; MICRO with IDM, GLITCH HOP or AMB TECHNO; RETROBOC with IDM or AMBIENT; AMBIENT with IDM, RETROBOC or
+  AMB TECHNO; AMB TECHNO with ACID, MICRO or AMBIENT.
+- The panel names the piece: the style, a **+** and the partner for a blend, and the seed: **RETROBOC+AMBIENT 0421**,
+  **ACID 0421**, **WILD 0421**. (A name too wide for the panel is shortened.)
+- It plays as making a piece always did: the tracks are changed (UNDO is marked first) and you press PLAY. It is
+  **refused while a song (ARRANGE) is playing**. A new piece ignores whatever was muted when you pressed OCT+.
+- The piece is **deterministic**: the same style, partner, seed, ENERGY, FORM, COMPLEX, TAPE and the FM-1's CPU
+  figure make the same piece every time. The result is ordinary music in the tracks: edit it, save it, play it.
+- Turning a knob puts PRESETS back on NEW; the next OCT+ is a new piece that uses the new setting.
 
-The genres: IDM, GLITCH HOP, BREAKS,
+**The recent pieces.** The last **8** pieces are remembered, newest first (a ninth drops the oldest). **PRESETS** starts
+on **NEW**; turn it back (counter-clockwise) to step through them: the panel reads **RECENT 1: ...** to **RECENT 8**
+with each piece's name, and **OCT+** now reads **OCT+ RECALL**. RECALL brings that piece back **exactly as it was** (the
+same piece is rebuilt from its settings), moves it to the front of the list and plays like any new piece, with UNDO
+marked first. It is refused while a song (ARRANGE) is playing, like GENERATE. The list is cleared at power-off; nothing of GEN is
+saved in a project or in the settings, and a saved project is untouched.
+
+**TAPE** (KNOB 4) decides how worn the tape sounds on every piece (AGE, see FX › MASTER and TAPE below):
+- **AUTO** (the default): the style decides. AGE is **RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15**,
+  and 0 for the others. A blend gets the main style's AGE plus half the partner's, at most 70. A WILD piece gets 0 to 50.
+- **OFF**: no tape (AGE 0). **10–100 %**: that AGE, for every piece.
+- A TAPE amount you set with the knob is never changed by the generator.
+- When a piece is too heavy for the FM-1 (see *The CPU fit* below), RETROBOC and AMBIENT (and blends they lead) keep their tape
+  and the music is thinned around it; for the other styles the tape gives way first.
+
+The styles: IDM, GLITCH HOP, BREAKS,
 DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO. Each one knows its tempo
 range, its scales and chord progressions, its drum map and kit, its bass archetypes and register, how its chords, arp
 and lead speak, which sound recipe each role takes, how human it plays and its space (reverb type, delay type and
-time, how wet).
+time, how wet). The generator uses its automatic choices for every part (the old per-part amounts and the SWING and HUMAN
+settings are gone from the screen).
 
-**EXPLORE**, the first choice and where the screen always opens (at power-on, after NEW PROJECT, every time
-you open GEN), follows **no genre** and breaks their rules on purpose, so every seed is a very different piece
-(**LAST: EXPLORE 0421**). **How far it goes is COMPLEX** (page 3, KNOB 2): at **100** every rule below is
+**WILD** (about one press in ten) follows **no style** and breaks their rules on purpose, so every seed is a very
+different piece (**LAST: WILD 0421**). **How far it goes is COMPLEX** (KNOB 3): at **100** every rule below is
 broken; at the default **50** the pieces are adventurous but musical; lower, plainer still (see
-*COMPLEX on EXPLORE* below):
+*COMPLEX on WILD* below):
 - **Tempo** anywhere from 56 to 200 BPM (COMPLEX 100; 80–165 at 50, 104–146 at 0); **any drum map** (the procedural IDM's too) and kit, its sounds pulled far
   from the kit's; any three bass archetypes against any kick rule; any chord play, voicing, arp and lead; a role may
   take another role's kind of sound (a plucked bass, a bell lead, an organ texture).
@@ -1067,24 +1096,27 @@ broken; at the default **50** the pieces are adventurous but musical; lower, pla
 - What it keeps: it always plays (two melodic parts at least, the genres' levels, the shared voice budget, the delay
   short of self-oscillation), the **SCALE page** and the **CHORD page** say the key and the chords it plays, and every
   note is in that key but the coloured chords' own tones and the approaches. The same seed is the same piece; the
-  genres' pieces are exactly as before. After an EXPLORE piece a genre's piece sets DIV back to 1/16 and PLAYHEADS off.
+  styles' pieces keep their own rules. After a WILD piece a style's piece sets DIV back to 1/16 and PLAYHEADS off.
 
-**COMPLEX on EXPLORE**. The knob is how wild: each of EXPLORE's own
+**COMPLEX on WILD**. The knob is how wild: each of WILD's own
 throws happens as often as COMPLEX says (at 50: half as often as at 100) — a track in a loop or a DIV of its own
 (and on at most 1 + COMPLEX / 20 tracks: three at 50), odd chord lengths and loops, the exotic modes (below 100 the
 commoner major, minor, dorian and mixolydian come up more), the borrowed and secondary colours, out-of-key chords,
 step components, PLAYHEADS, MUTATE, the delay's grain; VOICE on one track under COMPLEX 61; the tempo
 range narrows towards the middle. COMPLEX 100 is the full chaos again.
 
-**The CPU budget**. An EXPLORE piece is made to fit the FM-1's CPU: the generator estimates what the piece
-will cost to play (each part by its engine and how many voices it keeps sounding — its chords, how long its notes and
-releases ring at the piece's tempo —, the reverb type, the delay's grain, the PLAYHEADS) and keeps it under **65 % of
-the audio's time with two cores** (MENU › MORE › ABOUT: CORES 2), **55 % with one** (with the margin of the estimate's error).
-When a piece would cost more it gets lighter, a step at a time, until it fits: the heaviest engine swapped for LOFI or
-ANALOG, CLOUD / SHIMMER played as ROOM / SPRING, the texture left out, then the arp, then the lead (one core: drums,
-bass and chords at least); the delay's grain off, a PLAYHEAD less, a note less in each chord (two at least), the
-longest releases shorter. With two cores most pieces are untouched; with one, most lose a part or two. The genres and
-RANDOM are not changed by it.
+**The CPU fit**. Every piece GENERATE makes, and every section of a PARTS or SONG piece, is made to fit the FM-1's
+CPU: the generator estimates what the piece will cost to play (each part by its engine and how many voices it keeps
+sounding, the reverb type, the delay's grain, the PLAYHEADS and TAPE) and keeps it under a budget **calibrated on the
+FM-1 with two cores** (MENU › MORE › ABOUT: CORES 2; the CPU TEST figure scales it). One-core mode is fitted too, but
+its budget is not calibrated yet. When a piece would cost more it gets lighter, a step at a time, until it fits. The
+first thing trimmed is the extra ECHO and ARP step notes on chord steps (no part is lost); only then the delay's
+grain and time, a PLAYHEAD less, a note less in each chord (two at least), the longest releases, the texture, the
+reverb, the arp and the lead (one core: drums, bass and chords at least). TAPE comes into it as above: a style on
+AUTO that is too heavy lets its tape go first, except RETROBOC and AMBIENT, whose music is thinned instead; a TAPE
+amount you set is never changed. WILD pieces may also have their heaviest engine swapped for LOFI or ANALOG and
+CLOUD / SHIMMER played as ROOM / SPRING. The aim is that a generated piece never makes the overload safety pause
+TAPE.
 
 **The sounds**. Each sound starts with no modulation left over (the preset's LFO
 routes and the previous track's are cleared), then gets its role's: the **filter moving** on almost every melodic part
@@ -1092,7 +1124,7 @@ routes and the previous track's are cleared), then gets its role's: the **filter
 four bars at the genre's tempo), a **release** in the role's range (bass short but never a click, chords and textures
 long, arps and plucks between), and a **vibrato only on a held lead** (now and then a held pad): soft (a fifth of a
 semitone, a third at most), about 5 Hz, fading in. More pieces have a **chord progression**: a one-chord pedal only
-now and then (EXPLORE: one in eight), the arp following the chords.
+now and then (WILD: one in eight), the arp following the chords.
 
 What a piece is made of:
 
@@ -1171,7 +1203,7 @@ What a piece is made of:
   breaks) written over the factory DRUM-X kit, the drum track's TONE, DECAY, NOISE and DRIVE with it.
 - **Mix**: level, pan and sends by role and by how wet the genre is; **HUMAN** sets SEQ › MORE › TRACK's HUMAN on every track by
   the role (hats and leads more, the kick none) scaled by how human the genre is (a band more than a machine);
-  SWING the genre's unless set; DUCK, CLIP and PUNCH on the master; the delay's TYPE, PING-PONG and TIME and the
+  SWING the style's; DUCK, CLIP and PUNCH on the master; the delay's TYPE, PING-PONG and TIME and the
   reverb's type the genre's.
 - With **TRACKS 6** the sixth track is a **texture** (a drone, noise, a choir, an organ, strings) in long notes.
 - **FORM**: **LOOP** writes one loop (2 or 4 bars). **PARTS** also stores sections **A** (the piece), **B** (a break:
@@ -1351,8 +1383,10 @@ Hidden with LOAD ECO (a track's CHORUS send then says ECO).
 first: with AGE and every detail at 0 it is out of the chain and the sound is exactly as without it. While TAPE is on,
 everything you hear is about 4 ms later (the tape's own delay); with AGE and every detail back at 0 it is gone again.
 
-- **AGE** (FX › MASTER, KNOB 4) sets the five details at once: 0 is off, the middle is a clear tape wobble, the top is
-  a worn cassette. The status line says it in words (**A LITTLE TAPE**, **OLD TAPE**, **WORN CASSETTE**).
+- **AGE** (FX › MASTER, KNOB 4) sets the five details at once: 0 is off, **50 is a clearly worn tape** (audible wobble,
+  some hiss, a darker tone), **100 is mangled** and darker. The status line says it in words (**A LITTLE TAPE**,
+  **OLD TAPE**, **WORN CASSETTE**). Since 0.9 the map is steeper: a project saved in 0.8 with AGE above 0 sounds more
+  worn than it did. GEN sets AGE too (the TAPE knob on GEN).
 - The details are on **FX › MORE** under TAPE: **WOW** (a slow, uneven drift of the pitch), **FLUTTER** (a quick pitch
   tremble), **TAPE SAT** (a soft tape saturation), **HISS** (tape hiss that follows the music and is silent over
   silence) and **TAPE TONE** (rolls the highs off, the higher the duller).
@@ -1819,7 +1853,7 @@ hardware, photograph it** (two or three screens) while your song plays, and agai
 
 **CPU TEST.** SAVE › MORE › CPU TEST builds the heaviest reference song (TRACKS 6); press PLAY, let it play
 10 s or more and STOP: its mean load is kept with the settings (CPU TEST 98 % (2 CORES) on ABOUT and PROFILE). GEN's
-EXPLORE sizes its pieces by it (the computer's estimate holds that song at 63 % with two cores); never measured, it
+GEN sizes its pieces by it (the computer's estimate holds that song at 63 % with two cores); never measured, it
 assumes the FM-1 is 1.6 times heavier than the estimate.
 
 ---
