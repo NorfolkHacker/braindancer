@@ -112,6 +112,7 @@ static struct {
     uint16_t cost_thin;                                 /* (0.9) gc_cost(1) when AGE was looked at: after the first rung,
                                                          * before the music was thinned */
     uint8_t grain_off;                                  /* (0.9) the fitter turned the delay's grain off (gx_fit_piece) */
+    uint8_t in_sec;                                     /* (0.9) a section after A being fitted (gen_fit_section) */
 } gs;
 #define GKICK(i) ((uint32_t)(gs.kick >> ((i) & 63u)) & 1u)
 static uint32_t gseed_mix(uint32_t part)                /* (0.9) a blend's partner in every stream but GS_PICK's */
@@ -2159,8 +2160,9 @@ static uint32_t gc_cost(int steps)                      /* steps 0: before the p
         const track_t *t = &trk[k];
         uint32_t r = gs.role[k], e = t->eng_req % NENGINES, len = dlen(t), on = 0, ns = 0, tie = 0, v, f, cap;
         if (!gs.act[r] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) continue;
-        if (steps && t->p[P_MUTE]) continue;            /* (0.9) a section's muted track: no notes, its voices ended, it
-                                                         * costs nothing (voice.c trk_note_on) */
+        if (steps && gs.in_sec && t->p[P_MUTE]) continue;   /* (0.9) a later section's muted track (GEN's: B INTRO, the
+                                                         * BREAK ..): no notes, its voices ended, it costs nothing
+                                                         * (voice.c trk_note_on); only there (re-review N1) */
         for (h = 0; h < FG_HEADS; h++) c += fg_set[k][h].rate ? GC_HEAD : 0u;
         for (i = 0; steps && i < len; i++) {
             const step_t *s = &t->step[i];
@@ -2359,14 +2361,16 @@ static void gen_fit_section(void)
 {
     uint8_t act[RL_N];
     uint32_t r;
-    if (gc_cost(1) <= gc_budget()) return;
-    gen_fit_ccomp();
-    if (gc_cost(1) <= gc_budget()) return;
-    memcpy(act, gs.act, sizeof act);
-    gen_fit_rest();
-    for (r = 0; r < RL_N; r++)
-        if (act[r] && !gs.act[r] && gs.trk_of[r] < NTRK) trk[gs.trk_of[r]].p[P_MUTE] = 1;
-    memcpy(gs.act, act, sizeof act);
+    gs.in_sec = 1;                                      /* (the section's own mutes cost nothing: gc_cost) */
+    if (gc_cost(1) > gc_budget()) gen_fit_ccomp();
+    if (gc_cost(1) > gc_budget()) {
+        memcpy(act, gs.act, sizeof act);
+        gen_fit_rest();
+        for (r = 0; r < RL_N; r++)
+            if (act[r] && !gs.act[r] && gs.trk_of[r] < NTRK) trk[gs.trk_of[r]].p[P_MUTE] = 1;
+        memcpy(gs.act, act, sizeof act);
+    }
+    gs.in_sec = 0;
 }
 
 /* (0.9 spec 3) the AGE the piece asks for: the TAPE knob's (OFF 0, 2..11: 10..100); AUTO the style's (GEN_AUTO_AGE), a
@@ -2600,6 +2604,8 @@ static void gen_make(void)
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
         t->p[P_SDIV] = track_desc(t, P_SDIV)->def;      /* (was: only after an EXPLORE piece, gx.dirty) */
+        t->p[P_MUTE] = 0;                               /* (re-review N1) the mutes live at the press (a section's, the
+                                                         * user's) neither in the piece nor in its fit */
         t->p[P_APDEP] = track_desc(t, P_APDEP)->def; t->p[P_APRATE] = track_desc(t, P_APRATE)->def;   /* (gen_sound only */
         t->p[P_APWAVE] = track_desc(t, P_APWAVE)->def; t->p[P_APSYNC] = track_desc(t, P_APSYNC)->def;   /* sets AUTO PAN) */
     }
@@ -2826,6 +2832,8 @@ static void gen_make(void)
                                                          * asked for while a piece plays) */
     mut_keep();
     gen_parts();
+    gx.nmax = 4;                                        /* (re-review N2) the fit's chord cap the piece's only: the SEQ
+                                                         * dice after it uncapped */
 }
 /* ------------------------------------------------------------------------------------------- the identity --- */
 static uint32_t gid_r(uint32_t *s) { *s ^= *s << 13; *s ^= *s >> 17; *s ^= *s << 5; return *s; }
@@ -2996,6 +3004,7 @@ static const char *dice_seq(track_t *t)
     gs.ba = gs.g->bass[rng() % 3u];
     if (gmut.lead == LD_NONE) gmut.lead = LD_HOOK;      /* (asked for: a lead) */
     for (i = 0; i < GP_N; i++) if (!gs.amt[i]) gs.amt[i] = 60;
+    gx.nmax = 4;                                        /* (re-review N2) a chord as many notes as it comes (gnote) */
     gs.role[k] = (uint8_t)r; gs.act[r] = 1; gs.trk_of[r] = (uint8_t)k;
     if (safe_part[0] == k || safe_part[1] == k)         /* (ACID FM 0.5.2) a part diced on it: the safety net's no more */
         safe_part[safe_part[1] == k] = NTRK;

@@ -373,6 +373,65 @@ int main(void)
                n, diff, why[0], why[1], why[2], why[3], why[4], why[5]);
         bad += gcheck("(0.9) a piece depends only on its identity: the same after any piece before it (every parameter, ARRANGE, LOOP)", !diff && n == 120u);
     }
+    {   /* (0.9 re-review N1) the mutes live when GENERATE is pressed: a section's (B playing: the drums and the bass muted)
+         * or the user's MUTE on a track. Neither changes the piece nor its fit; no MUTE left on any track. Two cores, CPU
+         * TEST 74 %, PARTS pieces, styles and blends */
+        static const struct { const char *m, *p; uint16_t seed; } MG[] = {
+            {"RETROBOC", 0, 421}, {"IDM", 0, 77}, {"BREAKS", "ACID", 1234}, {"AMBIENT", "IDM", 3901}, {"ACID", 0, 5}, {"MICRO", "AMB TECHNO", 9}};
+        uint32_t t, w, n = 0, diff = 0, muted = 0, k;
+        uint32_t rng0 = rng_state;
+        for (t = 0; t < NELEM(MG); t++) {
+            genid_t id, pv;
+            snap_t s0, s1;
+            mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+            gid_set(&id, gt_style(MG[t].m), MG[t].p ? gt_style(MG[t].p) : GID_SOLO, MG[t].seed);
+            id.form = 1u; id.energy = 80; id.complex = 70;
+            gen_build(&id); snap_take(&s0);
+            for (w = 0; w < 2u; w++) {
+                gen_reset();
+                if (!w) {                               /* (a PARTS piece before, its section B playing: mutes live) */
+                    gid_set(&pv, gt_style("IDM"), GID_SOLO, 600u + t); pv.form = 1u; gen_build(&pv);
+                    section_load(1);
+                    for (k = 0, muted = 0; k < NTRK; k++) muted += trk[k].p[P_MUTE] != 0;
+                    if (!muted) printf("  (no mute in section B before %s)\n", MG[t].m);
+                } else trk[(t + 1u) % NTRK].p[P_MUTE] = 1;   /* (the user's MUTE) */
+                gen_build(&id); snap_take(&s1);
+                n++;
+                for (k = 0, muted = 0; k < NTRK; k++) muted += trk[k].p[P_MUTE] != 0;
+                if (snap_diff(&s0, &s1) || muted) {
+                    diff++;
+                    if (diff <= 4u) printf("  %s %s: differs (%s), %u tracks muted\n", gp.last, w ? "after a user's MUTE" : "built in section B",
+                                          snap_what(&s0, &s1), muted);
+                }
+            }
+        }
+        mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0; rng_state = rng0;
+        bad += gcheck("(0.9 N1) the mutes live at the press (a section's, the user's): the same piece, no MUTE left", n == 12u && !diff);
+    }
+    {   /* (0.9 re-review N2) the SEQ dice on a chord track not capped by the last piece's fit (gx.nmax): after a piece
+         * whose chords the fitter left at two notes (one core, CPU TEST unset: the floor), the dice's chords as many as
+         * they come; the same where no piece is (the track's key changed) */
+        uint32_t pd, i, big = 0, big2 = 0, a2 = 1, tries;
+        uint32_t rng0 = rng_state;
+        gen_reset();
+        gen_with(1, 421, 50, 0);                        /* (HOUSE 0421: its chords two notes, GEN_HOUSE_HASH) */
+        pd = gs.trk_of[RL_PAD];
+        for (i = 0; pd < NTRK && i < dlen(&trk[pd]); i++) a2 &= trk[pd].step[i].n <= 2u;
+        for (tries = 0; pd < NTRK && tries < 6u; tries++) {
+            host_ticks += 990000u;
+            dice_seq(&trk[pd]);
+            for (i = 0; i < dlen(&trk[pd]); i++) big += trk[pd].step[i].time == ST_NOTE && trk[pd].step[i].n > 2u;
+        }
+        for (tries = 0; pd < NTRK && tries < 6u; tries++) {
+            trk[pd].p[P_ROOT] = (int16_t)((gs.root + 5) % 12);   /* (no piece here: its choices made up) */
+            host_ticks += 990000u;
+            dice_seq(&trk[pd]);
+            for (i = 0; i < dlen(&trk[pd]); i++) big2 += trk[pd].step[i].time == ST_NOTE && trk[pd].step[i].n > 2u;
+        }
+        rng_state = rng0;
+        printf("gen: (0.9 N2) SEQ + SELECT x 6 on HOUSE 0421's chords (two notes as fitted): %u steps of 3 notes or more; no piece there: %u\n", big, big2);
+        bad += gcheck("(0.9 N2) the SEQ dice's chords not capped by the last piece's fit (and where no piece is)", pd < NTRK && a2 && big && big2);
+    }
     /* ---- every genre, three seeds, three energies: the guard rails */
     for (g = 0; g < NGENRE; g++) {
         for (s = 0; s < 3u; s++) {
@@ -1579,6 +1638,8 @@ int main(void)
                over2, p2, cuts2, over - over2, pieces - p2, cuts - cuts2);
         printf("gen:   the tape styles (AGE kept, the music thinned around it): %u over the budget with AGE on, %u of them on two cores\n",
                over_ts, over_ts2);
+        bad += gcheck("  (0.9 N3) the tape styles on two cores: none over the budget with their AGE (spec 3's Aim: the net's TAPE rung idle)",
+                      !over_ts2);
         bad += gcheck("(0.9) every piece fitted with TAPE counted: two cores over the budget 4 % at most, none with AUTO's AGE on (the "
                       "tape styles' kept: spec 3)",
                       over2 * 25u <= p2 && !over_on);
@@ -1606,7 +1667,7 @@ int main(void)
                     uint32_t cs;
                     if (!((dice_secs >> k) & 1u) || section_load(k)) continue;
                     secs++;
-                    cs = gc_cost(1);
+                    gs.in_sec = 1; cs = gc_cost(1); gs.in_sec = 0;   /* (as gen_fit_section costs it: its mutes free) */
                     sec_over += cs > gc_budget();
                     if (cs > gc_budget() && cs > ca) {
                         sec_bad++;
@@ -1627,7 +1688,7 @@ int main(void)
          * unset and 74 %, 40 pieces a style (solo and blends with each partner) */
         static const uint8_t CPT[2] = {0, 74};
         static const char *const TS[2] = {"RETROBOC", "AMBIENT"};
-        uint32_t c, t, n, kept[2][2] = {{0}}, tot[2][2] = {{0}}, lost = 0, ok = 1;
+        uint32_t c, t, n, kept[2][2] = {{0}}, tot[2][2] = {{0}}, ok = 1;
         for (c = 0; c < 2u; c++)
             for (t = 0; t < 2u; t++)
                 for (n = 0; n < 40u; n++) {
@@ -1644,7 +1705,6 @@ int main(void)
                 }
         printf("gen: (0.9) the tape styles' AUTO AGE kept, two cores: RETROBOC %u / %u unset, %u / %u at 74 %%; AMBIENT %u / %u, %u / %u\n",
                kept[0][0], tot[0][0], kept[1][0], tot[1][0], kept[0][1], tot[0][1], kept[1][1], tot[1][1]);
-        (void)lost;
         bad += gcheck("(0.9) RETROBOC and AMBIENT (and blends they lead): AUTO's AGE kept on every piece, the music thinned around it", ok);
         mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
