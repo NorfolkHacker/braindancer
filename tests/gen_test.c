@@ -109,6 +109,59 @@ static int pt_ok(uint32_t main, uint32_t part)          /* part one of main's pa
             for (j = 1; j < 7u && PT[i][j]; j++) if (gt_style(PT[i][j]) == part) return 1;
     return 0;
 }
+/* (0.9 review I1) the state a piece leaves, whole: every track's parameters, sound and steps; the project as stored
+ * (motion, the punch-in lane, the song's globals); ARRANGE's rows; LOOP / SONG; the section; the messages */
+typedef struct {
+    uint32_t trk_h, step_h, proj_h, chain_h, mode_h, msg_h;
+} snap_t;
+static uint32_t snap_bytes(uint32_t h, const void *p, uint32_t n)
+{
+    const uint8_t *b = (const uint8_t *)p;
+    while (n--) h = (h ^ *b++) * 16777619u;
+    return h;
+}
+static void snap_take(snap_t *s)
+{
+    uint32_t k;
+    memset(s, 0, sizeof *s);
+    s->trk_h = s->step_h = s->proj_h = s->chain_h = s->mode_h = s->msg_h = 2166136261u;
+    for (k = 0; k < NTRK; k++) {
+        s->trk_h = snap_bytes(s->trk_h, trk[k].p, sizeof trk[k].p);
+        s->trk_h = snap_bytes(s->trk_h, &trk[k].eng_req, 1); s->trk_h = snap_bytes(s->trk_h, &trk[k].preset, 1);
+        s->trk_h = snap_bytes(s->trk_h, &trk[k].user, 1);
+        s->step_h = snap_bytes(s->step_h, trk[k].step, sizeof trk[k].step);
+    }
+    s->trk_h = snap_bytes(s->trk_h, fg_set, sizeof fg_set);
+    s->trk_h = snap_bytes(s->trk_h, song.g, sizeof song.g);
+    project_capture(&proj_scratch);
+    memset(&proj_wire, 0, sizeof proj_wire);
+    if (proj_pack(&proj_wire, &proj_scratch)) s->proj_h = snap_bytes(s->proj_h, &proj_wire, sizeof proj_wire);
+    s->chain_h = snap_bytes(s->chain_h, &chain_config, sizeof chain_config);
+    s->mode_h = snap_bytes(s->mode_h, (const void *)&live.mode, 1);
+    s->mode_h = snap_bytes(s->mode_h, (const void *)&live.cur, 1);
+    s->mode_h = snap_bytes(s->mode_h, &ui.song_row, sizeof ui.song_row);
+    s->msg_h = snap_bytes(s->msg_h, ui.msg, str_len(ui.msg));
+    s->msg_h = snap_bytes(s->msg_h, ui.msg2, str_len(ui.msg2));
+    s->msg_h = snap_bytes(s->msg_h, gp.last, str_len(gp.last));
+}
+static uint32_t snap_diff(const snap_t *a, const snap_t *b)
+{
+    return (uint32_t)(a->trk_h != b->trk_h) | (uint32_t)(a->step_h != b->step_h) << 1 | (uint32_t)(a->proj_h != b->proj_h) << 2 |
+           (uint32_t)(a->chain_h != b->chain_h) << 3 | (uint32_t)(a->mode_h != b->mode_h) << 4 | (uint32_t)(a->msg_h != b->msg_h) << 5;
+}
+static const char *snap_what(const snap_t *a, const snap_t *b)
+{
+    static char w[64];
+    uint32_t d = snap_diff(a, b);
+    w[0] = 0;
+    if (d & 1u) strcat(w, "tracks ");
+    if (d & 2u) strcat(w, "steps ");
+    if (d & 4u) strcat(w, "project ");
+    if (d & 8u) strcat(w, "ARRANGE ");
+    if (d & 16u) strcat(w, "LOOP/SONG ");
+    if (d & 32u) strcat(w, "messages");
+    return w;
+}
 static int gid_eq_t(const genid_t *a, const genid_t *b) { return a->seed == b->seed && a->main == b->main && a->part == b->part && a->energy == b->energy && a->complex == b->complex && a->form == b->form && a->tape == b->tape && a->dev == b->dev && a->two == b->two; }
 static int in_scale(const track_t *t, int32_t n)
 {
@@ -196,9 +249,13 @@ int main(void)
             uint32_t n = 0;
             for (j = 1; j < 7u && PT[i][j]; j++) n++;
             ok &= GEN_NPARTNER[gen_shown_index(gt_style(PT[i][0]) + 1u)] == n;
-            for (j = 0; j < GEN_NPARTNER[i]; j++) ok &= pt_ok(GEN_SHOWN[i], GEN_SHOWN[GEN_PARTNER[i][j]]);
+            for (j = 0; j < GEN_NPARTNER[i]; j++) {
+                uint32_t q;
+                ok &= pt_ok(GEN_SHOWN[i], GEN_SHOWN[GEN_PARTNER[i][j]]);
+                for (q = 0; q < j; q++) ok &= GEN_PARTNER[i][q] != GEN_PARTNER[i][j];   /* (review M3: no partner twice) */
+            }
         }
-        bad += gcheck("  GEN_PARTNER is spec 2's table (every row, every partner)", ok);
+        bad += gcheck("  GEN_PARTNER is spec 2's table (every row, every partner, none twice)", ok);
         gen_reset();
         for (pr = 0; pr < 2000u; pr++) {                /* 2,000 presses' draws (the identity only, then as if built) */
             genid_t id;
@@ -251,6 +308,52 @@ int main(void)
             gen_with(0, 31, 50, 0); s2 = piece_sig();
             bad += gcheck("  gen_go, genre 0 (the tools'): a draw from the seed, deterministic", s1 == s2 && gid_eq_t(&a, &gp.id));
         }
+    }
+    {   /* (0.9 spec 2, review I1) a piece depends only on its identity: built fresh (after the power-on) and after
+         * other pieces of every kind (drums or none, LOOP / PARTS / SONG, a blend, WILD), the same tracks to the last
+         * parameter (AUTO PAN's too), the same steps, the same project as stored, ARRANGE, LOOP / SONG, the messages */
+        static const struct { const char *m, *p; uint16_t seed; uint8_t form, wild; } TG[] = {
+            {"AMBIENT", "IDM", 3901, 0, 0}, {"RETROBOC", "AMBIENT", 421, 1, 0}, {"IDM", 0, 421, 0, 0}, {"BREAKS", 0, 421, 0, 0},
+            {"DRILL'N'BASS", 0, 77, 2, 0}, {"ACID", 0, 5, 2, 0}, {"MICRO", "AMB TECHNO", 1234, 1, 0}, {0, 0, 421, 2, 1},
+            {0, 0, 99, 0, 1}, {"AMB TECHNO", 0, 9999, 1, 0}};
+        static const struct { const char *m, *p; uint16_t seed; uint8_t form, wild; } PV[] = {
+            {"ACID", 0, 5, 1, 0}, {"DRILL'N'BASS", 0, 77, 2, 0}, {0, 0, 99, 2, 1}, {"IDM", 0, 77, 0, 0},
+            {"BREAKS", "ELECTRO", 6060, 2, 0}, {"AMBIENT", 0, 31, 1, 0}};
+        uint32_t t, v, c, n = 0, diff = 0;
+        uint32_t why[8] = {0};
+        uint32_t rng0 = rng_state;                      /* (the session's random numbers as they were after: the blocks
+                                                         * below measure what they did before this one) */
+        for (c = 0; c < 2u; c++)
+            for (t = 0; t < NELEM(TG); t++) {
+                genid_t id;
+                snap_t s0;
+                gen_reset(); mc_host_v12 = (uint8_t)c;
+                gid_set(&id, TG[t].wild ? GID_WILD : gt_style(TG[t].m), TG[t].p ? gt_style(TG[t].p) : GID_SOLO, TG[t].seed);
+                id.form = TG[t].form;
+                gen_build(&id); snap_take(&s0);
+                for (v = 0; v < NELEM(PV); v++) {
+                    genid_t pv;
+                    snap_t s1;
+                    uint32_t w;
+                    char pn[28];
+                    gen_reset(); mc_host_v12 = (uint8_t)c;
+                    gid_set(&pv, PV[v].wild ? GID_WILD : gt_style(PV[v].m), PV[v].p ? gt_style(PV[v].p) : GID_SOLO, PV[v].seed);
+                    pv.form = PV[v].form;
+                    gen_build(&pv); str_cpy(pn, gp.last, sizeof pn);
+                    gen_build(&id); snap_take(&s1);
+                    n++;
+                    w = snap_diff(&s0, &s1);
+                    if (w) {
+                        diff++;
+                        if (diff <= 8u) printf("  %s (%s) after %s: differs (%s)\n", gp.last, c ? "two cores" : "one core", pn, snap_what(&s0, &s1));
+                        for (; w; w &= w - 1u) why[__builtin_ctz(w)]++;
+                    }
+                }
+            }
+        mc_host_v12 = 0; rng_state = rng0;
+        printf("gen: (0.9) %u rebuilds after another piece: %u differ (tracks %u, steps %u, project %u, ARRANGE %u, LOOP/SONG %u, messages %u)\n",
+               n, diff, why[0], why[1], why[2], why[3], why[4], why[5]);
+        bad += gcheck("(0.9) a piece depends only on its identity: the same after any piece before it (every parameter, ARRANGE, LOOP)", !diff && n == 120u);
     }
     /* ---- every genre, three seeds, three energies: the guard rails */
     for (g = 0; g < NGENRE; g++) {
@@ -980,6 +1083,8 @@ int main(void)
         mc_host_v12 = 1;
         for (gg = 0; gg <= GEN_EXPLORE; gg++)
             for (sd = 0; sd < (gg == GEN_EXPLORE ? 1200u : 10u); sd++) {
+                /* (0.9, review M2) the seeds past 9999 (uint16 already wrapped them) fold to seed % 10000 in the identity
+                 * (gen.c gid_now): EXPLORE's 1200 are other in-range pieces than 0.8's, a few the same twice */
                 gp.genre = (uint8_t)gg; gp.seed = (uint16_t)(sd * 97u + 5u); gp.energy = (uint8_t)(20u + (sd * 29u) % 70u);
                 gp.form = 0;
                 for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
@@ -992,7 +1097,7 @@ int main(void)
                     parts++;
                     if (trk[k].eng_req == ENGI_NOISE) {
                         nz++;
-                        if (nz <= 5u) printf("  NOISE on role %u: %s seed %u T%u\n", r, gs.g->name, gp.seed, k + 1u);
+                        if (nz <= 5u) printf("  NOISE on role %u: %s seed %u T%u\n", r, gs.g->name, gp.id.seed, k + 1u);
                     }
                 }
             }
@@ -1276,13 +1381,15 @@ int main(void)
                 uint32_t st, over, dt, busy, st0;
                 gt_cpt = CPT[sd & 1u]; gen_reset();
                 gen_with(g, g == GEN_EXPLORE ? sd * 25u + 5u : sd * 89u + g * 7u + 5u, 30u + (sd * 17u) % 60u, sd % 3u);   /* (0.9:
-                                                         * EXPLORE's 400 seeds evenly over the identity's 0..9999) */
+                                                         * EXPLORE's 400 seeds evenly over the identity's 0..9999; review
+                                                         * M2: RANDOM's, sd * 89 + 5 up to 17,716, fold to seed % 10000
+                                                         * past 9999, other draws than 0.8's; the genres' stay in range) */
                 st = gt_dly_stage(); over = gc_cost(1) > gc_budget(); busy = gen_busy();
                 over_q += over && st == 2u;
                 busy_q += busy && !gt_cpt && st == 2u;
                 kept_q += st == 2u;
                 if (g == 0u || g == GEN_EXPLORE) { xr_n++; xr_over += over; x_over += over && g; r_over += over && !g;
-                    if (over && xr_over < 8u) printf("  %s (%s) seed %u: %u over the budget %u, CPU TEST %u\n", g ? "EXPLORE" : "RANDOM", gs.g->name, gp.seed, gc_cost(1), gc_budget(), gt_cpt); }
+                    if (over && xr_over < 8u) printf("  %s (%s) seed %u: %u over the budget %u, CPU TEST %u\n", g ? "EXPLORE" : "RANDOM", gs.g->name, gp.id.seed, gc_cost(1), gc_budget(), gt_cpt); }   /* (the seed built) */
                 dt = (uint32_t)song.g[G_DTIME];
                 song.g[G_DTIME] = gs.g->dtime;
                 st0 = gt_dly_stage();

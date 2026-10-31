@@ -159,6 +159,8 @@ int main(int argc, char **argv)
         for (g = 0; g <= NGENRE + 1u; g++)
             for (p = 0; p < 3u; p++) {
                 dm_reset();
+                /* (0.9, review M2) the identity folds a seed to seed % 10000 (gen.c gid_now): these, 7 .. 2475, stay in
+                 * range, the same pieces' seeds as before */
                 gp.genre = (uint8_t)g; gp.seed = (uint16_t)(p * 1234u + 7u); gp.energy = 50; gp.form = (uint8_t)(p % 3u);
                 gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;
                 for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;

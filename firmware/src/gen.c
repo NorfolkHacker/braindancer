@@ -1733,10 +1733,16 @@ static void gen_parts(void)
     uint8_t pdeg[4], pq[4], pn = gs.pn;
     uint8_t ord[GF_MAXROWS], mul[GF_MAXROWS];
     uint32_t nord;
-    if (form == FM_LOOP) return;
-    gseed(GS_FORM);
     for (k = 0; k < 4u; k++)
         if (project_used(k) && !((dice_secs >> k) & 1u)) return;   /* (a section of yours: kept) */
+    if (form == FM_LOOP) {                              /* (0.9, review I1) a LOOP: the piece before's song gone (PLAY
+                                                         * the loop, not its sections; ARRANGE empty) */
+        live.mode = 0; live.cur = -1;
+        chain_defaults(&chain_config);
+        ui.song_row = 0;
+        return;
+    }
+    gseed(GS_FORM);
     live.cur = -1;
     section_store(0);                                   /* A: the whole piece */
     if (live.cur != 0) return;
@@ -2447,6 +2453,17 @@ static void gen_make(void)
     uint32_t k, dr = NTRK, nlive = trk_live < NTRK ? trk_live : NTRK, nmel, drums, next, wet;
     /* the choices from the identity's seed: the style (or WILD) and the partner, the root, the scale, the progression,
      * the bass */
+    /* (0.9 spec 2, review I1) a piece depends on its identity alone: what the piece before left in the generator's state
+     * cleared first (gs as at the power-on: its kick, which a drumless piece's bass followed; its voicings ..), and on
+     * the tracks what a part reads before it writes it (below: each part's LEN, AUTO PAN, DIV, PLAYHEADS) */
+    memset(&gs, 0, sizeof gs);
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        t->p[P_SDIV] = track_desc(t, P_SDIV)->def;      /* (was: only after an EXPLORE piece, gx.dirty) */
+        t->p[P_APDEP] = track_desc(t, P_APDEP)->def; t->p[P_APRATE] = track_desc(t, P_APRATE)->def;   /* (gen_sound only */
+        t->p[P_APWAVE] = track_desc(t, P_APWAVE)->def; t->p[P_APSYNC] = track_desc(t, P_APSYNC)->def;   /* sets AUTO PAN) */
+    }
+    memset(fg_set, 0, sizeof fg_set);
     gcf.dev = gp.id.dev >= 100u ? (uint16_t)gp.id.dev : (uint16_t)gc_dev();   /* (0.9) the identity's CPU factor */
     gcf.two = (uint8_t)gp.id.two;
     gs.pi = gp.id.part != GID_SOLO && gp.id.main != GID_WILD ? gp.id.part : (uint8_t)GID_SOLO;
@@ -2454,12 +2471,8 @@ static void gen_make(void)
     gseed(GS_PICK);
     gx.on = (uint8_t)(gp.id.main == GID_WILD);
     gx.nvo = gx.np = 0; gx.eng = -1; gx.w = gp.id.complex; gx.nmax = 4;
-    if (!gx.on && gx.dirty) {                           /* (0.8.6) after an EXPLORE piece: DIV and PLAYHEADS as a genre's
-                                                         * piece has them (1/16, none) */
-        for (k = 0; k < NTRK; k++) trk[k].p[P_SDIV] = 2;
-        memset(fg_set, 0, sizeof fg_set);
-        gx.dirty = 0;
-    }
+    if (!gx.on && gx.dirty) gx.dirty = 0;               /* (0.8.6) after an EXPLORE piece: DIV and PLAYHEADS as a genre's
+                                                         * piece has them (1/16, none): 0.9, every piece (above) */
     if (gx.on) {                                        /* (0.8.6) EXPLORE: a genre of its own a seed */
         gs.gi = NGENRE;
         gs.mutant = 0;
@@ -2528,6 +2541,15 @@ static void gen_make(void)
         }
     }
     if (gx.on) gx_fit_sounds();                         /* (0.9.13) EXPLORE: inside the CPU budget */
+    for (k = 0; k < NTRK; k++)                          /* (0.9, review I1) a track not on FM6 now: the init voice, as at
+                                                         * the power-on (not the piece before's FM6 patch, kept in the
+                                                         * project) */
+        if (trk[k].eng_req != ENGI_FM6) {
+            uint8_t v[FP_SIZE + 1u];
+            fm6_unpack(FM6_INIT, v);
+            fm6_set_patch(k, v);
+            fm6_slot[k] = 0xFFu;
+        }
     gen_scale_page();
     gseed(GS_MIX);
     for (k = 0; k < NTRK; k++) gen_mix(&trk[k], gs.role[k]);
@@ -2570,6 +2592,10 @@ static void gen_make(void)
                 track_defaults_steps(t);
                 { uint32_t j; for (j = 0; j < NSTEP; j++) gclear(&t->step[j]); }   /* (no note left from before) */
                 motion_clear(t);
+                t->p[P_SLEN] = track_desc(t, P_SLEN)->def;   /* (0.9, review I1) the part written against LEN's default,
+                                                         * as from the power-on (the bass's held notes read it), never
+                                                         * the piece before's; GATE too (the arp's is its own) */
+                t->p[P_SGATE] = track_desc(t, P_SGATE)->def;
                 gen_role(t, k, len);
                 t->p[P_SLEN] = (int16_t)len;
                 if (r == RL_BASS) t->p[P_SGATE] = (int16_t)clamp(g->bass_gate, 1, 127);
