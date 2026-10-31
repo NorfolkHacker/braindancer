@@ -1032,7 +1032,7 @@ stops the transport without leaving the screen.
 |---|---|---|---|
 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG | **COMPLEX** 0–100 % | **TAPE**: AUTO, OFF, 10–100 % |
 
-**GENERATE.** There is no genre to choose: **OCT+** picks a style itself, from a fresh seed, and writes the piece.
+**GENERATE.** There is no genre to choose: **OCT+** picks a style itself, from a fresh number, and writes the piece.
 - Out of every ten presses about one is **WILD**: a piece that follows no style and breaks the rules on purpose (below).
 - Otherwise it draws one of the ten styles evenly (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO,
   RETROBOC, AMBIENT, AMB TECHNO), and **never the same style twice in a row**.
@@ -1043,11 +1043,11 @@ stops the transport without leaving the screen.
   DRILL'N'BASS with IDM or BREAKS; ACID with BREAKS, ELECTRO or AMB TECHNO; ELECTRO with IDM, GLITCH HOP, BREAKS
   or ACID; MICRO with IDM, GLITCH HOP or AMB TECHNO; RETROBOC with IDM or AMBIENT; AMBIENT with IDM, RETROBOC or
   AMB TECHNO; AMB TECHNO with ACID, MICRO or AMBIENT.
-- The panel names the piece: the style, a **+** and the partner for a blend, and the seed: **RETROBOC+AMBIENT 0421**,
+- The panel names the piece: the style, a **+** and the partner for a blend, and its number: **RETROBOC+AMBIENT 0421**,
   **ACID 0421**, **WILD 0421**. (A name too wide for the panel is shortened.)
 - It plays as making a piece always did: the tracks are changed (UNDO is marked first) and you press PLAY. It is
   **refused while a song (ARRANGE) is playing**. A new piece ignores whatever was muted when you pressed OCT+.
-- The piece is **deterministic**: the same style, partner, seed, ENERGY, FORM, COMPLEX, TAPE and the FM-1's CPU
+- The piece is **deterministic**: the same style, partner, number, ENERGY, FORM, COMPLEX, TAPE and the FM-1's CPU
   figure make the same piece every time. The result is ordinary music in the tracks: edit it, save it, play it.
 - Turning a knob puts PRESETS back on NEW; the next OCT+ is a new piece that uses the new setting.
 
@@ -1064,7 +1064,7 @@ saved in a project or in the settings, and a saved project is untouched.
 - **OFF**: no tape (AGE 0). **10–100 %**: that AGE, for every piece.
 - A TAPE amount you set with the knob is never changed by the generator.
 - When a piece is too heavy for the FM-1 (see *The CPU fit* below), RETROBOC and AMBIENT (and blends they lead) keep their tape
-  and the music is thinned around it; for the other styles the tape gives way first.
+  and the music is thinned around it; for the other styles the tape gives way before the music is thinned.
 
 The styles: IDM, GLITCH HOP, BREAKS,
 DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO. Each one knows its tempo

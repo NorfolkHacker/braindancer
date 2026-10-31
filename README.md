@@ -23,7 +23,7 @@ the Rephlex catalogue.
   is saved in projects or settings.
 - **TAPE in GEN**: on AUTO each style sets AGE (RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15, the others 0; a
   blend gets the main style's plus half the partner's, at most 70; WILD 0 to 50). RETROBOC and AMBIENT keep their tape and
-  the music is thinned around it; for the other styles the tape gives way first when a piece is too heavy. A TAPE amount
+  the music is thinned around it; for the other styles the tape gives way before the music is thinned, when a piece is too heavy. A TAPE amount
   set with the knob is never changed. OFF and 10 to 100 % set AGE for every piece.
 - **Every piece is fitted** to what the FM-1 can play, with a budget calibrated on the device (2 CORES); one core is fitted
   too but not calibrated. A new piece ignores what was muted when GENERATE was pressed.

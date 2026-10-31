@@ -47,7 +47,7 @@ for i in range(W - 140):
     d.line([(70 + i, 330), (70 + i, 335)], fill=heat(i / (W - 140)))
 cap = font('SemiBold', 22)
 y0 = 370
-big = [('home', 'HOME · six living tracks'), ('gen_wild', 'GEN · EXPLORE, a new song idea'),
+big = [('home', 'HOME · six living tracks'), ('gen_wild', 'GEN · GENERATE, a new song idea'),
        ('save_arrange', 'ARRANGE · the song in sections')]
 for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
@@ -65,7 +65,7 @@ for r, row in enumerate(strips):
 y2 = y1 + 2 * 270 + 20
 cards = [("SIX RULES", "SELECT walks a section's pages;\nits button jumps group to group."),
          ("THREE SKINS", "AIR, COLORS and HUD: each\nknob its colour, tabs, a breadcrumb."),
-         ("EXPLORE", "HOME + SELECT writes a whole song;\nEXPLORE breaks every rule, 43 genres."),
+         ("GENERATE", "HOME + SELECT writes a whole song;\nOCT+ picks a style, or breaks every rule."),
          ("VOICE SINGS", "Words in ES, EN and JA: each note\nthe next syllable of your lyric."),
          ("ANIMAL", "Birds, crickets, frogs, wolves:\ncalls from physical models."),
          ("DRUM-X OCTAVES", "Above: ratchets x2..x8. Below:\nSHORT, GHOST, FLAM, per sound."),
