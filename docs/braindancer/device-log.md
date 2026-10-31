@@ -141,3 +141,20 @@ Still pending:
 - The computer's MIDI port: "BRAINDANCER MIDI 1" (ALSA client "BRAINDANCER").
 - The user checked the splash (BRAINDANCER types out and fits) and ABOUT (Braindancer v0.7, the address line fits): yes.
 - Proven commit: aec409f.
+
+## 2026-10-30 — Braindancer 0.8 (TAPE, acid, presets, kits)
+
+Release prep done (version v0.8, cheat sheets, manual and navigation map regenerated); every device line below is
+pending until the device session.
+
+- Backup before: pending (softkey into UBOOT, then `fm1_unbrick.py backup`; path and sha256 to be recorded).
+- Release built on clean HEAD: pending (braindancer-0.8.fwsc, size, identity, sha256).
+- Install: pending (`tools/fm1_install.py ... --port "BRAINDANCER"`).
+- Console `status`: pending (version `braindancer v0.8`, idle cpu_pct, `audio_lost`, `safety_tape` 0).
+- No-manual task "make it sound like a worn tape": pending (expected path FX > MASTER > KNOB 4 AGE).
+- Acid line with accents and slides on an ANALOG mono track (ACID SQUELCH): pending (the climb heard; slides glide
+  without a new attack).
+- CPU TEST with TAPE off: pending (late / lost blocks per second over ~10 s on SEQ STEPS, cpu %, `safety_tape`).
+- CPU TEST with AGE 100 set before it: pending (same figures; which run stored `cpt_res`, pre-flight 14).
+- GEN piece at AGE 50: pending (no lost blocks).
+- Proven commit: pending.
