@@ -177,15 +177,13 @@ static void gov_tick(int over, int hot, int under, int shed)
  * (DSF_CALM); a lever on again within 5 s of its own release takes 4 s of calm to go, then 8 s, each lever its own:
  * a load at the edge settles on it, never flaps. dly_safety, safe_hush_n, tape_safety: the times each came on (the
  * console's status); safe_kills: the voices the hush faded (not stolen ones). New music (voice.c safe_clear): all off,
- * TAPE back */
+ * TAPE back, each lever on stamped as released (0.9.1). dsf_rearm, dsf_since: voice.c (0.9.1) */
 #define DSF_HALF ((HALF_FRAMES * 1000000u / FS) * FM1_TICKS_PER_US)
 #define DSF_CALM ((HALF_FRAMES * 1000000u / FS) * 80u / 100u * FM1_TICKS_PER_US)
 #define DSF_STEP 172u                                  /* halves between two levers (0.5 s: the last one's effect seen) */
 #define DSF_REARM 1720u                                /* .. a lever on again within 5 s of its release: a longer calm */
 static uint8_t dsf_behind;                              /* bit k: the half k halves ago behind */
-static uint8_t dsf_rearm[4];                            /* [0] delay [1] texture [2] arp [3] TAPE: each lever's calm, 1 s << it */
 static uint16_t dsf_calm, dsf_wait;                     /* halves in a row under 80 %; to the next lever */
-static uint16_t dsf_since[4] = {0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu};   /* since each lever's release */
 static uint32_t dly_safety, safe_hush_n[2], safe_kills;
 static uint32_t tape_safety;                            /* the times TAPE's rung came on (console: safety_tape) */
 static uint32_t dsf_seq[4], dsf_tick;                   /* when each lever last came on (a count): released last on first */

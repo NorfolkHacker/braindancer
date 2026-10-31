@@ -2619,6 +2619,43 @@ static uint32_t proj_music_sig(void)
     h = as_mix(h, lyr_txt, sizeof lyr_txt);             /* (0.8.5) VOICE's lyrics */
     return as_mix(h, proj_name, sizeof proj_name);
 }
+/* (0.9.1 spec 3) what a user's edit of track k changes: its steps, its sound (every parameter at its base: automation
+ * playing is not an edit; not its mute, a section's or a scene's), its engine and preset, its FM6 patch */
+static uint32_t trk_edit_sig(uint32_t k)
+{
+    const track_t *t = &trk[k % NTRK];
+    uint32_t h = 2166136261u, j;
+    for (j = 0; j < P_COUNT; j++)
+        if (j != P_MUTE) {
+            int16_t v = motion_base_value(t, j);
+            h = as_mix(h, &v, sizeof v);
+        }
+    h = as_mix(h, &t->eng_req, 1);
+    h = as_mix(h, &t->preset, 1);
+    h = as_mix(h, t->step, sizeof t->step);
+    return as_mix(h, fm6_patch[k % NTRK], sizeof fm6_patch[k % NTRK]);
+}
+/* (0.9.1 spec 3) autosave_poll's 250 ms tick: the net's parts' signatures taken when it is armed again or another
+ * section plays (a song's next row); a part whose signature moved since was edited: out of the net for the rest of the
+ * piece (safe_edit). Any source counts: the panel, the web editor, a controller's CC, MUTATE. An edit in the first
+ * 250 ms after the arm is taken as the piece's */
+static uint32_t safe_sig[2];
+static uint8_t safe_seen_arms;
+static int8_t safe_seen_sec = -2;
+static void safe_edit_poll(void)
+{
+    uint32_t i, k;
+    if (safe_seen_arms != safe_arms || safe_seen_sec != live.cur) {
+        safe_seen_arms = safe_arms;
+        safe_seen_sec = live.cur;
+        for (i = 0; i < 2u; i++)
+            safe_sig[i] = safe_part[i] < NTRK ? trk_edit_sig(safe_part[i]) : 0u;
+        return;
+    }
+    for (i = 0; i < 2u; i++)
+        if ((k = safe_part[i]) < NTRK && trk_edit_sig(k) != safe_sig[i])
+            safe_edit(k);
+}
 static uint32_t sig_rows(uint32_t m) { return as_mix(m, &chain_config, sizeof chain_config); }
 static uint32_t autosave_sig(void) { return sig_rows(proj_music_sig()); }
 
@@ -2670,6 +2707,7 @@ static void autosave_poll(void)
         fill_poll = fm1_ms;
         proj_unsaved = (uint8_t)(m != proj_clean_sig);
         proj_fill_poll(sig_rows(m));
+        safe_edit_poll();
     }
 #if FELUCCA_FLASH
     uint32_t sig;

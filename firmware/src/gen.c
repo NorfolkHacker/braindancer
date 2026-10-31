@@ -113,6 +113,7 @@ static struct {
                                                          * before the music was thinned */
     uint8_t grain_off;                                  /* (0.9) the fitter turned the delay's grain off (gx_fit_piece) */
     uint8_t in_sec;                                     /* (0.9) a section after A being fitted (gen_fit_section) */
+    uint8_t wrote;                                      /* (0.9.1) the sections gen_parts wrote (bit s: the net's, safe_secs) */
 } gs;
 #define GKICK(i) ((uint32_t)(gs.kick >> ((i) & 63u)) & 1u)
 static uint32_t gseed_mix(uint32_t part)                /* (0.9) a blend's partner in every stream but GS_PICK's */
@@ -1758,6 +1759,7 @@ static void gen_parts(void)
     section_store(0);                                   /* A: the whole piece */
     if (live.cur != 0) return;
     dice_secs |= 1u;
+    gs.wrote |= 1u;
     for (k = 0; k < NTRK; k++) a_rel[k] = trk[k].p[P_REL];
     memcpy(a_fg, fg_set, sizeof a_fg); a_rtype = song.g[G_RTYPE]; a_nmax = gx.nmax;
     memcpy(pdeg, gs.pdeg, sizeof pdeg); memcpy(pq, gs.pq, sizeof pq);
@@ -1842,6 +1844,7 @@ static void gen_parts(void)
         section_store(k);
         if (live.cur != (int8_t)k) { n = k; break; }
         dice_secs |= (uint8_t)(1u << k);
+        gs.wrote |= (uint8_t)(1u << k);
     }
     memcpy(gs.pdeg, pdeg, sizeof pdeg); memcpy(gs.pq, pq, sizeof pq); gs.pn = pn;
     gplan(0);                                           /* (A's plan: the music live is A) */
@@ -2925,10 +2928,12 @@ static void gen_build(const genid_t *id)
     undo_mark();
     gp.id = *id;
     gen_make();
-    safe_part[0] = gs.act[RL_TEX] && gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) */
-    safe_part[1] = gs.act[RL_ARP] && gs.trk_of[RL_ARP] < trk_live ? gs.trk_of[RL_ARP] : (uint8_t)NTRK;   /* the parts the
-                                                         * safety net hushes (audio.c): the piece's texture and arp, if
-                                                         * it plays them (after gen_make: its section_load cleared them) */
+    safe_gen[0] = gs.act[RL_TEX] && gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) */
+    safe_gen[1] = gs.act[RL_ARP] && gs.trk_of[RL_ARP] < trk_live ? gs.trk_of[RL_ARP] : (uint8_t)NTRK;   /* the parts the
+                                                         * safety net hushes (audio.c): the piece's texture and arp, if it
+                                                         * plays them; (0.9.1) kept for its sections (safe_secs) */
+    safe_secs = gs.wrote;
+    safe_arm(1u);
     gid_name(&gp.id, gp.last, sizeof gp.last, 0);
     str_cpy(m, "GEN: ", sizeof m); str_cpy(m + 5, gp.last, sizeof m - 5);
     if (text_w(&UF_HDR, m) > 232) gid_name(&gp.id, gp.last, sizeof gp.last, 1);   /* (too wide: the short names) */
@@ -3052,8 +3057,7 @@ static const char *dice_seq(track_t *t)
     for (i = 0; i < GP_N; i++) if (!gs.amt[i]) gs.amt[i] = 60;
     gx.nmax = 4;                                        /* (re-review N2) a chord as many notes as it comes (gnote) */
     gs.role[k] = (uint8_t)r; gs.act[r] = 1; gs.trk_of[r] = (uint8_t)k;
-    if (safe_part[0] == k || safe_part[1] == k)         /* (ACID FM 0.5.2) a part diced on it: the safety net's no more */
-        safe_part[safe_part[1] == k] = NTRK;
+    safe_edit(k);                                       /* (ACID FM 0.5.2; 0.9.1 for the rest of the piece) a part diced on it */
     len = (uint32_t)t->p[P_SLEN];
     if (len < 8u || len > NSTEP) len = gs.len < 16u ? 16u : gs.len;
     load_begin(t, LOAD_PAT);

@@ -5,6 +5,7 @@
  * JIANT (FELUCCA TONIC): after SLOOP 2.4.1's song (isod89/sloop-fm1, GPL-3.0). */
 /* The song, the main loop's part (song_chain.c: what it is). Included by project.c. */
 static project_store_t song_keep __attribute__((section(".pool")));   /* the music as it was before PLAY */
+static uint8_t song_keep_gen;                    /* (0.9.1) the music before PLAY was the GEN piece: SONG END arms its net */
 
 /* ---- the songs (NSONG, four sections each: storage.c) */
 static uint8_t song_idx_dirty;                    /* the index changed (rows, the current song), not in flash yet */
@@ -135,6 +136,7 @@ static uint32_t chain_prepare(void)
             return 3u + chain_config.row[i].slot;
     project_capture(&proj_scratch);                   /* the music as it is: back when the song ends */
     chain.kept = (uint8_t)proj_pack(&song_keep, &proj_scratch);
+    song_keep_gen = safe_live;
     chain.config = chain_config;
     chain.loop = 0;
     chain.pass = 0;
@@ -158,6 +160,7 @@ static int section_load(uint32_t s)
     proj_lfo_keep = 0;
     if (rc)
         return 1;
+    safe_arm((safe_secs >> (s & 3u)) & 1u);             /* (0.9.1 spec 2) a section the GEN piece wrote: its net again */
     cpt_clk = 0;                                        /* (ACID FM 3c-2 task 7, fix round 1) CPU TEST left: the section's own
                                                          * CLOCK (restored with it); a failed load leaves the test on INT */
     chain_config = keep;
@@ -205,6 +208,7 @@ static void section_store(uint32_t s)
     char b[8] = "A";
     s &= 3u;
     dice_secs &= (uint8_t)~(1u << s);                 /* (0.6.81) a STORE: the section yours (DICE ALL marks its own after) */
+    safe_secs &= (uint8_t)~(1u << s);                 /* (0.9.1) yours: not the GEN piece's */
     b[0] = (char)('A' + s);
     project_capture(&proj_scratch);
     if (!proj_pack(&proj_wire, &proj_scratch)) {        /* (0.6: packed aside first, the section kept if it does not fit) */
@@ -339,6 +343,7 @@ static int song_switch(uint32_t n, int load_a)
     song_idx.rows[song_cur] = chain_config;           /* (the rows of the song left) */
     song_cur = (uint8_t)n;
     dice_secs = 0;                                    /* (0.6.81) another project's sections: none DICE ALL's */
+    safe_secs = 0;                                    /* (0.9.1) .. nor the GEN piece's */
     chain_config = song_idx.rows[n];
     if (song_index_save()) {                          /* (failed: written again by song_poll) */
         song_idx_dirty = 1;
@@ -425,6 +430,7 @@ static void song_poll(void)
             !project_restore_runtime(&proj_scratch)) {
             proj_cur = cur;                           /* (the music before the song: its slot and name) */
             str_cpy(proj_name, name, PROJ_NAME_LEN + 1u);
+            safe_arm(song_keep_gen);                  /* (0.9.1 spec 2) the GEN piece back: its net too */
             ui_message("SONG END");
         }
     }

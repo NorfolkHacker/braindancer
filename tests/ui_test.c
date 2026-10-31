@@ -227,6 +227,9 @@ static void ui_power_on(void)
     settings.palette = UI_ACID_INDEX;
     palette_set(UI_ACID_INDEX);
     transport_req = 0;
+    safe_clear();                                 /* (0.9.1) the safety net as at power-on: no GEN piece, no parts, no */
+    safe_gen[0] = safe_gen[1] = NTRK;             /* sections of one */
+    safe_secs = 0;
     panic_req = 0;
     mi_r = mi_w = midi_in_overflow = 0;
     memset(midi_sel_on, 0, sizeof midi_sel_on);

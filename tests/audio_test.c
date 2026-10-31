@@ -599,6 +599,23 @@ static void safety(void)
         fx_safe = SAFE_TAPE | SAFE_DLY;
         safe_clear();
         check("  (0.8) new music (safe_clear): TAPE's rung off", !fx_safe);
+        {   /* (0.9.1 spec 4) new music (safe_clear) drops the levers on as a calm release does: each stamped released, so
+             * one on again within 5 s takes the longer calm (4 s) and the net cannot flap once on the next overload */
+            uint32_t h;
+            int ok;
+            safe_reset(4u, LOAD_LITE);
+            safe_part[0] = 5u;
+            for (h = 0; h < 400u; h++) safe_run(1u, 125u, 0);
+            ok = (fx_safe & (SAFE_DLY | SAFE_TEX)) == (SAFE_DLY | SAFE_TEX);
+            safe_clear();
+            ok &= !fx_safe && dsf_since[0] == 0u && dsf_since[1] == 0u && dsf_since[2] == 0xFFFFu && dsf_since[3] == 0xFFFFu;
+            safe_part[0] = 5u;                          /* (re-armed: a section of the piece loaded) */
+            for (h = 0; h < 400u; h++) safe_run(1u, 125u, 0);
+            printf("audio: after safe_clear, the delay's and the texture's levers on again: calm x%u, x%u\n",
+                   1u << dsf_rearm[0], 1u << dsf_rearm[1]);
+            check("  (0.9.1) new music (safe_clear): the levers on stamped released; on again within 5 s: the 4 s calm",
+                  ok && (fx_safe & (SAFE_DLY | SAFE_TEX)) == (SAFE_DLY | SAFE_TEX) && dsf_rearm[0] == 2u && dsf_rearm[1] == 2u);
+        }
         safe_reset(4u, LOAD_LITE);
     }
     {   /* (review M2) the delay bus at rest (fx_rest: nothing sent, its rate a stale one): its lever not on */

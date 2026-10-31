@@ -309,17 +309,51 @@ static volatile uint8_t gov_cap = 16u, gov_lite;
 #define SAFE_TAPE 8u            /* (0.8) bit 3: TAPE faded out of the chain (fx.c tape_begin), the ladder's first rung */
 static volatile uint8_t fx_safe;
 static uint8_t safe_part[2] = {NTRK, NTRK};             /* the GEN piece's texture and arp tracks (NTRK: none) */
+/* (audio.c fx_safety_tick) each lever's calm (1 s << it) and the halves since its release ([0] delay [1] texture [2] arp
+ * [3] TAPE). (0.9.1) Here, before audio.c, so safe_clear stamps them (no ISR code changed) */
+static uint8_t dsf_rearm[4];
+static uint16_t dsf_since[4] = {0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu};
+/* (0.9.1 spec 2, 3) the GEN piece the net belongs to: its texture and arp tracks (a track the user edits: out, for the
+ * rest of the piece; project.c safe_edit_poll), the sections it wrote (bit s; a section stored over and another
+ * project's: not; song_main.c), the music now that piece (gen_build; one of its sections loaded; SONG END back to it),
+ * and a count of the arms (safe_edit_poll takes the parts' signatures again) */
+static uint8_t safe_gen[2] = {NTRK, NTRK};
+static uint8_t safe_secs, safe_live, safe_arms;
 static uint32_t safe_hushed(uint32_t k)                 /* track k hushed by the safety net */
 {
     return ((fx_safe & SAFE_TEX) && k == safe_part[0]) || ((fx_safe & SAFE_ARP) && k == safe_part[1]);
 }
 /* other music in (a project, a section, UNDO, NEW PROJECT, the editor's restore): no part of it the net may hush (they
- * are the user's), the levers off (the new music starts as it is; the net comes on again if it must). The audio ISR
- * off or not running */
+ * are the user's), the levers off (the new music starts as it is; the net comes on again if it must). (0.9.1 spec 4)
+ * Each lever on is stamped as released (dsf_since 0, as a calm release does, audio.c): on again within 5 s it takes
+ * the longer calm, so it never flaps once. The audio ISR off or not running */
 static void safe_clear(void)
 {
+    uint32_t l, on = fx_safe;
+    for (l = 0; l < 4u; l++)
+        if (on & (l == 3u ? SAFE_TAPE : 1u << l))
+            dsf_since[l] = 0;
     safe_part[0] = safe_part[1] = NTRK;
+    safe_live = 0;
     fx_safe = 0;
+}
+/* (0.9.1 spec 2) the GEN piece's parts the net may hush again (on: the music is the piece, or one of its sections), or
+ * none (another music); after the load's safe_clear */
+static void safe_arm(uint32_t on)
+{
+    safe_part[0] = on ? safe_gen[0] : (uint8_t)NTRK;
+    safe_part[1] = on ? safe_gen[1] : (uint8_t)NTRK;
+    safe_live = (uint8_t)(on != 0u);
+    safe_arms++;
+}
+/* (0.9.1 spec 3) track k rewritten by the user (or diced): never hushed by the net for the rest of the piece */
+static void safe_edit(uint32_t k)
+{
+    uint32_t i;
+    for (i = 0; i < 2u; i++) {
+        if (safe_gen[i] == k) safe_gen[i] = NTRK;
+        if (safe_part[i] == k) safe_part[i] = NTRK;
+    }
 }
 #define LITE_FM6_POLY 2u
 #define ECO_POLY 4u

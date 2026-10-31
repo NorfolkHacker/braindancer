@@ -1943,8 +1943,9 @@ int main(void)
         ok_new = safe_part[0] == NTRK && safe_part[1] == NTRK && !fx_safe;
         gen_with(1, gp.seed, 50, 1);
         ok_regen &= safe_part[0] < NTRK;
-        fx_safe = SAFE_TEX;
-        ok_sec = !section_load(0) && safe_part[0] == NTRK && safe_part[1] == NTRK && !fx_safe;
+        {   uint8_t k0 = safe_part[0], k1 = safe_part[1];   /* (0.9.1 spec 2) a section the piece wrote: armed again, levers off */
+            fx_safe = SAFE_TEX;
+            ok_sec = !section_load(0) && safe_part[0] == k0 && safe_part[1] == k1 && !fx_safe; }
         gen_with(1, gp.seed, 50, 1);
         k = safe_part[0];
         (void)dice_seq(&trk[k % NTRK]);
@@ -1961,10 +1962,79 @@ int main(void)
         fx_safe = 0;
         printf("gen: (0.5.2) the safety net's parts: %u of 60 pieces with one, %u not the playing texture / arp\n", armed, m1_bad);
         bad += gcheck("(0.5.2 review M1) the net's parts: the piece's texture and arp, only if it plays them", !m1_bad && armed > 10u);
-        bad += gcheck("  (review I1) none, the levers off, after UNDO, NEW PROJECT, a section load (a project load), a part diced "
-                      "on the track; GEN again: back", ok_undo && ok_new && ok_sec && ok_dice && ok_regen);
+        bad += gcheck("  (review I1) none, the levers off, after UNDO, NEW PROJECT, (0.9.1: a section of the piece loaded: "
+                      "armed again, the levers off), a part diced on the track; GEN again: back",
+                      ok_undo && ok_new && ok_sec && ok_dice && ok_regen);
         bad += gcheck("  (3c-2 final review 8) none, the levers off, after CPU TEST (its load the real one)", ok_cpt);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (0.9.1 spec 2, 3) the safety net's parts follow the GEN piece: armed again when one of its sections loads and
+         * when SONG END brings it back; not for a section stored over (yours) or another project's; a track the user
+         * edits (its steps, its sound, its engine) out for the rest of the piece; a mute is not an edit */
+        uint32_t sd, a0 = NTRK, a1 = NTRK, s0;
+        int ok_load, ok_mine, ok_end, ok_end_other, ok_switch, ok_keep, ok_steps, ok_rest, ok_regen, ok_sound, ok_engine, ok_ui;
+        mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+        for (sd = 0; sd < 200u; sd++) {                 /* (a PARTS piece that plays both, its sections A B C written) */
+            gen_with(1, sd * 7u + 1u, 50, 1);
+            if (safe_part[0] < NTRK && safe_part[1] < NTRK && (gs.wrote & 7u) == 7u) break;
+        }
+        a0 = safe_part[0]; a1 = safe_part[1];
+        fx_safe = SAFE_TEX;
+        ok_load = a0 < NTRK && a1 < NTRK && safe_live && safe_secs == gs.wrote &&
+                  !section_load(1) && safe_part[0] == a0 && safe_part[1] == a1 && !fx_safe && safe_live;
+        ok_load &= !section_load(0) && safe_part[0] == a0 && safe_part[1] == a1;
+        section_store(1);                               /* (B stored over: the user's now) */
+        ok_mine = !section_load(1) && safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;
+        ok_mine &= !section_load(0) && safe_part[0] == a0 && safe_part[1] == a1 && safe_live;   /* (A still the piece's) */
+        gen_with(1, gp.seed, 50, 1);                    /* SONG END: the music before PLAY back, the net with it */
+        ok_end = !chain_prepare();
+        transport_req = 0; chain.armed = 0; chain.ended = 1; song.playing = 0; fx_safe = SAFE_ARP;
+        song_poll();
+        ok_end &= msg_is("SONG END") && safe_part[0] == a0 && safe_part[1] == a1 && !fx_safe && safe_live;
+        gen_with(1, gp.seed, 50, 1);                    /* .. not when the music before PLAY was not the piece */
+        safe_clear();
+        ok_end_other = !chain_prepare();
+        transport_req = 0; chain.armed = 0; chain.ended = 1; song.playing = 0;
+        song_poll();
+        ok_end_other &= safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;
+        gen_with(1, gp.seed, 50, 1);                    /* another project: none of these sections the piece's */
+        ok_switch = !song_switch(1u, 0) && !safe_secs;
+        ok_switch &= !song_switch(0u, 0);
+        /* the user's edits (safe_edit_poll: autosave_poll's 250 ms tick; its first pass after an arm takes the signatures) */
+        gen_with(1, gp.seed, 50, 1);
+        safe_edit_poll();
+        trk[a0].p[P_MUTE] = 1; safe_edit_poll();
+        ok_keep = safe_part[0] == a0 && safe_part[1] == a1;   /* (a mute: no edit) */
+        trk[a0].p[P_MUTE] = 0;
+        trk[a0].step[0].vel ^= 1u; safe_edit_poll();    /* a step edited on the texture */
+        ok_steps = safe_part[0] == NTRK && safe_part[1] == a1 && safe_gen[0] == NTRK;
+        ok_rest = !section_load(1) && safe_part[0] == NTRK && safe_part[1] == a1;   /* (for the rest of the piece) */
+        gen_with(1, gp.seed, 50, 1);
+        ok_regen = safe_part[0] == a0 && safe_part[1] == a1;   /* (the next piece: its own parts) */
+        safe_edit_poll();
+        apply_preset_to(&trk[a1], (trk[a1].preset + 1u) % 4u); safe_edit_poll();   /* the arp's sound */
+        ok_sound = safe_part[1] == NTRK && safe_part[0] == a0;
+        gen_with(1, gp.seed, 50, 1); safe_edit_poll();
+        set_engine_of(&trk[a0], trk[a0].eng_req == ENGI_ANALOG ? ENGI_LOFI : ENGI_ANALOG); safe_edit_poll();   /* its engine */
+        ok_engine = safe_part[0] == NTRK && safe_part[1] == a1;
+        gen_with(1, gp.seed, 50, 1); fm1_ms += 300u; autosave_poll();   /* the panel's way, through the real tick */
+        song.sel = (uint8_t)a1; go_home(); frame(); press(B_EDIT); frames(64);
+        s0 = trk_edit_sig(a1);
+        turn(EN_K1, 3); frames(64);
+        if (trk_edit_sig(a1) == s0) { turn(EN_K1, -6); frames(64); }
+        fm1_ms += 300u; autosave_poll();
+        ok_ui = trk_edit_sig(a1) != s0 && safe_part[1] == NTRK && safe_part[0] == a0;
+        if (!(ok_load && ok_mine && ok_end && ok_end_other && ok_switch && ok_keep && ok_steps && ok_rest && ok_regen &&
+              ok_sound && ok_engine && ok_ui))
+            printf("gen:   (0.9.1 net) load %d mine %d end %d end-other %d switch %d keep %d steps %d rest %d regen %d "
+                   "sound %d engine %d ui %d\n", ok_load, ok_mine, ok_end, ok_end_other, ok_switch, ok_keep, ok_steps,
+                   ok_rest, ok_regen, ok_sound, ok_engine, ok_ui);
+        bad += gcheck("(0.9.1 spec 2) the net's parts again when a section of the piece loads and after SONG END; not for "
+                      "a section of yours, nor after another project", ok_load && ok_mine && ok_end && ok_end_other && ok_switch);
+        bad += gcheck("(0.9.1 spec 3) a track the user edits (steps, sound, engine; the panel too) out of the net for the "
+                      "rest of the piece; a mute is not an edit", ok_keep && ok_steps && ok_rest && ok_regen && ok_sound &&
+                      ok_engine && ok_ui);
+        fx_safe = 0; mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* (0.9 spec 6, pre-flight 1) GEN's page and its recent pieces are the session's: a project and the settings are
          * byte for byte the same whatever they hold (nothing to ignore on load: nothing of GEN was ever stored) */
