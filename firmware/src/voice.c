@@ -326,7 +326,8 @@ static uint32_t safe_hushed(uint32_t k)                 /* track k hushed by the
 /* other music in (a project, a section, UNDO, NEW PROJECT, the editor's restore): no part of it the net may hush (they
  * are the user's), the levers off (the new music starts as it is; the net comes on again if it must). (0.9.1 spec 4)
  * Each lever on is stamped as released (dsf_since 0, as a calm release does, audio.c): on again within 5 s it takes
- * the longer calm, so it never flaps once. The audio ISR off or not running */
+ * the longer calm, so it never flaps once. The audio ISR off (project_restore_runtime), or running (system_init,
+ * cpu_test_song): byte and halfword stores, so at worst a lever the ISR turns on meanwhile goes unstamped (one flap) */
 static void safe_clear(void)
 {
     uint32_t l, on = fx_safe;

@@ -388,6 +388,8 @@ static void song_poll(void)
         chain.applied = 0;
         for (k = 0; k < NTRK; k++)
             fm6_adopt(k);                             /* (an FM6 track's SLOT: F n or OWN) */
+        safe_arms++;                                  /* (0.9.1) the net's parts' signatures taken again, as the
+                                                       * section is (the SLOTs adopted: not an edit) */
         if (jump)
             proj_clean_mark();                        /* (3c-2 final review 3) the music is that section's now: clean */
         sync_reload = 1;

@@ -192,12 +192,14 @@ static uint32_t ed_bk_commit(void)
             if (proj_cur == k)
                 proj_cur = PROJ_NO_SLOT;
             if (ed_bk_len) memcpy(&proj_slot[k], raw, ed_bk_len);
+            safe_secs &= (uint8_t)~(1u << k);       /* (0.9.1) the user's: not the GEN piece's (its net) */
         }
     } else if (ed_bk_id >= 2u && ed_bk_id <= 5u) {
         memset(&proj_slot[ed_bk_id - 2u], 0, sizeof proj_slot[0]);
         if (proj_cur == ed_bk_id - 2u)
             proj_cur = PROJ_NO_SLOT;                     /* (another project there now: the music keeps its name) */
         if (ed_bk_len) memcpy(&proj_slot[ed_bk_id - 2u], raw, ed_bk_len);
+        safe_secs &= (uint8_t)~(1u << (ed_bk_id - 2u));   /* (0.9.1) the user's: not the GEN piece's (its net) */
     } else if (ed_bk_id == 1u) {
         memcpy(&ed_bk_settings, raw, sizeof ed_bk_settings);
         settings_import(&ed_bk_settings, sizeof ed_bk_settings);

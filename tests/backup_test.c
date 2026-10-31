@@ -281,6 +281,25 @@ int main(void)
     bad += check("a FUN9 project restores into slot 3 (flash and RAM)",
                  put_all(4, &st, sizeof st, st_crc32(&st, sizeof st)) == 0 && project_used(2) &&
                  !memcmp(&proj_slot[2], &st, sizeof st) && st_load(OBJ_PROJECT0 + 2, &proj_wire, sizeof proj_wire) == (int)sizeof st);
+    {   /* (0.9.1 review I1) a section the editor restores (a project slot, the current song's section) or SAVE > PROJECT
+         * writes (flash) is the user's: never the GEN piece's, the net not armed on it; a section left alone still is */
+        uint32_t k;
+        int ok;
+        for (k = 0; k < 4u; k++) memcpy(&proj_slot[k], &st, sizeof st);   /* (as a GEN piece's sections A..D) */
+        safe_gen[0] = 1u; safe_gen[1] = 2u; safe_secs = 15u; safe_arm(1u);
+        ok = put_all(3, &st, sizeof st, st_crc32(&st, sizeof st)) == 0 && !(safe_secs & 2u) &&
+             !section_load(1) && safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;
+        bad += check("(0.9.1) a section restored by the editor (id 3): the net not armed on it", ok);
+        ok = put_all(42u, &st, sizeof st, st_crc32(&st, sizeof st)) == 0 && !(safe_secs & 4u) &&
+             !section_load(2) && safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;
+        bad += check("(0.9.1) the current song's section restored (id 42): the net not armed on it", ok);
+        ok = !project_save_as(3, "MINE") && !(safe_secs & 8u) && !section_load(3) && safe_part[0] == NTRK &&
+             safe_part[1] == NTRK && !safe_live;
+        bad += check("(0.9.1) SAVE > PROJECT over a section (flash): the net not armed on it", ok);
+        ok = (safe_secs & 1u) && !section_load(0) && safe_part[0] == 1u && safe_part[1] == 2u && safe_live;
+        bad += check("(0.9.1) the section left alone: the net armed on it again", ok);
+        safe_clear(); safe_gen[0] = safe_gen[1] = NTRK; safe_secs = 0;
+    }
     {   /* (JIANT) the songs: a section of song 3 (id 40 + 4 * 2 + 1) into its flash object, read back by LIST / GET; the
          * current song's (song 1) from RAM; the song index (id 10) with a scene, the song playing kept */
         uint32_t len = 0, crc = 0;

@@ -1801,6 +1801,7 @@ static int project_save_as(uint32_t slot, const char *name)
             return 2;
         }
         memcpy(&proj_slot[slot & 3u], &proj_wire, sizeof proj_wire);
+        safe_secs &= (uint8_t)~(1u << (slot & 3u));     /* (0.9.1) the user's music there: not the GEN piece's */
         proj_name_get(proj_name, (const uint8_t *)p->name);
         proj_cur = (uint8_t)(slot & 3u);
         live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing, SAVE > PROJECT shows it) */
@@ -1811,6 +1812,7 @@ static int project_save_as(uint32_t slot, const char *name)
     }
 #endif
     memcpy(&proj_slot[slot & 3u], &proj_wire, sizeof proj_wire);
+    safe_secs &= (uint8_t)~(1u << (slot & 3u));         /* (0.9.1) the user's music there: not the GEN piece's */
     proj_name_get(proj_name, (const uint8_t *)p->name);
     proj_cur = (uint8_t)(slot & 3u);
     live.cur = (int8_t)(slot & 3u);
@@ -2325,6 +2327,7 @@ static __attribute__((noinline)) void perf_mut_poll(void)
     for (k = 0; k < NTRK; k++)
         mut.sig[k] = steps_sig(&trk[k]);
 }
+static void safe_edit_poll(void);                       /* (0.9.1) below, autosave_poll's tick */
 static void mutate_poll(void)
 {
     uint32_t en = mut_enabled(), k, nx, anc;
@@ -2368,7 +2371,8 @@ static void mutate_poll(void)
             anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
             break;
         }
-    for (k = 0; k < NTRK; k++) {
+    safe_edit_poll();                                   /* (0.9.1) the user's edits so far taken first: MUTATE's own */
+    for (k = 0; k < NTRK; k++) {                        /* changes below are not edits (safe_arms: taken again) */
         track_t *t = &trk[k];
         uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), hit = 0;
         const proj_trk_t *a = anc && !t->p[P_MMODE] && proj_scratch.t[k].engine == trk_eng(t) ?
@@ -2377,7 +2381,7 @@ static void mutate_poll(void)
             continue;
         if (s && nx % s == 0u) { mut_sound(t, a); hit = 1; }
         if (q && nx % q == 0u) { mut_pattern(t, a, (uint32_t)clamp(t->p[P_MAMT], 0, 127)); hit = 1; }
-        if (hit) { mut_flash[k] = 12; mut.moved |= (uint8_t)(1u << k); }
+        if (hit) { mut_flash[k] = 12; mut.moved |= (uint8_t)(1u << k); safe_arms++; }
     }
     for (k = 0; k < NTRK; k++)
         mut.sig[k] = steps_sig(&trk[k]);
@@ -2635,16 +2639,20 @@ static uint32_t trk_edit_sig(uint32_t k)
     h = as_mix(h, t->step, sizeof t->step);
     return as_mix(h, fm6_patch[k % NTRK], sizeof fm6_patch[k % NTRK]);
 }
-/* (0.9.1 spec 3) autosave_poll's 250 ms tick: the net's parts' signatures taken when it is armed again or another
- * section plays (a song's next row); a part whose signature moved since was edited: out of the net for the rest of the
- * piece (safe_edit). Any source counts: the panel, the web editor, a controller's CC, MUTATE. An edit in the first
+/* (0.9.1 spec 3) autosave_poll's 250 ms tick: the net's parts' signatures taken when it is armed again, another
+ * section plays or a song's row went in (song_poll, after it adopts the FM6 SLOTs) or MUTATE moved them (mutate_poll);
+ * a part whose signature moved since was edited: out of the net for the rest of the piece (safe_edit). Any source
+ * counts: the panel, the web editor, a controller's CC, MUTATE turned on. Not while a section the ISR put in waits
+ * for song_poll (chain.applied), checked again after the hashes (one may go in meanwhile). An edit in the first
  * 250 ms after the arm is taken as the piece's */
 static uint32_t safe_sig[2];
 static uint8_t safe_seen_arms;
 static int8_t safe_seen_sec = -2;
 static void safe_edit_poll(void)
 {
-    uint32_t i, k;
+    uint32_t i, k, h[2];
+    if (chain.applied)
+        return;
     if (safe_seen_arms != safe_arms || safe_seen_sec != live.cur) {
         safe_seen_arms = safe_arms;
         safe_seen_sec = live.cur;
@@ -2653,7 +2661,11 @@ static void safe_edit_poll(void)
         return;
     }
     for (i = 0; i < 2u; i++)
-        if ((k = safe_part[i]) < NTRK && trk_edit_sig(k) != safe_sig[i])
+        h[i] = safe_part[i] < NTRK ? trk_edit_sig(safe_part[i]) : 0u;
+    if (chain.applied)
+        return;                                         /* (a section went in while hashing: song_poll arms again) */
+    for (i = 0; i < 2u; i++)
+        if ((k = safe_part[i]) < NTRK && h[i] != safe_sig[i])
             safe_edit(k);
 }
 static uint32_t sig_rows(uint32_t m) { return as_mix(m, &chain_config, sizeof chain_config); }

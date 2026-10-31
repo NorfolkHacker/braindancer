@@ -63,6 +63,21 @@ static void gen_with(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t fo
     gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;
     gen_go();
 }
+/* (0.9.1 review I2) a song played as the firmware plays it: the ISR's sequencer (events_block) between main-loop passes
+ * pass_ms apart, each pass main.c's autosave_poll, mutate_poll, song_poll; worst: the net's poll also forced right
+ * after each block, before song_poll sees a section that went in. Until ms run out or the song is over (its end taken
+ * by song_poll). *changes: the sections that went in */
+static void gen_play(uint32_t ms, uint32_t pass_ms, int worst, uint32_t *changes)
+{
+    uint32_t t;
+    for (t = 0; t < ms && (song.playing || transport_req || chain.armed || chain.running || chain.ended); t += pass_ms) {
+        events_block(FS * pass_ms / 1000u);
+        fm1_ms += pass_ms;
+        if (chain.applied && changes) (*changes)++;
+        if (worst) safe_edit_poll();
+        autosave_poll(); mutate_poll(); song_poll();
+    }
+}
 static uint32_t all_sig(void)
 {
     uint32_t k, h = 2166136261u ^ (uint32_t)song.g[G_BPM];
@@ -1973,6 +1988,7 @@ int main(void)
          * edits (its steps, its sound, its engine) out for the rest of the piece; a mute is not an edit */
         uint32_t sd, a0 = NTRK, a1 = NTRK, s0;
         int ok_load, ok_mine, ok_end, ok_end_other, ok_switch, ok_keep, ok_steps, ok_rest, ok_regen, ok_sound, ok_engine, ok_ui;
+        int ok_mutate;
         mc_host_v12 = 1; gt_cpt = 74; gen_reset();
         for (sd = 0; sd < 200u; sd++) {                 /* (a PARTS piece that plays both, its sections A B C written) */
             gen_with(1, sd * 7u + 1u, 50, 1);
@@ -1987,16 +2003,19 @@ int main(void)
         ok_mine = !section_load(1) && safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;
         ok_mine &= !section_load(0) && safe_part[0] == a0 && safe_part[1] == a1 && safe_live;   /* (A still the piece's) */
         gen_with(1, gp.seed, 50, 1);                    /* SONG END: the music before PLAY back, the net with it */
+        SONG_END(&chain_config) = 0;                    /* (review: played to its end, once through, not faked) */
         ok_end = !chain_prepare();
-        transport_req = 0; chain.armed = 0; chain.ended = 1; song.playing = 0; fx_safe = SAFE_ARP;
-        song_poll();
-        ok_end &= msg_is("SONG END") && safe_part[0] == a0 && safe_part[1] == a1 && !fx_safe && safe_live;
+        fx_safe = SAFE_ARP;
+        gen_play(600000u, 15u, 0, 0);
+        ok_end &= !song.playing && !chain.running && msg_is("SONG END") && safe_part[0] == a0 && safe_part[1] == a1 &&
+                  !fx_safe && safe_live;
         gen_with(1, gp.seed, 50, 1);                    /* .. not when the music before PLAY was not the piece */
+        SONG_END(&chain_config) = 0;
         safe_clear();
         ok_end_other = !chain_prepare();
-        transport_req = 0; chain.armed = 0; chain.ended = 1; song.playing = 0;
-        song_poll();
-        ok_end_other &= safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;
+        gen_play(600000u, 15u, 0, 0);
+        ok_end_other &= !song.playing && !chain.running && msg_is("SONG END") && safe_part[0] == NTRK &&
+                        safe_part[1] == NTRK && !safe_live;
         gen_with(1, gp.seed, 50, 1);                    /* another project: none of these sections the piece's */
         ok_switch = !song_switch(1u, 0) && !safe_secs;
         ok_switch &= !song_switch(0u, 0);
@@ -2017,6 +2036,9 @@ int main(void)
         gen_with(1, gp.seed, 50, 1); safe_edit_poll();
         set_engine_of(&trk[a0], trk[a0].eng_req == ENGI_ANALOG ? ENGI_LOFI : ENGI_ANALOG); safe_edit_poll();   /* its engine */
         ok_engine = safe_part[0] == NTRK && safe_part[1] == a1;
+        gen_with(1, gp.seed, 50, 1); safe_edit_poll();  /* (round 1) MUTATE turned on by the user: an edit (its changes */
+        trk[a1].p[P_MSND] = 4; trk[a1].p[P_MAMT] = 40; safe_edit_poll();   /* after: not, mutate_poll) */
+        ok_mutate = safe_part[1] == NTRK && safe_part[0] == a0;
         gen_with(1, gp.seed, 50, 1); fm1_ms += 300u; autosave_poll();   /* the panel's way, through the real tick */
         song.sel = (uint8_t)a1; go_home(); frame(); press(B_EDIT); frames(64);
         s0 = trk_edit_sig(a1);
@@ -2034,7 +2056,71 @@ int main(void)
         bad += gcheck("(0.9.1 spec 3) a track the user edits (steps, sound, engine; the panel too) out of the net for the "
                       "rest of the piece; a mute is not an edit", ok_keep && ok_steps && ok_rest && ok_regen && ok_sound &&
                       ok_engine && ok_ui);
+        bad += gcheck("(0.9.1 round 1) MUTATE turned on on a part by the user: an edit, out of the net", ok_mutate);
         fx_safe = 0; mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (0.9.1 review I1) a section the user saves over through SAVE > PROJECT is the user's: the net never arms on it
+         * (the editor's restore into a section: backup_test) */
+        uint32_t sd, a0, a1;
+        int ok, ok_dlg;
+        mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+        for (sd = 0; sd < 200u; sd++) {                 /* (a PARTS piece that plays both, its sections A B C written) */
+            gen_with(1, sd * 7u + 1u, 50, 1);
+            if (safe_part[0] < NTRK && safe_part[1] < NTRK && (gs.wrote & 7u) == 7u) break;
+        }
+        a0 = safe_part[0]; a1 = safe_part[1];
+        ok = a0 < NTRK && a1 < NTRK && (safe_secs & 2u);
+        system_init();                                  /* NEW PROJECT: the user's own music */
+        stop_transport();
+        song.g[G_SLOT] = 2;                             /* SAVE > PROJECT, section B (the piece's), SAVE, OCT+ */
+        go_page(GR_SVPROJ); frame();
+        turn(EN_K3, 1);
+        ok &= ui.act == 3u;
+        press(B_OCTUP);
+        ok_dlg = ui.confirm == CF_OVR_PROJ;             /* (B used: OVERWRITE?, YES; then NAME, OCT+) */
+        if (ok_dlg) press(B_OCTUP);
+        ok_dlg &= name_on();
+        press(B_OCTUP);
+        ok &= ok_dlg && msg_is("SAVED (NO FLASH)") && !(safe_secs & 2u);
+        ok &= !section_load(1) && safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;
+        ok &= !section_load(0) && safe_part[0] == a0 && safe_part[1] == a1 && safe_live;   /* (A still the piece's) */
+        bad += gcheck("(0.9.1 review I1) a section of the piece saved over (SAVE > PROJECT): the user's, the net not armed "
+                      "on it; the piece's other sections still armed", ok);
+        mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (0.9.1 review I2) the GEN piece's own song played through its sections (the ISR's sequencer, the main loop's
+         * passes: an FM6 part's SLOT adopted by song_poll after a section went in, MUTATE as the piece set it): no part
+         * of it leaves the net without an edit. 12 styles x 3 seeds, the third seed's song with the net's poll forced
+         * right after each block (the worst order); then EXPLORE pieces whose MUTATE is on a part in the net, until 4 */
+        uint32_t g, sd, songs = 0, fm6 = 0, mut = 0, lost = 0, changes = 0, a0, a1, m;
+        mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+        for (g = 0; g < 12u + 300u && (g < 12u || mut < 4u); g++)
+            for (sd = 0; sd < (g < 12u ? 3u : 1u); sd++) {
+                if (g < 12u)
+                    gen_with(g == 11u ? GEN_EXPLORE : 1u + g % NGENRE, 101u + sd * 37u + g * 7u, 50, 1);
+                else
+                    gen_with(GEN_EXPLORE, 11u + (g - 12u) * 13u, 50, 1);
+                a0 = safe_part[0]; a1 = safe_part[1];
+                m = (a0 < NTRK && (trk[a0].p[P_MSND] || trk[a0].p[P_MPAT])) ||
+                    (a1 < NTRK && (trk[a1].p[P_MSND] || trk[a1].p[P_MPAT]));
+                if ((a0 == NTRK && a1 == NTRK) || (g >= 12u && !m) || chain_config.count < 2u || chain_prepare())
+                    continue;
+                songs++;
+                fm6 += (a0 < NTRK && trk[a0].eng_req == ENGI_FM6) || (a1 < NTRK && trk[a1].eng_req == ENGI_FM6);
+                mut += m;
+                gen_play(sd == 2u ? 30000u : 120000u, sd == 2u ? 3u : 12u, sd == 2u, &changes);
+                if (safe_part[0] != a0 || safe_part[1] != a1) {
+                    lost++;
+                    printf("gen:   (0.9.1 net) style %u seed %u: parts %u %u -> %u %u while its song played\n",
+                           g, sd, a0, a1, safe_part[0], safe_part[1]);
+                }
+                transport_req = 2; events_block(FS / 100u); song_poll();   /* (STOP: the music back) */
+            }
+        printf("gen: (0.9.1) the net while the piece's song plays: %u songs (%u with an FM6 part in the net, %u with "
+               "MUTATE on one), %u sections in, %u lost a part\n", songs, fm6, mut, changes, lost);
+        bad += gcheck("(0.9.1 review I2) the piece's own song played (FM6 SLOTs adopted, its MUTATE): no part leaves the net",
+                      songs >= 20u && fm6 >= 3u && mut >= 4u && changes >= 100u && !lost);
+        mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* (0.9 spec 6, pre-flight 1) GEN's page and its recent pieces are the session's: a project and the settings are
          * byte for byte the same whatever they hold (nothing to ignore on load: nothing of GEN was ever stored) */

@@ -616,6 +616,25 @@ static void safety(void)
             check("  (0.9.1) new music (safe_clear): the levers on stamped released; on again within 5 s: the 4 s calm",
                   ok && (fx_safe & (SAFE_DLY | SAFE_TEX)) == (SAFE_DLY | SAFE_TEX) && dsf_rearm[0] == 2u && dsf_rearm[1] == 2u);
         }
+        {   /* (0.9.1 review M4) .. TAPE's rung too: stamped when on (and only the levers on) */
+            uint32_t h, l, on;
+            int ok;
+            safe_reset(4u, LOAD_LITE);
+            tape_age_apply(50);
+            safe_part[1] = 5u;
+            for (h = 0; h < 400u; h++) safe_run(1u, 125u, 0);
+            on = fx_safe;
+            safe_clear();
+            ok = (on & SAFE_TAPE) && !fx_safe;
+            for (l = 0; l < 4u; l++)
+                ok &= dsf_since[l] == ((on & (l == 3u ? SAFE_TAPE : 1u << l)) ? 0u : 0xFFFFu);
+            safe_part[1] = 5u;
+            for (h = 0; h < 400u; h++) safe_run(1u, 125u, 0);
+            printf("audio: TAPE's rung and the others (0x%x) cleared, on again: TAPE's calm x%u\n", on, 1u << dsf_rearm[3]);
+            check("  (0.9.1) new music (safe_clear): TAPE's rung on stamped released too; on again within 5 s: the 4 s calm",
+                  ok && (fx_safe & SAFE_TAPE) && dsf_rearm[3] == 2u);
+            safe_reset(4u, LOAD_LITE);
+        }
         safe_reset(4u, LOAD_LITE);
     }
     {   /* (review M2) the delay bus at rest (fx_rest: nothing sent, its rate a stale one): its lever not on */
