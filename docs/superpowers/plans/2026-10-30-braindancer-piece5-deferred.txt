@@ -75,3 +75,11 @@ From the device session (2026-10-31):
   fit TAPE's cost (about +8 % CPU at AGE 50 on a light piece) when TAPE is on, RETROBOC above all.
 - Check on the device whether "TAPE PAUSED · CPU" overlaps the DUCK curve at deep DUCK.
 - Judge AGE by ear (is 50 a good worn tape, is 100 too much) and retune the AGE map if needed.
+
+Checked after the device session (2026-10-31):
+- "TAPE PAUSED · CPU" against the DUCK curve: rendered from the real drawing code at DUCK −30 dB, PUNCH 100 %, DUCK TIME
+  800 ms (the worst case): the curve passes just above the words, no overlap. Closed.
+- AGE measured on the FM-1 (USB audio, SINE KEY A3 held; the preset has its own ~9 cents p-p vibrato): AGE 0 pitch sd
+  2.25 cents, AGE 50 2.42, AGE 100 6.95; non-harmonic noise −53 / −50 / −49 dB, energy above 3 kHz −62 / −56 / −55 dB.
+  AGE 50 is barely different from AGE 0, AGE 100 is a clear wobble. Retune the AGE map so the middle is a clear,
+  obvious worn tape (more WOW and HISS by 50).
