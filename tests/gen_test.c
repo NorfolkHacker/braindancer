@@ -1874,6 +1874,22 @@ int main(void)
         bad += gcheck("  (3c-2 final review 8) none, the levers off, after CPU TEST (its load the real one)", ok_cpt);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
+    {   /* (0.9 spec 6, pre-flight 1) GEN's page and its recent pieces are the session's: a project and the settings are
+         * byte for byte the same whatever they hold (nothing to ignore on load: nothing of GEN was ever stored) */
+        static project_t pa, pb;
+        static project_store_t sa, sb;
+        static persist_t ea, eb;
+        genid_t x;
+        gen_reset();
+        gen_with(1u + GEN_SHOWN[2], 55, 50, 0);
+        memset(&sa, 0, sizeof sa); memset(&sb, 0, sizeof sb); memset(&ea, 0, sizeof ea); memset(&eb, 0, sizeof eb);
+        project_capture(&pa); proj_pack(&sa, &pa); settings_export(&ea);
+        gp.energy = 85; gp.form = 2; gp.complex = 10; gp.tape = 7; gp.at = 0;
+        gid_now(&x); x.seed = 999; gen_recent_push(&x);
+        project_capture(&pb); proj_pack(&sb, &pb); settings_export(&eb);
+        bad += gcheck("(0.9) GEN's page and recent pieces: a project and the settings byte for byte the same",
+                      !memcmp(&sa, &sb, sizeof sa) && !memcmp(&ea, &eb, sizeof ea));
+    }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;
 }
