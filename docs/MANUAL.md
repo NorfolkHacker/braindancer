@@ -1046,17 +1046,19 @@ stops the transport without leaving the screen.
 - The panel names the piece: the style, a **+** and the partner for a blend, and its number: **RETROBOC+AMBIENT 0421**,
   **ACID 0421**, **WILD 0421**. (A name too wide for the panel is shortened.)
 - It plays as making a piece always did: the tracks are changed (UNDO is marked first) and you press PLAY. It is
-  **refused while a song (ARRANGE) is playing**. A new piece ignores whatever was muted when you pressed OCT+.
+  **refused while a song (ARRANGE) is playing** (the status line says **STOP THE SONG FIRST**). A new piece **unmutes
+  every track**. After UNDO the panel still names the last piece GEN made (LAST: ...), not the music UNDO brought back.
 - The piece is **deterministic**: the same style, partner, number, ENERGY, FORM, COMPLEX, TAPE and the FM-1's CPU
   figure make the same piece every time. The result is ordinary music in the tracks: edit it, save it, play it.
 - Turning a knob puts PRESETS back on NEW; the next OCT+ is a new piece that uses the new setting.
 
 **The recent pieces.** The last **8** pieces are remembered, newest first (a ninth drops the oldest). **PRESETS** starts
 on **NEW**; turn it back (counter-clockwise) to step through them: the panel reads **RECENT 1: ...** to **RECENT 8**
-with each piece's name, and **OCT+** now reads **OCT+ RECALL**. RECALL brings that piece back **exactly as it was** (the
-same piece is rebuilt from its settings), moves it to the front of the list and plays like any new piece, with UNDO
-marked first. It is refused while a song (ARRANGE) is playing, like GENERATE. The list is cleared at power-off; nothing of GEN is
-saved in a project or in the settings, and a saved project is untouched.
+with each piece's name, and **OCT+** now reads **OCT+ RECALL**. RECALL brings that piece back and **sets the four
+knobs to its values** (the piece is rebuilt from its settings: the same piece while the tracks' setup, TRACKS 4 / 6,
+BPM LOCK and the clock, is the same), moves it to the front of the list and plays like any new piece, with UNDO marked
+first. It is refused while a song (ARRANGE) is playing, like GENERATE. The list is cleared at power-off; nothing of GEN
+is saved in a project or in the settings, and a saved project is untouched.
 
 **TAPE** (KNOB 4) decides how worn the tape sounds on every piece (AGE, see FX › MASTER and TAPE below):
 - **AUTO** (the default): the style decides. AGE is **RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15**,
@@ -1218,7 +1220,7 @@ What a piece is made of:
   predominant). Sections of yours (stored by you, not by GEN) are never
   overwritten: then the piece stays one loop.
 
-Every piece replaces every track's steps, sounds, kit, mix and automation. Mutes are left as they are. The roles that
+Every piece replaces every track's steps, sounds, kit, mix and automation, and unmutes every track. The roles that
 play go on the first tracks (drums on the DRUM track), so with TRACKS 4 you hear the most important ones.
 
 ### Sound dice (EDIT + SELECT)

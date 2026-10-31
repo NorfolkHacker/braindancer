@@ -18,15 +18,15 @@ the Rephlex catalogue.
   About one press in ten is WILD (no style); about 45 % of the rest are **blends** of the style with a partner that goes
   well with it, named on the panel, for example RETROBOC+AMBIENT 0421. It never picks the same style twice in a row.
   The GENRE and SEED knobs and GEN pages 2 and 3 are gone.
-- **Recent pieces**: PRESETS steps from NEW back through the last 8 pieces, and OCT+ RECALL brings one back exactly as it
-  was. GENERATE and RECALL are refused while a song (ARRANGE) is playing. The list is cleared at power-off; nothing of GEN
+- **Recent pieces**: PRESETS steps from NEW back through the last 8 pieces, and OCT+ RECALL brings one back and sets the four
+  knobs to its values. GENERATE and RECALL are refused while a song (ARRANGE) is playing (STOP THE SONG FIRST). The list is cleared at power-off; nothing of GEN
   is saved in projects or settings.
 - **TAPE in GEN**: on AUTO each style sets AGE (RETROBOC 60, AMBIENT 40, AMB TECHNO 25, IDM 20, MICRO 15, the others 0; a
   blend gets the main style's plus half the partner's, at most 70; WILD 0 to 50). RETROBOC and AMBIENT keep their tape and
   the music is thinned around it; for the other styles the tape gives way before the music is thinned, when a piece is too heavy. A TAPE amount
   set with the knob is never changed. OFF and 10 to 100 % set AGE for every piece.
 - **Every piece is fitted** to what the FM-1 can play, with a budget calibrated on the device (2 CORES); one core is fitted
-  too but not calibrated. A new piece ignores what was muted when GENERATE was pressed.
+  too but not calibrated. A new piece unmutes every track.
 - **The AGE retune**: 50 is clearly worn (audible wobble, some hiss, a darker tone) and 100 is mangled and darker. Projects
   from 0.8 with AGE above 0 sound more worn.
 - Projects, presets and settings load as before.
