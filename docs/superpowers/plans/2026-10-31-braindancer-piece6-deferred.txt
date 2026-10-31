@@ -1,7 +1,7 @@
 Braindancer piece 6 (release 0.9): what was parked, deferred or left "for later"
 ================================================================================
 One plain line per item, grouped by area, each naming the task it came from.
-"cal" is the 2026-10-31 device calibration (.superpowers/sdd/.../calibration.md, kept out of git).
+"cal" is the 2026-10-31 device calibration (docs/braindancer/gen-calibration-2026-10-31.md).
 
 FEATURES AND REACH
  1. A quicker way to reach TAPE / AGE from outside GEN (it still takes three taps on FX; the 0.8 user did not find it). (Task 8 brief; 0.8 device log)
