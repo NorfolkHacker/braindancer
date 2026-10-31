@@ -368,10 +368,11 @@ static __attribute__((noinline)) void master_begin(void)
 }
 /* (Braindancer 0.8) TAPE (G_TAGE .. G_TTONE: FX > MASTER AGE, FX > MORE > TAPE), after CLIP: the mix (dry + the buses'
  * return, folded as CLIP folds it) written into a short line and read back where the transport has drifted to (WOW: a
- * smoothed random drift, a segment of 0.3 .. 2 Hz at a time, each the other way; FLUTTER: 6 .. 15 Hz, the right at 1.07
- * x the left's rate), a 4-point Hermite between samples; SAT (the soft clip, its level kept at a mix's usual level as
- * CLIP's); HISS (noise, a first difference: bright, its level following the music's peak, none over silence; written
- * with the music, so it plays with it); TONE (a one-pole high-cut, its remainder carried: silence settles at exactly 0).
+ * smoothed random drift, segments of 0.5 .. 3.3 s (0.3 .. 2 a second), each the other way: a whole swing ~0.15 .. 1 Hz;
+ * FLUTTER: 6 .. 15 Hz, the right at 1.07 x the left's rate), a 4-point Hermite between samples; SAT (the soft clip,
+ * its level kept at a mix's usual level as CLIP's); HISS (noise, a first difference: bright, its level following the
+ * music's peak, none over silence; written with the music, so it plays with it); TONE (a one-pole high-cut, its
+ * remainder carried: silence settles at exactly 0).
  * Every detail 0 (AGE alone does nothing: it only sets them): out of the chain, tape_block not run, the mix bit for bit
  * as without it. In the chain the master is TAPE_D0 later: ~4 ms, kept short for live playing (WOW's swing +-1.6 ms
  * around it: a 0.5 % drift at 0.5 Hz). In and out: a TAPE_FADE crossfade with the undelayed mix; in, held until the
@@ -416,8 +417,9 @@ static int tape_set(void)                               /* a detail not 0 (AGE a
 /* (Braindancer 0.8) AGE (FX > MASTER KNOB 4): one turn sets the five details on its map, linear between AGE 0 (off), 50 and 100;
  * a detail turned after it (FX > MORE > TAPE) overrides that one until AGE is turned again.
  * (Braindancer 0.9) The map, steeper (spec 5): at 50 a clearly worn tape (WOW at the line's limit, a quick flutter, hiss and
- * highs off above 6.8 kHz), at 100 a mangled cassette; WOW reaches 100 at AGE 50 because the line (TAPE_LEN) holds 8.7 cents
- * at most; measured by tests/tape_test.c test_age_09 (0.8: {60 20 30 20 35}, {100 50 65 50 80}) */
+ * highs off above 6.8 kHz), at 100 a mangled cassette; WOW reaches 100 at AGE 50 because the line (TAPE_LEN) holds ~11 cents
+ * at most (a segment's steady offset: 11.0 the largest of an hour's at WOW 100, 4.8 their mean); measured by
+ * tests/tape_test.c test_age_09 (0.8: {60 20 30 20 35}, {100 50 65 50 80}) */
 static const uint8_t TAPE_AGE_PT[3][5] = {{0, 0, 0, 0, 0}, {100, 55, 45, 78, 50}, {100, 100, 85, 100, 90}};
                                         /* AGE 0, 50, 100 -> WOW FLUTTER SAT HISS TONE (linear between) */
 _Static_assert(G_TWOW == G_TAGE + 1 && G_TTONE == G_TWOW + 4, "TAPE: AGE, then its five details in a row");
@@ -510,10 +512,14 @@ static __attribute__((noinline)) void tape_block(uint32_t n)
     int32_t q[2], dq[2], m1, g = tape.g, gt = tape.gt, dg, env = tape.env, wrote = 0;
     uint32_t i, c, w = tape.w;
     TAPE_COUNT();
-    if (tape.wseg <= n) {                               /* WOW: a new segment, 0.3 .. 2 Hz, to a target the other way */
+    if (tape.wseg <= n) {                               /* WOW: a new segment, 0.5 .. 3.3 s (0.3 .. 2 a second: a whole
+                                                         * swing, there and back, 0.15 .. 1 Hz), to a target the other way */
         uint32_t r = noise32(&tape.rng);
         int32_t mag = (int32_t)(((uint32_t)tape.wow_a * (128u + ((r >> 8) & 127u))) >> 8);   /* (half .. all of it) */
-        tape.wseg = (uint32_t)FS * 10u / (3u + r % 18u);
+        int32_t ap = tape.wpos < 0 ? -tape.wpos : tape.wpos;
+        /* (0.9) from rest (the centre: switched on, or WOW up from 0; a segment's end is >= half WOW's swing out) only
+         * half a swing to go: 0.5 .. 0.67 s, so it moves at once (>= 2 cents at WOW 100; it was 3.33 s, -0.47 cents) */
+        tape.wseg = (uint32_t)FS * 10u / (ap < (tape.wow_a << 6) ? 15u + r % 6u : 3u + r % 18u);
         tape.wsg ^= 1u;
         tape.wstep = (((tape.wsg ? mag : -mag) << 8) - tape.wpos) / (int32_t)tape.wseg;
     } else {

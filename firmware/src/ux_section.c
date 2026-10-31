@@ -808,7 +808,8 @@ static int uxs_fx_val(uint32_t glo, uint32_t id, int32_t v, char *b, uint32_t nb
                 uxs_cat(b, nb, UXS_FX_SAY[UXF_BYHAND]);
             }
             break;
-        case G_TWOW:                                    /* (a smoothed random drift, 0.3 .. 2 Hz) */
+        case G_TWOW:                                    /* (a smoothed random drift: segments 0.3 .. 2 a second, a whole
+                                                         * swing ~0.15 .. 1 Hz) */
             uxs_cat(b, nb, UXS_FX_SAY[UXF_WOW]);
             break;
         case G_TFLUT:                                   /* (its rate: 6 .. 15 Hz with the amount) */

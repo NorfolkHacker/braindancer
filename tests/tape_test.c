@@ -1119,9 +1119,53 @@ static void test_age_08_load(void)
     tape_reset();
 }
 
+/* ---- (0.9) WOW from rest: switched on fresh, it moves within the first second (its first segment from the centre is
+ * short; it was always 3.33 s of half a swing, -0.47 cents: a device run measured over its first seconds heard none).
+ * The pitch: the 220 Hz bin's phase over 50 ms windows (2205 samples, exactly 11 cycles: the image at 440 Hz cancels),
+ * its step from window to window the frequency, as a band-passed fundamental's instantaneous frequency; the offset in
+ * cents averaged over 200 ms (4 windows), its largest from 0.1 s to 1.0 s ---- */
+#define WS_W 2205u
+static double wow_start_cents(void)
+{
+    uint32_t k, i, nw = 44100u / WS_W;                  /* (the first second: 20 windows) */
+    double ph[44100u / 2205u], c[44100u / 2205u], best = 0;
+    tape_reset();
+    tape_g(100, 0, 0, 0, 0);
+    tape_tone(220, 8000, 44100u / CTL + 2u);
+    for (k = 0; k < nw; k++) {
+        double re = 0, im = 0;
+        for (i = 0; i < WS_W; i++) {
+            double a = 2.0 * M_PI * 220.0 * (double)(k * WS_W + i) / FS;
+            re += out_l[k * WS_W + i] * cos(a);
+            im -= out_l[k * WS_W + i] * sin(a);
+        }
+        ph[k] = atan2(im, re);
+    }
+    for (k = 1; k < nw; k++) {
+        double d = ph[k] - ph[k - 1u];
+        while (d > M_PI) d -= 2.0 * M_PI;
+        while (d < -M_PI) d += 2.0 * M_PI;
+        c[k] = 1200.0 * log2(1.0 + d / (2.0 * M_PI * WS_W / FS) / 220.0);   /* (d: 2 pi df a window) */
+    }
+    for (k = 3; k + 3u < nw; k++) {                     /* (from 0.1 s: the line's delay and fade-in left out) */
+        double m = (c[k] + c[k + 1u] + c[k + 2u] + c[k + 3u]) / 4.0;
+        if (fabs(m) > fabs(best)) best = m;
+    }
+    tape_reset();
+    return best;
+}
+static void test_wow_start(void)
+{
+    char what[160];
+    double c = wow_start_cents();
+    snprintf(what, sizeof what, "(0.9) WOW 100 from rest: the pitch %+.2f cents off within the first second (|.| >= 2)", c);
+    ck(what, fabs(c) >= 2.0);
+}
+
 int main(void)
 {
     test_off();
+    test_wow_start();
     test_off_again();
     test_tone_through();
     test_in_out();
