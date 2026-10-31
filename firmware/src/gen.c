@@ -29,6 +29,20 @@
 #include "gen_tables.c"
 
 /* ------------------------------------------------------------------------------------------- the settings --- */
+/* (Braindancer 0.9, spec 2) a piece's identity: everything that makes it. The same identity always builds the same
+ * piece on the same firmware (gen_build); GENERATE draws one (gen_draw), the tools name one (gid_legacy) */
+#define GID_WILD 0xFEu                                  /* main: WILD (EXPLORE's generator, no template) */
+#define GID_SOLO 0xFFu                                  /* part: none */
+#define GT_AUTO 0u                                      /* the TAPE knob: AUTO, OFF, then 2..11 = AGE 10..100 */
+#define GT_OFF 1u
+#define GT_N 12u
+typedef struct {
+    uint16_t seed : 14, two : 1, : 1;                   /* 0..9999; made with two cores (mc_two()) */
+    uint16_t dev : 9, form : 2, tape : 4, : 1;          /* the CPU factor as made (gc_dev() 100..400); FORM 0..2; GT_* */
+    uint8_t main, part;                                 /* GENRE indices; GID_WILD; GID_SOLO */
+    uint8_t energy, complex;                            /* 0..100 */
+} genid_t;
+_Static_assert(sizeof(genid_t) == 8u, "genid_t: 8 bytes (the 8 recent pieces: 64)");
 static struct {
     uint8_t genre;                                      /* 0 RANDOM, 1 + the genre, (0.8.6) GEN_EXPLORE */
     uint16_t seed;                                      /* 0..9999 */
@@ -37,17 +51,21 @@ static struct {
     uint8_t complex, swing, human;                      /* 0..100 (swing: GA_AUTO the genre's) */
     uint8_t page, hot;                                  /* the GEN screen's page, its last knob */
     uint32_t sig;                                       /* the settings of the last piece made (OCT+ again: a new seed) */
-    char last[24];                                      /* the last piece: "ACID 0421", "D'N'BASS+D'N'BASS 0421" */
-} gp = {GEN_EXPLORE, 1, 50, 1, {GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO}, 50, GA_AUTO, 30, 0, 0, 0, ""};
+    uint8_t tape;                                       /* (0.9) the TAPE knob, GT_* */
+    genid_t id;                                         /* (0.9) the piece being made / made last */
+    char last[28];                                      /* its name: "RETROBOC+AMBIENT 0421", "WILD 0421" */
+} gp = {.genre = GEN_EXPLORE, .seed = 1, .energy = 50, .form = 1, .amt = {GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO},
+        .complex = 50, .swing = GA_AUTO, .human = 30, .tape = GT_AUTO,
+        .id = {.seed = 1, .form = 1, .main = GID_WILD, .part = GID_SOLO, .energy = 50, .complex = 50}};   /* (.id: the
+                                                         * knobs' own until a piece is made: SEQ + SELECT reads it) */
 
 /* the generator's own random numbers: a stream a part, from the seed */
 static uint32_t gq = 1;
 static uint32_t gr(void) { gq ^= gq << 13; gq ^= gq >> 17; gq ^= gq << 5; return gq; }
-static uint32_t gen_random_genre(void) { return 1u + GEN_SHOWN[gr() % GEN_NSHOWN]; }   /* (3b) a RANDOM draw: one of the ten, as a stored value */
 static uint32_t gseed_mix(uint32_t part);
-static void gseed(uint32_t part)
+static void gseed(uint32_t part)                        /* (0.9: the identity's seed) */
 {
-    gq = ((uint32_t)gp.seed + 1u) * 2654435761u ^ (part + 1u) * 0x9E3779B9u ^ 0x6D2B79F5u ^
+    gq = ((uint32_t)gp.id.seed + 1u) * 2654435761u ^ (part + 1u) * 0x9E3779B9u ^ 0x6D2B79F5u ^
          gseed_mix(part);                               /* (0.8.3: a genre's own motifs, figures and drums) */
     if (!gq) gq = 1;
     gr(); gr(); gr();
@@ -86,13 +104,16 @@ static struct {
     uint32_t fm6, ba, vm;
     uint8_t role[NTRK], act[RL_N], trk_of[RL_N];
     uint32_t drum_fill;                                 /* the fill forced (a BUILD section) */
-    uint8_t mutant;                                     /* (0.6.95) RANDOM: a hybrid of two or three genres */
+    uint8_t mutant;                                     /* (0.6.95) RANDOM: a hybrid of two or three genres; (0.9) a blend */
+    uint8_t pi;                                         /* (0.9) the partner (GENRE index) or GID_SOLO */
     uint16_t snd[NTRK]; uint8_t nsnd;                   /* (0.9.17) the piece's sounds so far (engine << 8 | preset) */
 } gs;
 #define GKICK(i) ((uint32_t)(gs.kick >> ((i) & 63u)) & 1u)
-static uint32_t gseed_mix(uint32_t part) { return part == GS_PICK ? 0u : (gs.gi + 1u) * 0x85EBCA6Bu; }
+static uint32_t gseed_mix(uint32_t part)                /* (0.9) a blend's partner in every stream but GS_PICK's */
+{
+    return part == GS_PICK ? 0u : (gs.gi + 1u) * 0x85EBCA6Bu ^ (gs.pi != GID_SOLO ? (gs.pi + 1u) * 0xC2B2AE35u : 0u);
+}
 static ggenre_t gmut;                                   /* (0.6.95) the genre as this throw plays it (its neighbours' parts) */
-static char gmut_name[20];
 
 static void gclear(step_t *s) { memset(s, 0, sizeof *s); s->time = ST_REST; }
 /* (0.8.6) EXPLORE: on (this piece is EXPLORE's), dirty (an EXPLORE piece set DIV and PLAYHEADS, which a genre's piece
@@ -1670,14 +1691,18 @@ static step_t gen_keep[NSTEP];                          /* (the drums of the sec
  * the GEN screen shows it before MAKE). Before, PARTS was always A B A C and SONG B C A D C A (or B A C D), whatever
  * the seed. A: the whole piece, B a break, C a drop / a turn, D the apex (gen_parts) */
 #define GF_MAXROWS 8u
-static uint32_t gform_hash(void)
+static uint32_t gid_form_key(const genid_t *id)         /* gform_hash's style: 0.8's gp.genre for a solo style and WILD */
+{
+    return id->main == GID_WILD ? GEN_EXPLORE : id->part == GID_SOLO ? id->main + 1u : (id->main + 1u) | (id->part + 1u) << 8;
+}
+static uint32_t gform_hash(const genid_t *id)
 {
     uint32_t h = 2166136261u;
-    h = (h ^ gp.seed) * 16777619u; h = (h ^ gp.genre) * 16777619u; h = (h ^ gp.form) * 16777619u;
+    h = (h ^ id->seed) * 16777619u; h = (h ^ gid_form_key(id)) * 16777619u; h = (h ^ id->form) * 16777619u;
     h ^= h >> 13; h *= 2246822519u; h ^= h >> 16;
     return h;
 }
-static uint32_t gform_order(uint32_t form, uint8_t *ord, uint8_t *mul)
+static uint32_t gform_order(const genid_t *id, uint32_t form, uint8_t *ord, uint8_t *mul)
 {
     static const uint8_t PARTS[8][7] = {{4, 0, 1, 0, 2}, {4, 0, 0, 1, 2}, {4, 0, 1, 2, 0}, {4, 0, 2, 0, 1},
                                         {4, 1, 0, 2, 0}, {5, 0, 1, 0, 2, 2}, {4, 0, 2, 1, 0}, {6, 0, 1, 0, 2, 1, 0}};
@@ -1685,7 +1710,7 @@ static uint32_t gform_order(uint32_t form, uint8_t *ord, uint8_t *mul)
                                        {6, 0, 2, 1, 3, 3, 0}, {7, 1, 1, 0, 2, 3, 2, 0}, {6, 0, 1, 0, 2, 3, 2}, {5, 2, 0, 1, 3, 0}};
     static const uint8_t ARC[6][6] = {{4, 1, 0, 2, 3}, {4, 0, 1, 2, 3}, {5, 1, 0, 3, 2, 0}, {4, 1, 2, 0, 3}, {4, 0, 1, 3, 2},
                                       {5, 1, 0, 2, 3, 0}};
-    uint32_t h = gform_hash(), k, n;
+    uint32_t h = gform_hash(id), k, n;
     const uint8_t *t = form == FM_CLUB ? CLUB[h % 8u] : form == FM_ARC ? ARC[h % 6u] : PARTS[h % 8u];
     n = t[0];
     for (k = 0; k < n; k++) {
@@ -1701,9 +1726,9 @@ static int section_load(uint32_t s);
 static void gen_parts(void)
 {
     const ggenre_t *g = gs.g;
-    uint32_t form = gp.form == 0u ? FM_LOOP : gp.form == 2u ? (g->form == FM_ARC ? FM_ARC : FM_CLUB) : g->form == FM_LOOP ? FM_PARTS : g->form;
+    uint32_t form = gp.id.form == 0u ? FM_LOOP : gp.id.form == 2u ? (g->form == FM_ARC ? FM_ARC : FM_CLUB) : g->form == FM_LOOP ? FM_PARTS : g->form;
     uint32_t dr = gs.trk_of[RL_DRUM], bs = gs.trk_of[RL_BASS], pd = gs.trk_of[RL_PAD], ld = gs.trk_of[RL_LEAD], ar = gs.trk_of[RL_ARP];
-    uint32_t k, n = 0, rows = 0, bars = gp.form == 2u ? 16u : 8u, i, fam = HXF(gs.hx);
+    uint32_t k, n = 0, rows = 0, bars = gp.id.form == 2u ? 16u : 8u, i, fam = HXF(gs.hx);
     static const uint8_t FILLS[6] = {FL_ROLL, FL_TOM, FL_HAT, FL_DROP, FL_LINEAR, FL_KICK16};   /* (0.6.97) a fill a section */
     uint8_t pdeg[4], pq[4], pn = gs.pn;
     uint8_t ord[GF_MAXROWS], mul[GF_MAXROWS];
@@ -1803,7 +1828,7 @@ static void gen_parts(void)
     live.cur = 0;
     if (n < 2u) return;
     chain_defaults(&chain_config);
-    nord = gform_order(form, ord, mul);                 /* (0.9.14) the order and lengths from the seed (gform_order) */
+    nord = gform_order(&gp.id, form, ord, mul);         /* (0.9.14) the order and lengths from the seed (gform_order) */
     for (k = 0; k < nord && rows < CHAIN_ROWS; k++) {
         if (ord[k] >= n) continue;
         chain_config.row[rows].slot = ord[k];
@@ -2062,18 +2087,20 @@ static uint32_t gc_dev(void)
         d = cpt_res ? d * GC_GEN_X100 / 100u : GC_DEV2_X100;
     return d < 100u ? 100u : d > 400u ? 400u : d;
 }
+static struct { uint16_t dev; uint8_t two; } gcf = {GC_DEV_X100, 0};   /* (0.9) the identity's CPU factor (gen_make):
+                                                         * gc_budget / gc_cost read it, not the device now */
 static uint32_t gc_budget(void)                          /* (65 / 63, 55 / 77, over the device; one core less 0.12:
                                                          * its pieces sparse, a held chord more of them) */
 {
-    return mc_two() ? 1030u * 100u / gc_dev() : 714u * 100u / gc_dev() - 120u;
+    return gcf.two ? 1030u * 100u / gcf.dev : 714u * 100u / gcf.dev - 120u;
 }
 static uint32_t gc_cost(int steps)                      /* steps 0: before the parts (a chord track's triads) */
 {
     const ggenre_t *g = gs.g;
     uint32_t k, i, h, bpm = steps ? (uint32_t)song.g[G_BPM] : (g->bpm_lo + g->bpm_hi) / 2u;
-    uint32_t c = (mc_two() ? 295u : 380u) + GC_REV[(uint32_t)(steps ? song.g[G_RTYPE] : g->rtype) % 5u];
+    uint32_t c = (gcf.two ? 295u : 380u) + GC_REV[(uint32_t)(steps ? song.g[G_RTYPE] : g->rtype) % 5u];
     if (steps && (song.g[G_DPIT] || song.g[G_DSPRY])) c += GC_GRAIN;
-    if (steps) c += GC_DLO[mc_two() ? 1 : 0][gc_dly_stage()];   /* (0.5.2) the delay's line past the full rate */
+    if (steps) c += GC_DLO[gcf.two ? 1 : 0][gc_dly_stage()];   /* (0.5.2) the delay's line past the full rate */
     for (k = 0; k < NTRK && k < trk_live; k++) {
         const track_t *t = &trk[k];
         uint32_t r = gs.role[k], e = t->eng_req % NENGINES, len = dlen(t), on = 0, ns = 0, tie = 0, v, f, cap;
@@ -2326,8 +2353,8 @@ static void gen_pick(void)
         for (d = 0, c = 0; c < 12u && d < 7u; c++) if ((m >> c) & 1u) gs.sc[d++] = (uint8_t)c;
         if (gx.on) gs.pal = GX_PAL[gr() % NELEM(GX_PAL)];
     }
-    gs.energy = dice_force_energy >= 0 ? (uint32_t)dice_force_energy * 50u : gp.energy;
-    gs.complex = gp.complex;
+    gs.energy = dice_force_energy >= 0 ? (uint32_t)dice_force_energy * 50u : gp.id.energy;
+    gs.complex = gp.id.complex;
     if (gs.mutant) gs.complex = gs.complex + 20u > 100u ? 100u : gs.complex + 20u;   /* (a mutant: more going on) */
     if (gx.on) gs.complex = (uint32_t)clamp((int32_t)gs.complex + grr(10, 40) * (int32_t)gx.w / 100, 0, 100);   /* (EXPLORE:
                                                          * more still; 0.9.13: as much more as COMPLEX) */
@@ -2393,14 +2420,40 @@ static void gen_pick(void)
     gs.ba = g->bass[gr() % 3u];
     if (gs.amt[GP_BASS] > 70u && gch(30)) gs.ba = g->bass[0];
 }
+/* (Braindancer 0.9) a blend (spec 2): the 0.6.95 mutant's code with one partner. The main keeps its drums, tempo range and
+ * swing ("the main style sets tempo and feel"); the partner gives the bass, and the chords, the arp, the lead and the
+ * space each half the time (the GS_PICK stream's four draws, as the mutant's), the scale's second and fourth choices and
+ * the texture. gs.mutant: COMPLEX + 20, an arp or a lead in another metre half the time, as before */
+static void gen_blend(ggenre_t *m, uint32_t pi)
+{
+    const ggenre_t *c = &GENRE[pi % NGENRE];
+    uint32_t k;
+    for (k = 0; k < 3u; k++) m->bass[k] = c->bass[k];
+    m->bass_lo = c->bass_lo; m->kick_mode = c->kick_mode; m->bass_gate = c->bass_gate; m->snd[GP_BASS] = c->snd[GP_BASS];
+    if (gch(50)) {
+        for (k = 0; k < 3u; k++) m->prog[k] = c->prog[k];
+        m->cbars = c->cbars; m->pads = c->pads; m->voicing = c->voicing; m->snd[GP_CHORDS] = c->snd[GP_CHORDS];
+        m->hx = c->hx;
+    }
+    if (gch(50)) { m->arp[0] = c->arp[0]; m->arp[1] = c->arp[1]; m->snd[GP_ARP] = c->snd[GP_ARP]; }
+    if (gch(50)) { m->lead = c->lead; m->snd[GP_LEAD] = c->snd[GP_LEAD]; }
+    if (gch(50)) { m->rtype = c->rtype; m->dtime = c->dtime; m->wet = c->wet; m->dtype = c->dtype; }
+    m->scale[1] = m->scale[3] = c->scale[0];
+    m->tex = c->tex;
+}
 static void gen_make(void)
 {
     const ggenre_t *g;
     uint32_t k, dr = NTRK, nlive = trk_live < NTRK ? trk_live : NTRK, nmel, drums, next, wet;
-    /* the choices from the seed: the genre (RANDOM), the root, the scale, the progression, the bass */
+    /* the choices from the identity's seed: the style (or WILD) and the partner, the root, the scale, the progression,
+     * the bass */
+    gcf.dev = gp.id.dev >= 100u ? (uint16_t)gp.id.dev : (uint16_t)gc_dev();   /* (0.9) the identity's CPU factor */
+    gcf.two = (uint8_t)gp.id.two;
+    gs.pi = gp.id.part != GID_SOLO && gp.id.main != GID_WILD ? gp.id.part : (uint8_t)GID_SOLO;
+    gs.gi = gp.id.main == GID_WILD ? NGENRE : gp.id.main % NGENRE;   /* (before any stream: gseed_mix reads them) */
     gseed(GS_PICK);
-    gx.on = (uint8_t)(dice_force_style < 0 && gp.genre == GEN_EXPLORE);
-    gx.nvo = gx.np = 0; gx.eng = -1; gx.w = gp.complex; gx.nmax = 4;
+    gx.on = (uint8_t)(gp.id.main == GID_WILD);
+    gx.nvo = gx.np = 0; gx.eng = -1; gx.w = gp.id.complex; gx.nmax = 4;
     if (!gx.on && gx.dirty) {                           /* (0.8.6) after an EXPLORE piece: DIV and PLAYHEADS as a genre's
                                                          * piece has them (1/16, none) */
         for (k = 0; k < NTRK; k++) trk[k].p[P_SDIV] = 2;
@@ -2416,44 +2469,11 @@ static void gen_make(void)
         memset(fg_set, 0, sizeof fg_set);
         g = gs.g = &gmut;
     } else {
-        gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gen_random_genre() - 1u;
         gmut = GENRE[gs.gi];
         gen_shown_tempo(&gmut, gs.gi + 1u);            /* (0.5.1) the shown genre's tempo and swing */
-        g = gs.g = &gmut;
         gs.mutant = 0;
-        if (!gp.genre && dice_force_style < 0 && gch(45)) {   /* (0.6.95) RANDOM: a mutant, the drums of one genre, the bass
-                                                             * of another, the rest from either; a name of its own: "EBM+JAZZ" */
-            uint32_t bg = gen_random_genre(), k2;
-            ggenre_t bt = GENRE[bg - 1u];
-            const ggenre_t *b = &bt, *c = &GENRE[gen_random_genre() - 1u];
-            gen_shown_tempo(&bt, bg);
-            gmut.drum = b->drum; gmut.kit = b->kit; gmut.ghosts = b->ghosts; gmut.hats = b->hats; gmut.fills = b->fills;
-            gmut.sd_micro = b->sd_micro; gmut.snd[GP_DRUMS] = b->snd[GP_DRUMS];
-            gmut.drum_pct = (uint8_t)(b->drum_pct > g->drum_pct ? b->drum_pct : g->drum_pct);
-            for (k2 = 0; k2 < 3u; k2++) gmut.bass[k2] = c->bass[k2];
-            gmut.bass_lo = c->bass_lo; gmut.kick_mode = c->kick_mode; gmut.bass_gate = c->bass_gate; gmut.snd[GP_BASS] = c->snd[GP_BASS];
-            if (gch(50)) {
-                for (k2 = 0; k2 < 3u; k2++) gmut.prog[k2] = b->prog[k2];
-                gmut.cbars = b->cbars; gmut.pads = b->pads; gmut.voicing = b->voicing; gmut.snd[GP_CHORDS] = b->snd[GP_CHORDS];
-                gmut.hx = b->hx;                            /* (0.8.3: the harmony with its progressions) */
-            }
-            if (gch(50)) { gmut.arp[0] = c->arp[0]; gmut.arp[1] = c->arp[1]; gmut.snd[GP_ARP] = c->snd[GP_ARP]; }
-            if (gch(50)) { gmut.lead = b->lead; gmut.snd[GP_LEAD] = b->snd[GP_LEAD]; }
-            if (gch(50)) { gmut.rtype = b->rtype; gmut.dtime = b->dtime; gmut.wet = b->wet; gmut.dtype = b->dtype; }
-            gmut.scale[1] = b->scale[0]; gmut.scale[3] = c->scale[0];
-            gmut.tex = c->tex;
-            gmut.bpm_lo = (uint8_t)(((uint32_t)g->bpm_lo + b->bpm_lo) / 2u);
-            gmut.bpm_hi = (uint8_t)(((uint32_t)g->bpm_hi + b->bpm_hi) / 2u);
-            if (gmut.bpm_hi < gmut.bpm_lo + 4u) gmut.bpm_hi = (uint8_t)(gmut.bpm_lo + 4u);
-            gmut.swing = (uint8_t)(((uint32_t)g->swing + b->swing) / 2u);
-            str_cpy(gmut_name, GEN_SHOWN_CARD[gen_shown_index(gs.gi + 1u) % GEN_NSHOWN], sizeof gmut_name);   /* (3b) the two
-                                                             * genres' card names, as the GEN screen shows them: "ACID+D'N'BASS" */
-            k2 = str_len(gmut_name);
-            gmut_name[k2++] = '+';
-            str_cpy(gmut_name + k2, GEN_SHOWN_CARD[gen_shown_index(bg) % GEN_NSHOWN], sizeof gmut_name - k2);
-            gmut.name = gmut_name;
-            gs.mutant = 1;
-        }
+        if (gs.pi != GID_SOLO) { gen_blend(&gmut, gs.pi); gs.mutant = 1; }   /* (0.9 spec 2) a blend */
+        g = gs.g = &gmut;
         /* (0.6.95) a throw its own: the drums from the map's family, the chords' play and a role's recipe from the neighbours */
         if (gmut.drum < DM_NONE && gmut.drum != DM_IDM && gch(35)) gmut.drum = DM_ALT[gmut.drum][gr() % 2u];
         if (gmut.pads <= CS_TRANCE && gch(35)) gmut.pads = CS_ALT[gmut.pads][gr() % 2u];
@@ -2637,30 +2657,80 @@ static void gen_make(void)
     mut_keep();
     gen_parts();
 }
-/* the piece made from the settings (UNDO brings back what was there); the message */
-static void gen_go(void)
+/* ------------------------------------------------------------------------------------------- the identity --- */
+static uint32_t gid_r(uint32_t *s) { *s ^= *s << 13; *s ^= *s >> 17; *s ^= *s << 5; return *s; }
+/* (0.9 spec 2) a style drawn: WILD GEN_WILD_PCT of the time; else a main of the ten, evenly, never prev (the piece
+ * built last: not part of any identity, pre-flight 3); then GEN_BLEND_PCT of the time a partner from its row */
+static void gid_pick(genid_t *id, uint32_t *s, uint32_t prev)
+{
+    uint32_t p = prev < NGENRE ? gen_shown_index(prev + 1u) : 255u, i;
+    if (!*s) *s = 0x9E3779B9u;
+    id->part = GID_SOLO;
+    if (gid_r(s) % 100u < GEN_WILD_PCT) { id->main = GID_WILD; return; }
+    i = gid_r(s) % (p < GEN_NSHOWN ? GEN_NSHOWN - 1u : GEN_NSHOWN);
+    if (p < GEN_NSHOWN && i >= p) i++;
+    id->main = GEN_SHOWN[i];
+    if (gid_r(s) % 100u < GEN_BLEND_PCT) id->part = GEN_SHOWN[GEN_PARTNER[i][gid_r(s) % GEN_NPARTNER[i]]];
+}
+static void gid_now(genid_t *id)                        /* the page's knobs and the device now; WILD, no partner */
+{
+    memset(id, 0, sizeof *id);
+    id->seed = (uint16_t)(gp.seed % 10000u); id->energy = gp.energy; id->form = (uint16_t)(gp.form % 3u);
+    id->complex = gp.complex; id->tape = (uint16_t)(gp.tape % GT_N);
+    id->two = mc_two() ? 1u : 0u; id->dev = (uint16_t)gc_dev();
+    id->main = GID_WILD; id->part = GID_SOLO;
+}
+static void gid_legacy(genid_t *id)                     /* (the tools and the tests) gp.genre as an identity */
+{
+    gid_now(id);
+    if (dice_force_style >= 0) { id->main = (uint8_t)((uint32_t)dice_force_style % NGENRE); return; }
+    if (gp.genre == GEN_EXPLORE) return;
+    if (gp.genre) { id->main = (uint8_t)((gp.genre - 1u) % NGENRE); return; }
+    {   uint32_t s = ((uint32_t)gp.seed + 1u) * 2654435761u ^ 0x5BD1E995u;   /* (RANDOM: a draw from the seed) */
+        gid_pick(id, &s, GID_SOLO); }
+}
+static void gid_part_name(uint32_t g, char *b, uint32_t n, int card)
+{
+    uint32_t i = g == GID_WILD ? 255u : gen_shown_index(g + 1u);
+    str_cpy(b, g == GID_WILD ? "WILD" : i < GEN_NSHOWN ? (card ? GEN_SHOWN_CARD[i] : GEN_SHOWN_NAME[i]) : GENRE[g % NGENRE].name, n);
+}
+/* a piece's name: "RETROBOC+AMBIENT 0421", "WILD 0421" (card: the cards' short names, "RETRO+AMBIENT 0421") */
+static void gid_name(const genid_t *id, char *b, uint32_t n, int card)
 {
     uint32_t k;
-    char b[8];
+    gid_part_name(id->main, b, n, card);
+    if (id->part != GID_SOLO && id->main != GID_WILD && (k = str_len(b)) + 2u < n) {
+        b[k++] = '+';
+        gid_part_name(id->part, b + k, n - k, card);
+    }
+    k = str_len(b);
+    if (k + 6u <= n) {
+        b[k] = ' '; b[k + 1] = (char)('0' + id->seed / 1000u % 10u); b[k + 2] = (char)('0' + id->seed / 100u % 10u);
+        b[k + 3] = (char)('0' + id->seed / 10u % 10u); b[k + 4] = (char)('0' + id->seed % 10u); b[k + 5] = 0;
+    }
+}
+/* (0.9) the one way a piece is made: UNDO marked, the piece from its identity, its name, the message */
+static void gen_build(const genid_t *id)
+{
+    char m[40];
     cpt_clock_back();                                   /* (ACID FM 3c-2 task 7) CPU TEST left: its CLOCK back (before the
                                                          * mark: UNDO brings the test back on the CLOCK it had) */
     undo_mark();
+    gp.id = *id;
     gen_make();
     safe_part[0] = gs.act[RL_TEX] && gs.trk_of[RL_TEX] < trk_live ? gs.trk_of[RL_TEX] : (uint8_t)NTRK;   /* (ACID FM 0.5.2) */
     safe_part[1] = gs.act[RL_ARP] && gs.trk_of[RL_ARP] < trk_live ? gs.trk_of[RL_ARP] : (uint8_t)NTRK;   /* the parts the
                                                          * safety net hushes (audio.c): the piece's texture and arp, if
                                                          * it plays them (after gen_make: its section_load cleared them) */
-    k = gs.gi < NGENRE && gs.g->name == GENRE[gs.gi].name ? gen_shown_index(gs.gi + 1u) : 255u;   /* (3b) a shown genre by its screen name */
-    str_cpy(gp.last, k != 255u ? GEN_SHOWN_NAME[k] : gs.g->name, sizeof gp.last);
-    k = str_len(gp.last);
-    b[0] = ' '; b[1] = (char)('0' + gp.seed / 1000u % 10u); b[2] = (char)('0' + gp.seed / 100u % 10u);
-    b[3] = (char)('0' + gp.seed / 10u % 10u); b[4] = (char)('0' + gp.seed % 10u); b[5] = 0;
-    str_cpy(gp.last + k, b, sizeof gp.last - k);
+    gid_name(&gp.id, gp.last, sizeof gp.last, 0);
+    str_cpy(m, "GEN: ", sizeof m); str_cpy(m + 5, gp.last, sizeof m - 5);
+    if (text_w(&UF_HDR, m) > 232) gid_name(&gp.id, gp.last, sizeof gp.last, 1);   /* (too wide: the short names) */
     ui_say("GEN: ", gp.last);
     str_cpy(ui.msg2, live.mode ? "PARTS: PLAY THE SONG" : song.g[G_CLOCK] == 1 ? "CLOCK: USB" : song.g[G_CLOCK] ? "CLOCK: TRS" :
             "UNDO: GLO + G4", sizeof ui.msg2);          /* (3c-2 task 7: the tempo the outside clock's, as tempo_ext says) */
     ui.force = 1;
 }
+static void gen_go(void) { genid_t id; gid_legacy(&id); gen_build(&id); }   /* the piece the settings name (the tools) */
 static uint32_t gen_sig(void)                           /* the settings that make the piece */
 {
     uint32_t h = 2166136261u, k;
@@ -2682,6 +2752,14 @@ static void gen_new_seed(void)
     }
     for (k = 7; k; k--) gseed_last[k] = gseed_last[k - 1u];
     gseed_last[0] = (uint16_t)(gp.seed + 1u);
+}
+static void gen_draw(genid_t *id)                       /* (0.9) a GENERATE press: a fresh seed, the page, a style drawn */
+{
+    uint32_t s;
+    gen_new_seed();
+    gid_now(id);
+    s = rng() | 1u;
+    gid_pick(id, &s, gp.id.main);
 }
 /* OCT+ on the GEN screen: the piece; the same settings again: a new seed first */
 static void gen_press(void)
@@ -2721,16 +2799,16 @@ static const char *dice_seq(track_t *t)
     static const char *const RN[RL_N] = {"SEQ DICED: DRUMS", "SEQ DICED: BASS", "SEQ DICED: PAD", "SEQ DICED: LEAD",
                                          "SEQ DICED: ARP", "SEQ DICED: TEXTURE"};
     uint32_t k = trk_index(t) % NTRK, r, i, len, lo = 0, cnt = 0, chord = 0;
-    uint16_t s0 = gp.seed;
+    uint16_t s0 = gp.id.seed;
     for (i = 0; i < NSTEP; i++)                         /* (what it plays now: its register, its chords) */
         if (t->step[i].time == ST_NOTE && t->step[i].n) { lo += t->step[i].note[0]; cnt++; chord += t->step[i].n > 1u; }
     r = drum_track(t) ? RL_DRUM : gs.g && gs.role[k] != RL_DRUM ? gs.role[k] : cnt && lo / cnt < 48u ? RL_BASS :
         chord * 3u > cnt && cnt ? RL_PAD : rng() % 2u ? RL_LEAD : RL_ARP;
-    gp.seed = (uint16_t)(rng() % 10000u);
+    gp.id.seed = (uint16_t)(rng() % 10000u);
     if (!gs.g || gs.root != t->p[P_ROOT] || gs.scale != t->p[P_SCALE]) {   /* (no piece here: its choices made up) */
         uint32_t m = SCALE_MASK[(uint32_t)t->p[P_SCALE] % (sizeof SCALE_MASK / sizeof SCALE_MASK[0])], c, d;
         gs.gi = gs.g && gs.gi < NGENRE ? gs.gi : GEN_SHOWN[rng() % GEN_NSHOWN];
-        gmut = GENRE[gs.gi]; gs.g = &gmut; gs.mutant = 0; gx.on = 0;
+        gmut = GENRE[gs.gi]; gs.g = &gmut; gs.mutant = 0; gs.pi = GID_SOLO; gx.on = 0;
         gseed(GS_PICK);
         gen_pick();
         for (d = 0, c = 0; c < 12u; c++) d += (m >> c) & 1u;
@@ -2760,14 +2838,14 @@ static const char *dice_seq(track_t *t)
         for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
         gen_role(t, k, len);
         if (steps_sig(t) != dsq_last[k]) break;
-        gp.seed = (uint16_t)(rng() % 10000u);
+        gp.id.seed = (uint16_t)(rng() % 10000u);
         gs.ba = gs.g->bass[rng() % 3u];
     }
     dsq_last[k] = steps_sig(t);
     t->p[P_SLEN] = (int16_t)len;
     if (r != RL_DRUM) dlevel(t, len);
     load_end(t);
-    gp.seed = s0;
+    gp.id.seed = s0;
     return RN[r];
 }
 
@@ -2908,8 +2986,8 @@ static void gen_panel(void)
         }
     }
     if (gp.form % 3u == 0u) { ord[0] = 0; n = 1; }      /* the FORM's sections, in the order this seed makes */
-    else n = gform_order(gp.form == 2u ? (gp.genre && GENRE[(gp.genre - 1u) % NGENRE].form == FM_ARC ? FM_ARC : FM_CLUB) : FM_PARTS,
-                         ord, mul);
+    else n = gform_order(&gp.id, gp.form == 2u ? (gp.genre && GENRE[(gp.genre - 1u) % NGENRE].form == FM_ARC ? FM_ARC : FM_CLUB) :
+                         FM_PARTS, ord, mul);   /* (0.9: the piece made last's; Task 5's panel) */
     bw = 228 / (int32_t)n;
     for (i = 0; i < n; i++) {
         uint32_t sc = ord[i];

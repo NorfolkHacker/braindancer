@@ -65,6 +65,51 @@ static uint32_t all_sig(void)
     for (k = 0; k < NTRK; k++) h = (h ^ steps_sig(&trk[k]) ^ trk[k].eng_req ^ (uint32_t)trk[k].p[P_E4] * 7u) * 16777619u;
     return h;
 }
+/* (0.9) a piece's parts as played, and with TAPE: the steps and engines, the delay, the reverb, the grain, the parts
+ * played, the PLAYHEADs; piece_sig adds the swing and TAPE's six */
+static uint32_t parts_sig(void)
+{
+    uint32_t h = all_sig() ^ (uint32_t)song.g[G_DTIME] * 0x9e3779b9u ^ (uint32_t)song.g[G_RTYPE] << 20 ^
+                 (uint32_t)(song.g[G_DPIT] != 0) << 27 ^ (uint32_t)(song.g[G_DSPRY] != 0) << 28, k, q;
+    for (q = 0; q < 6u; q++) h = h * 31u + (gs.act[q] != 0);
+    for (k = 0; k < NTRK; k++) for (q = 0; q < FG_HEADS; q++) h = h * 3u + (fg_set[k][q].rate != 0);
+    return h;
+}
+static uint32_t piece_sig(void)
+{
+    uint32_t h = parts_sig(), k;
+    h = (h ^ (uint32_t)(uint16_t)song.g[G_SWING]) * 16777619u;
+    for (k = G_TAGE; k <= G_TTONE; k++) h = (h ^ (uint32_t)(uint16_t)song.g[k]) * 16777619u;
+    return h;
+}
+static uint32_t gt_style(const char *name)              /* a shown style's GENRE index by its screen name */
+{
+    uint32_t i;
+    for (i = 0; i < GEN_NSHOWN; i++) if (!strcmp(GEN_SHOWN_NAME[i], name)) return GEN_SHOWN[i];
+    printf("gen: no style %s\n", name);
+    return GID_SOLO;
+}
+static void gid_set(genid_t *id, uint32_t main, uint32_t part, uint32_t seed)
+{
+    gid_now(id);
+    id->main = (uint8_t)main; id->part = (uint8_t)part; id->seed = (uint16_t)(seed % 10000u);
+}
+/* spec 2's table, by name: main, then its partners */
+static const char *const PT[GEN_NSHOWN][7] = {
+    {"IDM", "GLITCH HOP", "MICRO", "RETROBOC", "AMBIENT", "DRILL'N'BASS", "ELECTRO"},
+    {"GLITCH HOP", "IDM", "BREAKS", "MICRO", "ELECTRO"}, {"BREAKS", "GLITCH HOP", "DRILL'N'BASS", "ACID", "ELECTRO"},
+    {"DRILL'N'BASS", "IDM", "BREAKS"}, {"ACID", "BREAKS", "ELECTRO", "AMB TECHNO"},
+    {"ELECTRO", "IDM", "GLITCH HOP", "BREAKS", "ACID"}, {"MICRO", "IDM", "GLITCH HOP", "AMB TECHNO"},
+    {"RETROBOC", "IDM", "AMBIENT"}, {"AMBIENT", "IDM", "RETROBOC", "AMB TECHNO"}, {"AMB TECHNO", "ACID", "MICRO", "AMBIENT"}};
+static int pt_ok(uint32_t main, uint32_t part)          /* part one of main's partners in spec 2's table */
+{
+    uint32_t i, j;
+    for (i = 0; i < GEN_NSHOWN; i++)
+        if (gt_style(PT[i][0]) == main)
+            for (j = 1; j < 7u && PT[i][j]; j++) if (gt_style(PT[i][j]) == part) return 1;
+    return 0;
+}
+static int gid_eq_t(const genid_t *a, const genid_t *b) { return a->seed == b->seed && a->main == b->main && a->part == b->part && a->energy == b->energy && a->complex == b->complex && a->form == b->form && a->tape == b->tape && a->dev == b->dev && a->two == b->two; }
 static int in_scale(const track_t *t, int32_t n)
 {
     uint32_t mask = scale_mask(t);
@@ -131,6 +176,81 @@ int main(void)
         gen_with(1, 421, 50, 0); h2 = all_sig();
         gen_with(1, 422, 50, 0); h3 = all_sig();
         bad += gcheck("deterministic: HOUSE 0421 twice the same piece, 0422 another", h1 == h2 && h1 != h3);
+    }
+    {   /* (0.9 spec 2) GENERATE: the identity makes the piece; the picker; the blends */
+        genid_t a, b, d;
+        uint32_t h1, h2, h3, i, j, pr, wild = 0, blend = 0, rep = 0, badp = 0, nonw = 0, cnt[GEN_NSHOWN] = {0}, seenp = 0, ok;
+        char nm[32];
+        gen_reset();
+        gid_set(&a, gt_style("RETROBOC"), gt_style("AMBIENT"), 421);
+        gen_build(&a); h1 = piece_sig();
+        ok = !strcmp(gp.last, "RETROBOC+AMBIENT 0421") && !strcmp(ui.msg, "GEN: RETROBOC+AMBIENT 0421") && gs.mutant;
+        gid_set(&b, gt_style("DRILL'N'BASS"), GID_SOLO, 77); gen_build(&b);
+        gen_build(&a); h2 = piece_sig();
+        d = a; d.part = GID_SOLO; gen_build(&d); h3 = piece_sig();
+        bad += gcheck("(0.9) the same identity twice the same piece (RETROBOC+AMBIENT 0421, another between); solo another", h1 == h2 && h1 != h3);
+        bad += gcheck("  named on the panel and the status line: RETROBOC+AMBIENT 0421; solo RETROBOC 0421", ok && !strcmp(gp.last, "RETROBOC 0421"));
+        d.main = GID_WILD; gen_build(&d);
+        bad += gcheck("  WILD: the EXPLORE generator, named WILD 0421", gx.on && !strcmp(gp.last, "WILD 0421"));
+        for (ok = 1, i = 0; i < GEN_NSHOWN; i++) {      /* the firmware's table is spec 2's */
+            uint32_t n = 0;
+            for (j = 1; j < 7u && PT[i][j]; j++) n++;
+            ok &= GEN_NPARTNER[gen_shown_index(gt_style(PT[i][0]) + 1u)] == n;
+            for (j = 0; j < GEN_NPARTNER[i]; j++) ok &= pt_ok(GEN_SHOWN[i], GEN_SHOWN[GEN_PARTNER[i][j]]);
+        }
+        bad += gcheck("  GEN_PARTNER is spec 2's table (every row, every partner)", ok);
+        gen_reset();
+        for (pr = 0; pr < 2000u; pr++) {                /* 2,000 presses' draws (the identity only, then as if built) */
+            genid_t id;
+            uint32_t prev = gp.id.main, si;
+            host_ticks += 1300000u + pr * 777u;
+            gen_draw(&id);
+            if (id.main == GID_WILD) { wild++; badp += id.part != GID_SOLO; gp.id = id; continue; }
+            nonw++;
+            si = gen_shown_index(id.main + 1u);
+            if (si >= GEN_NSHOWN) { badp++; continue; }
+            cnt[si]++;
+            rep += id.main == prev;
+            if (id.part != GID_SOLO) { blend++; badp += !pt_ok(id.main, id.part); seenp |= 1u << gen_shown_index(id.part + 1u); }
+            gp.id = id;
+        }
+        for (ok = 1, i = 0; i < GEN_NSHOWN; i++) ok &= cnt[i] * 100u >= nonw * 7u && cnt[i] * 100u <= nonw * 13u;
+        printf("gen: (0.9) 2000 presses: WILD %u, blends %u of %u, the same main twice running %u, outside the table %u\n",
+               wild, blend, nonw, rep, badp);
+        bad += gcheck("  WILD about 10 % (7..13 %), never blended", wild >= 140u && wild <= 260u);
+        bad += gcheck("  blends about 45 % of the rest (40..50 %), partners only from the table, every style a partner", blend * 100u >= nonw * 40u &&
+                      blend * 100u <= nonw * 50u && !badp && seenp == (1u << GEN_NSHOWN) - 1u);
+        bad += gcheck("  the main evenly (7..13 % each), never the same main as the press before", ok && !rep);
+        for (ok = 1, i = 0; i < GEN_NSHOWN; i++)       /* a blend: the main's tempo, swing and drums, the partner's bass */
+            for (j = 0; j < GEN_NPARTNER[i]; j++) {
+                uint32_t mi = GEN_SHOWN[i], pa = GEN_SHOWN[GEN_PARTNER[i][j]];
+                gid_set(&d, mi, pa, 100u * i + j + 3u); gen_build(&d);
+                ok &= song.g[G_BPM] >= GEN_SHOWN_TEMPO[i][0] - 3 && song.g[G_BPM] <= GEN_SHOWN_TEMPO[i][1] + 3 &&
+                      song.g[G_SWING] == GEN_SHOWN_TEMPO[i][2] && gs.g->kit == GENRE[mi].kit && gs.g->bass_lo == GENRE[pa].bass_lo &&
+                      gs.g->kick_mode == GENRE[pa].kick_mode && gs.mutant;
+                gid_name(&d, nm, sizeof nm, 1);         /* (the short form: the fallback, pre-flight 17) */
+                ok &= text_w(&UF_HDR, ui.msg) <= 232 && str_len(gp.last) + 1u < sizeof gp.last && strchr(gp.last, '+') &&
+                      (strstr(gp.last, GEN_SHOWN_NAME[i]) == gp.last || !strcmp(gp.last, nm));
+            }
+        bad += gcheck("  every blend: the main's tempo, swing and kit, the partner's bass; its name whole and on the status line", ok);
+        {   /* the CPU factor is the identity's: rebuilt after CPU TEST changed, the same piece and budget */
+            uint32_t b0, s0;
+            mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+            gid_set(&d, gt_style("IDM"), gt_style("MICRO"), 9641); gen_build(&d); s0 = piece_sig(); b0 = gc_budget();
+            cpt_res = 0; cpt_cores = 0;
+            gen_build(&d);
+            bad += gcheck("  the CPU factor in the identity: CPU TEST forgotten, the same piece and budget rebuilt", piece_sig() == s0 &&
+                          gc_budget() == b0 && gc_dev() != d.dev);
+            mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+        }
+        {   /* the tools' way in: gen_go with gp.genre 0 draws from the seed (the same seed, the same draw) */
+            uint32_t s1, s2;
+            gen_reset();
+            gen_with(0, 31, 50, 0); s1 = piece_sig(); a = gp.id;
+            gen_with(1, 7, 50, 0);
+            gen_with(0, 31, 50, 0); s2 = piece_sig();
+            bad += gcheck("  gen_go, genre 0 (the tools'): a draw from the seed, deterministic", s1 == s2 && gid_eq_t(&a, &gp.id));
+        }
     }
     /* ---- every genre, three seeds, three energies: the guard rails */
     for (g = 0; g < NGENRE; g++) {
@@ -505,7 +625,7 @@ int main(void)
             gen_with(0, seeds, 50, 0);
             if (gs.mutant) {
                 mut++;
-                if (!strchr(gs.g->name, '+') || gs.g->bpm_hi < gs.g->bpm_lo || strncmp(ui.msg, "GEN: ", 5)) bad_mut++;
+                if (!strchr(gp.last, '+') || gs.g->bpm_hi < gs.g->bpm_lo || strncmp(ui.msg, "GEN: ", 5)) bad_mut++;
                 project_capture(&proj_scratch);
                 if (!proj_pack(&proj_wire, &proj_scratch)) bad_mut++;
                 for (i = 0; i < 16u; i++) events_block(CTL);
@@ -598,7 +718,7 @@ int main(void)
             for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
             gp.complex = (uint8_t)((sd * 29u) % 100u); gp.swing = GA_AUTO; gp.human = 30;
             gen_go();
-            if (strncmp(ui.msg, "GEN: EXPLORE ", 13) || strcmp(gs.g->name, "EXPLORE")) name_bad++;
+            if (strncmp(ui.msg, "GEN: WILD ", 10) || strcmp(gs.g->name, "EXPLORE")) name_bad++;   /* (0.9: WILD on the screen) */
             for (k = 0; k < NTRK; k++) {
                 const track_t *t = &trk[k];
                 uint32_t r = gs.role[k], len = dlen(t), on = 0, c = 0, b;
@@ -671,7 +791,7 @@ int main(void)
                "gen:   RMS %.0f at least, peak %d, %u voices at most (the genres: %u)\n",
                SEEDS, nbpm, bpm_lo, bpm_hi, nsc, nlen, odd, ndm, neng, poly, divs, comps, lms, heads, words, nn, key_col, key_appr, rms_min,
                peak_max, vmax_all, vref);
-        bad += gcheck("  60 seeds: each named EXPLORE nnnn, each another piece (no two the same)", !name_bad && !same);
+        bad += gcheck("  60 seeds: each named WILD nnnn, each another piece (no two the same)", !name_bad && !same);
         bad += gcheck("  each plays: two melodic parts at least, sound (RMS), never stuck at full scale", !nmel_bad && !quiet && !loud);
         bad += gcheck("  the budgets: FM6 / VOICE on two tracks at most, no retired engine, one DRUM track, no more voices than a genre's",
                       !budget_bad && vmax_all <= vref);
@@ -1015,11 +1135,11 @@ int main(void)
             uint32_t sd, hid = 0, hh;
             char v[16];
             for (sd = 0; sd < 2500u; sd++) {
-                hid += gen_shown_index(gen_random_genre()) == 255u;
                 gen_with(0, sd, 50, 0);
-                hid += gen_shown_index(gs.gi + 1u) == 255u;
+                hid += gp.id.main != GID_WILD && gen_shown_index(gs.gi + 1u) == 255u;
+                hid += gp.id.part != GID_SOLO && gen_shown_index(gp.id.part + 1u) == 255u;
             }
-            bad += gcheck("  (3b) RANDOM / mutant / dice draws over 2,500 seeds: only the ten genres", hid == 0u);
+            bad += gcheck("  (0.9) seed draws over 2,500 seeds: only the ten", hid == 0u);
             bad += gcheck("  (3b) gen_shown_index: the ten in order, hidden / RANDOM / EXPLORE 255", gen_shown_index(1u + GEN_SHOWN[0]) == 0u &&
                           gen_shown_index(1u + GEN_SHOWN[9]) == 9u && gen_shown_index(1u) == 255u && gen_shown_index(0u) == 255u &&
                           gen_shown_index(GEN_EXPLORE) == 255u);
@@ -1046,17 +1166,17 @@ int main(void)
             gen_with(1, 421, 50, 0);
             bad += gcheck("  (0.5.1) a hidden genre (HOUSE) keeps its template's tempo", song.g[G_BPM] >= 119 && song.g[G_BPM] <= 130);
         }
-        {   /* (3b final review I2) RANDOM's mutants are named from the shown names only ("ACID+D'N'BASS 0421"), never JIANT's
-             * hidden ones; the name fits the GEN panel's LAST line and the status line */
+        {   /* (3b final review I2; 0.9 pre-flight 17) the seed draws' blends are named from the shown names only
+             * ("RETROBOC+AMBIENT 0421", the cards' short names where the status line has no room), never JIANT's hidden
+             * ones; the name whole on the status line (the GEN panel's line: Task 5's) */
             uint32_t sd, nm = 0, badn = 0, wide = 0, j;
-            char v[48];
             for (sd = 0; sd < 3000u; sd++) {
-                char a[24], *pl;
+                char a[28], *pl;
                 gen_with(0, sd, 50, 0);
-                if (!gs.mutant) continue;
+                if (gp.id.part == GID_SOLO) continue;
                 nm++;
                 str_cpy(a, gp.last, sizeof a);
-                pl = strchr(a, ' ');                   /* the name before the seed (no shown card name has a space) */
+                pl = strrchr(a, ' ');                  /* the name before the seed (the full names have spaces: the last) */
                 if (pl) *pl = 0;
                 pl = strchr(a, '+');
                 if (!pl) { badn++; continue; }
@@ -1064,17 +1184,16 @@ int main(void)
                 {
                     int ka = 0, kb = 0;
                     for (j = 0; j < GEN_NSHOWN; j++) {
-                        ka |= !strcmp(a, GEN_SHOWN_CARD[j]);
-                        kb |= !strcmp(pl, GEN_SHOWN_CARD[j]);
+                        ka |= !strcmp(a, GEN_SHOWN_NAME[j]) || !strcmp(a, GEN_SHOWN_CARD[j]);
+                        kb |= !strcmp(pl, GEN_SHOWN_NAME[j]) || !strcmp(pl, GEN_SHOWN_CARD[j]);
                     }
-                    if (!ka || !kb) { if (badn < 3u) printf("    mutant name \"%s\"\n", gp.last); badn++; }
+                    if (!ka || !kb) { if (badn < 3u) printf("    blend name \"%s\"\n", gp.last); badn++; }
                 }
-                gen_last_line(v, sizeof v);
-                wide += text_w(&AF_X, v) > GEN_LAST_W || !strstr(v, gp.last) || text_w(&UF_HDR, ui.msg) > 232 || str_len(gp.last) + 1u >= sizeof gp.last ||
+                wide += text_w(&UF_HDR, ui.msg) > 232 || str_len(gp.last) + 1u >= sizeof gp.last ||
                         strncmp(ui.msg, "GEN: ", 5) || strcmp(ui.msg + 5, gp.last);
             }
-            bad += gcheck("  (3b) RANDOM's mutants over 3,000 seeds: named from the shown card names only", nm > 500u && badn == 0u);
-            bad += gcheck("  (3b) ... the name and seed whole, fitting the GEN panel (150 px) and the status line", nm > 500u && wide == 0u);
+            bad += gcheck("  (0.9) the seed draws' blends over 3,000 seeds: named from the shown names only", nm > 400u && badn == 0u);
+            bad += gcheck("  (0.9) ... the name and seed whole, fitting the status line", nm > 400u && wide == 0u);
             gp.genre = (uint8_t)GEN_EXPLORE; gp.hot = 0xFF; ui.msg_t = 0;
         }
         frames(800);
@@ -1156,7 +1275,8 @@ int main(void)
             for (sd = 0; sd < (g == GEN_EXPLORE ? 400u : g == 0u ? 200u : 10u); sd++, n++) {
                 uint32_t st, over, dt, busy, st0;
                 gt_cpt = CPT[sd & 1u]; gen_reset();
-                gen_with(g, sd * 89u + g * 7u + 5u, 30u + (sd * 17u) % 60u, sd % 3u);
+                gen_with(g, g == GEN_EXPLORE ? sd * 25u + 5u : sd * 89u + g * 7u + 5u, 30u + (sd * 17u) % 60u, sd % 3u);   /* (0.9:
+                                                         * EXPLORE's 400 seeds evenly over the identity's 0..9999) */
                 st = gt_dly_stage(); over = gc_cost(1) > gc_budget(); busy = gen_busy();
                 over_q += over && st == 2u;
                 busy_q += busy && !gt_cpt && st == 2u;
@@ -1193,6 +1313,7 @@ int main(void)
                     for (act[j] = 0, q = 0; q < 6u; q++) act[j] |= (uint32_t)(gs.act[q] != 0) << q;
                     for (q = 0; q < NTRK; q++) for (hh = 0; hh < FG_HEADS; hh++) act[j] += (fg_set[q][hh].rate != 0) << 8;
                 }
+                if (!g && gp.id.main == GID_WILD) continue;   /* (0.9: a seed's draw may be WILD, EXPLORE's: fitted, as EXPLORE) */
                 if (dt2[0] != dt2[1]) { r_dly++; continue; }   /* (the delay rule: its TIME, then the rest drawn after it) */
                 r_n++;
                 if (sig[0] != sig[1] || act[0] != act[1] || rt[0] != rt[1]) {
@@ -1202,7 +1323,10 @@ int main(void)
             }
         printf("gen: (0.5.2) RANDOM and the genres at CPU TEST unset and 74 %%: %u pieces with the same TIME, %u of them differ; "
                "%u with a quarter-rate delay shortened at one of them\n", r_n, r_diff, r_dly);
-        bad += gcheck("  .. EXPLORE under the budget (4 % over at most: at the floor, the fit's steps run out)", x_over * 25u <= 400u);
+        /* (0.9 ruling) 0.8's own EXPLORE measured 11..21 of 400 over the budget on valid seeds (0..9999); the old 4 %
+         * passed only because most of its seeds were out of range (up to 35,824). The threshold is 0.8's measured rate,
+         * 6 % (24 of 400); Task 3 re-examines it when it fits every piece */
+        bad += gcheck("  .. EXPLORE under the budget (6 % over at most: at the floor, the fit's steps run out)", x_over <= 24u);
         bad += gcheck("  .. (review I2) RANDOM and the genres keep their parts, sounds, reverb, grain and PLAYHEADS whatever the "
                       "budget: only a quarter-rate delay changes", !r_diff);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;

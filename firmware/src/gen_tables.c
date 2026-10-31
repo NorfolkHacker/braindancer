@@ -630,6 +630,29 @@ static void gen_shown_tempo(ggenre_t *m, uint32_t genre)
         m->swing = GEN_SHOWN_TEMPO[i][2];
     }
 }
+/* (Braindancer 0.9) GENERATE (gen.c gid_pick): WILD (EXPLORE, no template) GEN_WILD_PCT of the presses, else a main
+ * style of the ten, never the press before's, blended GEN_BLEND_PCT of the time with a partner from its row (spec 2's
+ * table, GEN_SHOWN indices); TAPE on AUTO (gen.c gen_age): a style's AGE, a blend the main's + half the partner's
+ * (GEN_AGE_MAX at most), WILD 0..GEN_AGE_WILD from its seed */
+#define GEN_WILD_PCT 10u
+#define GEN_BLEND_PCT 45u
+#define GEN_MAXPART 6u
+static const uint8_t GEN_PARTNER[GEN_NSHOWN][GEN_MAXPART] = {
+    {1, 6, 7, 8, 3, 5},                                 /* IDM: GLITCH HOP, MICRO, RETROBOC, AMBIENT, DRILL'N'BASS, ELECTRO */
+    {0, 2, 6, 5},                                       /* GLITCH HOP: IDM, BREAKS, MICRO, ELECTRO */
+    {1, 3, 4, 5},                                       /* BREAKS: GLITCH HOP, DRILL'N'BASS, ACID, ELECTRO */
+    {0, 2},                                             /* DRILL'N'BASS: IDM, BREAKS */
+    {2, 5, 9},                                          /* ACID: BREAKS, ELECTRO, AMB TECHNO */
+    {0, 1, 2, 4},                                       /* ELECTRO: IDM, GLITCH HOP, BREAKS, ACID */
+    {0, 1, 9},                                          /* MICRO: IDM, GLITCH HOP, AMB TECHNO */
+    {0, 8},                                             /* RETROBOC: IDM, AMBIENT */
+    {0, 7, 9},                                          /* AMBIENT: IDM, RETROBOC, AMB TECHNO */
+    {4, 6, 8},                                          /* AMB TECHNO: ACID, MICRO, AMBIENT */
+};
+static const uint8_t GEN_NPARTNER[GEN_NSHOWN] = {6, 4, 4, 2, 3, 4, 3, 2, 3, 3};
+static const uint8_t GEN_AUTO_AGE[GEN_NSHOWN] = {20, 0, 0, 0, 0, 0, 15, 60, 40, 25};
+#define GEN_AGE_MAX 70u
+#define GEN_AGE_WILD 50u
 /* its keys: the SCALE page's modes of seven, the exotic ones likeliest (LOC too: its tonic chord a diminished one the
  * plan never takes, the other six degrees do) */
 static const uint8_t GX_SCALE[9] = {SC_MAJ, SC_MIN, SC_DOR, SC_MIX, SC_HARM, SC_PHRY, SC_LYD, 10u /* LOC */, SC_MEL};
