@@ -1811,7 +1811,7 @@ static const uint8_t DK_FXT[9] = {P_DIST, P_DTYPE, P_DTONE, P_CHOR, P_DLY, P_REV
 static const uint8_t DK_FXG[6] = {G_RTYPE, G_RSIZE, G_RDAMP, G_DTIME, G_DFDBK, G_DPIT};
 static struct {                                         /* what CANCEL puts back (the sound: undo_sound) */
     step_t step[NSTEP];
-    int16_t slen, v[9], g[6];
+    int16_t slen, level, v[9], g[6];
     const char *msg;
 } dk;
 static const char *dice_seq(track_t *t);                /* song_dice.c */
@@ -1893,6 +1893,7 @@ static void dk_keep(uint32_t kind)
     if (kind == CF_DICE_SEQ) {
         for (i = 0; i < NSTEP; i++) dk.step[i] = t->step[i];
         dk.slen = t->p[P_SLEN];
+        dk.level = t->p[P_LEVEL];                 /* (0.9.1: dice_seq's dlevel lowers it) */
     } else if (kind == CF_DICE_LFO) {
         for (i = 0; i < 8u; i++) dk.v[i] = t->p[DK_LFO[i]];
     } else if (kind == CF_DICE_FX) {
@@ -1910,6 +1911,7 @@ static int dk_back(uint32_t kind, uint32_t k)           /* CANCEL: 0 done */
         load_begin(t, LOAD_PAT);
         for (i = 0; i < NSTEP; i++) t->step[i] = dk.step[i];
         t->p[P_SLEN] = dk.slen;
+        t->p[P_LEVEL] = dk.level;
         load_end(t);
         latch_drop_req |= (uint8_t)(1u << (k % NTRK));
     } else if (kind == CF_DICE_LFO) {

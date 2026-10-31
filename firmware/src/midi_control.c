@@ -410,7 +410,8 @@ static void midi_control(uint32_t ch, uint32_t cc, uint32_t value)
  * released (also pedal-held ones), its pedal, bend, wheel and RPN selection reset, so no note hangs on a channel no
  * longer heard (was midi_route_ch14, on ROUT's change to CH1-4). One heard by other tracks lets go of its notes on two
  * tracks or more (on the tracks of before: MN_MULTI); a note of one track follows its note-on's track, as across a
- * change of the selected track. Each track receiving then follows its own channel's bend; one receiving none, none */
+ * change of the selected track. Each track receiving then follows its own channel's bend; one receiving none, none.
+ * (0.9.1) Also when KEYBOARD PLAYS SELECTED's selection moves: the track left loses the bend it took from it. */
 static void __attribute__((noinline)) midi_reroute(void)
 {
     uint32_t ch, note, i;

@@ -2282,6 +2282,7 @@ static uint32_t midi_in_mask(uint32_t ch)    /* bit i: track i receives channel 
 }
 static uint32_t midi_rsig = ~0u;           /* the routing events_block last saw (a change: midi_reroute) */
 static uint8_t midi_heard[16];             /* .. each channel's tracks then (bit 7: the selected one's) */
+static uint8_t midi_rsel;                  /* (0.9.1) .. the selected track then (KEYBOARD PLAYS SELECTED: a new one, midi_reroute) */
 
 #include "midi_control.c"
 #include "midi_clock.c"
@@ -2402,8 +2403,10 @@ static void events_block(uint32_t n)
         uint32_t sig = song.g[G_MRSEL] ? 1u : 0u;
         for (i = 0; i < NTRK; i++)
             sig = sig << 5 | (song.g[G_MRIN1 + i] ? trk_midi_ch(i) : 16u);
-        if (sig != midi_rsig) {
+        if (sig != midi_rsig || (song.g[G_MRSEL] && song.sel % NTRK != midi_rsel)) {   /* (0.9.1 spec 7: the selection
+                                                         * moved, its bend zeroed on the track left, midi_reroute) */
             midi_rsig = sig;
+            midi_rsel = (uint8_t)(song.sel % NTRK);
             midi_reroute();
         }
     }

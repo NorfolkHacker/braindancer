@@ -20431,8 +20431,8 @@ static int test_u1_dice(void)
         ok &= moved && ui.confirm == D[i].kind;
         if (!moved) printf("  dice %u: SELECT again changed nothing drawn\n", (unsigned)i);
         press(B_OCTDN); frame();                        /* OCT-: as before the first dice (the sequence's: its steps and LEN, what
-                                                         * dk_back keeps; the level dice_seq sets, dlevel, stays as before 1b) */
-        back = D[i].kind == CF_DICE_SEQ ? !memcmp(s0, TSEL->step, sizeof s0) && TSEL->p[P_SLEN] == p0[P_SLEN] : u1_same(p0, s0, g0, 0);
+                                                         * dk_back keeps; (0.9.1) the level dlevel set: back too) */
+        back = D[i].kind == CF_DICE_SEQ ? !memcmp(s0, TSEL->step, sizeof s0) && TSEL->p[P_SLEN] == p0[P_SLEN] && TSEL->p[P_LEVEL] == p0[P_LEVEL] : u1_same(p0, s0, g0, 0);
         ok &= !ui.confirm && msg_is(D[i].back) && back;
         if (!msg_is(D[i].back) || !back) printf("  dice %u: OCT- '%s', back %d\n", (unsigned)i, ui.msg, back);
         fm1_ms += 1200u;
@@ -22182,6 +22182,69 @@ static int test_r1_name(void)
     return bad;
 }
 
+/* (0.9.1 spec 5) GEN's hint on every way into GEN, not only HOME's taps: SELECT on HOME, HOME + SELECT, HOME from
+ * another section when HOME remembers GEN (the message cleared before each, so each way is seen on its own) */
+static void msg_clear(void) { ui.msg_t = 0; ui.msg[0] = 0; }
+static int test_091_gen_hint(void)
+{
+    int bad = 0, ok, sel, hs, back, taps;
+    ui_power_on(); frame();
+    msg_clear();
+    turn(EN_SELECT, 1); frame(); fm1_ms += 1000u; turn(EN_SELECT, 1); frame();   /* SELECT: TRACKS VISUAL GEN */
+    sel = ux_home_at(UXH_GEN) && msg_is("HOME AGAIN: TRACKS");
+    press(B_OCTDN); frame(); msg_clear();                                        /* (OCT-: TRACKS) */
+    fm1_ms += 1200u; held_turn(B_HOME, 1); frame();                              /* HOME + SELECT */
+    hs = gen_on() && msg_is("HOME AGAIN: TRACKS");
+    press(B_FX); frame(); msg_clear();                                           /* (another section) */
+    press(B_HOME); frame();                                                      /* HOME: the page it remembers, GEN */
+    back = ux_home_at(UXH_GEN) && msg_is("HOME AGAIN: TRACKS");
+    ui_power_on(); frame(); msg_clear();
+    press(B_HOME); frame(); press(B_HOME); frame();                              /* HOME's taps: as before */
+    taps = ux_home_at(UXH_GEN) && msg_is("HOME AGAIN: TRACKS");
+    ok = sel && hs && back && taps;
+    if (!ok) printf("  GEN's hint: SELECT %d, HOME + SELECT %d, HOME from FX %d, HOME's taps %d (message '%s')\n", sel, hs,
+                    back, taps, ui.msg);
+    bad += check("0.9.1: GEN's hint (HOME AGAIN: TRACKS) on every way in: SELECT, HOME + SELECT, HOME from another "
+                 "section, HOME's taps", ok);
+    ui_power_on();
+    return bad;
+}
+/* (0.9.1 spec 6) SEQ's dice, then OCT-: the track's level back too (dice_seq lowers a part that sits high, dlevel) */
+static int test_091_dice_level(void)
+{
+    int bad = 0, ok, lowered = 0;
+    uint32_t tries, j;
+    track_t *t;
+    ui_power_on(); frame(); song.playing = 0;
+    song.sel = 2; t = TSEL;
+    t->p[P_LEVEL] = 120;
+    dk_keep(CF_DICE_SEQ);
+    t->p[P_LEVEL] = 70;                                 /* (what dlevel does to a high part) */
+    ok = !dk_back(CF_DICE_SEQ, 2u) && t->p[P_LEVEL] == 120;
+    for (tries = 0; tries < 8u && !lowered; tries++) {  /* the panel's way: SEQ + SELECT on a part written high, OCT- */
+        ui_power_on(); frame(); song.playing = 0;
+        song.sel = 2; t = TSEL;
+        for (j = 0; j < 16u; j++) {
+            step_t *s = &t->step[j];
+            memset(s, 0, sizeof *s);
+            s->time = ST_NOTE; s->n = 1; s->note[0] = (uint8_t)(84u + j % 5u); s->vel = 100;
+        }
+        t->p[P_SLEN] = 16; t->p[P_LEVEL] = 120;
+        go_home(); frames(30); fm1_ms += 1200u + tries * 7u;
+        held_turn(B_SEQ, 1); frame();
+        if (ui.confirm == CF_DICE_SEQ && t->p[P_LEVEL] != 120) {
+            lowered = 1;
+            press(B_OCTDN); frame();
+            ok &= !ui.confirm && msg_is("SEQ BACK") && t->p[P_LEVEL] == 120;
+        } else {
+            press(B_OCTDN); frame();
+        }
+    }
+    if (!lowered) printf("  dice level: no dice in 8 lowered the level (dlevel); raise the notes\n");
+    bad += check("0.9.1: SEQ + SELECT then OCT-: the steps, LEN and the level as before the dice", ok && lowered);
+    ui_power_on();
+    return bad;
+}
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -22189,6 +22252,8 @@ int main(void)
     bad += test_large_face();
     bad += test_ux_nav_sections();
     bad += test_ux_nav_home();
+    bad += test_091_gen_hint();
+    bad += test_091_dice_level();
     bad += test_ux_tracks();
     bad += test_ux_home_bpm();
     bad += test_hc_edit();

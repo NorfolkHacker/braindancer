@@ -30,8 +30,6 @@ static void ux_home_flip(void)
 {
     uint32_t p = ux_home_page();
     nav_go(SEC_HOME, p == UXH_TRACKS ? UXH_VISUAL : p == UXH_VISUAL ? UXH_GEN0 : UXH_TRACKS, 0);
-    if (gen_on())                                       /* (GEN is JIANT's screen, no status line: its hint as a message) */
-        ui_message(ux_home_hint());
 }
 static const char *ux_home_where(void)
 {

@@ -489,6 +489,19 @@ static int route_track_test(void)
                  ok && midi_bend_target[2] == 512);
     host_route_sel(0); events_block(CTL);
 
+    /* (0.9.1 spec 7) KEYBOARD PLAYS SELECTED: another track selected, the bend of the one it leaves back to 0; a track
+     * on its own channel keeps its own */
+    midi_test_reset(); host_route_sel(1); song.sel = 2;
+    song.g[G_MRIN1 + 1] = 1; song.g[G_MRCH1 + 1] = 7; events_block(CTL);   /* (T2 takes channel 7) */
+    queued(0xEB, 127, 127, 1);                         /* channel 12, no track's: the selected T3 bent up */
+    queued(0xE6, 127, 127, 1);                         /* channel 7: T2 bent up */
+    ok = midi_bend_target[2] == 512 && midi_bend_target[1] == 512;
+    song.sel = 4; events_block(CTL);
+    bad += check("(0.9.1) KEYBOARD PLAYS SELECTED: another track selected, the one left unbent; a track on its own "
+                 "channel keeps its bend", ok && midi_bend_target[2] == 0 && midi_bend_target[4] == 0 &&
+                 midi_bend_target[1] == 512);
+    host_route_sel(0); song.g[G_MRIN1 + 1] = 0; events_block(CTL);
+
     /* MIDI OUT: a track's notes on its CHANNEL when its OUT and NOTES OUT are on */
     midi_test_reset(); usb.config = 1; mo_lvl = MO_ALL; events_block(CTL); mo_take();
     song.g[G_MRCH1 + 1] = 10; events_block(CTL); mo_take();

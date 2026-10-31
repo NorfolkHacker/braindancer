@@ -228,6 +228,7 @@ static void confirm_open(uint32_t kind, uint32_t trk);
 static void gen_open(void);
 static int chain_busy(void);
 static void ui_message(const char *s);
+static const char *ux_home_hint(void);                /* (ux_nav.c) */
 /* entry e of section sec shown (one that is not here: the nearest after it, else before); outside: from another
  * section (SAVE: SOUND (3c-2 task 2: was USER) comes with its SAVE armed, SAVE . OCT+ . OCT+ as before; SECTIONS did, gone in
  * task 3) */
@@ -235,6 +236,7 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
 {
     const ch_t *c = nav_ch(sec);
     uint32_t key = nav_key(sec), k, i;
+    int hint = 0;
     if (e >= c->n)
         e = 0;
     for (k = e; k < c->n && !nv_ok(sec, k); k++) {}
@@ -254,6 +256,7 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
             if (!gen_on()) {
                 confirm_open(CF_DICE_ALL, song.sel);
                 gen_open();
+                hint = 1;
             }
         } else if (gen_on()) {
             ui.confirm = 0;
@@ -262,6 +265,8 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
             go_home();
         ui.force = 1;
         page_flash();
+        if (hint)                                       /* (0.9.1 spec 5) GEN's hint on every way in (its screen has no */
+            ui_message(ux_home_hint());                 /* status line: a message), HOME's taps, SELECT, HOME + SELECT */
         return;
     }
     if (gen_on())
