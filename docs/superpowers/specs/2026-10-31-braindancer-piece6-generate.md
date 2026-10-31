@@ -67,8 +67,10 @@ the RANDOM / mutant code and the EXPLORE fitter; no per-role rewrite).
   off, PLAYHEADS, chord notes, long releases, texture, reverb, arp, lead), not only `gen_fit_delay`.
 - **TAPE is counted**: `gc_cost` adds TAPE's measured cost (`GC_TAPE1` / `GC_TAPE2`, re-measured if the AGE retune
   changes it) whenever the piece's AGE is above 0. The 0.8 rule "GEN ignores TAPE" is withdrawn.
-- **Still over budget after thinning**: on AUTO, GEN lowers AGE step by step (to 0 at the last); an AGE set with the
-  knob is kept, and the safety net stays the last resort.
+- **AUTO gives way before the music** (user decision 2026-10-31, revising the earlier order): after the fitter's first
+  rung (chord step components, below), a piece on AUTO that is still over budget **with** TAPE takes AGE to 0 before
+  any other thinning (TAPE is a fixed cost in the model, so a smaller AGE saves nothing); only then is the music thinned.
+  An AGE set with the knob is kept, the music is thinned around it, and the safety net stays the last resort.
 - **Aim**: a generated piece does not need the safety net to pause TAPE (`safety_tape` stays 0 while it plays on the
   device), including the heavy-GEN case of the 0.8 device session.
 - **Recalibration** (user decision 2026-10-31, from 15 GEN pieces measured on the FM-1 running 0.8, 2 CORES, CPU TEST
