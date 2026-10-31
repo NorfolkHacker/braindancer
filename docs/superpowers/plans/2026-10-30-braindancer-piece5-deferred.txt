@@ -68,3 +68,10 @@ DOCS AND RELEASE (T9, T10)
 - Past text (README intro and 0.7 section, news 0.7) still names Aphex Twin / Rephlex; left as past entries. (T9 ruling)
 - The older "short mode" wording for the delay remains in the past 0.5.2 entries (README, news). (T9)
 - Merge to main and push wait for the user's go-ahead. (T10 step 2)
+
+From the device session (2026-10-31):
+- TAPE / AGE is hard to find without the manual (FX tapped three times to reach MASTER): give it a quicker way in.
+- GEN does not budget for TAPE: a heavy GEN piece with TAPE on overloads and the safety net pauses TAPE. Piece 6 must
+  fit TAPE's cost (about +8 % CPU at AGE 50 on a light piece) when TAPE is on, RETROBOC above all.
+- Check on the device whether "TAPE PAUSED · CPU" overlaps the DUCK curve at deep DUCK.
+- Judge AGE by ear (is 50 a good worn tape, is 100 too much) and retune the AGE map if needed.
