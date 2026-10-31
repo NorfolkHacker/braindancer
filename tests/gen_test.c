@@ -1381,13 +1381,19 @@ int main(void)
         ok &= gp.at == 2u;                              /* (clamped at the oldest) */
         {   /* (Task 4 review) RECALL while ARRANGE runs: refused as GENERATE is (OCT+ does nothing; the ring as it was) */
             genid_t r0 = gen_recent[0];
+            uint32_t said = 1;                          /* (0.9 final review I2: the refusal says so) */
             chain.running = 1;
+            ui.msg[0] = 0; ui.msg_t = 0;
             press(B_OCTUP); frames(4);
+            said &= !strcmp(ui.msg, "STOP THE SONG FIRST") && ui.msg_t;
             ok &= piece_sig() == s2 && gp.at == 2u && gen_nrecent == 2u && gid_eq(&gen_recent[0], &r0);
             gp.at = 0;
+            ui.msg[0] = 0; ui.msg_t = 0;
             press(B_OCTUP); frames(4);
+            said &= !strcmp(ui.msg, "STOP THE SONG FIRST") && ui.msg_t;
             ok &= piece_sig() == s2 && gen_nrecent == 2u && gid_eq(&gen_recent[0], &r0);
             chain.running = 0; gp.at = 2;
+            bad += gcheck("  (0.9) OCT+ while the song plays: RECALL and GENERATE refused, both say STOP THE SONG FIRST", said);
         }
         press(B_OCTUP); frames(4);
         ok &= piece_sig() == s1 && gp.at == 1u && gen_nrecent == 2u && !strcmp(gp.last, n0);

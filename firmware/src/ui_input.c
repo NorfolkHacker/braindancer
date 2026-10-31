@@ -2604,7 +2604,8 @@ static void ui_input_frame(void)
         if (b & 1u)
             page_tap(panel_btn_of(id));
     if (gen_on() && (oct & 2u)) {                       /* (0.9.2) GEN, HOME's page: OCT+ GENERATE or RECALL (the screen */
-        if (!chain_busy()) gen_press();                 /* stays; not while ARRANGE runs, both alike), OCT- back to TRACKS */
+        if (!chain_busy()) gen_press();                 /* stays; not while ARRANGE runs, both alike, and it says so: */
+        else ui_message("STOP THE SONG FIRST");         /* 0.9 final review I2), OCT- back to TRACKS */
     } else if (gen_on() && (oct & 1u)) {
         nav_go(SEC_HOME, UXH_TRACKS, 0);
     } else if (act_cols() && (oct & 2u)) {              /* action pages: OCT+ does the picked action, */
