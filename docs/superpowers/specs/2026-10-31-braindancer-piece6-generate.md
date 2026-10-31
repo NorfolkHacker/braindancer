@@ -71,6 +71,20 @@ the RANDOM / mutant code and the EXPLORE fitter; no per-role rewrite).
   knob is kept, and the safety net stays the last resort.
 - **Aim**: a generated piece does not need the safety net to pause TAPE (`safety_tape` stays 0 while it plays on the
   device), including the heavy-GEN case of the 0.8 device session.
+- **Recalibration** (user decision 2026-10-31, from 15 GEN pieces measured on the FM-1 running 0.8, 2 CORES, CPU TEST
+  74 %; analysis in `.superpowers/sdd/2026-10-31-braindancer-piece6-generate/calibration.md`). 0.8's model ranked the
+  device's pieces backwards: it overcharged FM6 and missed chord steps whose ECHO / ARP step notes pile up voices. So:
+  - Two cores: the style pieces' device factor `GC_GEN_X100` 150 → **118** (budget at CPU TEST 74 %: 588 → 751); WILD
+    keeps its own, **155**; with no CPU TEST stored, `GC_DEV2_X100` scaled the same way (styles ≈ **150**, WILD
+    ≈ **196**). One core: unchanged (no one-core data).
+  - FM6 (engine 12, and DIGITAL which plays as FM6): `GC_ENG` 79 → **40**, `GC_VOX` 26 → **13**.
+  - Chord steps: each chord-track step of two or more notes that carries ECHO or ARP NOTES step components costs
+    **`GC_CCOMP` 70**; the fitter's **first** rung clears those components (no part is lost).
+  - TAPE's cost: the device's AGE 0 → 50 step (≈ 8 % CPU), **92** on two cores (`GC_TAPE2`), **76** on one
+    (`GC_TAPE1`, scaled), not 169 / 139.
+  - Budget bound in tests: on two cores at most 4 % of pieces over (projected under 1 %); one core is fitted the same
+    way but carries no bound (reported only) until it is measured.
+  - Confirmed on the device in the release session (the late / dropped counters per piece, as in the calibration).
 
 ## 4. Recent pieces
 
