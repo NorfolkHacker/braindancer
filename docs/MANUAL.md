@@ -1348,7 +1348,8 @@ Hidden with LOAD ECO (a track's CHORUS send then says ECO).
 ### TAPE
 
 **TAPE** colours the whole mix like an old tape machine. It sits on the master after CLIP, PUNCH and DUCK. It is off at
-first: with AGE and every detail at 0 it is out of the chain and the sound is exactly as without it.
+first: with AGE and every detail at 0 it is out of the chain and the sound is exactly as without it. While TAPE is on,
+everything you hear is about 4 ms later (the tape's own delay); with AGE and every detail back at 0 it is gone again.
 
 - **AGE** (FX › MASTER, KNOB 4) sets the five details at once: 0 is off, the middle is a clear tape wobble, the top is
   a worn cassette. The status line says it in words (**A LITTLE TAPE**, **OLD TAPE**, **WORN CASSETTE**).
@@ -1356,13 +1357,18 @@ first: with AGE and every detail at 0 it is out of the chain and the sound is ex
   tremble), **TAPE SAT** (a soft tape saturation), **HISS** (tape hiss that follows the music and is silent over
   silence) and **TAPE TONE** (rolls the highs off, the higher the duller).
 - A detail you turn by hand stays where you put it until AGE is turned again. The status line then reads
-  **AGE · OFF, 2 BY HAND** (the number of details set by hand).
-- The FX › MASTER picture shows the five details as small bars while TAPE is on.
+  **AGE · OFF, 2 BY HAND** (the number of details set by hand). This is not so while recorded AGE automation plays:
+  the next AGE record sets all five again, so a detail turned by hand meanwhile is overwritten, put back at a stop and
+  not saved. Turn details by hand with the song stopped, or with no AGE records.
+- The FX › MASTER picture shows the five details as small bars while TAPE is on. If the overload safety has paused
+  TAPE, the bars dim and the word beside them reads **TAPE PAUSED · CPU** until TAPE comes back.
 - AGE can be automated like the DJ FILTER: with REC armed, the AGE knob records and plays back with the section, and a
   stop puts back the six values as they were. AGE has no lock.
 - TAPE is saved with the project; a project from an older version loads with TAPE off.
-- If the sound engine is overloaded, TAPE is the first thing it switches off, before the long delay is moved to its full-rate line with TIME shortened, the
-  texture and the arp. Your settings are never changed; it comes back by itself when there is room again.
+- If the sound engine is overloaded, it first thins the voices (fewer notes at once, then the lighter load). Only if
+  that is not enough does it start its last-resort steps, and TAPE is the first of those, before the long delay is moved
+  to its full-rate line with TIME shortened, the texture and the arp. So with TAPE on you may hear notes dropped before
+  TAPE goes. Your settings are never changed; it comes back by itself when there is room again.
 
 ### DJ FILTER (GLO › LIVE KNOB 4)
 

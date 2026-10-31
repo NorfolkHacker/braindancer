@@ -17,7 +17,9 @@ the Rephlex catalogue.
 - **TAPE**, a new master effect after CLIP, PUNCH and DUCK: WOW, FLUTTER, TAPE SAT, HISS and TAPE TONE, with one **AGE** knob that
   sets them together. FX › MASTER is now CLIP · PUNCH · DUCK · AGE; DUCK TIME moved to FX › MORE › MASTER and TAPE has its
   own group in FX › MORE. It is off at first, saved with the project (a 0.7 project loads with TAPE off), AGE can be
-  automated, and it is the first thing the overload safety switches off (your settings are never changed).
+  automated, and it adds about 4 ms of delay to everything while on. Under overload it is the first of the safety's
+  last-resort steps, after the voices are thinned (your settings are never changed, and FX › MASTER shows TAPE PAUSED · CPU
+  while it is off).
 - **The 303 acid response** (ANALOG, MONO or LEGATO): accents that follow each other climb the cutoff and relax after a
   plain step; a slide is a short glide (about 58 ms) with no new attack, whatever GLIDE is. Notes played on the keys keep
   the old accent.

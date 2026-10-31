@@ -144,8 +144,10 @@ Still pending:
 
 ## 2026-10-30 — Braindancer 0.8 (TAPE, acid, presets, kits)
 
-Release prep done (version v0.8, cheat sheets, manual and navigation map regenerated); every device line below is
-pending until the device session.
+Release prep done (version v0.8; the cheat sheets' HTML, the manual and navigation-map.svg regenerated). The cheat-sheet
+PNG/PDF and navigation-map.png were not re-rendered, because playwright is not installed here: they are pending and must
+be rendered before release (the printed cheat sheet still shows DUCK TIME on FX › MASTER KNOB 4). Every device line below
+is pending until the device session.
 
 - Backup before: pending (softkey into UBOOT, then `fm1_unbrick.py backup`; path and sha256 to be recorded).
 - Release built on clean HEAD: pending (braindancer-0.8.fwsc, size, identity, sha256).
