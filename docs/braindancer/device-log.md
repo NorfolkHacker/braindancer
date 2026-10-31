@@ -176,7 +176,7 @@ regenerated). The cheat-sheet PNG/PDF, docs/navigation-map.png and tools/gen_rea
 re-rendered, because playwright is not installed here: still to be rendered.
 
 Before the release, the same day on 0.8: 15 GEN pieces measured for the CPU model's calibration (2 CORES, CPU TEST
-74 %; `.superpowers/sdd/2026-10-31-braindancer-piece6-generate/calibration.md`): the model ranked the device's pieces
+74 %; `docs/braindancer/gen-calibration-2026-10-31.md`): the model ranked the device's pieces
 backwards; recalibrated (spec §3).
 
 - Backup before: `~/fm1-backups/2026-10-31-braindancer-0.8/fm1-recovery-20261031-163637` (full 1 MiB, 0 of 143 app
@@ -208,10 +208,10 @@ backwards; recalibrated (spec §3).
   (not too bare): pass.
 - PRESETS back to RECENT 2 and RECALL: the same piece came back: pass.
 - AGE measured over USB (SINE KEY A3, sends off, other tracks muted). A first reading suggested WOW did nothing; the
-  debug (`wow-debug.md`) found the measurement at fault (its window sat in WOW's flat 3.3 s first segment; SINE KEY's
+  debug (`docs/braindancer/tape-wow-debug-2026-10-31.md`) found the measurement at fault (its window sat in WOW's flat 3.3 s first segment; SINE KEY's
   own 0.75 Hz beat) and the device equal to the host to 0.02 cents (WOW 100: sd 3.5 cents, peak-to-peak 14 over 10 s;
   AGE 100's FLUTTER 7.3 cents rms at 15 Hz). Fixed for the release: WOW's first segment from rest is 0.5–0.67 s
   (d0b79b1); on the device WOW 100 now moves +2.5 cents within 0.4 s of the note (host +2.56): pass.
 - AGE 50 / 100 by ear: RETROBOC and AMBIENT pieces judged worn by the user; not judged on a held note.
-- Merge ff to main and push: pending the user's go-ahead.
+- Merge ff to main and push: done on the user's go-ahead (main a00c759, no tag).
 - Proven commit: d0b79b1.

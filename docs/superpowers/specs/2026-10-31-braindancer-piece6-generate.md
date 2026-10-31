@@ -79,7 +79,7 @@ the RANDOM / mutant code and the EXPLORE fitter; no per-role rewrite).
 - **Aim**: a generated piece does not need the safety net to pause TAPE (`safety_tape` stays 0 while it plays on the
   device), including the heavy-GEN case of the 0.8 device session.
 - **Recalibration** (user decision 2026-10-31, from 15 GEN pieces measured on the FM-1 running 0.8, 2 CORES, CPU TEST
-  74 %; analysis in `.superpowers/sdd/2026-10-31-braindancer-piece6-generate/calibration.md`). 0.8's model ranked the
+  74 %; analysis in `docs/braindancer/gen-calibration-2026-10-31.md`). 0.8's model ranked the
   device's pieces backwards: it overcharged FM6 and missed chord steps whose ECHO / ARP step notes pile up voices. So:
   - Two cores: the style pieces' device factor `GC_GEN_X100` 150 → **118** (budget at CPU TEST 74 %: 588 → ≈ 750; 746 with the stored integer ratio); WILD
     keeps its own, **155**; with no CPU TEST stored, `GC_DEV2_X100` scaled the same way (styles ≈ **150**, WILD
