@@ -142,21 +142,29 @@ Still pending:
 - The user checked the splash (BRAINDANCER types out and fits) and ABOUT (Braindancer v0.7, the address line fits): yes.
 - Proven commit: aec409f.
 
-## 2026-10-30 — Braindancer 0.8 (TAPE, acid, presets, kits)
+## 2026-10-31 — Braindancer 0.8 (TAPE, acid, presets, kits)
 
 Release prep done (version v0.8; the cheat sheets' HTML, the manual and navigation-map.svg regenerated). The cheat-sheet
-PNG/PDF and navigation-map.png were not re-rendered, because playwright is not installed here: they are pending and must
-be rendered before release (the printed cheat sheet still shows DUCK TIME on FX › MASTER KNOB 4). Every device line below
-is pending until the device session.
+PNG/PDF and navigation-map.png were not re-rendered, because playwright is not installed here: still to be rendered
+(the printed cheat sheet still shows DUCK TIME on FX › MASTER KNOB 4).
 
-- Backup before: pending (softkey into UBOOT, then `fm1_unbrick.py backup`; path and sha256 to be recorded).
-- Release built on clean HEAD: pending (braindancer-0.8.fwsc, size, identity, sha256).
-- Install: pending (`tools/fm1_install.py ... --port "BRAINDANCER"`).
-- Console `status`: pending (version `braindancer v0.8`, idle cpu_pct, `audio_lost`, `safety_tape` 0).
-- No-manual task "make it sound like a worn tape": pending (expected path FX > MASTER > KNOB 4 AGE).
-- Acid line with accents and slides on an ANALOG mono track (ACID SQUELCH): pending (the climb heard; slides glide
-  without a new attack).
-- CPU TEST with TAPE off: pending (late / lost blocks per second over ~10 s on SEQ STEPS, cpu %, `safety_tape`).
-- CPU TEST with AGE 100 set before it: pending (same figures; which run stored `cpt_res`, pre-flight 14).
-- GEN piece at AGE 50: pending (no lost blocks).
-- Proven commit: pending.
+- Backup before: `~/fm1-backups/2026-10-31-braindancer-0.7/fm1-recovery-20261031-082920` (full 1 MiB, 0 of 143 app
+  sectors blank, sha256 b504e9dc…). Softkey took on the second try.
+- Release built on clean HEAD 439fefd: braindancer-0.8.fwsc, 610,126 B, identity FM-1_908, sha256 0bc7a550…; image
+  561,732 B (22,604 B free).
+- Install: `tools/fm1_install.py build/braindancer-0.8.fwsc --port "BRAINDANCER" --yes`: FM-1_907 -> FM-1_908.
+- Console `status`: `braindancer v0.8`, idle cpu_pct 7, audio_late 0, audio_lost 0, safety_tape 0.
+- No-manual task "make it sound like a worn tape": **not found without help.** The user could not find FX › MASTER
+  (it needs FX tapped three times: SENDS → SPACE → MASTER). AGE was then audible on a light pattern. Follow-up: make
+  TAPE / AGE easier to reach.
+- AGE on a heavy GEN piece seemed to do nothing: the piece overloaded (cpu_pct 57, voices_shed 2,215, audio_late 407,
+  audio_lost 0) and the safety net had paused TAPE (`safety_tape` 3). Working as designed, but GEN does not budget for
+  TAPE: piece 6 must.
+- GEN piece at AGE 50 (another piece): AGE 0 cpu_pct 42, AGE 50 cpu_pct 50; late 0, shed 0, lost 0, safety_tape 0. Pass.
+- CPU TEST with TAPE off: audio_late +387, voices_shed +996, audio_lost 0, safety_tape 0, audio_max 4,075 us.
+- CPU TEST with AGE 100 (same length): audio_late +1,173, voices_shed +2,806, audio_lost 0, safety_tape +1 (TAPE paused
+  once), audio_max 4,232 us. "TAPE PAUSED · CPU" shown on FX › MASTER; whether it overlaps the DUCK curve: not checked.
+- Acid line (set up over USB SysEx: T5 ACID SQUELCH, LEGATO, steps ACC ACC ACC plain SLD SLD ACC plain, other tracks
+  muted): the accent climb and the slides without a new attack heard. Pass.
+- AGE by ear (50 / 100): not judged.
+- Proven commit: 439fefd.
