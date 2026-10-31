@@ -408,6 +408,66 @@ int main(void)
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0; rng_state = rng0;
         bad += gcheck("(0.9 N1) the mutes live at the press (a section's, the user's): the same piece, no MUTE left", n == 12u && !diff);
     }
+    {   /* (0.9 spec 4) recent pieces: 9 presses keep 8, newest first; each brought back exactly (the full snapshot: every
+         * parameter, step, the project as stored, ARRANGE, LOOP / SONG, the messages), the oldest each time, moved to the
+         * front, never twice, UNDO marked; GENERATE never repeats a recalled piece's main; a restart clears. Once with no
+         * CPU TEST stored, once at a stored 74 % that is forgotten before the rebuilds */
+        uint32_t c, pr, j, ok, okb, rep = 0, okc = 1;
+        uint32_t rng0 = rng_state;
+        for (c = 0; c < 2u; c++) {
+            genid_t ids[9];
+            snap_t sn[9], sr;
+            ok = okb = 1;
+            mc_host_v12 = (uint8_t)c; gt_cpt = c ? 74u : 0u;
+            gen_reset(); session_dice(4242u);
+            for (pr = 0; pr < 9u; pr++) {
+                host_ticks += 1300000u + pr * 777u;
+                gen_generate();
+                ids[pr] = gp.id; snap_take(&sn[pr]);
+            }
+            ok &= gen_nrecent == 8u && gp.at == 0u && (!c || (gc_dev_base() == 117u && gp.id.dev == 117u));   /* (74 % of the model's 63: 117) */
+            for (j = 0; j < 8u; j++) ok &= gid_eq(&gen_recent[j], &ids[8u - j]);
+            bad += gcheck(c ? "(0.9) recent pieces, CPU TEST 74 %: 9 presses keep the last 8, newest first" :
+                              "(0.9) recent pieces: 9 presses keep the last 8, newest first", ok);
+            if (c) { cpt_res = 0; cpt_cores = 0; }
+            for (j = 0; j < 8u; j++) {
+                undo_ok = 0;
+                gen_recall(gen_nrecent - 1u);
+                snap_take(&sr);
+                if (snap_diff(&sn[1u + j], &sr)) {
+                    okb = 0;
+                    printf("  recall %u (%s): differs (%s)\n", j, gp.last, snap_what(&sn[1u + j], &sr));
+                }
+                okb &= gid_eq(&gen_recent[0], &ids[1u + j]) && gen_nrecent == 8u && undo_ok;
+            }
+            for (j = 1; j < 8u; j++) okb &= !gid_eq(&gen_recent[j], &gen_recent[0]);
+            bad += gcheck("  each brought back (the oldest each time): the same piece to the last parameter, to the front, never twice, UNDO marked", okb);
+            /* a middle one too: recall 3, then the ring's order is that piece first, the rest as they were */
+            {
+                genid_t was[8], mid;
+                for (j = 0; j < 8u; j++) was[j] = gen_recent[j];
+                mid = was[3];
+                gen_recall(3);
+                okc &= gid_eq(&gen_recent[0], &mid) && gen_nrecent == 8u;
+                for (j = 1; j < 4u; j++) okc &= gid_eq(&gen_recent[j], &was[j - 1u]);
+                for (j = 4; j < 8u; j++) okc &= gid_eq(&gen_recent[j], &was[j]);
+            }
+        }
+        bad += gcheck("  a middle one brought back: first, the newer ones one place down, the older ones where they were", okc);
+        for (pr = 0; pr < 50u; pr++) {
+            genid_t id;
+            gen_recall(3);
+            host_ticks += 990000u;
+            gen_draw(&id);
+            rep += id.main != GID_WILD && id.main == gp.id.main;
+        }
+        bad += gcheck("  GENERATE after a piece brought back: never its main", !rep);
+        gen_recall(99);                                 /* (beyond the ring: nothing happens) */
+        bad += gcheck("  a recall beyond the ring does nothing", gen_nrecent == 8u);
+        session_dice(77u);
+        bad += gcheck("  a restart (the power-on's session_dice) clears them, PRESETS on NEW", gen_nrecent == 0u && gp.at == 0u);
+        mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0; rng_state = rng0;
+    }
     {   /* (0.9 re-review N2) the SEQ dice on a chord track not capped by the last piece's fit (gx.nmax): after a piece
          * whose chords the fitter left at two notes (one core, CPU TEST unset: the floor), the dice's chords as many as
          * they come; the same where no piece is (the track's key changed) */

@@ -53,6 +53,7 @@ static struct {
     uint8_t page, hot;                                  /* the GEN screen's page, its last knob */
     uint32_t sig;                                       /* the settings of the last piece made (OCT+ again: a new seed) */
     uint8_t tape;                                       /* (0.9) the TAPE knob, GT_* */
+    uint8_t at;                                         /* (0.9) PRESETS on GEN: 0 NEW, k the recent piece k - 1 */
     genid_t id;                                         /* (0.9) the piece being made / made last */
     char last[28];                                      /* its name: "RETROBOC+AMBIENT 0421", "WILD 0421" */
 } gp = {.genre = GEN_EXPLORE, .seed = 1, .energy = 50, .form = 1, .amt = {GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO},
@@ -2887,6 +2888,25 @@ static void gid_name(const genid_t *id, char *b, uint32_t n, int card)
         b[k + 3] = (char)('0' + id->seed / 10u % 10u); b[k + 4] = (char)('0' + id->seed % 10u); b[k + 5] = 0;
     }
 }
+/* (0.9 spec 4) the last pieces' identities, newest first: 64 bytes of RAM, nothing in the flash */
+#define GEN_NRECENT 8u
+static genid_t gen_recent[GEN_NRECENT];
+static uint8_t gen_nrecent;
+static int gid_eq(const genid_t *a, const genid_t *b)
+{
+    return a->seed == b->seed && a->two == b->two && a->dev == b->dev && a->form == b->form && a->tape == b->tape &&
+           a->main == b->main && a->part == b->part && a->energy == b->energy && a->complex == b->complex;
+}
+static void gen_recent_push(const genid_t *id)          /* to the front; already there: moved; a ninth: the oldest out */
+{
+    uint32_t k, n = gen_nrecent;
+    for (k = 0; k < n && !gid_eq(&gen_recent[k], id); k++) {}
+    if (k == n) k = n < GEN_NRECENT ? n++ : GEN_NRECENT - 1u;
+    for (; k; k--) gen_recent[k] = gen_recent[k - 1u];
+    gen_recent[0] = *id;
+    gen_nrecent = (uint8_t)n;
+}
+static void gen_recent_clear(void) { gen_nrecent = 0; gp.at = 0; }   /* a new session; PRESETS on NEW */
 /* (0.9) the one way a piece is made: UNDO marked, the piece from its identity, its name, the message */
 static void gen_build(const genid_t *id)
 {
@@ -2907,6 +2927,7 @@ static void gen_build(const genid_t *id)
     str_cpy(ui.msg2, live.mode ? "PARTS: PLAY THE SONG" : song.g[G_CLOCK] == 1 ? "CLOCK: USB" : song.g[G_CLOCK] ? "CLOCK: TRS" :
             "UNDO: GLO + G4", sizeof ui.msg2);          /* (3c-2 task 7: the tempo the outside clock's, as tempo_ext says) */
     ui.force = 1;
+    gen_recent_push(&gp.id);
 }
 static void gen_go(void) { genid_t id; gid_legacy(&id); gen_build(&id); }   /* the piece the settings name (the tools) */
 static uint32_t gen_sig(void)                           /* the settings that make the piece */
@@ -2938,6 +2959,28 @@ static void gen_draw(genid_t *id)                       /* (0.9) a GENERATE pres
     gid_now(id);
     s = rng() | 1u;
     gid_pick(id, &s, gp.id.main);
+}
+static void gen_ui_defaults(void)                       /* (pre-flight 7) the parts' amounts as AUTO does */
+{
+    uint32_t k;
+    for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
+    gp.swing = GA_AUTO; gp.human = 30;
+}
+static void gen_generate(void)                          /* OCT+ at NEW */
+{
+    genid_t id;
+    gen_draw(&id);
+    gen_ui_defaults();
+    gen_build(&id);
+    gp.at = 0;
+}
+static void gen_recall(uint32_t k)                      /* recent piece k (0 newest) rebuilt and moved to the front */
+{
+    genid_t id;
+    if (k >= gen_nrecent) return;
+    id = gen_recent[k];                                 /* (a copy: gen_build's push moves the ring under it) */
+    gen_ui_defaults();
+    gen_build(&id);
 }
 /* OCT+ on the GEN screen: the piece; the same settings again: a new seed first */
 static void gen_press(void)

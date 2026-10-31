@@ -525,6 +525,7 @@ static void session_dice(uint32_t seed)
         rng_state = 0x1234567u;
     gp.seed = (uint16_t)(rng() % 10000u);               /* (0.9.17) GEN's SEED this session's: the first OCT+ after
                                                          * power-on made the same piece every time (SEED 0001) */
+    gen_recent_clear();                                 /* (0.9) a new session: no recent pieces */
     macro_dice(0);
 }
 
