@@ -651,6 +651,9 @@ static const uint8_t GEN_PARTNER[GEN_NSHOWN][GEN_MAXPART] = {
 };
 static const uint8_t GEN_NPARTNER[GEN_NSHOWN] = {6, 4, 4, 2, 3, 4, 3, 2, 3, 3};
 static const uint8_t GEN_AUTO_AGE[GEN_NSHOWN] = {20, 0, 0, 0, 0, 0, 15, 60, 40, 25};
+static const uint8_t GEN_KEEP_AGE[GEN_NSHOWN] = {0, 0, 0, 0, 0, 0, 0, 1, 1, 0};   /* (0.9 spec 3, user decision) the
+                                                         * tape styles, RETROBOC and AMBIENT (and blends they lead): AUTO's
+                                                         * AGE kept, the music thinned around it (gen.c gen_fit_tape) */
 #define GEN_AGE_MAX 70u
 #define GEN_AGE_WILD 50u
 /* its keys: the SCALE page's modes of seven, the exotic ones likeliest (LOC too: its tonic chord a diminished one the

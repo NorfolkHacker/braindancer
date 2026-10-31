@@ -132,7 +132,8 @@ static void gnote(step_t *s, const int32_t *n, uint32_t cnt, int32_t vel, uint32
 {
     uint32_t j;
     int32_t top = 0;
-    if (gx.on && cnt > gx.nmax) cnt = gx.nmax;          /* (0.9.13) EXPLORE's CPU budget: the top notes left out */
+    if (cnt > gx.nmax) cnt = gx.nmax;                   /* (0.9.13) EXPLORE's CPU budget: the top notes left out; (0.9)
+                                                         * every piece's (a later section's chords as the fitter left A's) */
     s->n = (uint8_t)cnt;
     for (j = 0; j < 4u; j++) {
         s->note[j] = (uint8_t)(j < cnt ? clamp(n[j], 0, 127) : 0);
@@ -1728,6 +1729,7 @@ static uint32_t gform_order(const genid_t *id, uint32_t form, uint8_t *ord, uint
 }
 static void section_store(uint32_t s);                  /* (song_main.c) */
 static int section_load(uint32_t s);
+static void gen_fit_section(void);                      /* (0.9, below: a section after A fitted) */
 static void gen_parts(void)
 {
     const ggenre_t *g = gs.g;
@@ -1829,6 +1831,7 @@ static void gen_parts(void)
             if (dr < NTRK) trk[dr].p[P_MUTE] = 1;
             if (bs < NTRK && (ld < NTRK || ar < NTRK || pd < NTRK)) trk[bs].p[P_MUTE] = 1;
         }
+        gen_fit_section();                              /* (0.9 spec 3) fitted as A was */
         section_store(k);
         if (live.cur != (int8_t)k) { n = k; break; }
         dice_secs |= (uint8_t)(1u << k);
@@ -2040,8 +2043,9 @@ static void gx_mutate(void)
  * (ACID FM 0.5.2: and a long TIME shortened to the full rate), a PLAYHEAD less, a note less in every chord (two at
  * least), the long releases shorter, the texture cleared
  * (gx_fit_piece, after them). (ACID FM 0.5.2) Then, still over: the arp left out, then the lead (gen_fit_rest). With
- * two cores the budget is the FM-1's measured 65 % (GC_GEN_X100, no margin off). (0.9) every piece fitted:
- * gx_fit_piece, then gen_fit_tape */
+ * two cores the budget is the FM-1's measured 65 % (GC_GEN_X100, no margin off). (0.9) every piece fitted
+ * (gx_fit_piece: the chord steps' ECHO / ARP NOTES first, then AUTO's AGE given way (gen_fit_tape), then the delay and
+ * the rest), and every section after A (gen_fit_section) */
 static const uint8_t GC_ENG[NENGINES] = {27, 40, 45, 27, 27, 64, 27, 27, 27, 27, 70, 60, 40, 27, 27};   /* (ANALOG ..
                                                          * 14 by number; the retired ones as ANALOG, DIGITAL as FM6;
                                                          * ACID FM 0.2: WHEEL 7, ANIMAL 14 retired) */
@@ -2065,9 +2069,9 @@ static const uint8_t GC_DIVQ[6] = {1, 2, 4, 8, 3, 6};   /* a DIV's steps a beat,
 static const uint8_t GC_DLO[2][3] = {{0, 52, 66}, {0, 63, 81}};   /* [two cores][the line's rate: full, half, quarter] */
 /* (Braindancer 0.8) TAPE (fx.c tape_block), while a detail is set: a fixed cost a sample whatever the voices, on core 0
  * after the parts (the critical path: x 1.22 with two cores, as GC_DLO). (0.9 spec 3) Counted in gc_cost while the
- * piece's AGE (gs.age) is above 0: every piece is fitted with it, and on AUTO a piece still over after the thinning
- * gets a lower AGE (gen_fit_tape); a knob-set AGE is kept and the safety net's TAPE rung (audio.c fx_safety_tick)
- * stays the last resort. 0.8's rule "GEN never pays for TAPE" withdrawn. 0.8's figure (139 thousandths one core, 169
+ * piece's AGE (gs.age) is above 0: every piece is fitted with it; on AUTO a piece still over after the first rung
+ * gives its AGE way (to 0) before the music is thinned (gen_fit_tape), but the tape styles' (GEN_KEEP_AGE); a knob-set
+ * AGE is kept and the safety net's TAPE rung (audio.c fx_safety_tick) stays the last resort. 0.8's rule "GEN never pays for TAPE" withdrawn. 0.8's figure (139 thousandths one core, 169
  * two: a host measure once, cpu_vg's CPU TEST song section with AGE 100 against AGE 0) recalibrated on the FM-1 (0.9
  * spec 3): a GEN piece at AGE 0 and 50 played at 42 % and 50 % CPU, ~8 %: 92 at the styles' factor with two cores, one
  * core 92 x 139 / 169. One snapshot pair (+-10 %): a targeted measurement on the device decides. The 0.9 AGE retune
@@ -2155,6 +2159,8 @@ static uint32_t gc_cost(int steps)                      /* steps 0: before the p
         const track_t *t = &trk[k];
         uint32_t r = gs.role[k], e = t->eng_req % NENGINES, len = dlen(t), on = 0, ns = 0, tie = 0, v, f, cap;
         if (!gs.act[r] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) continue;
+        if (steps && t->p[P_MUTE]) continue;            /* (0.9) a section's muted track: no notes, its voices ended, it
+                                                         * costs nothing (voice.c trk_note_on) */
         for (h = 0; h < FG_HEADS; h++) c += fg_set[k][h].rate ? GC_HEAD : 0u;
         for (i = 0; steps && i < len; i++) {
             const step_t *s = &t->step[i];
@@ -2226,16 +2232,18 @@ static int gen_dly_long_ok(void)                         /* the piece may keep i
 {
     return gc_cost(1) <= gc_budget() && (cpt_res || !gen_busy());
 }
+static void gen_dly_shorter(void)                      /* the delay's TIME a step shorter (a free time: DTIME_MS's six
+                                                         * steps, about half) */
+{
+    uint32_t g = (uint32_t)song.g[G_DTIME];
+    song.g[G_DTIME] = (int16_t)(g < DT_FREE ? DT_SHORTER[g] : g >= DT_FREE + 6u ? g - 6u : DT_FREE);
+}
 static void gen_fit_delay(void)
 {
-    uint32_t n, g;
+    uint32_t n;
     if (gc_dly_stage() < 2u || gen_dly_long_ok())
         return;
-    for (n = 0; n < 12u && gc_dly_stage(); n++) {
-        g = (uint32_t)song.g[G_DTIME];
-        song.g[G_DTIME] = (int16_t)(g < DT_FREE ? DT_SHORTER[g] : g >= DT_FREE + 6u ? g - 6u : DT_FREE);   /* (DTIME_MS:
-                                                         * six steps about half the time) */
-    }
+    for (n = 0; n < 12u && gc_dly_stage(); n++) gen_dly_shorter();
 }
 static void gen_leave_out(uint32_t r)                   /* a role's part left out of the piece: its steps cleared */
 {
@@ -2283,15 +2291,20 @@ static void gen_fit_rest(void)
 /* (0.9 spec 3, "AUTO gives way before the music") after the first rung (gen_fit_ccomp), still over the budget with TAPE:
  * on AUTO, AGE to 0 before any other thinning (TAPE a fixed cost while AGE is above 0, GC_TAPE1 / 2: a smaller AGE saves
  * nothing); only then the music is thinned. An AGE set with the knob is kept, the music thinned around it (the safety
- * net's TAPE rung the last resort) */
+ * net's TAPE rung the last resort); so is the tape styles' AUTO AGE (RETROBOC, AMBIENT and the blends they lead:
+ * GEN_KEEP_AGE). The sections after A keep A's AGE (one AGE a piece): gen_fit_section thins their music */
+static int gen_keeps_age(void)                          /* (0.9 spec 3, user decision) a tape style leads the piece */
+{
+    uint32_t i = gp.id.main == GID_WILD ? 255u : gen_shown_index(gp.id.main + 1u);
+    return i < GEN_NSHOWN && GEN_KEEP_AGE[i];
+}
 static void gen_fit_tape(void)
 {
     gs.cost_thin = (uint16_t)gc_cost(1);
     gs.age_cut = 0;
-    if (gp.id.tape != GT_AUTO || !gs.age || gs.cost_thin <= gc_budget()) return;
-    gs.age = 0;
+    if (gp.id.tape != GT_AUTO || !gs.age || gs.cost_thin <= gc_budget() || gen_keeps_age()) return;
+    gs.age = 0;                                         /* (written once, after the fit: gen_make, review M4) */
     gs.age_cut = 1;
-    tape_age_apply(0);
 }
 static void gen_fit_ccomp(void)                         /* (0.9 recalibration) over the budget: the chord steps' ECHO and
                                                          * ARP NOTES cleared (those components only: no part lost) */
@@ -2314,6 +2327,7 @@ static void gen_fit_ccomp(void)                         /* (0.9 recalibration) o
 static void gx_fit_piece(void)
 {
     int16_t dt = song.g[G_DTIME];
+    int dbl = 0;
     if (gc_cost(1) > gc_budget()) gen_fit_ccomp();      /* (0.9) the first rung: the chord steps' ECHO / ARP NOTES */
     gen_fit_tape();                                     /* (0.9) AUTO, still over with TAPE: AGE 0, before the music */
     gen_fit_delay();                                    /* (0.5.2) a quarter-rate delay at the full rate before the notes */
@@ -2321,21 +2335,38 @@ static void gx_fit_piece(void)
     {   /* (PING-PONG without the grain: twice TIME) a quarter-rate line shortened (gen_fit_delay); (0.9 fix round 1,
          * controller ruling B) a line the grain's removal doubled past the rate it had: straight back to the full
          * rate (the doubling the fitter's side effect, not the piece's) */
-        uint32_t s0 = gc_dly_stage(), n, g, gr = song.g[G_DPIT] || song.g[G_DSPRY];
+        uint32_t s0 = gc_dly_stage(), n, gr = song.g[G_DPIT] || song.g[G_DSPRY];
         song.g[G_DPIT] = song.g[G_DSPRY] = 0;
         gs.grain_off = (uint8_t)gr;
         gen_fit_delay();
-        for (n = 0; gr && !s0 && n < 12u && gc_dly_stage(); n++) {
-            g = (uint32_t)song.g[G_DTIME];
-            song.g[G_DTIME] = (int16_t)(g < DT_FREE ? DT_SHORTER[g] : g >= DT_FREE + 6u ? g - 6u : DT_FREE);
-        }
+        for (n = 0; gr && !s0 && n < 12u && gc_dly_stage(); n++) { gen_dly_shorter(); dbl = 1; }
     }
     gen_fit_rest();
-    if (song.g[G_DTIME] != dt) {                        /* (0.5.2) the rest made room for the delay's TIME after all: back */
+    if (song.g[G_DTIME] != dt && !dbl) {                /* (0.5.2) the rest made room for the delay's TIME after all: back
+                                                         * (0.9 review M1: not a line ruling B brought back to the full
+                                                         * rate: the made TIME, the grain off, the half rate again) */
         int16_t cut = song.g[G_DTIME];
         song.g[G_DTIME] = dt;
         if (!gen_dly_long_ok()) song.g[G_DTIME] = cut;
     }
+}
+/* (0.9 spec 3, "every section is fitted"; review I1) a PARTS / SONG section after A, its pitched parts made again
+ * (gen_parts: gen_pitched, gen_post's step components with them), fitted to the budget A was: the chord steps' ECHO /
+ * ARP NOTES, then the rest's rungs (PLAYHEADS, chord notes, long releases, the texture, CLOUD / SHIMMER, the arp, the
+ * lead). AGE as A has it (one AGE a piece). A part left out here is muted in this section only (a muted track costs
+ * nothing, gc_cost): the next section makes it again */
+static void gen_fit_section(void)
+{
+    uint8_t act[RL_N];
+    uint32_t r;
+    if (gc_cost(1) <= gc_budget()) return;
+    gen_fit_ccomp();
+    if (gc_cost(1) <= gc_budget()) return;
+    memcpy(act, gs.act, sizeof act);
+    gen_fit_rest();
+    for (r = 0; r < RL_N; r++)
+        if (act[r] && !gs.act[r] && gs.trk_of[r] < NTRK) trk[gs.trk_of[r]].p[P_MUTE] = 1;
+    memcpy(gs.act, act, sizeof act);
 }
 
 /* (0.9 spec 3) the AGE the piece asks for: the TAPE knob's (OFF 0, 2..11: 10..100); AUTO the style's (GEN_AUTO_AGE), a
@@ -2786,11 +2817,13 @@ static void gen_make(void)
     for (k = 0; k < NTRK; k++) trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0;   /* (0.6.96) a new piece: MUTATE off on every
                                                          * track, its anchor the piece (a reroll kept the lanes and
                                                          * orbited the old piece's sounds) */
-    tape_age_apply((int32_t)gs.age);                    /* (0.9) TAPE: the knob's AGE, or AUTO the style's (gen_age) */
     if (gx.on) { gx_mutate(); gx_heads(); }             /* (0.8.6) EXPLORE: MUTATE, PLAYHEADS (before the sections:
                                                          * each holds them) */
     gx_fit_piece();                                     /* (0.9) every piece: the full fitter, TAPE counted (AUTO's
                                                          * AGE given way first, gen_fit_tape) */
+    tape_age_apply((int32_t)gs.age);                    /* (0.9) TAPE: the knob's AGE, or AUTO the style's (gen_age), as
+                                                         * fitted: written once (review M4: never a moment at the AGE
+                                                         * asked for while a piece plays) */
     mut_keep();
     gen_parts();
 }

@@ -307,6 +307,15 @@ int main(void)
             gen_build(&d);
             bad += gcheck("  the CPU factor in the identity: CPU TEST forgotten, the same piece and budget rebuilt", piece_sig() == s0 &&
                           gc_budget() == b0 && gc_dev_base() != d.dev);
+            {   /* (0.9 review M6) WILD's own factor (x1.55) from the stored ratio: the same */
+                uint32_t wb, ws;
+                cpt_res = 74; cpt_cores = 2;
+                gid_set(&d, GID_WILD, GID_SOLO, 3423); gen_build(&d); ws = piece_sig(); wb = gc_budget();
+                cpt_res = 0; cpt_cores = 0;
+                gen_build(&d);
+                bad += gcheck("  .. WILD (its own x1.55 from the stored CPU TEST): the same piece and budget rebuilt",
+                              piece_sig() == ws && gc_budget() == wb && wb == 569u && gc_dev_base() != d.dev);
+            }
             mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
         }
         {   /* the tools' way in: gen_go with gp.genre 0 draws from the seed (the same seed, the same draw) */
@@ -968,7 +977,8 @@ int main(void)
              * gives x1.00 again, at 126 % x2.00, never under x1.00. (ACID FM 0.5.2) Two cores: x1.90 unset (the budget
              * 1030 / 1.9, 542: 0.5.1's 543), a CPU TEST x1.50 its own ratio (GC_GEN_X100, measured on an FM-1): x1.00 at
              * 42 %, the pieces compared against it; one core as before. (0.9 spec 3's recalibration) Two cores unset: a
-             * style's piece x1.50 (gc_dev), WILD's x1.96 (these pieces); a CPU TEST x1.18 its ratio a style's, x1.55 WILD's */
+             * style's piece x1.50 (gc_dev), WILD's x1.96 (these pieces); a CPU TEST x1.18 its ratio a style's, x1.55 WILD's:
+             * at 42 % a style's x1.00 (0.77, the floor), these WILD pieces' x1.02 (66 x 1.55) */
             uint32_t est[2] = {0}, over = 0, mel_bad = 0, quiet2 = 0, d0, d1, d2, d3, d4, w0;
             cpt_res = 0;
             mc_host_v12 = 1;
@@ -1421,7 +1431,8 @@ int main(void)
                 if (dt != gs.g->dtime) {                /* shortened: a quarter-rate delay, over the budget with it or busy
                                                          * (0.9: AUTO's AGE already given way: the piece's AGE as it is) */
                     uint32_t why = st0 == 2u && (gc_cost(1) > gc_budget() || (busy && !gt_cpt)), stg;
-                    song.g[G_DPIT] = 1; stg = gt_dly_stage(); song.g[G_DPIT] = 0;   /* (its line with the grain on) */
+                    {   int16_t gp0 = song.g[G_DPIT];   /* (its line with the grain on; review M5: the grain kept) */
+                        song.g[G_DPIT] = 1; stg = gt_dly_stage(); song.g[G_DPIT] = gp0; }
                     /* (0.9 fix round 1, controller ruling B) or to keep the full rate when the fitter turned the grain
                      * off: PING-PONG then doubles the line it had (full with the grain) to the half rate, the fitter's
                      * side effect: straight back to the full rate */
@@ -1442,7 +1453,8 @@ int main(void)
                       !cut_bad && slow_kept >= 10u);
         /* (0.9 ruling) 0.8's own EXPLORE measured 11..21 of 400 over the budget on valid seeds (0..9999); the old 4 %
          * passed only because most of its seeds were out of range (up to 35,824). The threshold is 0.8's measured rate,
-         * 6 % (24 of 400); Task 3 re-examines it when it fits every piece */
+         * 6 % (24 of 400). Re-examined in Task 3 with every piece fitted (TAPE counted, the recalibration): EXPLORE
+         * 18 of 400 (4.5 %), still past 4 %: the 6 % stays */
         bad += gcheck("  .. EXPLORE under the budget (6 % over at most: at the floor, the fit's steps run out)", x_over <= 24u);
         mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
@@ -1526,7 +1538,8 @@ int main(void)
         mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* every style, blends and WILD, CPU TEST unset and 74 %, one core and two, TAPE on AUTO: the estimate with TAPE
-         * within the budget (4 % over at most: the fitter's floor, AGE already 0), never over with AGE on. (0.9 spec 3,
+         * within the budget (4 % over at most: the fitter's floor, AGE already 0), never over with AGE on (but the tape
+         * styles', RETROBOC and AMBIENT: their AGE kept as a knob's, user decision). (0.9 spec 3,
          * "AUTO gives way before the music") AUTO took AGE to 0 before the music was thinned: over with TAPE after the
          * first rung (the chord steps' ECHO / ARP NOTES), AGE and its five 0, the parts those of the same identity with
          * TAPE OFF (that first rung aside: it counted TAPE); with the knob at 100 the AGE kept.
@@ -1534,7 +1547,7 @@ int main(void)
          * FM-1, two cores, CPU TEST 74 %). One core is fitted the same way but carries no bound, its figure printed: its
          * budget (gen.c gc_budget, 714 / dev - 120) has no device measurement behind it and no template piece reaches it */
         static const uint8_t CPT[2] = {0, 74};
-        uint32_t c, n, pieces = 0, over = 0, over_on = 0, cuts = 0, cut_bad = 0, p2 = 0, over2 = 0, cuts2 = 0;
+        uint32_t c, n, pieces = 0, over = 0, over_on = 0, cuts = 0, cut_bad = 0, p2 = 0, over2 = 0, cuts2 = 0, over_ts = 0, over_ts2 = 0;
         for (c = 0; c < 4u; c++)
             for (n = 0; n < 150u; n++) {
                 genid_t id;
@@ -1548,7 +1561,9 @@ int main(void)
                 pieces++;
                 over += gc_cost(1) > gc_budget();
                 p2 += c & 1u; over2 += (c & 1u) && gc_cost(1) > gc_budget(); cuts2 += (c & 1u) && gs.age_cut;
-                over_on += gc_cost(1) > gc_budget() && song.g[G_TAGE];
+                over_on += gc_cost(1) > gc_budget() && song.g[G_TAGE] && !gen_keeps_age();
+                over_ts += gc_cost(1) > gc_budget() && song.g[G_TAGE] && gen_keeps_age();   /* (the tape styles: AGE kept) */
+                over_ts2 += (c & 1u) && gc_cost(1) > gc_budget() && song.g[G_TAGE] && gen_keeps_age();
                 if (gs.age_cut) {
                     cuts++;
                     cut_bad += gs.cost_thin <= gc_budget() || song.g[G_TAGE] || tape_set();
@@ -1562,9 +1577,75 @@ int main(void)
         printf("gen: (0.9) %u pieces (TAPE AUTO): %u over the budget, %u with AGE on; AUTO lowered AGE on %u\n", pieces, over, over_on, cuts);
         printf("gen:   two cores: %u of %u over, AGE lowered on %u; one core (no bound: uncalibrated): %u of %u over, AGE lowered on %u\n",
                over2, p2, cuts2, over - over2, pieces - p2, cuts - cuts2);
-        bad += gcheck("(0.9) every piece fitted with TAPE counted: two cores over the budget 4 % at most, none with AGE on",
+        printf("gen:   the tape styles (AGE kept, the music thinned around it): %u over the budget with AGE on, %u of them on two cores\n",
+               over_ts, over_ts2);
+        bad += gcheck("(0.9) every piece fitted with TAPE counted: two cores over the budget 4 % at most, none with AUTO's AGE on (the "
+                      "tape styles' kept: spec 3)",
                       over2 * 25u <= p2 && !over_on);
         bad += gcheck("  AUTO took AGE to 0 before the music was thinned (over with TAPE then; the parts those of TAPE OFF)", cuts && !cut_bad);
+        mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (0.9 spec 3, "every section is fitted"; review I1) a PARTS or SONG piece's sections B..D, made after A was fitted,
+         * fitted to the budget A was fitted to: none over it unless A is (the floor), and over by no more than A. Two
+         * cores (the calibrated configuration), CPU TEST unset and 74 %, styles, blends and WILD, TAPE on AUTO */
+        static const uint8_t CPT[2] = {0, 74};
+        uint32_t c, n, pieces = 0, secs = 0, sec_over = 0, sec_bad = 0, worst = 0;
+        for (c = 0; c < 2u; c++)
+            for (n = 0; n < 100u; n++) {
+                genid_t id;
+                uint32_t s = n * 2246822519u + c * 7u + 3u, k, ca;
+                mc_host_v12 = 1; mc_off = 0; gt_cpt = CPT[c]; gen_reset();
+                gid_now(&id);
+                gid_pick(&id, &s, GID_SOLO);
+                id.seed = (uint16_t)((n * 131u + c * 17u + 9u) % 10000u); id.energy = (uint8_t)(30u + (n * 23u) % 70u);
+                id.complex = (uint8_t)(20u + (n * 37u) % 80u); id.form = (uint16_t)(1u + n % 2u); id.tape = GT_AUTO;
+                gen_build(&id);
+                pieces++;
+                ca = gc_cost(1);
+                for (k = 1; k < 4u; k++) {
+                    uint32_t cs;
+                    if (!((dice_secs >> k) & 1u) || section_load(k)) continue;
+                    secs++;
+                    cs = gc_cost(1);
+                    sec_over += cs > gc_budget();
+                    if (cs > gc_budget() && cs > ca) {
+                        sec_bad++;
+                        if (cs - (ca > gc_budget() ? ca : gc_budget()) > worst) worst = cs - (ca > gc_budget() ? ca : gc_budget());
+                        if (sec_bad <= 4u) printf("  %s, CPU TEST %u: section %c %u over the budget %u (A %u)\n", gp.last, CPT[c], 'A' + (int)k, cs, gc_budget(), ca);
+                    }
+                }
+                section_load(0);
+            }
+        printf("gen: (0.9) %u PARTS / SONG pieces, two cores: %u later sections, %u over the budget, %u over it and A (worst +%u)\n",
+               pieces, secs, sec_over, sec_bad, worst);
+        bad += gcheck("(0.9) every section fitted: no later section over the budget the piece was fitted to (A at the floor aside)",
+                      secs > 200u && !sec_bad);
+        mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
+    {   /* (0.9 spec 3, "except the tape styles": user decision) RETROBOC and AMBIENT, and blends led by them: TAPE is part of
+         * their sound, AUTO keeps their AGE and the music is thinned around it (as a knob-set AGE). Two cores, CPU TEST
+         * unset and 74 %, 40 pieces a style (solo and blends with each partner) */
+        static const uint8_t CPT[2] = {0, 74};
+        static const char *const TS[2] = {"RETROBOC", "AMBIENT"};
+        uint32_t c, t, n, kept[2][2] = {{0}}, tot[2][2] = {{0}}, lost = 0, ok = 1;
+        for (c = 0; c < 2u; c++)
+            for (t = 0; t < 2u; t++)
+                for (n = 0; n < 40u; n++) {
+                    genid_t id;
+                    uint32_t m = gt_style(TS[t]), i = gen_shown_index(m + 1u), want;
+                    mc_host_v12 = 1; mc_off = 0; gt_cpt = CPT[c]; gen_reset();
+                    gid_set(&id, m, n % 3u ? GEN_SHOWN[GEN_PARTNER[i][n % GEN_NPARTNER[i]]] : GID_SOLO, n * 211u + t * 5u + 17u);
+                    id.energy = (uint8_t)(30u + (n * 29u) % 60u); id.form = (uint16_t)(n % 3u); id.tape = GT_AUTO;
+                    gen_build(&id);
+                    want = gen_age();
+                    tot[c][t]++;
+                    kept[c][t] += song.g[G_TAGE] == (int16_t)want && want;
+                    ok &= !gs.age_cut && song.g[G_TAGE] == (int16_t)want && want > 0u;
+                }
+        printf("gen: (0.9) the tape styles' AUTO AGE kept, two cores: RETROBOC %u / %u unset, %u / %u at 74 %%; AMBIENT %u / %u, %u / %u\n",
+               kept[0][0], tot[0][0], kept[1][0], tot[1][0], kept[0][1], tot[0][1], kept[1][1], tot[1][1]);
+        (void)lost;
+        bad += gcheck("(0.9) RETROBOC and AMBIENT (and blends they lead): AUTO's AGE kept on every piece, the music thinned around it", ok);
         mc_host_v12 = 0; mc_off = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* (ACID FM 0.5.2 review I1, M1) the parts the safety net may hush (audio.c fx_safety_tick: safe_part) are the GEN
