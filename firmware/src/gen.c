@@ -3079,6 +3079,8 @@ static void gen_open(void)                              /* (0.9: the knobs as le
 static void gen_knob(uint32_t k, int32_t s)             /* ENERGY +-5, FORM a place, COMPLEX +-5, TAPE a place (stops) */
 {
     gp.hot = (uint8_t)k;
+    gp.at = 0;                                          /* (a knob turned: a new piece on these settings; PRESETS on NEW,
+                                                         * OCT+ GENERATE) */
     if (k == 0u) gp.energy = (uint8_t)clamp((int32_t)gp.energy + s * 5, 0, 100);
     else if (k == 1u) gp.form = (uint8_t)clamp((int32_t)gp.form + (s > 0 ? 1 : -1), 0, 2);
     else if (k == 2u) gp.complex = (uint8_t)clamp((int32_t)gp.complex + s * 5, 0, 100);

@@ -1367,10 +1367,12 @@ int main(void)
         str_cpy(n0, gp.last, sizeof n0); s1 = piece_sig();
         e1 = gp.id.energy; f1 = gp.id.form; c1 = gp.id.complex; t1 = gp.id.tape;
         ok = ui.confirm == CF_DICE_ALL && !strncmp(ui.msg, "GEN: ", 5) && gen_nrecent == 1u;
-        gp.energy = 85; gp.form = 2; gp.complex = 15; gp.tape = 7;   /* (the second piece made on other knobs) */
-        press(B_OCTUP); frames(4); s2 = piece_sig();
-        ok &= gen_nrecent == 2u && s2 != s1 && strcmp(gp.last, n0);
-        bad += gcheck("  OCT+: GENERATE (GEN: name seed), the screen stays; again: another piece", ok);
+        press(B_OCTUP); frames(4); s2 = piece_sig();   /* (again, the knobs untouched: the same settings, a new seed) */
+        ok &= gen_nrecent == 2u && s2 != s1 && strcmp(gp.last, n0) && gp.id.seed != gen_recent[1].seed &&
+              gp.id.energy == e1 && gp.id.form == f1 && gp.id.complex == c1 && gp.id.tape == t1 &&
+              gp.energy == e1 && gp.form == f1 && gp.complex == c1 && gp.tape == t1;
+        bad += gcheck("  OCT+: GENERATE (GEN: name seed), the screen stays; again, the knobs untouched: a new seed, the same settings", ok);
+        gp.energy = 85; gp.form = 2; gp.complex = 15; gp.tape = 7;   /* (the knobs moved on: a recall brings piece 1's back) */
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
         turn(EN_PRESET, -1);
         gen_panel_line(v, sizeof v);
@@ -1404,6 +1406,36 @@ int main(void)
         bad += gcheck("  OCT-: back to TRACKS, the piece stays", !ui.confirm && ui.home && home_level() == 0u && piece_sig() == s1);
         tools_run(5); press(B_OCTUP);
         bad += gcheck("  NEW PROJECT: GEN's knobs and recent pieces kept", msg_is("NEW PROJECT") && gen_nrecent == 2u && gp.form == 0u);
+        {   /* (Task 5 review) a knob turned on a recent piece: PRESETS back to NEW, OCT+ GENERATE with the turned value; a
+             * piece made or brought back with every part amount, the swing and the human as AUTO does (gen_ui_defaults) */
+            genid_t r2;
+            uint32_t e2, sr, d = 1;
+            fm1_ms += 1200u; held_turn(B_HOME, 1); frames(800);
+            turn(EN_PRESET, -1); turn(EN_PRESET, -1);
+            ok = gen_on() && gp.at == 2u;
+            r2 = gen_recent[1];
+            for (k = 0; k < GP_N; k++) gp.amt[k] = 40;
+            gp.swing = 10; gp.human = 90;
+            press(B_OCTUP); frames(4);
+            for (k = 0; k < GP_N; k++) d &= gp.amt[k] == GA_AUTO;
+            d &= gp.swing == GA_AUTO && gp.human == 30u;
+            ok &= gp.at == 1u && gid_eq(&gp.id, &r2) && gp.energy == r2.energy;
+            sr = piece_sig(); e2 = (uint32_t)gp.energy + (gp.energy <= 95u ? 5u : -5u);
+            frames(800);
+            turn(EN_K1, gp.energy <= 95u ? 1 : -1);
+            gen_panel_line(v, sizeof v);
+            ok &= gp.energy == e2 && gp.at == 0u && !strcmp(gen_oct_label(), "OCT+ GENERATE") && strncmp(v, "RECENT", 6);
+            for (k = 0; k < GP_N; k++) gp.amt[k] = 40;
+            gp.swing = 10; gp.human = 90;
+            press(B_OCTUP); frames(4);
+            for (k = 0; k < GP_N; k++) d &= gp.amt[k] == GA_AUTO;
+            d &= gp.swing == GA_AUTO && gp.human == 30u;
+            ok &= gp.at == 0u && gen_nrecent == 3u && gp.id.energy == e2 && gid_eq(&gen_recent[0], &gp.id) &&
+                  !gid_eq(&gp.id, &r2) && piece_sig() != sr;
+            bad += gcheck("  (review) a knob turned on RECENT: PRESETS back to NEW, OCT+ GENERATE with it (a new piece, in the ring)", ok);
+            bad += gcheck("  (review) GENERATE and RECALL: every part amount, the swing and the human as AUTO (gen_ui_defaults)", d);
+            press(B_OCTDN);
+        }
     }
     {   /* every name fits: the status line (232 px) and the panel's line beside its label, for every style and blend */
         uint32_t i, j, wide = 0;
