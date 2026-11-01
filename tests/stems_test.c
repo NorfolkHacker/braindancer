@@ -144,7 +144,8 @@ static uint32_t take(uint32_t nb, uint32_t cores, int tight, uint32_t *sounding,
 int main(void)
 {
     static const char *const LOADS[3] = {"FULL", "LITE", "ECO"};
-    static const uint32_t SEEDS[3] = {42, 3, 123};
+    static const uint32_t SEEDS[3] = {42, 3, 126};   /* (0.9.1 item 16: 126, was 123, whose piece, its drums on T1 now,
+                                                         * sounds 3 tracks in the take: the case needs 4) */
     char s[200];
     uint32_t si, l, c, nb = (uint32_t)(4.0 * FS / CTL);   /* 4 s a take */
     printf("-- the stems (fx.c) against each track's solo render\n");

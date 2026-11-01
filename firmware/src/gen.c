@@ -2691,9 +2691,9 @@ static void gen_make(void)
     gen_pick();
     gs.fm6 = 0;
     /* the orchestration: the drums (unless the genre or the knob leaves them out), then the melodic roles with an
-     * amount, the most important first; the drums on the fourth track, or the last live (0.9.1 item 16: always; was
-     * the first DRUM track the music had, so a piece rebuilt after NEW PROJECT, its DRUM part T1, or a project or the
-     * CPU TEST song with it elsewhere, was another piece: a piece depends on its identity alone) */
+     * amount, the most important first; the drums on T1, where the power-on, the demo and NEW PROJECT have the DRUM
+     * part (0.9.1 item 16: always; was the first DRUM track the music had, so a project or the CPU TEST song with it
+     * elsewhere made another piece of the same identity: a piece depends on its identity alone) */
     {
         static const uint8_t PRI[GP_N] = {RL_DRUM, RL_BASS, RL_PAD, RL_ARP, RL_LEAD};
         uint8_t pri[5];
@@ -2708,7 +2708,7 @@ static void gen_make(void)
             if (np < 2u && !gs.act[RL_PAD]) { gs.act[RL_PAD] = 1; gs.amt[GP_CHORDS] = 60; pri[np++] = RL_PAD; }
         }
         for (k = 0; k < GP_N - 1u; k++) if (!gs.act[PRI[k + 1u]]) pri[np++] = PRI[k + 1u];   /* (the silent ones after) */
-        dr = nlive > 3u ? 3u : nlive - 1u;
+        dr = 0;
         set_engine_of(&trk[dr], ENGI_DRUM);             /* (its sound DRUM's first, as at the power-on: not a DRUM
                                                          * track's own the kit leaves) */
         for (k = 0; k < RL_N; k++) gs.trk_of[k] = NTRK;

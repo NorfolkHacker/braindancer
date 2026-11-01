@@ -67,7 +67,7 @@ static void gen_with(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t fo
  * AGE above 0 or not; the one core / two cores are the caller's), its id printed (gen_id_fmt), parsed, rebuilt
  * (gen_build): the same name, cost, budget and AGE. 0 when no seed gives the kind (the case would prove nothing).
  * (0.9.1 item 16) rebuilt after the harness's power-on and again after NEW PROJECT (DRILL'N'BASS 0001 was 734 there,
- * 720 after NEW PROJECT, its drums on T1) */
+ * 720 after NEW PROJECT: its drums went on the first DRUM track, the harness's T4, NEW PROJECT's T1) */
 static int gen_rt(uint32_t genre, int wild, int age)
 {
     genid_t x;
@@ -263,12 +263,14 @@ static uint32_t hits_all(const track_t *t)
     return c;
 }
 
-#define GEN_HOUSE_HASH 153064764u    /* (all_sig of HOUSE 0421, energy 50, one core, CPU TEST unset; 0.9: re-recorded at
+#define GEN_HOUSE_HASH 1370655077u   /* (all_sig of HOUSE 0421, energy 50, one core, CPU TEST unset; 0.9: re-recorded at
                                      * 7568d5c: every piece fitted, spec 6: the base's piece with its chords at two notes,
                                      * the arp, the lead and the texture left out, the texture's REL 84, a chord's ARP
-                                     * NOTES cleared) */
-#define GEN_HOUSE_HASH_X1 2027450874u   /* (the same at the model's x1.00, two cores: nothing to fit, the piece captured on
-                                         * the base commit a4fcac7 unchanged) */
+                                     * NOTES cleared. 0.9.1 item 16: re-recorded (was 153064764), the drums on T1 as on
+                                     * the device: the harness's power-on (TRK_OLD) has its DRUM part on T4, where GEN put
+                                     * them until now; built after NEW PROJECT the piece is 0.9's as the device made it) */
+#define GEN_HOUSE_HASH_X1 950740879u    /* (the same at the model's x1.00, two cores: nothing to fit; 0.9.1 item 16:
+                                         * re-recorded as GEN_HOUSE_HASH, was 2027450874, a4fcac7's piece with T4's drums) */
 int main(void)
 {
     int bad = 0;
@@ -398,7 +400,8 @@ int main(void)
         {   /* (0.9 final review M4) each section after A is fitted from what A's fit left (its releases, PLAYHEADS, reverb,
              * chord cap), never from the section before it. IDM 0211 SONG at ENERGY 100 made with room (CPU TEST 30 %);
              * then its sections made again (gen_parts, A as made) on a tighter budget (the factor 1.32): the drop (C) is
-             * over and thinned, the break after it (D) fits as it is, and so is not thinner than A */
+             * over and thinned, the break after it (D) fits as it is, and so is not thinner than A. (0.9.1 item 16: IDM 0202,
+             * was 0211, whose drop fits at 1.32 since its drums are on T1: nothing thinned, the case proved nothing) */
             uint32_t ok, h, nr0 = gen_nrecent, rng0 = rng_state;
             int16_t rel[NTRK], rt;
             uint8_t fg[NTRK][FG_HEADS];
@@ -406,7 +409,7 @@ int main(void)
             memcpy(rk, gen_recent, sizeof rk);
             a = gp.id;
             mc_host_v12 = 1; gt_cpt = 30; gen_reset();
-            gid_set(&d, gt_style("IDM"), GID_SOLO, 211); d.energy = 100; d.form = 2;
+            gid_set(&d, gt_style("IDM"), GID_SOLO, 202); d.energy = 100; d.form = 2;
             gen_build(&d);
             for (i = 0; i < NTRK; i++) { rel[i] = trk[i].p[P_REL]; for (h = 0; h < FG_HEADS; h++) fg[i][h] = fg_set[i][h].rate; }
             rt = song.g[G_RTYPE];
@@ -506,10 +509,11 @@ int main(void)
                n, diff, why[0], why[1], why[2], why[3], why[4], why[5]);
         bad += gcheck("(0.9) a piece depends only on its identity: the same after any piece before it (every parameter, ARRANGE, LOOP)", !diff && n == 120u);
         /* (0.9.1 item 16) and from the other music a press can find (RECALL on the device, the calibration's host
-         * rebuilds): after NEW PROJECT (system_init: its tracks TRK_DEF's, the DRUM part on T1, not the harness's T4)
-         * and each piece above built on it; NEW PROJECT alone; a project loaded (the DRUM part on T3, other engines,
-         * the delay WIDE and PING-PONG, a macro, MONO); the CPU TEST song (the DRUM part on the last track); UNDO back to
-         * a piece. The same snapshot, cost and budget as fresh */
+         * rebuilds), against the harness's power-on (its DRUM part on T4, TRK_OLD): after NEW PROJECT (system_init:
+         * TRK_DEF's tracks, the DRUM part on T1) and each piece above built on it; NEW PROJECT alone; a project loaded
+         * (T1 DRUM with a sound of the user's, DRUM on T3 too, other engines, what a sound keeps, the song's globals, a
+         * macro, the punch-in lane, words, the kit's switches); the CPU TEST song (the DRUM part on the last track
+         * alone); UNDO back to NEW PROJECT's music. The same snapshot, cost and budget as fresh */
         n = diff = 0;
         memset(why, 0, sizeof why);
         for (c = 0; c < 2u; c++)
@@ -540,17 +544,16 @@ int main(void)
                         else if (st == 1u) {            /* (a project of the user's: NEW PROJECT, then LOAD) */
                             uint32_t q;
                             system_init();
-                            set_engine_of(&trk[0], ENGI_ANALOG); set_engine_of(&trk[2], ENGI_DRUM); set_engine_of(&trk[5], ENGI_FM6);
+                            set_engine_of(&trk[2], ENGI_DRUM); set_engine_of(&trk[3], ENGI_ANALOG); set_engine_of(&trk[5], ENGI_FM6);
                             for (q = 0; q < NTRK; q++) {   /* (what a sound keeps: ARP, TRANS, CHANCE, ROTATE, HUMAN ..) */
                                 track_t *u = &trk[q];
                                 u->p[P_AMODE] = 3; u->p[P_TRANS] = 5; u->p[P_QUANT] = 3; u->p[P_TCHAN] = 40; u->p[P_SOFS] = 3;
                                 u->p[P_POFS] = -7; u->p[P_HVEL] = 60; u->p[P_CHRD] = 2; u->p[P_SLCR] = 1; u->p[P_VOICE] = V_MONO;
                                 u->p[P_M1SRC] = 1; u->p[P_M1DST] = 2; u->p[P_M1AMT] = 50; u->p[P_LEVEL] = 40; u->p[P_PAN] = 30;
                             }
-                            set_engine_of(&trk[3], ENGI_DRUM);   /* (T4 DRUM too, a sound of the user's: GEN's drum
-                                                         * track, its engine not set again) */
-                            trk[3].p[P_ATK] = 90; trk[3].p[P_DIST] = 70; trk[3].p[P_FCUT] = 20; trk[3].p[P_REV] = 90;
-                            for (q = 0; q < 8u; q++) trk[3].p[P_E0 + q] = (int16_t)clamp(trk[3].p[P_E0 + q] + 9, -64, 127);
+                            /* (T1 DRUM, GEN's drum track, with a sound of the user's: the piece's from DRUM's first) */
+                            trk[0].p[P_ATK] = 90; trk[0].p[P_DIST] = 70; trk[0].p[P_FCUT] = 20; trk[0].p[P_REV] = 90;
+                            for (q = 0; q < 8u; q++) trk[0].p[P_E0 + q] = (int16_t)clamp(trk[0].p[P_E0 + q] + 9, -64, 127);
                             song.g[G_BPM] = 97; song.g[G_WIDTH] = 100; song.g[G_DPING] = 1; song.g[G_RTYPE] = 4;
                             song.g[G_DJF] = -30; song.g[G_SLMODE] = 2; song.g[G_PLAYS1 + 2] = 3; song.g[G_TAGE] = 40;
                             macro_v[0] = 90; pfx_lane_put(3, 2); lyr_set(1, "HELLO WORLD");
@@ -1589,7 +1592,12 @@ int main(void)
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
         turn(EN_PRESET, -1);
         gen_panel_line(v, sizeof v);
-        ok = gp.at == 1u && !strncmp(v, "RECENT 1: ", 10) && !strcmp(gen_oct_label(), "OCT+ RECALL");
+        {   /* (RECENT 1: name; too wide, the name alone or the short one: gen_panel_line) */
+            char nl[40], ns[40];
+            gid_name(&gen_recent[0], nl, sizeof nl, 0); gid_name(&gen_recent[0], ns, sizeof ns, 1);
+            ok = gp.at == 1u && (!strncmp(v, "RECENT 1: ", 10) || !strcmp(v, nl) || !strcmp(v, ns)) &&
+                 !strcmp(gen_oct_label(), "OCT+ RECALL");
+        }
         turn(EN_PRESET, -1); turn(EN_PRESET, -1);
         ok &= gp.at == 2u;                              /* (clamped at the oldest) */
         {   /* (Task 4 review) RECALL while ARRANGE runs: refused as GENERATE is (OCT+ does nothing; the ring as it was) */
@@ -2260,7 +2268,9 @@ int main(void)
          * right after each block (the worst order); then EXPLORE pieces whose MUTATE is on a part in the net, until 4 */
         uint32_t g, sd, songs = 0, fm6 = 0, mut = 0, lost = 0, changes = 0, a0, a1, m;
         mc_host_v12 = 1; gt_cpt = 74; gen_reset();
-        for (g = 0; g < 12u + 300u && (g < 12u || mut < 4u); g++)
+        for (g = 0; g < 12u + 1200u && (g < 12u || mut < 4u); g++)   /* (0.9.1 item 16: 1200 EXPLORE pieces at most, was
+                                                         * 300: ~2 % have MUTATE on a net part, 300 found one since the drums
+                                                         * went to T1) */
             for (sd = 0; sd < (g < 12u ? 3u : 1u); sd++) {
                 if (g < 12u)
                     gen_with(g == 11u ? GEN_EXPLORE : 1u + g % NGENRE, 101u + sd * 37u + g * 7u, 50, 1);
