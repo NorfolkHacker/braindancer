@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<!-- Copyright (C) 2026 NorfolkHacker -->
 # Braindancer flash map (M-VAVE FM-1, 1 MiB, JEDEC 0x856014)
 
 Measured on 2026-10-24 against this tree (branch `piece2-trim`) and the piece 1 full-flash backup
@@ -6,9 +8,9 @@ taken while the device ran JIANT 0.9.9-beta4a, which had replaced the official V
 (`python3 -I`, plain file reads); nothing in it was executed. Sectors are 4 KiB; "used" means not all `0xFF`.
 
 Sources in the tree: `firmware/hal/fm1_flash.h` (`FL_*`, `FL_RANGE_OK`), `firmware/hal/fm1_flash_map.h`,
-`firmware/src/storage.c` (flash-map comment, `st_sector`), `firmware/src/ota.c`, `firmware/loader/{loader.c,ldr_core.c}`,
-`tools/fm1pkg_make.py` (JieLi region table, line 143 ff.). A grep of `firmware tools web` for every address constant in
-the three gaps finds only the places cited below; no other source names them.
+`firmware/src/storage.c` (flash-map comment, `st_sector`), `firmware/src/ota.c`,
+`firmware/loader/{loader.c,ldr_core.c}`, `tools/fm1pkg_make.py` (JieLi region table, line 143 ff.). A grep of `firmware
+tools web` for every address constant in the three gaps finds only the places cited below; no other source names them.
 
 ## The whole flash
 
@@ -51,9 +53,9 @@ Census check: gap 1 0/4, gap 2 0/2, 0xE8000..0xFBFFF 12/20 used (E8, E9, EA..F1,
 | `USR` | 0xEA000 | 0x12000 | 0xEA000..0xFBFFF |
 
 So the three "gaps" are not unowned in the vendor layout. Gaps 1 and 2 and the whole of Felucca's store lie inside the
-SDK's `VM` area (the SDK's non-volatile config store); gap 3 is its tail (`E8000`), `BTIF` and `USR`. JIANT already
-uses most of `VM` (0x97000..0xE7FFF) as its own store, so using more of it adds no new kind of exposure. The table lives
-in the encrypted app area; Braindancer is freestanding (`tools/build.py` takes only the SPL, cfg_tool.bin and eq_cfg_hw.bin
+SDK's `VM` area (the SDK's non-volatile config store); gap 3 is its tail (`E8000`), `BTIF` and `USR`. JIANT already uses
+most of `VM` (0x97000..0xE7FFF) as its own store, so using more of it adds no new kind of exposure. The table lives in
+the encrypted app area; Braindancer is freestanding (`tools/build.py` takes only the SPL, cfg_tool.bin and eq_cfg_hw.bin
 from the SDK) and nothing in `firmware/` reads or acts on the table. Whether the boot ROM / SPL parses it is not
 documented in this tree. kagaimiq/jl-uboot-tool (https://github.com/kagaimiq/jl-uboot-tool) does not document the VM
 area or update records on its front page; its docs/ folder was not read.
@@ -61,12 +63,12 @@ area or update records on its front page; its docs/ folder was not read.
 ## What writes where: the update loader
 
 - `firmware/loader/loader.c` limits the RAM driver to `FL_RANGE_OK = [0x4000,0x97000) + [0xE0000,0xFC000)`.
-- `ldr_core.c` after a successful update scans, for `s` from `LDR_REC_HI 0xFC000` down to (excluding) `LDR_REC_LO 0x93000`
-  in 0x1000 steps, the 80 bytes at `s - 0x100`: the last 256 bytes of the sector below `s`, so the slot offset inside
-  each sector is 0xF00. That is 105 candidate slots (`0x93F00`, `0x94F00`, ... `0xFBF00`), 73 of them skipped
-  (sectors inside the store window below), 32 read. The scan `break`s (does not `continue`) on a flash read error. It erases the whole sector below any 80-byte record that looks like an
-  update record (bytes 6..7 = `0x5441`, first CRC16 matches bytes 2..79). It skips only `[LDR_DATA_LO 0x97000,
-  LDR_DATA_HI 0xE0000)`, "Felucca's store".
+- `ldr_core.c` after a successful update scans, for `s` from `LDR_REC_HI 0xFC000` down to (excluding) `LDR_REC_LO
+  0x93000` in 0x1000 steps, the 80 bytes at `s - 0x100`: the last 256 bytes of the sector below `s`, so the slot offset
+  inside each sector is 0xF00. That is 105 candidate slots (`0x93F00`, `0x94F00`, ... `0xFBF00`), 73 of them skipped
+  (sectors inside the store window below), 32 read. The scan `break`s (does not `continue`) on a flash read error. It
+  erases the whole sector below any 80-byte record that looks like an update record (bytes 6..7 = `0x5441`, first CRC16
+  matches bytes 2..79). It skips only `[LDR_DATA_LO 0x97000, LDR_DATA_HI 0xE0000)`, "Felucca's store".
 - Consequences: gap 2 and the sample area are inside the skipped window, so the loader never erases them. Gap 1
   (0x93000..0x96FFF) and everything from 0xE0000 up are not skipped, so the loader would erase a gap-1 sector whose
   `+0xF00` bytes happen to look like a record. The same record format is what the SPL looks for at power-on, which is
@@ -87,22 +89,22 @@ Why not "free": the shipped update loader can erase it (record scan above, windo
 the SPL's own record scan covers it. That is code we ship touching it, so the strict criterion fails today. Also it is
 a 16 KiB island between the app region and the projects, not contiguous with the sample area, so its value is small.
 
-What would settle it: lower `LDR_DATA_LO` to 0x93000 in `ldr_core.c` (so the loader skips it like the rest of the
-store) and, in piece 4, have the sample writer refuse a sector whose `+0xF00` 80 bytes look like a record (CRC16/`AT`
-magic: probability about 2^-32 per sector for random data: negligible but cheap to guard, so guard it). Then it is free on the same footing as
-the rest of `VM`. Official V15, if the user goes back to stock, may use `VM` (it is the SDK config store); in the
-backup it did not use this part.
+What would settle it: lower `LDR_DATA_LO` to 0x93000 in `ldr_core.c` (so the loader skips it like the rest of the store)
+and, in piece 4, have the sample writer refuse a sector whose `+0xF00` 80 bytes look like a record (CRC16/`AT` magic:
+probability about 2^-32 per sector for random data: negligible but cheap to guard, so guard it). Then it is free on the
+same footing as the rest of `VM`. Official V15, if the user goes back to stock, may use `VM` (it is the SDK config
+store); in the backup it did not use this part.
 
 ## Gap 2: 0xDA000..0xDBFFF (8 KiB) - verdict: free, with the SPL-record guard every sample sector needs
 
-Evidence: erased in both sectors of the backup. `storage.c` documents it free ("0xDA000..0xDBFFF free"), the only
-tree references are that comment and the `_Static_assert` family that keeps the song objects below the sample area. It is
+Evidence: erased in both sectors of the backup. `storage.c` documents it free ("0xDA000..0xDBFFF free"), the only tree
+references are that comment and the `_Static_assert` family that keeps the song objects below the sample area. It is
 inside `[LDR_DATA_LO, LDR_DATA_HI)` so the update loader skips it and `FL_RANGE_OK` of the loader cannot reach it, and
 `ota.c` does not touch it. Between the song index (0xD8000..0xD9FFF) and the user preset banks (0xDC000), so no
 neighbouring object spills over: `st_sector()` computes its addresses from object numbers and none lands here
-(`OBJ_SONGIDX` 0xD8000/0xD9000, `OBJ_UPRESET0` from 0xDC000).
-Stock V15: lies in the SDK `VM` area, like the 0x97000..0xE7FFF Felucca store that JIANT already overwrites; the backup
-shows no sign of V15 using it on this lightly used unit (not proof for others). If a user goes back to stock, V15 would find sample bytes where it expects erased VM
+(`OBJ_SONGIDX` 0xD8000/0xD9000, `OBJ_UPRESET0` from 0xDC000). Stock V15: lies in the SDK `VM` area, like the
+0x97000..0xE7FFF Felucca store that JIANT already overwrites; the backup shows no sign of V15 using it on this lightly
+used unit (not proof for others). If a user goes back to stock, V15 would find sample bytes where it expects erased VM
 sectors; the same is already true for every JIANT project, so this adds no new class of harm, and it does not matter for
 what we run.
 
@@ -122,10 +124,11 @@ Caveat for piece 4: it is a separate 8 KiB extent (the song index separates it f
 
 Per the backup, 12 of 20 sectors are in use, by data nothing we ship reads:
 
-- **0xE8000** (1 sector): `55 AA AA 55 91 6A 20 00 ...`, 150 non-`FF` bytes, all within the first 173 bytes (offsets 0..172), the rest `FF`. A header with magic
-  `0x55AAAA55` followed by a short record; looks like a JieLi VM/system-config header (last sector of `VM`). Its
-  `+0xF00` slot (0xE8F00) is the stock firmware's update-record location, as `ldr_core.c` notes ("the stock firmware's:
-  0xE8F00"); it is erased now. The loader erases this sector if a record appears there. Owner: official V15 / SDK VM.
+- **0xE8000** (1 sector): `55 AA AA 55 91 6A 20 00 ...`, 150 non-`FF` bytes, all within the first 173 bytes (offsets
+  0..172), the rest `FF`. A header with magic `0x55AAAA55` followed by a short record; looks like a JieLi
+  VM/system-config header (last sector of `VM`). Its `+0xF00` slot (0xE8F00) is the stock firmware's update-record
+  location, as `ldr_core.c` notes ("the stock firmware's: 0xE8F00"); it is erased now. The loader erases this sector if
+  a record appears there. Owner: official V15 / SDK VM.
 - **0xE9000** (1 sector): 10 bytes `95 66 60 00 38 EB 65 69 14 31` then `FF`; the region table names this `BTIF`.
   Owner: stock Bluetooth/identity data. Unknown content; could be a device address.
 - **0xEA000..0xF1FFF** (8 sectors): two byte-identical 16 KiB copies (sector hashes EA..ED equal EE..F1). Content is
@@ -134,8 +137,8 @@ Per the backup, 12 of 20 sectors are in use, by data nothing we ship reads:
   bank, duplicated for safety. Nothing in Braindancer reads it (Braindancer has its own presets and FM6 banks).
   Not free: erasing it destroys stock V15's factory sounds, which a user going back to stock needs; the user's backup
   is the only copy.
-- **0xF2000..0xF9FFF** (8 sectors, 32 KiB): erased. Inside the stock `USR` region (0xEA000, 0x12000). Whether V15 uses it
-  (e.g. when saving user tones or sequences) is not visible in this one backup.
+- **0xF2000..0xF9FFF** (8 sectors, 32 KiB): erased. Inside the stock `USR` region (0xEA000, 0x12000). Whether V15 uses
+  it (e.g. when saving user tones or sequences) is not visible in this one backup.
 - **0xFA000..0xFBFFF** (2 sectors): repeated 3-byte records `50 03 00 1E 1E ...` and `00 02 00 00 03 00 ... 08 00`,
   repeating with a period of 0x3B bytes: stock user/performance data (`USR`); no ASCII, no magic.
 
@@ -161,22 +164,24 @@ The SPL looks for an update record at power-on in slots at `sector + 0xF00` (4K 
 `ldr_core.c` both test the same 80-byte record `r` at that slot; it is taken for a record when all of:
 - `r[0] | r[1] != 0` (the CRC16, little endian, is nonzero),
 - `r[6] == 0x41 and r[7] == 0x54` (little-endian 16-bit `0x5441`, "AT"),
-- `crc16(r[2:80]) == LE16(r[0:2])` (CRC-CCITT, poly 0x1021, init 0, MSB first, as `fm1pkg_make.crc16` / `ota_crc16(p, 78, 0)`).
+- `crc16(r[2:80]) == LE16(r[0:2])` (CRC-CCITT, poly 0x1021, init 0, MSB first, as `fm1pkg_make.crc16` / `ota_crc16(p,
+  78, 0)`).
 
-For random data the chance is about 2^-32 per sector (2^-16 for the 2-byte magic times 2^-16 for the 2-byte CRC; the nonzero test barely changes it), negligible but cheap to guard, so guard it. The
-SPL then runs the loader on a sample. This applies to every sector of 0xB8000..0xD7FFF (32 slots) and gap 2 (2 slots).
-Requirement for piece 4, plainly: the sample writer must ensure no sample sector's `+0xF00` slot can be taken for an
-update record. Either reject and alter any 256-byte tail block that matches the test above (flip a bit of the sample
-data, which is harmless for audio; test on the data about to be written), or reserve the slot (do not store sample
-data in the last 256 bytes of each sector). Which is better is not decided by evidence here; testing the slot is the
-cheaper one. Whether the SPL ignores 0x97000..0xE0000 is unknown and should not be relied on.
+For random data the chance is about 2^-32 per sector (2^-16 for the 2-byte magic times 2^-16 for the 2-byte CRC; the
+nonzero test barely changes it), negligible but cheap to guard, so guard it. The SPL then runs the loader on a sample.
+This applies to every sector of 0xB8000..0xD7FFF (32 slots) and gap 2 (2 slots). Requirement for piece 4, plainly: the
+sample writer must ensure no sample sector's `+0xF00` slot can be taken for an update record. Either reject and alter
+any 256-byte tail block that matches the test above (flip a bit of the sample data, which is harmless for audio; test on
+the data about to be written), or reserve the slot (do not store sample data in the last 256 bytes of each sector).
+Which is better is not decided by evidence here; testing the slot is the cheaper one. Whether the SPL ignores
+0x97000..0xE0000 is unknown and should not be relied on.
 
 ## JIANT and Felucca
 
 JIANT 0.9.x and Felucca store songs 5..8 at 0xB8000..0xD7FFF (`storage.c` flash-map comment, "songs 2..4 ... at
 0xA0000..0xB7FFF", the other four in the sectors above) and Braindancer now reserves that range as the sample area.
-- A device that has samples from Braindancer and goes back to JIANT: JIANT's songs 5..8 read those sectors as song objects
-  (commit-record magic and CRCs fail, so they read as empty); the first time JIANT saves song 5..8 it erases and
+- A device that has samples from Braindancer and goes back to JIANT: JIANT's songs 5..8 read those sectors as song
+  objects (commit-record magic and CRCs fail, so they read as empty); the first time JIANT saves song 5..8 it erases and
   overwrites the sample sectors, so the breaks there are lost. Gap 2 is not used by JIANT, so samples stored only there
   survive a JIANT visit.
 - A Braindancer installed over a JIANT that had songs 5..8: those songs' sectors are the sample area and contain valid

@@ -50,6 +50,33 @@ def call_args(s, i):                       # the text from i to the ')' closing 
     return s[i:j - 1]
 
 
+LBL_ONLY = ("UXG_ARROW_LBL", "UXG_MIDI_LBL")   # (0.9.1) tables drawn in UF_LBL alone, by name (was any *_LBL)
+
+
+def table_kind(name):
+    """a UX*_ table's faces: 'val' (UF_VAL), 'hdr' (UF_HDR), 'lbl' (UF_LBL, LBL_ONLY), 'both' (UF_HDR and UF_LBL)"""
+    if name.endswith("_VAL"):
+        return "val"
+    if name.endswith("_HDR"):
+        return "hdr"
+    if name in LBL_ONLY:
+        return "lbl"
+    if name.endswith("_LBL"):
+        sys.exit(f"ux_msg_scan: {name} ends in _LBL but is not in LBL_ONLY: list it (UF_LBL alone) or rename it")
+    return "both"
+
+
+def selfcheck():
+    assert table_kind("UXD_Q_VAL") == "val" and table_kind("UXD_LOST_HDR") == "hdr"
+    assert table_kind("UXG_MIDI_LBL") == "lbl" and table_kind("UXS_LABEL") == "both"
+    try:
+        table_kind("UXQ_NEW_LBL")
+    except SystemExit:
+        print("ux_msg_scan: selfcheck ok")
+        return
+    raise AssertionError("an unlisted _LBL table passed")
+
+
 def main(out):
     hdr, lbl, val, plain, got_msg, tables, chains, labels = [], [], [], 0, 0, 0, 0, []
     for f in sorted(glob.glob(str(SRC / "*.c"))) + sorted(glob.glob(str(SRC / "ux_*.h"))):   # (3b: ux_more.h UXM_K34 ..)
@@ -78,14 +105,15 @@ def main(out):
                 hdr.extend(LIT.findall(t.group(1)))
                 lbl.extend(LIT.findall(t.group(1)))
             for t in re.finditer(r'\b(UX[A-Z]*_[A-Z_]+)\s*\[[^]]*\]\s*=\s*\{(.*?)\};', s, flags=re.S):
-                if t.group(1).endswith('_VAL'):       # (3c-2 task 1: ux_dialog.c's questions, UXD_Q_VAL: UF_VAL alone)
+                k = table_kind(t.group(1))
+                if k == 'val':                        # (3c-2 task 1: ux_dialog.c's questions, UXD_Q_VAL: UF_VAL alone)
                     tables += 1
                     val.extend(LIT.findall(t.group(2)))
-                elif t.group(1).endswith('_HDR'):     # (.. its lost lines and their pieces, UXD_LOST_HDR: UF_HDR alone)
+                elif k == 'hdr':                      # (.. its lost lines and their pieces, UXD_LOST_HDR: UF_HDR alone)
                     tables += 1
                     hdr.extend(LIT.findall(t.group(2)))
-                elif t.group(1).endswith('_LBL'):       # (3c-1 task 6: a picture's own words, drawn in UF_LBL alone: ux_glo.c
-                    tables += 1                       # UXG_ARROW_LBL, LIVE's REVERSE / PING-PONG arrows)
+                elif k == 'lbl':                      # (3c-1 task 6: a picture's own words, drawn in UF_LBL alone: ux_glo.c
+                    tables += 1                       # UXG_ARROW_LBL, LIVE's REVERSE / PING-PONG arrows; LBL_ONLY)
                     lbl.extend(LIT.findall(t.group(2)))
                 elif t.group(1) != 'UXH_PAGES':       # (3b: ux_section.c UXS_LABEL, ux_more.c UXM_HEAD / UXM_ACT: a knob's
                     tables += 1                       # label, a MORE row, the status line: both faces)

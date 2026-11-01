@@ -285,6 +285,11 @@ def unpinned_selfcheck():
         raise SystemExit(f"the pin's guard (tools/build.py unpinned_vars) fails its self-check: {got}")
 
 
+def small_int(v):
+    """an ASCII integer 1..16 (str.isdigit alone takes other scripts' digits and superscripts), else None"""
+    return int(v) if v.isascii() and v.isdigit() and 1 <= int(v) <= 16 else None
+
+
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_OTA_RAMONLY", "FELUCCA_CDC",
@@ -297,7 +302,7 @@ def build_app():
                        ("FELUCCA_VOICES_2CORE", "firmware/src/voice.c: the shared voices with two cores (ACID FM 0.2)")):
         v = os.environ.get(flag)   # set but invalid: stop (a silently dropped value would build the default)
         if v is not None and v != "":
-            if not (v.isdigit() and 1 <= int(v) <= 16):
+            if small_int(v) is None:
                 raise SystemExit(f"{flag}={v!r}: not valid, must be an integer 1..16 ({what})")
             flags.append(f"-D{flag}={int(v)}")
     v = os.environ.get("FELUCCA_USB_LAYOUT")   # firmware/src/usb.c: how the USB composite presents itself (#67), 0..3

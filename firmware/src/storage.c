@@ -13,11 +13,14 @@
  * Flash access goes through three hooks (also used by the host test):
  *   st_read(off, dst, n)   st_erase(off)   st_prog(off, src, n)
  */
+#define ST_NSONG 4u                                    /* (ACID FM 0.2) songs in use; (0.9.1) song_chain.c's must be the */
+#define ST_NSONG_INDEX 8u                              /* same (asserted): rows in the stored song index (JIANT's 8) */
 #ifndef NSONG                                  /* (song_chain.c defines them, before this file in the firmware; the host tests that
                                                 * include this file alone get them here, the same values) */
-#define NSONG 4u                               /* (ACID FM 0.2) songs in use */
-#define NSONG_INDEX 8u                         /* rows in the stored song index (JIANT's 8, the layout kept) */
+#define NSONG ST_NSONG
+#define NSONG_INDEX ST_NSONG_INDEX
 #endif
+_Static_assert(NSONG == ST_NSONG && NSONG_INDEX == ST_NSONG_INDEX, "NSONG / NSONG_INDEX: song_chain.c and storage.c differ");
 #define ST_MAGIC 0x554C4546u                   /* "FELU" */
 #define ST_SECTOR 4096u
 #define ST_PAYLOAD_OFF 256u

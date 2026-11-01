@@ -96,8 +96,10 @@
 #include "ui_menu.c"
 #include "ui_input.c"
 #include "ui_layer.c"              /* the quick layers (FX GLO SCL EDIT REC held; SEQ TOOLS: ui_tools.c) */
-#include "ux_widgets.c"            /* ACID FM: header, knob row, glow panel, status, footer, step strip (ux_widgets.h) */
-#include "ux_home.c"               /* ACID FM: HOME's pages on the screen (ux_nav.c, included by ui.c: HOME's navigation) */
+#include "ux_widgets.c"            /* ACID FM: header, knob row, glow panel, status, footer, step strip
+                                    * (ux_widgets.h) */
+#include "ux_home.c"               /* ACID FM: HOME's pages on the screen (ux_nav.c, included by ui.c: HOME's
+                                    * navigation) */
 #include "ux_more.c"                /* (ACID FM 3b) the MORE list (ux_more.h) */
 #include "ux_seq.c"                 /* (ACID FM 3c-1) the SEQ pages: STEPS' roll, strip, grid (ux_seq.h) */
 #include "ux_glo.c"                 /* (ACID FM 3c-1 task 6) the GLO pages: LIVE (ux_glo.h) */

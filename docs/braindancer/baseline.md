@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<!-- Copyright (C) 2026 NorfolkHacker -->
 # Baseline: JIANT main as forked
 
 - Upstream commit: b66729d38a2e6aff21d24dda0e40ed53a63f5667

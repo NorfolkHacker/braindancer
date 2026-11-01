@@ -11,6 +11,10 @@
  * rule broken, every piece still playing in its key, very different from the next.
  *   cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o build/host/gen_test tests/gen_test.c -lm */
 #define UI_TEST_NO_MAIN 1
+#include <stdint.h>
+static struct { uint32_t cost_thin; uint8_t grain_off; } gt_probe;   /* (0.9.1) what gen.c hands the tests (GEN_PROBE):
+                                                         * not in the firmware's RAM */
+#define GEN_PROBE(f, v) (gt_probe.f = (v))
 #include "ui_test.c"
 
 static int gcheck(const char *what, int ok)
@@ -1840,7 +1844,7 @@ int main(void)
                     /* (0.9 fix round 1, controller ruling B) or to keep the full rate when the fitter turned the grain
                      * off: PING-PONG then doubles the line it had (full with the grain) to the half rate, the fitter's
                      * side effect: straight back to the full rate */
-                    why |= gs.grain_off && st0 == 1u && !stg && !st;
+                    why |= gt_probe.grain_off && st0 == 1u && !stg && !st;
                     cut++;
                     if (!why && ++cut_bad < 6u)
                         printf("  %s seed %u: TIME %s shortened, its line at 1/%u rate, %u of %u with it\n", gs.g->name, gp.seed,
@@ -1970,7 +1974,7 @@ int main(void)
                 over_ts2 += (c & 1u) && gc_cost(1) > gc_budget() && song.g[G_TAGE] && gen_keeps_age();
                 if (gs.age_cut) {
                     cuts++;
-                    cut_bad += gs.cost_thin <= gc_budget() || song.g[G_TAGE] || tape_set();
+                    cut_bad += gt_probe.cost_thin <= gc_budget() || song.g[G_TAGE] || tape_set();
                     gen_fit_ccomp(); ps = parts_sig();  /* (the first rung as if over: the same on both) */
                     id.tape = GT_OFF; gen_build(&id); gen_fit_ccomp();
                     cut_bad += parts_sig() != ps;       /* (no part thinned for TAPE) */

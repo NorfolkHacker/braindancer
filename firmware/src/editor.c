@@ -103,9 +103,11 @@ static struct {
 static int16_t *ed_val(uint32_t i) { return i < P_COUNT ? &TSEL->p[i] : &song.g[i - P_COUNT]; }
 static uint32_t ed_step_sig(const step_t *s)
 {
-    return ((uint32_t)s->note[0] | (uint32_t)s->note[1] << 7 | (uint32_t)s->note[2] << 14 | (uint32_t)s->note[3] << 21) ^
+    return ((uint32_t)s->note[0] | (uint32_t)s->note[1] << 7 | (uint32_t)s->note[2] << 14 |
+            (uint32_t)s->note[3] << 21) ^
            ((uint32_t)s->n << 28) ^ ((uint32_t)s->time * 0x9E3779B1u) ^ ((uint32_t)s->flags * 0x85EBCA6Bu) ^
-           ((uint32_t)s->vel * 0xC2B2AE35u) ^ ((uint32_t)(s->hit | s->acc << 8) * 0x27D4EB2Fu) ^ ((uint32_t)s->probability * 0x165667B1u);
+           ((uint32_t)s->vel * 0xC2B2AE35u) ^ ((uint32_t)(s->hit | s->acc << 8) * 0x27D4EB2Fu) ^
+           ((uint32_t)s->probability * 0x165667B1u);
 }
 static void ed_shadow(void)                              /* the editor is in sync */
 {
@@ -255,7 +257,8 @@ static void ed_step_put(step_t *st, const uint8_t *a, uint32_t na)
     for (i = 0; i < 4u; i++)
         st->note[i] = a[1 + i] & 0x7Fu;
     st->time = (uint8_t)(a[5] > ST_REST ? ST_REST : a[5]);
-    st->flags = (uint8_t)((a[6] & (SF_ACCENT | SF_SLIDE)) | (st->flags & (SF_RATCH | SF_MFINE)));   /* (0.9.1: its MICRO kept) */
+    st->flags = (uint8_t)((a[6] & (SF_ACCENT | SF_SLIDE)) | (st->flags & (SF_RATCH | SF_MFINE)));   /* (0.9.1: its
+                                                                                                     * MICRO kept) */
     st->vel = a[7] & 0x7Fu;
     if (na >= 11u) {
         st->hit = (uint8_t)((a[8] & 0x7Fu) | (a[10] & 1u) << 7);
@@ -263,7 +266,8 @@ static void ed_step_put(step_t *st, const uint8_t *a, uint32_t na)
     }
     if (na >= 12u) step_set_chance(st, a[11] <= 100u ? a[11] : 100u);
     if (na >= 13u) step_set_ratchet(st, a[12]);
-    if (na >= 21u)                                        /* (0.8.5, INFO 4F 01 07) each lane's mode, 0..6 (core.h LM_*) */
+    if (na >= 21u)                                        /* (0.8.5, INFO 4F 01 07) each lane's mode, 0..6 (core.h
+                                                           * LM_*) */
         for (i = 0; i < NLANE; i++)
             step_set_lmode(st, i, a[13 + i] < LM_N ? a[13 + i] : LM_NONE);
     ui.force = 1;
@@ -349,9 +353,11 @@ static int ed_args_ok(uint32_t cmd, const uint8_t *a, uint32_t n)
     case ED_MENU_SET:
         return n == 3u;
     case ED_STEP_SET:
-        return n == 9u || n == 12u || (n == 13u && a[12] <= 100u) ||               /* notes only, or the complete grid extension, */
+        return n == 9u || n == 12u || (n == 13u && a[12] <= 100u) ||               /* notes only, or the complete
+                                                                                    * grid extension, */
                (n == 14u && a[12] <= 100u && a[13] >= 1u && a[13] <= 4u) ||     /* its chance, its ratchet, */
-               (n == 22u && a[12] <= 100u && a[13] >= 1u && a[13] <= 4u && ed_lm_ok(a + 14));   /* (0.8.5) the lanes' modes */
+               (n == 22u && a[12] <= 100u && a[13] >= 1u && a[13] <= 4u && ed_lm_ok(a + 14));   /* (0.8.5) the lanes'
+                                                                                                 * modes */
     case ED_TRACK:
         return n <= 1u;
     case ED_TRACK_MIX:
@@ -409,7 +415,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         break;
     }
     case ED_INFO:
-        /* (ACID FM 0.2, Braindancer 0.7: "BRAINDANCER v.."; JIANT: "JIANT v..", Felucca "FELUCCA v..": the web tools take all three) */
+        /* (ACID FM 0.2, Braindancer 0.7: "BRAINDANCER v.."; JIANT: "JIANT v..", Felucca "FELUCCA v..": the web tools
+         * take all three) */
         ed_str("BRAINDANCER " FELUCCA_VERSION, 24);
         ed_b(NENGINES);
         ed_b(P_COUNT);
@@ -430,10 +437,14 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(0x4E); ed_b(1); ed_b(ED_MENU_N);   /* MENU settings: cmds 72, 73; the items MENU_DESC offers */
         ed_b(0x52); ed_b(1); ed_b(4);   /* RATCH: a step's ratchet (1..4 hits) after its chance */
         ed_b(0x4C); ed_b(1); ed_b(1);   /* 1.1 parameter locks: MOTION ops 5..7, the kinds after the records */
-        ed_b(0x56); ed_b(1); ed_b(FM6_NBANK);   /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank: cmds 74..77, SLOT 9..40 */
-        ed_b(0x4A); ed_b(1); ed_b(1);   /* (JIANT 0.6.62) 'J': this is JIANT (the web installer writes over it, web/index_pkg.html) */
-        ed_b(0x4F); ed_b(1); ed_b(LM_N);   /* (0.8.5) 'O': the DRUM-X octaves, a step's lane modes 0..6 after its ratchet */
-        ed_b(0x59); ed_b(1); ed_b(LYR_LEN - 1u);   /* (JIANT 0.8.5) 'Y': LYRIC (cmd 39), a track's lyric, at most 63 bytes */
+        ed_b(0x56); ed_b(1); ed_b(FM6_NBANK);   /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank: cmds 74..77, SLOT
+                                                 * 9..40 */
+        ed_b(0x4A); ed_b(1); ed_b(1);   /* (JIANT 0.6.62) 'J': this is JIANT (the web installer writes over it,
+                                         * web/index_pkg.html) */
+        ed_b(0x4F); ed_b(1); ed_b(LM_N);   /* (0.8.5) 'O': the DRUM-X octaves, a step's lane modes 0..6 after its
+                                            * ratchet */
+        ed_b(0x59); ed_b(1); ed_b(LYR_LEN - 1u);   /* (JIANT 0.8.5) 'Y': LYRIC (cmd 39), a track's lyric, at most 63
+                                                    * bytes */
         break;
     case ED_GET:
     case ED_SET:
@@ -446,14 +457,15 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
                 ed_load_before(&b);
                 set_engine((uint32_t)clamp(ed_rv(a + 2), 0, NENGINES - 1));
                 ed_load_after(&b);
-            } else if (a[0] == 1 && a[1] == G_BPM && tempo_ext()) {   /* (ACID FM 3c-2 task 7, spec 5.2) under CLOCK USB /
-                                                           * TRS refused as the device's tempo writers (ui.c tempo_ext);
-                                                           * the reply the BPM as it is */
+            } else if (a[0] == 1 && a[1] == G_BPM && tempo_ext()) {   /* (ACID FM 3c-2 task 7, spec 5.2) under CLOCK
+                                                           * USB / TRS refused as the device's tempo writers (ui.c
+                                                           * tempo_ext); the reply the BPM as it is */
             } else if (a[0] == 1 && a[1] == G_DJF) {     /* (0.9.1) the DJ FILTER: recorded as its knob is */
                 motion_djf_set(TSEL, (int16_t)clamp(ed_rv(a + 2), d->min, d->max));
-            } else if (a[0] == 1 && a[1] == G_TAGE) {    /* (Braindancer 0.8) AGE: as FX > MASTER's knob, TAPE's five details
-                                                           * on its map with it (fx.c: the sound reads the details; they go
-                                                           * back to the editor as pushes), recorded as the knob is */
+            } else if (a[0] == 1 && a[1] == G_TAGE) {    /* (Braindancer 0.8) AGE: as FX > MASTER's knob, TAPE's five
+                                                           * details on its map with it (fx.c: the sound reads the
+                                                           * details; they go back to the editor as pushes), recorded
+                                                           * as the knob is */
                 motion_age_set(TSEL, (int16_t)clamp(ed_rv(a + 2), 0, 100));
             } else if (d->max > d->min) {
                 *vp = (int16_t)enum_orig(d, clamp(ed_rv(a + 2), d->min, d->max));
@@ -532,7 +544,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             return;
         if (a[0] == 1u) {
             if (ed_flash_stop() || project_save(a[1]))
-                return;                              /* the legacy reply has no failure bit: do not confirm a failed save */
+                return;                              /* the legacy reply has no failure bit: do not confirm a failed
+                                                      * save */
         }
         else if (a[0] == 0u)
             project_load(a[1] & 3u);
@@ -550,7 +563,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         for (i = 0; i < 2u; i++)                           /* then the two edit-page titles */
             ed_str(ENGINES[a[0]]->page_title[i], 8);
         break;
-    case ED_UP_LIST: {                                     /* start, count -> start, count, total, per slot: used, engine, name */
+    case ED_UP_LIST: {                                     /* start, count -> start, count, total, per slot: used,
+                                                            * engine, name */
         uint32_t s0, cnt;
         if (na < 2u)
             return;
@@ -574,8 +588,9 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         }
         break;
     }
-    case ED_UP_GET: {                                      /* slot -> slot, used, engine, name, P_COUNT x v14, 16 x (note,
-                                                            * flags), (v5) kind [, 16 x hi] (upreset.c up_parse) */
+    case ED_UP_GET: {                                      /* slot -> slot, used, engine, name, P_COUNT x v14, 16 x
+                                                            * (note, flags), (v5) kind [, 16 x hi] (upreset.c
+                                                            * up_parse) */
         int16_t v[P_COUNT];
         char nm[13] = {0};
         const up_rec_t *r;
@@ -672,7 +687,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
     case ED_PING:
         ed_b(0);
         break;
-    case ED_TRACK:                                         /* [track] -> selected, NTRK, per track: engine, preset, level, mute, armed */
+    case ED_TRACK:                                         /* [track] -> selected, NTRK, per track: engine, preset,
+                                                            * level, mute, armed */
         if (na >= 1u && a[0] < NTRK && a[0] != song.sel) {
             track_select(a[0]);
             if (ed_w.on)
@@ -716,7 +732,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         for (i = 0; i < P_COUNT; i++)
             ed_v(motion_base_value(&trk[a[0]], i));
         break;
-    case ED_TRACK_STEP: {                                  /* track, index [, step] -> track, index, step (as STEP_GET) */
+    case ED_TRACK_STEP: {                                  /* track, index [, step] -> track, index, step (as
+                                                            * STEP_GET) */
         step_t *st;
         if (na < 2u || a[0] >= NTRK || a[1] >= NSTEP)
             return;

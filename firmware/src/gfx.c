@@ -31,7 +31,7 @@ typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #include "ux_fonts.h"                   /* UF_LBL 8 / UF_HDR 10 / UF_VAL 14 / UF_TTL 32 / UF_MARK 30 px: Inter Tight (ACID FM) */
 #include "ui_font_x.h"                  /* (0.8.5) AF_X: the 5 x 7 mono pixel face (tools/gen_px_font.py) */
 #include "ui_palettes.h"
-#include "ui_keycaps.h"                 /* KC_*: the keycaps / badges (tools/gen_aa_keycaps.py), KNOB_* arcs */
+#include "ui_keycaps.h"                 /* KC_*: the keycaps / badges (tools/gen_aa_keycaps.py) */
 #define ELLIPSIS '\x85'                 /* the ellipsis glyph of AF_S and AF_M */
 
 /* host tests hook in here (layout lint, draw cost); nothing in the firmware */

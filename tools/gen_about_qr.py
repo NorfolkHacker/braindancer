@@ -8,7 +8,10 @@ no quiet zone (draw_about_qr draws its own), one row per word, the leftmost modu
 """
 import sys
 
-import segno
+try:
+    import segno
+except ImportError:
+    sys.exit("gen_about_qr: the Python package segno is missing (it is in the project's .venv: . .venv/bin/activate)")
 
 
 def rows(url):

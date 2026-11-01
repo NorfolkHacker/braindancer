@@ -89,6 +89,9 @@ enum { GS_PICK, GS_DRUMS, GS_BASS, GS_CHORDS, GS_ARP, GS_LEAD, GS_SOUND, GS_FORM
  * its root, third, fifth and seventh move off the mode (bit pairs 0 2 4 6: 1 a semitone up, 2 down; 0 the mode's) */
 typedef struct { uint8_t at, len, deg, q, alt; } gch_t;
 #define GCH_N 8u
+#ifndef GEN_PROBE                                       /* (0.9.1) what the fitter did, for the tests only (tests/gen_test.c */
+#define GEN_PROBE(f, v) ((void)0)                       /* defines it): nothing in the firmware's RAM */
+#endif
 static struct {
     const ggenre_t *g;
     uint32_t gi;
@@ -109,9 +112,6 @@ static struct {
     uint8_t pi;                                         /* (0.9) the partner (GENRE index) or GID_SOLO */
     uint16_t snd[NTRK]; uint8_t nsnd;                   /* (0.9.17) the piece's sounds so far (engine << 8 | preset) */
     uint8_t age, age_cut;                               /* (0.9) the piece's AGE (gen_age); AUTO took it to 0 (gen_fit_tape) */
-    uint16_t cost_thin;                                 /* (0.9) gc_cost(1) when AGE was looked at: after the first rung,
-                                                         * before the music was thinned */
-    uint8_t grain_off;                                  /* (0.9) the fitter turned the delay's grain off (gx_fit_piece) */
     uint8_t in_sec;                                     /* (0.9) a section after A being fitted (gen_fit_section) */
     uint8_t wrote;                                      /* (0.9.1) the sections gen_parts wrote (bit s: the net's, safe_secs) */
 } gs;
@@ -2313,9 +2313,10 @@ static int gen_keeps_age(void)                          /* (0.9 spec 3, user dec
 }
 static void gen_fit_tape(void)
 {
-    gs.cost_thin = (uint16_t)gc_cost(1);
+    uint32_t c = gc_cost(1);                            /* (after the first rung, before the music is thinned) */
+    GEN_PROBE(cost_thin, c);
     gs.age_cut = 0;
-    if (gp.id.tape != GT_AUTO || !gs.age || gs.cost_thin <= gc_budget() || gen_keeps_age()) return;
+    if (gp.id.tape != GT_AUTO || !gs.age || c <= gc_budget() || gen_keeps_age()) return;
     gs.age = 0;                                         /* (written once, after the fit: gen_make, review M4) */
     gs.age_cut = 1;
 }
@@ -2350,7 +2351,7 @@ static void gx_fit_piece(void)
          * rate (the doubling the fitter's side effect, not the piece's) */
         uint32_t s0 = gc_dly_stage(), n, gr = song.g[G_DPIT] || song.g[G_DSPRY];
         song.g[G_DPIT] = song.g[G_DSPRY] = 0;
-        gs.grain_off = (uint8_t)gr;
+        GEN_PROBE(grain_off, (uint8_t)gr);
         gen_fit_delay();
         for (n = 0; gr && !s0 && n < 12u && gc_dly_stage(); n++) { gen_dly_shorter(); dbl = 1; }
     }
@@ -2647,6 +2648,7 @@ static void gen_make(void)
      * cleared first (gs as at the power-on: its kick, which a drumless piece's bass followed; its voicings ..), and on
      * the tracks what a part reads before it writes it (below: each part's LEN, AUTO PAN, DIV, PLAYHEADS) */
     memset(&gs, 0, sizeof gs);
+    GEN_PROBE(grain_off, 0); GEN_PROBE(cost_thin, 0);
     gen_clean();                                        /* (0.9.1 item 16) and what the music before held */
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];

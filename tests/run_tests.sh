@@ -415,6 +415,9 @@ run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/inst
 run "ABOUT page QR code (gen_about_qr.py)" python3 tests/about_qr_test.py
 run "GEN calibration data: the log to the device CSV (tools/gen_cal.py)" python3 tests/gen_cal_test.py
 run "pages: no BREAK on the README and the landing page, no two-core warning in the installer" python3 tests/stale_pages_test.py
+run "tools/build.py: FELUCCA_NVOICE as an ASCII integer 1..16 only" python3 tests/build_py_test.py
+run "song_chain.c and storage.c agree on NSONG (a static assert)" sh tests/nsong_tie_test.sh
+run "ux_msg_scan: _LBL tables by an explicit list" python3 -c "import sys; sys.path.insert(0, 'tests'); import ux_msg_scan; ux_msg_scan.selfcheck()"
 run "ACID FM built on JIANT FM and Felucca: ABOUT, the web pages, the English manual, its page names and links (built_on_test.py)" python3 tests/built_on_test.py
 run "navigation map (docs/navigation-map.svg) matches the firmware's chains" python3 tools/gen_nav_map.py --check
 if [ -x "${CHROMIUM:-/usr/bin/chromium}" ]; then
@@ -422,6 +425,7 @@ if [ -x "${CHROMIUM:-/usr/bin/chromium}" ]; then
 else
     echo "== skip render sizes (no Chromium)"
 fi
+run "render_chromium.py: Chromium's stderr on a failure, its process group killed at the timeout (stand-ins)" python3 tests/render_chromium_test.py
 
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, package builder, update protocol" node web/test_web.mjs

@@ -15,6 +15,7 @@ CHROMIUM names another Chromium (default /usr/bin/chromium)."""
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -26,15 +27,30 @@ R = Path(__file__).resolve().parent.parent
 CHROME = os.environ.get("CHROMIUM", "/usr/bin/chromium")
 SHEETS = ("controls", "sound")
 W_SHEET, SCALE_SHEET = 1600, 1.5
+TIMEOUT = 120                                           # (s) one Chromium run
 
 
 def chrome(*args):
+    """Chromium's stdout; a failure or a run past TIMEOUT stops with its stderr (Chromium and its children killed: it
+    runs in a session of its own, its process group)"""
     prof = tempfile.mkdtemp(prefix="render-chromium-")
     try:
-        return subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
-                               "--allow-file-access-from-files", f"--user-data-dir={prof}",
-                               "--virtual-time-budget=5000", *args],
-                              check=True, capture_output=True, text=True, timeout=120).stdout
+        p = subprocess.Popen([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
+                              "--allow-file-access-from-files", f"--user-data-dir={prof}",
+                              "--virtual-time-budget=5000", *args],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+        try:
+            out, err = p.communicate(timeout=TIMEOUT)
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, signal.SIGKILL)
+            try:
+                err = p.communicate(timeout=10)[1]
+            except subprocess.TimeoutExpired:           # (a child outside the group holding the pipes)
+                err = ""
+            sys.exit(f"render_chromium: Chromium ran over {TIMEOUT} s, killed ({' '.join(args)})\n{err.strip()}")
+        if p.returncode:
+            sys.exit(f"render_chromium: Chromium failed (exit {p.returncode}, {' '.join(args)}):\n{err.strip()}")
+        return out
     finally:
         shutil.rmtree(prof, ignore_errors=True)
 
@@ -116,7 +132,8 @@ def verify():
         bad.append(f"{png.name}: {im.size[0]} x {im.size[1]} {im.mode}, the SVG gives {2 * w} x {2 * h} P")
     for b in bad:
         print("render_chromium: FAIL", b)
-    print("render_chromium: the renders are the size their sources give" if not bad else "")
+    if not bad:
+        print("render_chromium: the renders are the size their sources give")
     return not bad
 
 

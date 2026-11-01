@@ -15,8 +15,13 @@ m = re.search(r"static const uint32_t ABOUT_QR\[29\] = \{(.*?)\};", src, re.S)
 if not m:
     sys.exit("FAIL: no ABOUT_QR[29] in ui_menu.c")
 have = [int(w, 16) for w in re.findall(r"0x([0-9A-Fa-f]{8})u", m[1])]
-out = subprocess.run([sys.executable, str(ROOT / "tools/gen_about_qr.py"), ABOUT_URL],
-                     check=True, capture_output=True, text=True).stdout
+p = subprocess.run([sys.executable, str(ROOT / "tools/gen_about_qr.py"), ABOUT_URL], capture_output=True, text=True)
+if p.returncode and "segno is missing" in p.stderr:
+    print("skip ABOUT QR: segno missing (activate .venv)")
+    sys.exit(0)
+if p.returncode:
+    sys.exit("FAIL: gen_about_qr.py: " + p.stderr.strip())
+out = p.stdout
 want = [int(w, 16) for w in re.findall(r"0x([0-9A-Fa-f]{8})u", out)]
 if len(want) != 29:
     sys.exit(f"FAIL: gen_about_qr.py made {len(want)} rows, not 29")

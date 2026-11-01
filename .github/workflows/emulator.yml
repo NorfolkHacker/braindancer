@@ -131,7 +131,7 @@ jobs:
           python3 -c 'import json,sys; L=[l.split() for l in open("build/prev/list") if l.strip()]; json.dump([{"version":v,"file":f} for v,f in L], open("build/prev/versions.json","w"))'
           python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site build/prev
           cp -r build/site/webapp build/site/firmware build/emu/
-      # (JIANT 0.8.1) the site's front page (web/landing: what JIANT is, install / try / edit, what comes next) at the
+      # (Braindancer) the site's front page (web/landing: what Braindancer is, install / try / read the manual, what comes next) at the
       # root, for people who just want to play; the emulator moves to emu/ (its links go up one level)
       - name: the front page and the emulator under emu/
         run: |
