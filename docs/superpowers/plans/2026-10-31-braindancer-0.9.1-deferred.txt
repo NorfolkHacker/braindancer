@@ -7,9 +7,11 @@ THE SAFETY NET
  2. Edits in the first 250 ms after an arm, a section change or a MUTATE step are taken as the piece's (Task 1, pre-flight 2).
  3. SAVE > LOAD of a GEN section (project_load) never arms the net; section_load of the same slot does. UNDO forward again to a GEN piece leaves it unarmed. (Task 1)
  4. No test of the RAM branch of project_save_as; a save-over gap in dice_secs. (Task 1 re-review)
- 5. The console counter safety_tape rose 6 times in the 0.9.1 calibration session, between measurement windows, right after
-    GENERATE, including once with two AGE-0 pieces in a row. The cause is not found in the code. A timed device test is
-    planned in the release session. (Task 8, Task 9 investigation)
+ 5. (FIRST, next work) RETROBOC keeps its TAPE. Timed in the release session (counters every 0.5 s): a heavy RETROBOC
+    piece (RETROBOC 7592, AGE 60) has TAPE paused by the safety net 1.5 s after it starts, again 1 s later, then kept
+    paused for the whole piece (the FM-1 never gets 4 s of calm); the user hears it flat. AMBIENT at AGE 40 kept TAPE.
+    The calibration session's trips "with AGE-0 pieces" were quick GENERATE presses passing through a tape piece. Fix:
+    lighten the tape styles' pieces or charge TAPE more. (Task 8, release session; device log 2026-11-01)
 
 CPU MODEL AND FITTING
  6. One-core calibration: no data; one-core mode keeps its budget but shares the new FM6 and TAPE weights, and has not been measured. (Task 8; piece6 #12)

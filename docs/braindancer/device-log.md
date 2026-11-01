@@ -269,3 +269,44 @@ Task 8 of the 0.9.1 clean-up: GEN's CPU model measured on 0.9's own pieces, for 
 
   TAPE at 70 turns a clean piece late; turning AGE back up tripped the safety net once (`safety_tape` 5 → 6).
 - The device stays on 0.9.1-cal for now.
+
+## 2026-11-01 — Braindancer 0.9.1 (the clean-up release)
+
+- Backup before (from 0.9.1-cal): `~/fm1-backups/2026-11-01-braindancer-0.9.1-cal/fm1-recovery-20261101-125635` (full
+  1 MiB, 0 of 143 app sectors blank, sha256 d68bdd6b…).
+- Release built on the clean HEAD 9d67899: braindancer-0.9.1.fwsc, 610,126 B, identity FM-1_909, sha256 b3bafcf3…;
+  19,296 B free; ISR 297/300, TIMER5 2170, slicer 821, tape 780.
+- Install: `tools/fm1_install.py build/braindancer-0.9.1.fwsc --port "BRAINDANCER" --yes`. Console `status`:
+  `braindancer v0.9.1`, idle cpu_pct 6, audio_lost 0, safety_tape 0, `gen_piece -`.
+- Conditions as the calibration: 2 CORES, TRACKS 6 (read over SysEx), CPU TEST ratio 117 (budget 725, WILD 588),
+  NEW PROJECT, GEN at its defaults. The counters were read every 0.5 s through the whole session (a poller on the
+  console), so a TAPE pause is timed to the half second.
+- (a) GENERATE (rows `docs/braindancer/gen-calibration-0.9.1-verify.csv`; late / shed per 20 s):
+
+  | Tag | Piece | AGE | cpu % | late /20 s | shed /20 s | lost | gen_cost / budget | clicks |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | V01 | ELECTRO 9289 | 0 | 62 | 49.3 | 217.2 | 0 | 661 / 725 | n |
+  | V02 | WILD 4996 | 0 | 58 | 0.0 | 81.0 | 0 | 553 / 588 | n |
+  | V03 | IDM+AMBIENT 3300 | 0 | 53 | 8.2 | 24.6 | 0 | 701 / 725 | n |
+  | V04 | BREAKS+ELECTRO 5319 | 0 | 51 | 32.9 | 54.0 | 0 | 725 / 725 | n |
+  | V05 | GLITCH HOP+ELECTRO 3778 | 0 | 64 | 34.1 | 149.2 | 0 | 719 / 725 | n |
+  | V06 | DRILL'N'BASS+IDM 9812 | 0 | 64 | 15.3 | 49.3 | 0 | 688 / 725 | n |
+  | V07 | BREAKS 0798 | 0 | 67 | 15.3 | 97.6 | 0 | 703 / 725 | n |
+  | V08 | ACID 7659 | 0 | 58 | 8.2 | 28.2 | 0 | 691 / 725 | n |
+  | V09 | GLITCH HOP 0685 | 0 | 66 | 45.8 | 171.5 | 0 | 723 / 725 | n |
+  | V10 | ACID+AMB TECHNO 7689 | 0 | 50 | 8.2 | 10.6 | 0 | 689 / 725 | n |
+  | V11 | AMBIENT 6208 | 40 | 71 | 0.0 | 83.6 | 0 | 720 / 725 | n |
+  | V12 | RETROBOC 7592 | 60 | 58 | 17.6 | 132.8 | 0 | 697 / 725 | n |
+
+  No audio lost, no click heard. **9 of V01–V10 are late (late20 > 5)**: the plan's bound (at most 1) is report-only
+  by the Task 9 ruling, and the re-fit did not reduce lateness on the device (13 of 19 at 0.9.1-cal). The overload
+  stays inaudible. The tape styles keep their AGE (V11 40, V12 60): pass.
+- **TAPE pauses, timed:** AMBIENT 6208 (AGE 40) kept its TAPE for over 3 minutes. RETROBOC 7592 (AGE 60): the safety
+  net paused TAPE 1.5 s after the piece started and again 1 s later, then kept it paused for the rest of the piece (the
+  FM-1 keeps running a little late, so the 4 s of calm it needs to bring TAPE back never come); the user heard it flat.
+  The calibration session's "trips with AGE-0 pieces" were quick GENERATE presses passing through a tape piece between
+  readings. Released as known (user decision): first item of the next work.
+- (b) From TRACKS, HOME + SELECT: `HOME AGAIN: TRACKS` shown: pass. (c) SEQ + SELECT, then OCT−: the TRACKS level back:
+  pass. (d) No bend-wheel keyboard check (not attempted). (e) Items 2–4: host-tested.
+- AMBIENT 6208 sounds worn: pass. RETROBOC 7592 sounds flat (TAPE paused): known, above.
+- Proven commit: 9d67899.
