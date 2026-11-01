@@ -1114,8 +1114,8 @@ range narrows towards the middle. COMPLEX 100 is the full chaos again.
 **The CPU fit**. Every piece GENERATE makes, and every section of a PARTS or SONG piece, is made to fit the FM-1's
 CPU: the generator estimates what the piece will cost to play (each part by its engine and how many voices it keeps
 sounding, the reverb type, the delay's grain, the PLAYHEADS and TAPE) and keeps it under a budget **calibrated on the
-FM-1 with two cores, measured again in 0.9.1** (MENU › MORE › ABOUT: CORES 2; the CPU TEST figure scales it). One-core mode is fitted too, but
-its budget is not calibrated yet. When a piece would cost more it gets lighter, a step at a time, until it fits. The
+FM-1 with two cores, measured again in 0.9.1** (MENU › MORE › ABOUT: CORES 2; the CPU TEST figure scales it). One-core mode is fitted too: it keeps its
+budget and shares the new FM6 and TAPE weights, but it has not been measured on the device. When a piece would cost more it gets lighter, a step at a time, until it fits. The
 first thing trimmed is the extra ECHO and ARP step notes on chord steps (no part is lost); only then the delay's
 grain and time, a PLAYHEAD less, a note less in each chord (two at least), the longest releases, the texture, the
 reverb, the arp and the lead (one core: drums, bass and chords at least). TAPE comes into it as above: a style on

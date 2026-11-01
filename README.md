@@ -14,7 +14,7 @@ catalogue.
 
 0.9.1 is a clean-up release on top of 0.9: GEN's CPU model is measured again on 0.9's own pieces played on the FM-1
 (2 CORES) and fits the device better; some heavy pieces are thinned a little more than in 0.9; the overload measured
-so far has been inaudible, with no audio lost; one-core mode is unchanged. The safety net keeps a GEN piece's texture
+so far has been inaudible, with no audio lost; one-core mode keeps its budget, shares the new FM6 and TAPE weights, and has not been measured on the device. The safety net keeps a GEN piece's texture
 and arp in hand through its sections and never hushes a part you rewrote; GEN's hint shows on every way in; GENERATE
 starts the music afresh, as NEW PROJECT does; SEQ's dice puts the level back with OCT−; KEYBOARD PLAYS SELECTED drops
 the pitch bend of the track it leaves.
@@ -35,7 +35,7 @@ the pitch bend of the track it leaves.
   the music is thinned around it; for the other styles the tape gives way before the music is thinned, when a piece is too heavy. A TAPE amount
   set with the knob is never changed. OFF and 10 to 100 % set AGE for every piece.
 - **Every piece is fitted** to what the FM-1 can play, with a budget calibrated on the device (2 CORES); one core is fitted
-  too but not calibrated. A new piece unmutes every track.
+  too but not measured on the device (it shares the new FM6 and TAPE weights). A new piece unmutes every track.
 - **The AGE retune**: 50 is clearly worn (audible wobble, some hiss, a darker tone) and 100 is mangled and darker. Projects
   from 0.8 with AGE above 0 sound more worn.
 - Projects, presets and settings load as before.

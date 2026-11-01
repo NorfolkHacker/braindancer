@@ -616,7 +616,7 @@ recipes: [
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
   {v: "0.9.1", items: [
-    "0.9.1 is a clean-up release. GEN's CPU model is measured again on 0.9's own pieces played on the FM-1 (2 CORES) and fits the device better: some heavy pieces are thinned a little more than in 0.9, and the overload measured so far has been inaudible, with no audio lost. One-core mode is unchanged.",
+    "0.9.1 is a clean-up release. GEN's CPU model is measured again on 0.9's own pieces played on the FM-1 (2 CORES) and fits the device better: some heavy pieces are thinned a little more than in 0.9, and the overload measured so far has been inaudible, with no audio lost. One-core mode keeps its budget; it shares the new weights for FM6 and TAPE but has not been measured on the device.",
     "The safety net that quiets a GEN piece's texture and arp when the FM-1 is overloaded now keeps working when you jump to another section of the piece or the song ends, and it never quiets a track you have edited (its steps, its sound or its engine).",
     "GEN shows its hint (HOME AGAIN: TRACKS) however you open it: HOME, SELECT on HOME or HOME + SELECT.",
     "GENERATE starts the music afresh, the way NEW PROJECT does: the macros, lyrics, DJ FILTER, SLICER, PLAYS and the punch-in lane go back to their defaults with the new piece, so a piece depends on its number alone. UNDO brings the old music back.",

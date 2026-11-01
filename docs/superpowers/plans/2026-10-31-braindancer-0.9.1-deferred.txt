@@ -12,7 +12,7 @@ THE SAFETY NET
     planned in the release session. (Task 8, Task 9 investigation)
 
 CPU MODEL AND FITTING
- 6. One-core calibration: no data; one-core mode is unchanged and uncalibrated. (Task 8; piece6 #12)
+ 6. One-core calibration: no data; one-core mode keeps its budget but shares the new FM6 and TAPE weights, and has not been measured. (Task 8; piece6 #12)
  7. The old 0.9 rows G01-G10 (unnamed) are not used in the re-fit. (Task 9)
  8. TAPE's model cost (measured or not, Task 9 section 6). (Task 9; piece6 #5, #6)
  9. The late-within bound is report-only since Task 9: the cost barely separates late pieces from clean ones. (Task 9)
