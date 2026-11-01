@@ -5,7 +5,7 @@
      Portions Copyright (C) 2026 NorfolkHacker -->
 <!-- Felucca web editor. One file, no libraries. Protocol: EDITOR_PROTOCOL.md.
      Add ?mock=1 to the URL to use a built-in simulated device. -->
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,10 +28,8 @@
   h2 { font-size: 13px; font-weight: 600; margin: 0 0 4px; padding-bottom: 2px; border-bottom: 1px solid var(--fg); }
   h3 { font-size: 11px; font-weight: 400; color: var(--dim); margin: 4px 0 0; }
   a { color: inherit; }
-  .lang { float: right; font-size: 12px; color: var(--dim); text-decoration: underline; background: none; padding: 0; }
   button { font: inherit; background: var(--fg); color: var(--bg); border: 0; padding: 2px 10px; cursor: pointer; }
   button:disabled { opacity: .3; cursor: default; }
-  button.lang { color: var(--dim); background: none; }
   select, input[type=text], input[type=number], input[type=search] {
     font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); padding: 1px 3px; border-radius: 0; }
   input[type=range] { width: 100%; margin: 0; accent-color: var(--fg); }
@@ -146,7 +144,6 @@
 </head>
 <body>
 <main>
-  <button class="lang" id="lang"></button>
   <h1>Braindancer Editor</h1>
   <p class="dim"><a href="../installer/" style="color:inherit" data-t="installer"></a></p>
   <!-- always visible: connection, version, sync mode, the tabs and (Sound / Sequencer / Tracks) the track selector -->
@@ -2437,109 +2434,6 @@ function setLabel(e, txt) { e.replaceChildren(...(e.dataset.ic ? [icon(e.dataset
 })();
 
 const TEXT = {
-  ja: {
-    tabFm6: "6-OP FM", fm6Help: "FM6 エンジンの音色（6 オペレーター）をまるごと編集します。本体のノブはこの音色の上にかかるマクロです。SysEx を読み込み、音色を選んで編集し、トラックへ送るとすぐ鳴ります。トラックの音色はひとつで、読み込んだものがそのトラックの音色になります（SLOT は OWN）。",
-    fm6Source: "音色の出し入れ", fm6ReadBtn: "トラックから読む", fm6SendBtn: "トラックへ送る", fm6Live: "編集しながら送る",
-    fm6Import: "SysEx を読み込む", fm6Export: "SysEx に書き出し",
-    fm6Init: "初期音色", fm6Voice: "ボイス", fm6Ops: "オペレーター", fm6Carriers: "キャリア", fm6Feedback: "フィードバック",
-    fm6PitchEg: "ピッチ EG", fm6Freq: "周波数",
-    fm6Legend: "R1〜R4 / L1〜L4: EG のレートとレベル、BP LD RD LC RC: キーボードレベルスケーリング、RS: レートスケーリング、AMS: LFO 音量変調、KVS: ベロシティ、OL: 出力レベル、MODE: 比率 / 固定、FC FF: 周波数（粗・細）、DET: デチューン（7 が中央）。● はキャリア。",
-    fm6BankSend: "本体のボイスバンクへ送る (B1–B32)", fm6BankSent: "ボイスバンクを送りました:", fm6BankFail: "ボイスバンクを送れませんでした (rc ", fm6BankNow: "本体のボイスバンク:", fm6BankNone: "なし",
-    fm6Pick: "読み込んだファイルの音色（押すと編集へ）:", fm6Picked: "編集中:", fm6Sent: "トラックへ送りました:", fm6Read: "トラックから読みました",
-    fm6Loaded: "読み込みました", fm6BadSum: "チェックサム不一致あり",
-    fm6Keep: "残すには、トラックへ送ってから本体でユーザープリセット（SAVE）かプロジェクトに保存してください。",
-    fm6Short: "途中で切れたデータあり", fm6Skipped: "音色以外の {x} 件は無視",
-    fm6NoVoice: "6 オペレーター FM の音色が見つかりません（32 音色バンクか 1 音色の SysEx が必要です）",
-    fm6NotSysex: "SysEx ファイルではありません（6 オペレーター FM の 32 音色バンクか 1 音色の SysEx が必要です）",
-    fm6Is4op: "4 オペレーター FM の音色データです。FM6 は 6 オペレーターの音色だけ読み込めます",
-    fm6OtherBlocks: "6 オペレーターのファイル形式ですが、音色ではないデータ（パフォーマンスや補助データなど）だけでした",
-    fm6OtherMaker: "別のメーカーの SysEx です", fm6Universal: "音色ではない汎用 SysEx です",
-    fm6Factories: "ファクトリー音色",
-    fm6NeedDevice: "FM-1 を接続すると 6-OP FM の音色を編集してトラックへ送れます。",
-    fm6NoFw: "このファームウェアには 6-OP FM（FM6）がありません。Felucca 1.0 以降に更新すると使えます。",
-    motion: "オートメーション", motionOn: "再生", motionClear: "オートメーションを消去", motionConfirm: "選択トラックのオートメーションを消しますか？", chance: "確率 %", ratchet: "ラチェット", motionStep: "ステップ", motionParam: "パラメーター", motionValue: "値",
-    backupTitle: "全体バックアップ", backupExport: "バックアップ保存", backupImport: "バックアップ復元", backupHelp: "現在の曲・A〜D・音色バンク・設定を、このパソコンへ保存。", backupOld: "全体バックアップには対応版への更新が必要です。", backupConfirm: "全体バックアップを復元しますか？ 現在の曲と保存データを置き換えます。USBを抜かないでください。", backupWorking: "バックアップ処理中 ", backupDone: "バックアップを保存しました", backupRestored: "全体バックアップを復元しました", backupSkipped: "（ソング5〜8は対象外のため復元していません: Braindancerはソング4つ）",
-    deviceDisplay: "本体の画面",
-    deviceDisplayHelp: "FM-1 の画面に反映し、保存します。再生中の変更は停止後に保存されます。",
-    devicePresets: "本体のプリセット",
-    deviceFavHelp: "お気に入りと表示フィルターは FM-1 と同期します。パソコンのライブラリの音色は、本体のユーザースロットに保存してから登録してください。",
-    deviceList: "表示",
-    deviceAll: "すべてのプリセット",
-    deviceFavorites: "お気に入りのみ",
-    deviceEmpty: "お気に入りはまだありません。「すべてのプリセット」から追加してください。",
-    deviceTheme: "テーマ",
-    deviceFont: "フォント",
-    deviceMonitor: "MIDI モニター",
-    deviceRegular: "標準",
-    deviceBold: "太字",
-    deviceOff: "オフ",
-    deviceEvents: "イベント",
-    deviceNotes: "保持中の音・和音",
-    deviceStar: "お気に入りに追加",
-    deviceUnstar: "お気に入りから削除",
-    deviceUnsaved: "反映されましたが、本体に保存できませんでした。もう一度お試しください。",
-    deviceRejected: "本体がこの設定を受け付けませんでした。",
-    devicePending: "反映しました。再生を停止すると保存されます。",
-
-    other: "English", connect: "接続", disconnect: "切断", mock: "モック（実機なし）",
-    sound: "音色", engine: "エンジン", presets: "プリセット", initSound: "音色を初期化",
-    track: "トラック",
-    saveFile: "ファイルに保存", loadFile: "ファイルを読み込む", projects: "プロジェクト",
-    load: "読込", save: "保存", used: "使用中", empty: "空", unknown: "—",
-    steps: "ステップ", reload: "再読み込み", clearSeq: "シーケンスを消去",
-    notesHelp: "ノートは C4 E4 G4 のように入力（最大 4 音、C4 = 60）。ヒットは DRUM のレーン名（KICK >SNARE HATCL、> はアクセント）。",
-    notes: "ノート", hits: "ヒット", time: "タイム", acc: "アクセント", slide: "スライド", vel: "ベロシティ",
-    foot: "Chrome か Edge で使えます。", iconsCredit: "アイコン: Fukiai（MIT）Hügelton Instruments",
-    nomidi: "このブラウザでは使えません。Chrome か Edge で開いてください。",
-    denied: "MIDI（SysEx）の使用が許可されませんでした。",
-    nodevice: "Braindancer が見つかりません。USB で接続して、もう一度押してください。",
-    connecting: "接続中", reading: "読み込み中 ", steploading: "ステップを読み込み中 ",
-    ready: "接続しました", disconnected: "切断されました", lost: "Braindancer が外されました", instbusy: "別のタブでインストーラーが書き込み中です。終わってから接続してください。",
-    noreply: "応答がありません", error: "エラー: ", busy: "処理中",
-    applying: "書き込み中 ", applied: "読み込みました", badfile: "ファイルを読み込めません: ",
-    savedSlot: "保存しました: スロット ", loadedSlot: "読み込みました: スロット ", emptySlot: "空のスロットです: ",
-    confirmSave: "スロット {n} に上書き保存しますか？", confirmLoad: "スロット {n} を読み込みますか？ すべてのトラックの音色とシーケンスが置き換わります（元に戻せません）。",
-    confirmClear: "シーケンスを全部消しますか？", confirmInit: "音色を初期化しますか？ シーケンスはそのままです（本体の SAVE 長押しで元に戻せます）。",
-    erase: "消去", remove: "外す",
-    layout: "（ファームウェアのパラメーター数が想定と違うため、簡易表示にしています）",
-    ctlHelp: "スライダーはクリックしてからホイールか矢印キーで微調整（Shift で 10 ずつ）、ダブルクリックで初期値。",
-    lyricT: "歌詞（VOICE WORDS）",
-    lyricHelp: "VOICE トラックの歌詞（63 文字まで）。EDIT > WORDS の LANG で言語（ES / EN / JA、日本語はローマ字）、LYRIC を TEXT に。音符ごとに次の音節を歌い、「-」は母音をもう一音のばす。",
-    lyricSend: "送信",
-    lyricLang: "LANG",
-    lyricSrc: "LYRIC",
-    lyricSent: "歌詞を送りました",
-    live: "● リアルタイム", polling: "○ ポーリング（古いファームウェア）",
-    library: "ライブラリ", libSearch: "名前・タグで検索", allEngines: "全エンジン", allTags: "全タグ",
-    sortModified: "更新順", sortCreated: "作成順", sortName: "名前順", sortEngine: "エンジン順",
-    name: "名前", tagsCol: "タグ", date: "更新",
-    audition: "試聴", toSlot: "本体スロットへ", rename: "名前変更", tags: "タグ", duplicate: "複製", delete: "削除",
-    exportPatch: "書き出し", saveToLib: "今の音色をライブラリへ", import: "読み込み", exportLib: "ライブラリを書き出し",
-    factoryToLib: "ライブラリへコピー", libEmpty: "ライブラリは空です。「今の音色をライブラリへ」やファクトリープリセットのコピー、本体スロットからの取り込み、ファイルの読み込みで追加できます。",
-    noMatch: "該当なし", noLibDB: "（ブラウザに保存できません。再読み込みで消えます）",
-    bank: "本体のユーザープリセット", bankLoad: "読込", bankStore: "今の音色を保存", bankGet: "ライブラリへ",
-    exportBank: "バンクを書き出し", dndHelp: "ライブラリとスロットの間はドラッグでもコピーできます。",
-    confirmOverwrite: "スロット {n}（{name}）を上書きしますか？", confirmEraseSlot: "スロット {n}（{name}）を消去しますか？",
-    confirmDelete: "「{name}」をライブラリから削除しますか？",
-    promptName: "名前（本体では英数字 12 文字まで）", promptTags: "タグ（カンマ区切り）",
-    promptNameAuto: "名前（英数字 12 文字まで。空なら本体が自動で付けます）",
-    auditioning: "試聴の準備中 ", auditioned: "試聴中（音色だけ。シーケンスはそのまま。本体の SAVE 長押しで元の音色に戻せます）: ",
-    savedLib: "ライブラリに保存しました: ", copiedLib: "ライブラリにコピーしました: ", imported: "読み込みました: ",
-    skippedN: " 件（読めないもの {n} 件）", patchesN: " 件",
-    putDone: "本体に書き込みました: スロット ", storedSlot: "本体に保存しました: スロット ", erasedSlot: "消去しました: スロット ",
-    loadedUser: "音色を読み込みました（シーケンスはそのまま。パターンは本体の SEQ > PHRASES から。SAVE 長押しで元に戻せます）: ", reloaded: "本体で音色が変わったので読み直しました", readingBank: "スロットを読み込み中",
-    badEngine: "このファームウェアにないエンジンです: ", flashFail: "書き込みに失敗しました（rc {rc}）",
-    installer: "Braindancer インストーラー",
-    tabSeq: "シーケンサー", tabTracks: "トラック", tabSettings: "設定",
-    needDevice: "FM-1 を接続すると編集できます。",
-    bankConnect: "FM-1 を接続すると本体のユーザープリセットも扱えます。", bankNone: "このファームウェアにはユーザープリセットがありません。",
-    mixer: "ミキサー", mixHelp: "本体の MIXER ページと同じトラック。フェーダーはレベル。パンはどのトラックも選択を変えずに書き込みます（0.8 のファームウェアでは一瞬そのトラックを選びます）。REC は本体での録音待機の表示です。",
-    level: "レベル", pan: "パン", mute: "ミュート", rec: "REC", selectTrack: "選択", selectedTrack: "選択中",
-    projHelp: "プロジェクトは本体の状態をまとめて保存します: 全トラックの音色とパターン、曲の並び順、選択中のトラック、グローバル設定。",
-    slot: "スロット", songTitle: "ソング", songHelp: "保存スロットのパターンと繰り返す回数を順に並べます。音色は現在のまま。並び順を残すには、上のプロジェクトを保存してください。切替はトラック1のパターン終端、曲末で停止します。", songAdd: "行を追加", songRemove: "最後の行を削除", songPlay: "先頭から再生", songStop: "停止", songReps: "回", songEmpty: "行を追加してください", songBusy: "停止してから編集してください", songInvalid: "スロットと回数を確認してください", songPlaying: "再生中の行", songSaved: "並び順を変更しました。プロジェクトを保存すると残せます。",
-    system: "システム", firmware: "ファームウェア", sync: "同期", tracksN: "トラック", stepsN: "ステップ数", enginesL: "エンジン",
-    userBank: "ユーザープリセット", none: "なし",
-  },
   en: {
     tabFm6: "6-OP FM", fm6Help: "Edit the whole patch of the FM6 engine (six operators). The device's knobs are macros on top of it. Import a SysEx file, pick a voice, edit it and send it to a track: it plays at once. A track has one patch: whatever you load becomes it (SLOT shows OWN).",
     fm6Source: "Patches in and out", fm6ReadBtn: "Read from track", fm6SendBtn: "Send to track", fm6Live: "Send while editing",
@@ -2584,7 +2478,7 @@ const TEXT = {
     deviceRejected: "The device rejected that setting.",
     devicePending: "Applied. Settings will save when playback stops.",
 
-    other: "日本語", connect: "Connect", disconnect: "Disconnect", mock: "Mock device (no hardware)",
+    connect: "Connect", disconnect: "Disconnect", mock: "Mock device (no hardware)",
     sound: "Sound", engine: "Engine", presets: "Presets", initSound: "Init sound",
     track: "Track",
     saveFile: "Save to file", loadFile: "Load file", projects: "Projects",
@@ -2644,14 +2538,11 @@ const TEXT = {
     userBank: "User presets", none: "none",
   },
 };
-let lang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
-const t = (k) => TEXT[lang][k] ?? k;
+const t = (k) => TEXT.en[k] ?? k;
 let lastKey = null, lastArg = "";
 function sayK(k, arg = "") { lastKey = k; lastArg = arg; $("status").textContent = t(k) + arg; }
-function applyLang() {
-  document.documentElement.lang = lang;
+function applyText() {
   document.querySelectorAll("[data-t]").forEach((e) => setLabel(e, t(e.dataset.t)));
-  $("lang").textContent = t("other");
   setLabel($("connect"), t(dev ? "disconnect" : "connect"));
   if (lastKey) $("status").textContent = t(lastKey) + lastArg;
   $("libq").placeholder = t("libSearch");
@@ -2662,7 +2553,6 @@ function applyLang() {
   renderPanels();
   if (dev) { renderSlots(); renderStepHead(); renderTrackbar(); renderMixer(); renderSysinfo(); renderFm6(); }
 }
-$("lang").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; applyLang(); });
 
 /* ---------------------------------------------------------------- tabs --- */
 /* one panel at a time; the last one is remembered (localStorage) and in the URL hash (#sound ...) */
@@ -3008,8 +2898,7 @@ function buildUI() {
 function renderTrackbar() {
   const box = $("trackbtns");
   const ntrk = hasTracks() ? dev.info.ntrk : 0;
-  if (box.children.length !== ntrk || box.dataset.lang !== lang) {
-    box.dataset.lang = lang;
+  if (box.children.length !== ntrk) {
     box.replaceChildren(...Array.from({ length: ntrk }, (_, i) => el("button", { type: "button", "data-i": i,
       onclick: () => selectTrack(i) }, String(i + 1))));
   }
@@ -3660,8 +3549,7 @@ function renderMixer() {
   const box = $("mixer");
   if (!dev || !dev.mix) { box.replaceChildren(); mixCtl.length = 0; return; }
   const m = dev.mix;
-  if (mixCtl.length !== m.ntrk || box.dataset.lang !== lang) {
-    box.dataset.lang = lang;
+  if (mixCtl.length !== m.ntrk) {
     mixCtl.length = 0;
     box.replaceChildren(...m.tracks.map((_, i) => buildStrip(i)));
   }
@@ -3965,7 +3853,7 @@ function renderPreferences(force = false) {
   $("device-display").hidden = !p || !(p.state.caps & 7);
   $("device-presets").hidden = !p || !(p.state.caps & 8);
   if (!p) { renderPreferences.sig = null; return; }
-  const sig = JSON.stringify([p.state, p.palettes, lang, d.dump && d.dump.engine]);
+  const sig = JSON.stringify([p.state, p.palettes, d.dump && d.dump.engine]);
   if (!force && sig === renderPreferences.sig) return;
   renderPreferences.sig = sig;
   const defs = [
@@ -4213,7 +4101,7 @@ function renderLib() {
         el("td", {}, p.pattern || p.grid ? icon("note_eight") : "", p.name),
         el("td", { text: p.engineName || String(p.engine) }),
         el("td", { text: p.tags.join(", ") }),
-        el("td", { text: new Date(p.modified).toLocaleDateString(lang) }));
+        el("td", { text: new Date(p.modified).toLocaleDateString("en") }));
       tr.addEventListener("click", () => { libSel = p.id; renderLib(); });
       tr.addEventListener("dblclick", () => libAudition(p.id));
       tr.addEventListener("dragstart", (e) => { libSel = p.id; e.dataTransfer.setData("text/x-felucca-lib", p.id); e.dataTransfer.effectAllowed = "copy"; });
@@ -4650,7 +4538,7 @@ $("fm6export").addEventListener("click", () => downloadBytes(`${fileSlug(FM6.nam
 $("connect").addEventListener("click", () => {
   if (dev) { wantConnected = false; disconnect(); } else connect();
 });
-applyLang();
+applyText();
 showTab(tab);
 libInit();
 if (!MOCK && !navigator.requestMIDIAccess) sayK("nomidi");

@@ -7,7 +7,7 @@
 //   node web/test_web.mjs
 // - editor.html: the protocol section (between PROTO-BEGIN/END) against its mock device (v1 commands,
 //   the user preset bank / librarian, library files, live pushes, older-firmware fallback, the v3 tracks
-//   and the mixer, the v5 drum grid in steps and user presets), its tab layout and ja/en strings
+//   and the mixer, the v5 drum grid in steps and user presets), its tab layout and English strings
 // - fm1pkg.js: productOf and logicalImage on build/felucca.fwsc (skipped without a build)
 // - fm1ota.js: a full install and an unplug during the write against a simulated FM-1
 // - the installer (fm1diag.js, index_pkg.html): every failure path against simulated FM-1s (official V13..V16, JIANT,
@@ -48,7 +48,7 @@ function installerCheck() {
   ok(isJiantInfo(info("BRAINDANCER v0.7", 6, [0x56, 1, 32, 0x4A, 1, 1])) && isJiantInfo(info("ACID FM v0.6", 6, [0x56, 1, 32, 0x4A, 1, 1])),
     "installer: BRAINDANCER v0.7 and ACID FM v0.6 are supported alike");
   ok(!isJiantInfo(info("BAUDGIRL 2.0", 4, [])), "installer: another firmware is not");
-  /* (0.8.5) the release notice: before 0.8.5 is written, on the preview installer only, in every language it has */
+  /* (0.8.5) the release notice: before 0.8.5 is written, on the preview installer only */
   const ns = html.slice(html.indexOf("function releaseNotice"), html.indexOf("const noticeOf"));
   const releaseNotice = vm.runInNewContext(`(${ns.trim()})`);
   ok(releaseNotice("v0.8.5-abc1234-preview") === "n085" && releaseNotice("v0.8.5-abc1234") === "n085",
@@ -59,8 +59,7 @@ function installerCheck() {
   ok(!/n085|DRUM-X octave/i.test(land), "installer: the landing page has no notice");
   const T = installerText();
   for (const k of ["n085Title", "n085What", "n085Risk", "n085Keep", "n085Confirm"])
-    ok(["en", "ja", "es"].every((L) => typeof T[L][k] === "string" && T[L][k].length > 5), `installer: ${k} in English, Japanese and Spanish`);
-  ok(/Aviso antes de instalar 0\.8\.5/.test(T.es.n085Title) && /backup completo/.test(T.es.n085Keep), "installer: the notice in Spanish");
+    ok(typeof T.en[k] === "string" && T.en[k].length > 5, `installer: ${k} in English`);
 }
 
 /* ------------------------------------------------------------ editor protocol --- */
@@ -1399,8 +1398,8 @@ function fm6TabNoBank() {
     && !["fm6store", "fm6erase", "fm6bankexp"].some((id) => html.includes(`"${id}"`)), "FM6 tab: import, voices, send, factory load and the hint; no store / erase / bank export");
   ok(!/TARGET\.BANK|fm6Erase|fm6Store|defaultSlot/.test(code), "FM6 tab: no bank requests");
   const tb = html.slice(html.indexOf("const TEXT = {"), html.indexOf("\n};", html.indexOf("const TEXT = {")) + 2);
-  const T = vm.runInNewContext(tb.replace("const TEXT =", "(") + ")"), en = T.en, ja = T.ja;
-  ok(/send it to a track, then save a user preset \(SAVE\) or a project/.test(en.fm6Keep) && ja.fm6Keep && !/B1|B27|bank/i.test(en.fm6Help + en.fm6NeedDevice),
+  const T = vm.runInNewContext(tb.replace("const TEXT =", "(") + ")"), en = T.en;
+  ok(/send it to a track, then save a user preset \(SAVE\) or a project/.test(en.fm6Keep) && !/B1|B27|bank/i.test(en.fm6Help + en.fm6NeedDevice),
     "FM6 tab: the hint (send to a track, then SAVE on the device), no B slots in the help");
 }
 
@@ -1529,15 +1528,14 @@ function editorTabs() {
     `editor: ${tabs.length} tabs, one panel each (${tabs.join(" ")})`);
   ok(/localStorage\.setItem\(TAB_KEY/.test(html) && /try \{ localStorage/.test(html) && /history\.replaceState\([^)]*"#" \+ name\)/.test(html)
     && /addEventListener\("hashchange"/.test(html), "editor: last tab in localStorage (try/catch) and in the URL hash");
-  /* every string key in both languages */
+  /* every string key */
   const tb = html.slice(html.indexOf("const TEXT = {"), html.indexOf("\n};", html.indexOf("const TEXT = {")) + 2);
   const TEXT = vm.runInNewContext(tb.replace("const TEXT =", "(") + ")");
-  const ja = new Set(Object.keys(TEXT.ja)), en = new Set(Object.keys(TEXT.en));
+  const en = new Set(Object.keys(TEXT.en));
   const used = new Set([...html.matchAll(/data-t="(\w+)"|\bt\("(\w+)"\)|sayK\("(\w+)"|hint = "(\w+)"/g)].map((x) => x[1] || x[2] || x[3] || x[4]));
   for (const k of ["needDevice", "bankConnect", "bankNone", "selectedTrack", "selectTrack", "notesHelp", "live", "polling"]) used.add(k);
-  const miss = [...used].filter((k) => !ja.has(k) || !en.has(k));
-  const odd = [...ja].filter((k) => !en.has(k)).concat([...en].filter((k) => !ja.has(k)));
-  ok(!miss.length && !odd.length, `editor: every string in ja and en (${used.size} used${miss.length ? ", missing " + miss : ""}${odd.length ? ", one language only " + odd : ""})`);
+  const miss = [...used].filter((k) => !en.has(k));
+  ok(!miss.length, `editor: every string used is in TEXT (${used.size} used${miss.length ? ", missing " + miss : ""})`);
   /* the page script parses (the browser's view of it) */
   const script = html.slice(html.indexOf("<script>") + 8, html.lastIndexOf("</script>"));
   let err = null;
@@ -1684,10 +1682,10 @@ async function updater() {
 }
 
 /* ------------------------------------------- the installer's failure paths (0.9.11) --- */
-/* the page's strings: TEXT as the page builds it (en, ja, then Spanish and the shared tips) */
+/* the page's strings: TEXT as the page builds it (English, with the shared tips) */
 function installerText() {
   const html = readFileSync(join(HERE, "index_pkg.html"), "utf8");
-  const src = html.slice(html.indexOf("const TEXT = {"), html.indexOf("const LANGS"));
+  const src = html.slice(html.indexOf("const TEXT = {"), html.indexOf("const t = (k)"));
   return vm.runInNewContext(src + "\nTEXT");
 }
 const FAST = { hs: 120, hsTries: 1, findTries: 2, backoff: 20, settle1: 40, idle1: 400, upgradeTries: 2, loaderSettle: 40,
@@ -1891,12 +1889,9 @@ async function installerBrowsers() {
     "installer: the report: identity, every port probed, the error");
 }
 
-/* every string in English, Spanish and Japanese; every code the flows throw has its message and its tip */
+/* every code the flows throw has its message and its tip */
 function installerStrings() {
   const T = installerText();
-  const en = Object.keys(T.en), miss = (L) => en.filter((k) => !(k in T[L]));
-  ok(!miss("es").length, `installer: Spanish has every string${miss("es").length ? " (missing " + miss("es").join(" ") + ")" : ""}`);
-  ok(!miss("ja").length, `installer: Japanese has every string${miss("ja").length ? " (missing " + miss("ja").join(" ") + ")" : ""}`);
   const src = ["fm1ota.js", "fm1diag.js"].map((f) => readFileSync(join(HERE, f), "utf8")).join("\n");
   const codes = new Set([...src.matchAll(/fail\("([A-Za-z0-9]+)"/g)].map((m) => m[1]));
   ["oldstock", "newstock", "skiff", "felucca", "otherfw", "nomidiIos", "nomidiSafari", "nomidiFirefox", "nomidi", "blocked", "denied"].forEach((k) => codes.add(k));
@@ -1908,7 +1903,7 @@ function installerStrings() {
 }
 
 /* the page itself, inlined as make_site.py does, in a small fake DOM: V14 refused with its message and box, the port
- * busy, the report copied; Spanish for a Spanish browser */
+ * busy, the report copied; English whatever the browser's language */
 async function installerPage() {
   const html = readFileSync(join(HERE, "index_pkg.html"), "utf8");
   const strip = (f) => readFileSync(join(HERE, f), "utf8").replace(/^export\s+/gm, "").replace(/^import .*?;\n/gm, "");
@@ -1928,7 +1923,6 @@ async function installerPage() {
   };
   for (const m of html.matchAll(/id="([\w-]+)"([^>]*)/g)) els.set(m[1], mk(m[1], { hidden: /\bhidden\b/.test(m[2]) }));
   const dataT = [...html.matchAll(/data-t="(\w+)"/g)].map((m) => mk("", { dataset: { t: m[1] } }));
-  const langs = ["es", "en", "ja"].map((l) => mk("", { dataset: { lang: l } }));
   let clip = "";
   const run = async (devOpts, navExtra = {}) => {
     const dev = devOpts && new FakeFM1(IMG, devOpts);
@@ -1937,7 +1931,7 @@ async function installerPage() {
       requestMIDIAccess: async () => dev.access, permissions: { query: async () => ({ state: "granted" }) },
       clipboard: { writeText: async (s) => { clip = s; } }, ...navExtra };
     const ctx = vm.createContext({
-      document: { getElementById: (id) => els.get(id) || (els.set(id, mk(id)), els.get(id)), querySelectorAll: (q) => q === "[data-t]" ? dataT : q === "#lang button" ? langs : [],
+      document: { getElementById: (id) => els.get(id) || (els.set(id, mk(id)), els.get(id)), querySelectorAll: (q) => q === "[data-t]" ? dataT : [],
         createElement: () => mk(""), body: { append() {} }, documentElement: {} },
       navigator: nav, location: { href: "https://juanjiant-bit.github.io/JIANT/webapp/installer/", search: "" },
       window: { addEventListener() {} }, confirm: () => true, console,
@@ -1953,18 +1947,31 @@ async function installerPage() {
   let p = await run({ ...PROFILES.v14 });
   ok(els.get("go").disabled === false && /Braindancer v0\.9\.11/.test(status()), "installer page: the package loads, Install enabled");
   await p.click("go");
-  ok(/firmware oficial más viejo.*FM-1_014/.test(status()) && els.get("tip").hidden === false && /Volver al V15 oficial/.test(tip()) && els.get("stock").open,
-    "installer page: V14 (Spanish): its message, its box, Return opened");
+  ok(/older official firmware.*FM-1_014/.test(status()) && els.get("tip").hidden === false && /Return to official V15/.test(tip()) && els.get("stock").open,
+    "installer page: V14 (English, though the browser says es-AR): its message, its box, Return opened");
   await p.click("copy-report");
   ok(/identity: FM-1_014/.test(clip) && /firmware: oldstock/.test(clip) && /error: oldstock/.test(clip) && /midi inputs: FM-1/.test(clip), "installer page: COPY REPORT: browser, ports, identity, kind, error");
   p = await run({ ...PROFILES.v15, busy: true });
   await p.click("go");
-  ok(/otro programa.*FM-1/.test(status()) && /M-VAVE/.test(tip()), "installer page: the port busy: who to close");
+  ok(/another program is using its MIDI port.*FM-1/.test(status()) && /M-VAVE/.test(tip()), "installer page: the port busy: who to close");
   p = await run({ ...PROFILES.skiff });
   await p.click("go");
   ok(/Skiff/.test(status()) && /FM-1_732/.test(status()), "installer page: Skiff named, with its identity");
   p = await run(null, { requestMIDIAccess: undefined, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1" });
-  ok(/iPhone y iPad/.test(status()) && els.get("tip").hidden === false, "installer page: an iPhone: told at once, with what to use");
+  ok(/iPhone and iPad cannot do it/.test(status()) && els.get("tip").hidden === false, "installer page: an iPhone: told at once, with what to use");
+}
+
+/* (0.9.1 item 15) every user-facing page is English: no Japanese, no Spanish text, no language switch, no stored language */
+function englishOnly() {
+  for (const f of ["index_pkg.html", "editor.html", "404.html"]) {
+    const h = readFileSync(join(HERE, f), "utf8");
+    const jp = h.match(/[\u3040-\u30FF\u4E00-\u9FFF]/g) || [];
+    ok(!jp.length, `${f}: no Japanese characters${jp.length ? " (" + jp.slice(0, 8).join("") + ")" : ""}`);
+    ok(/<html lang="en">/.test(h), `${f}: <html lang="en">`);
+    ok(!/class="lang"|id="lang"|data-lang|(^|\n)\s*(button)?\.lang\s*\{|aria-label="Language"|\bapplyLang\b|\bsetLang\b|URLSearchParams\([^)]*\)\.get\("lang"\)|navigator\.language|TEXT\.(ja|es)\b|\b(ja|es): \{/.test(h),
+       `${f}: no language switch, no ja / es table, no stored or sniffed language`);
+    ok(!/\b(página|instalar|conectá|versión|probá|Inicio|Instalador|Emulador)\b/.test(h), `${f}: no Spanish text`);
+  }
 }
 
 /* (0.9.11) 404.html: old and mistyped links to the page they meant */
@@ -2020,5 +2027,6 @@ await installerBrowsers();
 installerStrings();
 await installerPage();
 siteRedirects();
+englishOnly();
 console.log(failed ? `WEB TESTS FAILED (${failed})` : "web tests passed");
 process.exit(failed ? 1 : 0);
