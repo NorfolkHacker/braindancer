@@ -3,8 +3,7 @@
 *Formerly ACID FM.*
 
 **IDM / braindance firmware for the M-VAVE FM-1**. Braindancer is becoming a firmware with virtual analog, FM and a generator that
-writes whole songs on the device. Acid-coloured, in the spirit of Aphex Twin, Boards of Canada and the Rephlex
-catalogue.
+writes whole songs on the device. Acid-coloured, in the spirit of 90s braindance and IDM, and of worn-tape ambient.
 
 **[Install](https://norfolkhacker.github.io/braindancer/webapp/installer/)** (Chrome or Edge, over USB) ·
 **[Try it in the browser](https://norfolkhacker.github.io/braindancer/emu/)** ·
@@ -59,7 +58,7 @@ Before that, 0.8 was about the sound (piece 5), on top of 0.7:
 - The web editor has the six TAPE globals (G 96 to 101); see `web/EDITOR_PROTOCOL.md`.
 - Still built on JIANT FM and Felucca.
 
-Before that, 0.7 was the rename: ACID FM is now **Braindancer**, after braindance, the 90s IDM of Aphex Twin and the Rephlex catalogue.
+Before that, 0.7 was the rename: ACID FM is now **Braindancer**, after braindance, the 90s IDM.
 It is a rename only: no new features, and projects, presets and settings load as before.
 
 - The splash and ABOUT say BRAINDANCER, and the FM-1 shows up over USB as a MIDI device called BRAINDANCER (formerly ACID FM).

@@ -638,7 +638,7 @@ news: [
     "DRUM-X kits: 909 CLUB has a shorter, clickier kick, a noisier snare, bright short hats and a ride on the BELL lane. 808 BOOM has a long low kick, a tonal snare, soft hats, a long tom and a cowbell on BELL. LOFI DUST, TECHNO RAW and BREAKS have crunchier lanes.",
     "TAPE stays off, so 0.7 projects, presets and settings load as they were. Two things do sound different: an ANALOG MONO or LEGATO sequence with accents or slides now gets the acid response, and the 909 CLUB, 808 BOOM, LOFI DUST, TECHNO RAW and BREAKS kits sound different."]},
   {v: "0.7", items: [
-    "ACID FM is now Braindancer: the same firmware, renamed. It is named for braindance, the 90s IDM of Aphex Twin and the Rephlex catalogue that GEN's genres come from. A rename only: no new features, and your projects, presets and settings load as before.",
+    "ACID FM is now Braindancer: the same firmware, renamed. It is named for braindance, the 90s IDM that GEN's genres come from. A rename only: no new features, and your projects, presets and settings load as before.",
     "On the FM-1: the splash and ABOUT say BRAINDANCER, and over USB the computer sees a MIDI device called BRAINDANCER (formerly ACID FM). Your DAW may list it as a new port and ask you to pick it again.",
     "The website is now norfolkhacker.github.io/braindancer/ (installer, emulator, manual); the old links forward there. The installer finds a device on Braindancer or ACID FM."]},
   {v: "0.6", items: [
