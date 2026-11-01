@@ -99,7 +99,7 @@ gen_fit: 35 rows, 21 late
 ```
 
 - 0.9's constants: score 34, 16 late within, 2 clean over.
-- Best, unconstrained (sty 126, wild 150, FM6 65 / 12, k 50): score 10, 1 late within, **8 clean over of 14**: refused (the
+- Best, unconstrained (sty 126, wild 150, FM6 60 / 14, k 50): score 10, 1 late within, **8 clean over of 14**: refused (the
   music would be thinned for pieces that played clean).
 - Best under the bound (sty 122, wild 150, FM6 20 / 24, k 70): score 13, 5 late within, 3 clean over. Its FM6 weighs 116 at
   400 voices (0.9: 92) and `gen_test`'s fit-floor checks fail with it (EXPLORE not under its budget, a later section over
