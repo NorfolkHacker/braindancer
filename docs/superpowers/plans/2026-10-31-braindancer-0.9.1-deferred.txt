@@ -1,0 +1,40 @@
+Braindancer 0.9.1 (the clean-up release): what was parked, deferred or left "for later"
+=======================================================================================
+One plain line per item, grouped by area, each naming the task it came from. The 0.9 list is
+docs/superpowers/plans/2026-10-31-braindancer-piece6-deferred.txt; items there not repeated here still stand.
+
+THE SAFETY NET
+ 1. A user's own section inside a GEN song keeps the GEN arm while the song plays (Task 1, pre-flight 1).
+ 2. Edits in the first 250 ms after an arm, a section change or a MUTATE step are taken as the piece's (Task 1, pre-flight 2).
+ 3. SAVE > LOAD of a GEN section (project_load) never arms the net; section_load of the same slot does. UNDO forward again to a GEN piece leaves it unarmed. (Task 1)
+ 4. No test of the RAM branch of project_save_as; a save-over gap in dice_secs. (Task 1 re-review)
+ 5. The console counter safety_tape rose 6 times in the 0.9.1 calibration session, between measurement windows, right after
+    GENERATE, including once with two AGE-0 pieces in a row. The cause is not found in the code. A timed device test is
+    planned in the release session. (Task 8, Task 9 investigation)
+
+CPU MODEL AND FITTING
+ 6. One-core calibration: no data; one-core mode is unchanged and uncalibrated. (Task 8; piece6 #12)
+ 7. The old 0.9 rows G01-G10 (unnamed) are not used in the re-fit. (Task 9)
+ 8. TAPE's model cost (measured or not, Task 9 section 6). (Task 9; piece6 #5, #6)
+ 9. The late-within bound is report-only since Task 9: the cost barely separates late pieces from clean ones. (Task 9)
+10. The WILD factor rests on two rows. (Task 9)
+11. Host rebuilds match the device's gen_cost within about 2 % (4 of 20 exact); the cause is not found. History
+    dependence, the section TAPE lead and gen_clean are ruled out. Open suspects: TRACKS (trk_live) is a device setting
+    outside the identity; a stored section keeps a FORM's ARRANGE off, so a host rebuild with empty slots differs.
+    (Task 9; item 16)
+12. gen_fit.py --candidates rescans the grid for each line (a nit). (Task 9)
+13. TRACKS (trk_live) shapes the piece but is not part of its identity; no gen_test case at TRACKS 4 (drums live on T1 there). (item 16)
+
+LEFT FOR LATER BY THE TRIAGE
+14. TAPE / AGE quick access (piece6 #1): the first item of the next feature release; needs a design decision on where the shortcut goes.
+15. PLAYS and routing per section or per project (3c2 #15); KIT dice bars (3c2 #8).
+16. MIDI lt_mch and midi_forget_track (3c1 #3-4).
+17. gen_make torn read, muted-live cost, WILD estimate, one AGE per piece (piece6 #26, #21, #20, #22): they change the fitter.
+18. Features that change goldens or identities: GEN using the 0.8 presets, mixing per role, more styles, TAPE locks, AGE as a mod destination, deeper WOW.
+19. tape_block speed-up (piece5 #8, piece6 D3): before any TAPE feature.
+
+SMALL THINGS
+20. No test for the GEN-refused hint, a repeated dice / OCT+ level, or the "new track unbent" bend case. (Task 2)
+21. gen_cal.py delta reads a log with universal newlines; a log edited on Windows could carry CR. gen_cal rows is tested only in Task 9. (Task 3)
+22. Task 4b: the Spanish check is a word list; a bare TEXT.en block in index_pkg.html:213.
+23. Task 6: save_on / LZ_SAVE kept (dead on the device, read by 4 ui_test checks); emulator.yml long comment; 3 blank lines in gen_aa_keycaps.py; flash-map code spans across lines.

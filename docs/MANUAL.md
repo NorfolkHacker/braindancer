@@ -1026,7 +1026,8 @@ its own. **KNOB 1–4** set the four values shown, **OCT+** makes a piece, **PRE
 **SELECT** does nothing there, and **OCT−** goes back to TRACKS (the piece stays; **UNDO**, GLO + G4, brings back what
 was there before). Every section button works from there. The panel shows the five parts as rows with a preview of their
 density and heat, the FORM's sections as coloured chips, the piece's name and **OCT+ GENERATE**. **PLAY** runs and
-stops the transport without leaving the screen.
+stops the transport without leaving the screen. GEN shows its hint as a message however you open it (HOME, SELECT on HOME
+or HOME + SELECT).
 
 | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|
@@ -1047,7 +1048,10 @@ stops the transport without leaving the screen.
   **ACID 0421**, **WILD 0421**. (A name too wide for the panel is shortened.)
 - It plays as making a piece always did: the tracks are changed (UNDO is marked first) and you press PLAY. It is
   **refused while a song (ARRANGE) is playing** (the status line says **STOP THE SONG FIRST**). A new piece **unmutes
-  every track**. After UNDO the panel still names the last piece GEN made (LAST: ...), not the music UNDO brought back.
+  every track**. GENERATE also starts the music afresh, the way NEW PROJECT does: the macros (M1–M4), the lyrics, the DJ FILTER,
+  the SLICER, PLAYS and the other song-wide settings, the punch-in lane and the DRUM-X kit's mutes, X-MOD, TONE and HANDS go back to their
+  defaults, and so do the settings a sound keeps on each track (ARP, QUANT, TRANS, CHANCE, HUMAN, CHORD ...). The tempo and the
+  setup (CLOCK, TUNE, MIDI, ROUTE) stay. **UNDO** brings the old music back. After UNDO the panel still names the last piece GEN made (LAST: ...), not the music UNDO brought back.
 - The piece is **deterministic**: the same style, partner, number, ENERGY, FORM, COMPLEX, TAPE and the FM-1's CPU
   figure make the same piece every time. The result is ordinary music in the tracks: edit it, save it, play it.
 - Turning a knob puts PRESETS back on NEW; the next OCT+ is a new piece that uses the new setting.
@@ -1110,7 +1114,7 @@ range narrows towards the middle. COMPLEX 100 is the full chaos again.
 **The CPU fit**. Every piece GENERATE makes, and every section of a PARTS or SONG piece, is made to fit the FM-1's
 CPU: the generator estimates what the piece will cost to play (each part by its engine and how many voices it keeps
 sounding, the reverb type, the delay's grain, the PLAYHEADS and TAPE) and keeps it under a budget **calibrated on the
-FM-1 with two cores** (MENU › MORE › ABOUT: CORES 2; the CPU TEST figure scales it). One-core mode is fitted too, but
+FM-1 with two cores, measured again in 0.9.1** (MENU › MORE › ABOUT: CORES 2; the CPU TEST figure scales it). One-core mode is fitted too, but
 its budget is not calibrated yet. When a piece would cost more it gets lighter, a step at a time, until it fits. The
 first thing trimmed is the extra ECHO and ARP step notes on chord steps (no part is lost); only then the delay's
 grain and time, a PLAYHEAD less, a note less in each chord (two at least), the longest releases, the texture, the
@@ -1239,7 +1243,8 @@ The same idea for the other parts of the selected track, each heard at once unde
 - **SEQ + SELECT**: a new sequence, the part GEN's generator would write for the track: on the song's
   harmony when GEN made the piece (its plan, genre and the track's role), so it fits the others; else in the track's
   own key, a genre made up for it. Drums on a DRUM track, else the role its steps sound like (low notes: a bass line,
-  chords: a pad, else a lead or an arp). Never the same part twice in a row. Its sound, mix and automation stay.
+  chords: a pad, else a lead or an arp). Never the same part twice in a row. Its sound, mix and automation stay. **OCT−**
+  brings back the track's level too, not only its steps and length.
 - **LFO + SELECT**: the track's LFO: a rate in the middle of the range, any wave, MODE FREE or TRIG (half the time
   each; TRIG at any phase), a fade now and then, aimed
   mostly at the filter, a little at the shape, seldom at the pitch or the level.
@@ -1889,7 +1894,7 @@ and above it the clock: **CLOCK INT**, or **CLOCK USB ◆** (the ◆ blinks on e
 **GLO › MORE, the rows under MIDI:**
 
 - **KEYBOARD PLAYS SELECTED** (ON / OFF): notes on a channel no track listens to play the selected track: a keyboard
-  on any channel plays whatever ALGORITHM picks.
+  on any channel plays whatever ALGORITHM picks. Selecting another track resets the pitch bend of the track you leave.
 - **CLOCK OUT** (ON / OFF): the clock (24 a beat) with **START / STOP** over USB, while CLOCK is INT: a drum machine or
   a DAW follows the FM-1. It runs while stopped too, so the follower knows the tempo before PLAY. USB only: the FM-1's
   TRS socket is an input.

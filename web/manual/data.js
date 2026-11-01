@@ -615,6 +615,14 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.9.1", items: [
+    "0.9.1 is a clean-up release. GEN's CPU model is measured again on 0.9's own pieces played on the FM-1 (2 CORES) and fits the device better: some heavy pieces are thinned a little more than in 0.9, and the overload measured so far has been inaudible, with no audio lost. One-core mode is unchanged.",
+    "The safety net that quiets a GEN piece's texture and arp when the FM-1 is overloaded now keeps working when you jump to another section of the piece or the song ends, and it never quiets a track you have edited (its steps, its sound or its engine).",
+    "GEN shows its hint (HOME AGAIN: TRACKS) however you open it: HOME, SELECT on HOME or HOME + SELECT.",
+    "GENERATE starts the music afresh, the way NEW PROJECT does: the macros, lyrics, DJ FILTER, SLICER, PLAYS and the punch-in lane go back to their defaults with the new piece, so a piece depends on its number alone. UNDO brings the old music back.",
+    "SEQ + SELECT (dice the sequence), then OCT−: the track's level comes back too, not only its steps and length.",
+    "KEYBOARD PLAYS SELECTED: selecting another track resets the pitch bend of the track you leave.",
+    "The printed cheat sheets and the navigation map's picture are up to date again."]},
   {v: "0.9", items: [
     "0.9: GEN is one button. OCT+ GENERATE picks a style itself, out of ten (IDM, GLITCH HOP, BREAKS, DRILL'N'BASS, ACID, ELECTRO, MICRO, RETROBOC, AMBIENT, AMB TECHNO), never the same one twice in a row. About one press in ten is WILD, with no style; about 45 % of the rest are blends of the style with a partner that goes well with it. The panel names the piece, for example RETROBOC+AMBIENT 0421.",
     "GEN is a single page: ENERGY, FORM (LOOP, PARTS, SONG), COMPLEX and TAPE (AUTO, OFF, 10–100 %). The GENRE and SEED knobs and GEN pages 2 and 3 are gone; the generator makes its own choices for the parts. SELECT does nothing on GEN, OCT− goes back to TRACKS.",

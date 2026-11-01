@@ -10,6 +10,15 @@ catalogue.
 **[Try it in the browser](https://norfolkhacker.github.io/braindancer/emu/)** ·
 **[Manual](https://norfolkhacker.github.io/braindancer/manual/)**
 
+## Status: 0.9.1
+
+0.9.1 is a clean-up release on top of 0.9: GEN's CPU model is measured again on 0.9's own pieces played on the FM-1
+(2 CORES) and fits the device better; some heavy pieces are thinned a little more than in 0.9; the overload measured
+so far has been inaudible, with no audio lost; one-core mode is unchanged. The safety net keeps a GEN piece's texture
+and arp in hand through its sections and never hushes a part you rewrote; GEN's hint shows on every way in; GENERATE
+starts the music afresh, as NEW PROJECT does; SEQ's dice puts the level back with OCT−; KEYBOARD PLAYS SELECTED drops
+the pitch bend of the track it leaves.
+
 ## Status: 0.9
 
 0.9 is about the generator (piece 6), on top of 0.8:
