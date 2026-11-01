@@ -1269,7 +1269,7 @@ int main(int argc, char **argv)
         printf("regress: golden file %s rewritten (%u renders; %u had changed, %u new, %u gone)\n", gpath, g1 - g0,
                g_changed, g_new, g_gone);
     } else if (g_new) {
-        printf("regress: %u renders not in %s (new: GOLDEN_UPDATE=1 adds them)\n", g_new, gpath);
+        printf("regress: %u renders not in %s (FAIL: every render has a golden; add only their lines, docs: Task 7 of 0.9.1)\n", g_new, gpath);
     }
 
     /* ---- voices ---- */
@@ -1344,5 +1344,5 @@ int main(int argc, char **argv)
     if (!gupd && (g_changed || g_gone))
         printf("regress: the sound changed. If that is intended: GOLDEN_UPDATE=1 sh tests/run_tests.sh, "
                "then review and commit tests/golden.txt\n");
-    return (!gupd && (g_changed || g_gone)) || h_fail || k_fail || (!cupd && c_fail) || crash;
+    return (!gupd && (g_changed || g_gone || g_new)) || h_fail || k_fail || (!cupd && c_fail) || crash;
 }
