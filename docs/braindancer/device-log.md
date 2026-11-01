@@ -215,3 +215,57 @@ backwards; recalibrated (spec §3).
 - AGE 50 / 100 by ear: RETROBOC and AMBIENT pieces judged worn by the user; not judged on a held note.
 - Merge ff to main and push: done on the user's go-ahead (main a00c759, no tag).
 - Proven commit: d0b79b1.
+
+## 2026-11-01 — Braindancer 0.9.1 calibration session (0.9.1-cal, f3f96f4)
+
+Task 8 of the 0.9.1 clean-up: GEN's CPU model measured on 0.9's own pieces, for the re-fit (Task 9). Raw log
+`build/cal/cal-091.log` (not committed); rows `docs/braindancer/gen-calibration-0.9.1.csv`.
+
+- Backup before: `~/fm1-backups/2026-11-01-braindancer-0.9/fm1-recovery-20261101-102610` (full 1 MiB, 0 of 143 app
+  sectors blank, sha256 65fbffa9…).
+- Package: braindancer-0.9.1-cal.fwsc, 610,126 B, identity FM-1_909, sha256 ba660205…, built on the clean HEAD f3f96f4.
+  Console `status`: `braindancer v0.9.1-cal`; idle `gen_piece -`.
+- Conditions: 2 CORES and TRACKS 6 (read over SysEx, `MENU_DESC` 23 / 18); a CPU TEST stored (`gen_id` ratio 117,
+  budget 746 for the styles, 569 for WILD); NEW PROJECT once; GEN at ENERGY 50, FORM PARTS, COMPLEX 50, TAPE AUTO.
+- 20 GENERATE presses by the user, ~20 s windows over the serial console (late / shed per 20 s):
+
+  | Tag | Piece | AGE | cpu % | late /20 s | shed /20 s | lost | gen_cost / budget | clicks |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | G01 | BREAKS 1634 | 0 | 66 | 15.0 | 78.2 | 0 | 647 / 746 | n |
+  | G02 | DRILL'N'BASS+IDM 5749 | 0 | 65 | 34.1 | 95.3 | 0 | 722 / 746 | n |
+  | G03 | MICRO 1625 | 0 | 48 | 0.0 | 8.0 | 0 | 688 / 746 | n |
+  | G04 | GLITCH HOP+ELECTRO 9025 | 0 | 63 | 40.1 | 127.4 | 0 | 738 / 746 | n |
+  | G05 | IDM 0932 | 0 | 62 | 2.0 | 10.0 | 0 | 668 / 746 | n |
+  | G06 | ACID+AMB TECHNO 8285 | 12 | 43 | 11.0 | 55.1 | 0 | 676 / 746 | n |
+  | G07 | DRILL'N'BASS 8567 | 0 | 62 | 17.0 | 38.1 | 0 | 696 / 746 | n |
+  | G08 | MICRO 2995 | 15 | 64 | 13.0 | 73.2 | 0 | 737 / 746 | n |
+  | G09 | RETROBOC 3716 | 60 | 68 | 5.0 | 67.2 | 0 | 716 / 746 | n |
+  | G10 | WILD 8988 | 0 | 68 | 2.0 | 40.1 | 0 | 524 / 569 | n |
+  | G11 | GLITCH HOP 9193 (left out: the window began on G10) | 0 | 52 | 23.1 | 89.2 | 0 | 687 / 746 | n |
+  | G12 | ACID 8309 | 0 | 52 | 29.1 | 113.4 | 0 | 716 / 746 | n |
+  | G13 | RETROBOC+IDM 1146 | 70 | 50 | 7.0 | 116.3 | 0 | 722 / 746 | n |
+  | G14 | IDM+ELECTRO 5940 | 0 | 53 | 18.1 | 146.4 | 0 | 686 / 746 | n |
+  | G15 | AMB TECHNO+ACID 8384 | 0 | 55 | 10.0 | 111.3 | 0 | 730 / 746 | (not said) |
+  | G16 | ACID+ELECTRO 1485 | 0 | 56 | 31.1 | 170.5 | 0 | 742 / 746 | n |
+  | G17 | ELECTRO+BREAKS 5234 | 0 | 49 | 1.0 | 1.0 | 0 | 702 / 746 | n |
+  | G18 | AMBIENT 6748 | 40 | 69 | 0.0 | 30.1 | 0 | 743 / 746 | n |
+  | G19 | AMB TECHNO+AMBIENT 7920 | 0 | 54 | 6.0 | 8.0 | 0 | 736 / 746 | n |
+  | G20 | IDM+DRILL'N'BASS 7721 | 0 | 69 | 7.0 | 19.1 | 0 | 733 / 746 | n |
+
+  No audio lost on any piece and no clicks heard. **13 of the 19 counted rows are late (late20 > 5)**, more than
+  0.9's "about half": the model still lets heavy pieces through, and cost near the budget does not predict lateness
+  (G17 at 702 is clean, G02 at 722 is not).
+- `safety_tape` went 0 → 5 over the 20 presses, every time **between** windows (just after a GENERATE: before G06,
+  G09, G13, G14, G15), never inside one; G14 and G15 (and G13's predecessor) play no TAPE, so some trips come from the
+  moment of building a piece, not from a piece's TAPE. For Task 9 to look at; the spec's aim (`safety_tape` stays 0) is
+  not met.
+- TAPE pair on G21, RETROBOC+IDM 4073 (AGE 70 on AUTO), AGE set over SysEx (`SET` G_TAGE):
+
+  | Tag | AGE | cpu % | late /20 s | shed /20 s | lost |
+  | --- | --- | --- | --- | --- | --- |
+  | G21 | 70 | 65 | 12.0 | 176.6 | 0 |
+  | G21-AGE0 | 0 | 61 | 0.0 | 26.1 | 0 |
+  | G21-AGE70 | 70 | 74 | 8.0 | 72.2 | 0 |
+
+  TAPE at 70 turns a clean piece late; turning AGE back up tripped the safety net once (`safety_tape` 5 → 6).
+- The device stays on 0.9.1-cal for now.
