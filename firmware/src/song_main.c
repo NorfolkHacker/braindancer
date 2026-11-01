@@ -388,8 +388,11 @@ static void song_poll(void)
         chain.applied = 0;
         for (k = 0; k < NTRK; k++)
             fm6_adopt(k);                             /* (an FM6 track's SLOT: F n or OWN) */
-        safe_arms++;                                  /* (0.9.1) the net's parts' signatures taken again, as the
-                                                       * section is (the SLOTs adopted: not an edit) */
+        /* (0.9.1 final review 2) the net follows the section that went in (a live jump or a song row, put in by the ISR's
+         * sec_apply, which never touches safe_part): the GEN piece's own section arms it, the user's disarms it. It
+         * bumps safe_arms too: the parts' signatures taken again (the SLOTs adopted: not an edit). Plain byte stores,
+         * as safe_arm everywhere; a lever the ISR turns on in between is only ever one flap */
+        safe_arm(live.cur >= 0 ? (uint32_t)(safe_secs >> (live.cur & 3)) & 1u : 0u);
         if (jump)
             proj_clean_mark();                        /* (3c-2 final review 3) the music is that section's now: clean */
         sync_reload = 1;

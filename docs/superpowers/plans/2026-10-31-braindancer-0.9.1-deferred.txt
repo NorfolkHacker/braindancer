@@ -4,7 +4,6 @@ One plain line per item, grouped by area, each naming the task it came from. The
 docs/superpowers/plans/2026-10-31-braindancer-piece6-deferred.txt; items there not repeated here still stand.
 
 THE SAFETY NET
- 1. A user's own section inside a GEN song keeps the GEN arm while the song plays (Task 1, pre-flight 1).
  2. Edits in the first 250 ms after an arm, a section change or a MUTATE step are taken as the piece's (Task 1, pre-flight 2).
  3. SAVE > LOAD of a GEN section (project_load) never arms the net; section_load of the same slot does. UNDO forward again to a GEN piece leaves it unarmed. (Task 1)
  4. No test of the RAM branch of project_save_as; a save-over gap in dice_secs. (Task 1 re-review)

@@ -2186,6 +2186,36 @@ int main(void)
         bad += gcheck("(0.9.1 round 1) MUTATE turned on on a part by the user: an edit, out of the net", ok_mutate);
         fx_safe = 0; mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
+    {   /* (0.9.1 final review 2) a section that comes in by a live jump while the music plays (the ISR's sec_apply, then
+         * song_poll) arms the net when the GEN piece wrote it and disarms it when it is the user's */
+        uint32_t sd, a0, a1, n = 0;
+        int ok_to_gen, ok_to_mine;
+        mc_host_v12 = 1; gt_cpt = 74; gen_reset();
+        for (sd = 0; sd < 200u; sd++) {                 /* (a PARTS piece that plays both, its sections A B C written) */
+            gen_with(1, sd * 7u + 1u, 50, 1);
+            if (safe_part[0] < NTRK && safe_part[1] < NTRK && (gs.wrote & 7u) == 7u) break;
+        }
+        a0 = safe_part[0]; a1 = safe_part[1];
+        section_store(1);                               /* (B: the user's now) */
+        ok_to_gen = !section_load(1) && safe_part[0] == NTRK && safe_part[1] == NTRK && !safe_live;   /* (stopped, yours) */
+        transport_req = 1;                              /* PLAY */
+        gen_play(300u, 15u, 0, 0);
+        ok_to_gen &= song.playing && live.cur == 1 && !safe_live;
+        ok_to_gen &= !section_jump(0);                  /* the SAVE layer's live jump to A: the piece's */
+        gen_play(8000u, 15u, 0, &n);
+        ok_to_gen &= n > 0 && live.cur == 0 && safe_live && safe_part[0] == a0 && safe_part[1] == a1;
+        n = 0;
+        ok_to_mine = !section_jump(1);                  /* .. and back to B: yours, the net off */
+        gen_play(8000u, 15u, 0, &n);
+        ok_to_mine &= n > 0 && live.cur == 1 && !safe_live && safe_part[0] == NTRK && safe_part[1] == NTRK;
+        transport_req = 2; gen_play(600u, 15u, 0, 0);
+        if (!(ok_to_gen && ok_to_mine))
+            printf("gen:   (0.9.1 final review 2) to-gen %d to-mine %d (cur %d live %u parts %u %u)\n", ok_to_gen, ok_to_mine,
+                   (int)live.cur, (unsigned)safe_live, (unsigned)safe_part[0], (unsigned)safe_part[1]);
+        bad += gcheck("(0.9.1 final review 2) a live jump to a section of the piece arms the net, to a section of yours "
+                      "disarms it", ok_to_gen && ok_to_mine);
+        fx_safe = 0; mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
+    }
     {   /* (0.9.1 review I1) a section the user saves over through SAVE > PROJECT is the user's: the net never arms on it
          * (the editor's restore into a section: backup_test) */
         uint32_t sd, a0, a1;
