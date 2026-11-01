@@ -9,17 +9,19 @@ counts 2, a clean row over it 1) among the points with at most a quarter of the 
 
   tools/gen_fit.py ROWS.csv                  the fit, and each row's cost / budget under 0.9's constants and the fit's
   tools/gen_fit.py ROWS.csv --emit-h OUT.h   and the rows as C for tests/gen_test.c (tests/gen_cal_rows.h)
-  tools/gen_fit.py ROWS.csv --check-h OUT.h  exit 1 unless OUT.h is what --emit-h writes"""
+  tools/gen_fit.py ROWS.csv --check-h OUT.h  exit 1 unless OUT.h is what --emit-h writes
+  tools/gen_fit.py ROWS.csv --candidates     the points under the bound that score better than ADOPTED"""
 import csv
 import sys
 
 ENG = [27, 40, 45, 27, 27, 64, 27, 27, 27, 27, 70, 60, 40, 27, 27]   # gen.c GC_ENG at 0.9 (FM6 12, DIGITAL 1: fitted)
 VOX = [19, 13, 15, 17, 19, 23, 19, 19, 19, 19, 11, 16, 13, 19, 19]   # gen.c GC_VOX at 0.9
 FM6 = (1, 12)
-TAPE = (76, 92)                                                       # GC_TAPE1 / GC_TAPE2 (not fitted)
+TAPE = (76, 92)                                                       # GC_TAPE1 / GC_TAPE2 at 0.9 (not fitted)
+TAPE_FIT = (78, 95)                                                   # .. at 0.9.1 (G21's AGE pair: docs/braindancer/gen-calibration-0.9.1.md 6)
 THETA0 = {"sty": 118, "wild": 155, "e6": 40, "v6": 13, "k": 70}
 # the point adopted in gen.c (0.9.1): the best score of the fit's points that also pass tests/gen_test.c's fit-floor bounds
-ADOPTED = {"sty": 122, "wild": 150, "e6": 30, "v6": 18, "k": 70}
+ADOPTED = {"sty": 122, "wild": 150, "e6": 30, "v6": 18, "k": 70, "tape": TAPE_FIT}   # (tests/gen_fit_test.py: gen.c's)
 DEV2_0 = (150, 196)                                                   # GC_DEV2_X100 / GC_DEV2W_X100 at THETA0
 GRID = {"sty": range(100, 182, 2), "wild": range(120, 225, 5), "e6": range(20, 85, 5), "v6": range(6, 28, 2),
         "k": range(0, 150, 10)}
@@ -57,7 +59,7 @@ def budget(r, th):                                                    # gen.c gc
 
 
 def cost(r, th):                                                      # gen.c gc_sum
-    c = r["fixed"] + r["ccomp"] * th["k"] + (TAPE[1 if r["two"] else 0] if r["tape"] else 0)
+    c = r["fixed"] + r["ccomp"] * th["k"] + (th.get("tape", TAPE)[1 if r["two"] else 0] if r["tape"] else 0)
     for e, v in r["parts"]:
         en, vx = (th["e6"], th["v6"]) if e in FM6 else (ENG[e], VOX[e])
         c += en + vx * v // 100
@@ -88,20 +90,18 @@ def side(rows, costs, budgets):
     return s, m, mc
 
 
-def fit(rows, limit=True):
-    """(theta, judge(rows, theta)) of the best grid point; limit: only points with at most a quarter of the clean rows
-    over the budget (the music is not thinned for lateness alone: the FM-1 lost no audio on any piece measured), the
-    late rows within it a report. The unconstrained best: limit=False. A cost depends on e6 v6 k alone, a style row's budget on sty
-    alone, a WILD row's on wild alone: the budgets once, the costs once a (e6, v6, k)"""
+def scan(rows, limit=True):
+    """every grid point (under the clean-over bound when limit) as (score, -margin, distance from 0.9, theta). A cost depends on
+    e6 v6 k alone, a style row's budget on sty alone, a WILD row's on wild alone: the budgets once, the costs once a
+    (e6, v6, k)"""
     sr, wr = [r for r in rows if not r["wild"]], [r for r in rows if r["wild"]]
     bs = {s: [budget(r, dict(THETA0, sty=s)) for r in sr] for s in GRID["sty"]}
     bw = {w: [budget(r, dict(THETA0, wild=w)) for r in wr] for w in GRID["wild"]}
-    best = None
     nclean = sum(not r["late"] for r in rows)
     for e6 in GRID["e6"]:
         for v6 in GRID["v6"]:
             for k in GRID["k"]:
-                th = dict(THETA0, e6=e6, v6=v6, k=k)
+                th = dict(THETA0, e6=e6, v6=v6, k=k, tape=TAPE_FIT)
                 cs, cw = [cost(r, th) for r in sr], [cost(r, th) for r in wr]
                 d0 = abs(e6 / THETA0["e6"] - 1) + abs(v6 / THETA0["v6"] - 1) + abs(k / THETA0["k"] - 1)
                 S = [(s, *side(sr, cs, bs[s])) for s in GRID["sty"]]
@@ -111,10 +111,26 @@ def fit(rows, limit=True):
                         if limit and (cos + cow) * 4 > nclean:
                             continue
                         m = min([x for x in (ms, mw) if x is not None] or [0.0])
-                        key = (ss + sw, -m, d0 + abs(s / THETA0["sty"] - 1) + abs(w / THETA0["wild"] - 1))
-                        if best is None or key < best[0]:
-                            best = (key, dict(th, sty=s, wild=w))
-    return best[1], judge(rows, best[1])
+                        yield ss + sw, -m, d0 + abs(s / THETA0["sty"] - 1) + abs(w / THETA0["wild"] - 1), dict(th, sty=s, wild=w)
+
+
+def fit(rows, limit=True):
+    """(theta, judge(rows, theta)) of the best grid point; limit: only points with at most a quarter of the clean rows
+    over the budget (the music is not thinned for lateness alone: the FM-1 lost no audio on any piece measured), the
+    late rows within it a report. The unconstrained best: limit=False. Then the widest margin, then the nearest to
+    0.9's constants"""
+    best = min(scan(rows, limit), key=lambda t: t[:3])
+    return best[3], judge(rows, best[3])
+
+
+def better(rows):
+    """the points under the bound that score better than ADOPTED, as {(e6, v6, k, sty): [wild ..]} with their scores"""
+    top = judge(rows, ADOPTED)[0]
+    out = {}
+    for sc, _, _, th in scan(rows):
+        if sc < top:
+            out.setdefault((sc, th["e6"], th["v6"], th["k"], th["sty"]), []).append(th["wild"])
+    return out
 
 
 def emit_h(rows):
@@ -135,6 +151,10 @@ def main(argv):
     if not argv:
         sys.exit(__doc__)
     rows = load(argv[0])
+    if "--candidates" in argv:
+        for key in sorted(better(rows)):
+            print("score %d: FM6 %d / %d, k %d, sty %d, wild %s" % (*key, ",".join(map(str, better(rows)[key]))))
+        return
     if "--check-h" in argv:
         h = argv[argv.index("--check-h") + 1]
         sys.exit(0 if open(h).read() == emit_h(rows) else f"gen_fit: {h} is not the rows' (run --emit-h)")

@@ -11,13 +11,15 @@
 
 ## 2. The data
 
-- `docs/braindancer/gen-cal-rows.csv`: 0.8's 15 pieces (the 0.8 calibration's breakdown) and the 20 counted pieces of this
+- `docs/braindancer/gen-cal-rows.csv`: 0.8's 15 pieces (the 0.8 calibration's breakdown, `gen-calibration-2026-10-31.md`: its per-track costs and its late-half
+  counts a 20 s window; 4741, 7848 and 4493 were not timed there (`timed` 0 in the rows file): their late20 (0, 1, 10) are the calibration's approximate "~" rates from the counters,
+  not timed windows; the other 12 rows' late20 are its timed per-20 s counts, the labels from its table by the rate: 8790, listed "clean*" there at 9, is late here (over the line)) and the 20 counted pieces of this
   session (G01..G21 without G11, whose window began on the previous piece; the AGE-set windows are not fitted). 21 of the 35 rows
-  are late (13 of the 20 new ones).
+  are late (14 of the 20 new ones; the device log's "13 of 19" counts G01..G20 only).
 - The 0.9.1 rows' parts (engine and voices), the fixed term, TAPE and the chord components are **rebuilt on the host** from each
   piece's identity (`tests/gen_terms.c`, `tools/gen_cal.py ids / rows`), not read from the device.
 - **The rebuild is approximate.** Only 4 of the 20 pieces reproduce the device's `gen_cost` exactly (G03, G05, G14, G20); the
-  other 16 are within about 1 % (-16 .. +9 on ~700): the AGE-0 pieces are lighter on the device than on the host, the pieces
+  other 16 are within about 2 % (most within 1 %; G10 and G15 about 2 %; -16 .. +9 on ~700): the AGE-0 pieces are lighter on the device than on the host, the pieces
   with AGE above 0 heavier. The cause was not found. History dependence is ruled out: the 21 identities rebuilt in the
   session's order, with GENERATE's defaults, and fresh each, give identical costs; and a section's TAPE is global (set once,
   after the fit: `gen.c` `tape_age_apply`), the same in every section. The rows file carries the host-rebuilt terms.
@@ -37,12 +39,12 @@
 | G12 | ACID 8309 | 0 | 52 | 29.1 | 113.4 | 716 | 718 |
 | G13 | RETROBOC+IDM 1146 | 70 | 50 | 7.0 | 116.3 | 722 | 716 |
 | G14 | IDM+ELECTRO 5940 | 0 | 53 | 18.1 | 146.4 | 686 | 686 (exact) |
-| G15 | AMB TECHNO+ACID 8384 | 0 | 55 | 10.0 | 111.3 | 730 | 746 |
+| G15 | AMB TECHNO+ACID 8384 | 0 | 55 | 10.0 | 111.3 | 730 | 746 (D, 731, is the nearest section) |
 | G16 | ACID+ELECTRO 1485 | 0 | 56 | 31.1 | 170.5 | 742 | 745 |
 | G17 | ELECTRO+BREAKS 5234 | 0 | 49 | 1.0 | 1.0 | 702 | 703 |
 | G18 | AMBIENT 6748 | 40 | 69 | 0.0 | 30.1 | 743 | 737 |
 | G19 | AMB TECHNO+AMBIENT 7920 | 0 | 54 | 6.0 | 8.0 | 736 | 737 |
-| G20 | IDM+DRILL'N'BASS 7721 | 0 | 69 | 7.0 | 19.1 | 733 | 741 (exact) |
+| G20 | IDM+DRILL'N'BASS 7721 | 0 | 69 | 7.0 | 19.1 | 733 | 741 (A and C, 733, are the exact match; 741 is the heaviest section, the row's) |
 | G21 | RETROBOC+IDM 4073 | 70 | 65 | 12.0 | 176.6 | 744 | 745 |
 
 ## 3. The fit
@@ -56,9 +58,9 @@ these rows. Reported side by side, from `tools/gen_fit.py` (`build/cal/fit-091.t
 ```
 gen_fit: 35 rows, 21 late
   0.9's  {'sty': 118, 'wild': 155, 'e6': 40, 'v6': 13, 'k': 70}: score 34, late within 16, clean over 2, margin -0.129
-  best, unconstrained {'sty': 126, 'wild': 150, 'e6': 65, 'v6': 12, 'k': 50}: score 10, late within 1, clean over 8, margin -0.167
-  fitted (clean over at most a quarter of the clean rows) {'sty': 122, 'wild': 150, 'e6': 20, 'v6': 24, 'k': 70}: score 13, late within 5, clean over 3, margin -0.113; GC_DEV2_X100 155, GC_DEV2W_X100 190
-  adopted {'sty': 122, 'wild': 150, 'e6': 30, 'v6': 18, 'k': 70}: score 15, late within 6, clean over 3, margin -0.103
+  best, unconstrained {'sty': 126, 'wild': 150, 'e6': 60, 'v6': 14, 'k': 50, 'tape': (78, 95)}: score 10, late within 1, clean over 8, margin -0.167
+  fitted (clean over at most a quarter of the clean rows) {'sty': 122, 'wild': 150, 'e6': 20, 'v6': 24, 'k': 70, 'tape': (78, 95)}: score 13, late within 5, clean over 3, margin -0.113; GC_DEV2_X100 155, GC_DEV2W_X100 190
+  adopted {'sty': 122, 'wild': 150, 'e6': 30, 'v6': 18, 'k': 70, 'tape': (78, 95)}: score 15, late within 6, clean over 3, margin -0.103
   0.8 4741       clean late20    0.0  0.9 792/746  fit 807/725  adopted 797/725
   0.8 7848       clean late20    1.0  0.9 583/569  fit 583/588  adopted 583/588
   0.8 4493       LATE  late20   10.0  0.9 687/746  fit 711/725  adopted 697/725
@@ -79,21 +81,21 @@ gen_fit: 35 rows, 21 late
   G03            clean late20    0.0  0.9 688/746  fit 688/725  adopted 688/725
   G04            LATE  late20   40.1  0.9 745/746  fit 790/725  adopted 764/725
   G05            clean late20    2.0  0.9 668/746  fit 668/725  adopted 668/725
-  G06            LATE  late20   11.0  0.9 678/746  fit 669/725  adopted 673/725
+  G06            LATE  late20   11.0  0.9 678/746  fit 672/725  adopted 676/725
   G07            LATE  late20   17.0  0.9 703/746  fit 703/725  adopted 703/725
-  G08            LATE  late20   13.0  0.9 736/746  fit 736/725  adopted 736/725
-  G09            clean late20    5.0  0.9 707/746  fit 705/725  adopted 705/725
+  G08            LATE  late20   13.0  0.9 736/746  fit 739/725  adopted 739/725
+  G09            clean late20    5.0  0.9 707/746  fit 708/725  adopted 708/725
   G10            clean late20    2.0  0.9 535/569  fit 535/588  adopted 535/588
   G12            LATE  late20   29.1  0.9 718/746  fit 742/725  adopted 728/725
-  G13            LATE  late20    7.0  0.9 716/746  fit 712/725  adopted 713/725
+  G13            LATE  late20    7.0  0.9 716/746  fit 715/725  adopted 716/725
   G14            LATE  late20   18.1  0.9 686/746  fit 728/725  adopted 703/725
   G15            LATE  late20   10.0  0.9 746/746  fit 747/725  adopted 745/725
   G16            LATE  late20   31.1  0.9 745/746  fit 736/725  adopted 740/725
   G17            clean late20    1.0  0.9 703/746  fit 703/725  adopted 703/725
-  G18            clean late20    0.0  0.9 737/746  fit 741/725  adopted 737/725
+  G18            clean late20    0.0  0.9 737/746  fit 744/725  adopted 740/725
   G19            LATE  late20    6.0  0.9 737/746  fit 735/725  adopted 735/725
   G20            LATE  late20    7.0  0.9 741/746  fit 741/725  adopted 741/725
-  G21            LATE  late20   12.0  0.9 745/746  fit 745/725  adopted 745/725
+  G21            LATE  late20   12.0  0.9 745/746  fit 748/725  adopted 748/725
 ```
 
 - 0.9's constants: score 34, 16 late within, 2 clean over.
@@ -103,13 +105,29 @@ gen_fit: 35 rows, 21 late
   400 voices (0.9: 92) and `gen_test`'s fit-floor checks fail with it (EXPLORE not under its budget, a later section over
   its piece, AUTO's AGE check): the generator cannot always reach the budget with parts that heavy.
 - **Adopted** (sty 122, wild 150, FM6 30 / 18, k 70): the best score among the grid's points under the bound that also pass
-  all of `gen_test`'s checks (the top 40 by score were built and run): score 15, 6 late within, 3 clean over. WILD's factor
-  rests on two rows (G10, 0.8 7848): it is under-determined; 150 is the nearest to 0.9's 155 at the same score.
+  all of `gen_test`'s checks: score 15, 6 late within, 3 clean over. WILD's factor rests on two rows (G10, 0.8 7848): it is
+  under-determined; 150 is the nearest to 0.9's 155 at the same score.
+  The rule and the points tried. `tools/gen_fit.py ROWS.csv --candidates` lists every grid point under the bound that scores
+  better than the adopted one (all at score 13; WILD's factor only moves the score through two rows, so each point holds a
+  range of wild values). Each was built into `gen.c` (with `GC_TAPE` 78 / 95, WILD 150) and `gen_test` run; all five
+  fail the same real checks, beside the pinned figures:
+
+  | Point (FM6 base / voice, k, sty) | `gen_test` checks it fails |
+  | --- | --- |
+  | 20 / 24, 70, 122 | EXPLORE 3423 / 9641 under the budget; EXPLORE under the budget (6 % at most); AUTO AGE check; every section fitted (7 sections over, 1 over A) |
+  | 20 / 26, 70, 120 | the same four, and the lead's steps / leaps / off-the-eighths check |
+  | 20 / 26, 80, 120 | the same five |
+  | 25 / 24, 70, 120 | the same four (6 sections over, 1 over A) |
+  | 25 / 24, 80, 120 | the same four |
+
+  (sty 120 also moves GC_DEV2_X100 to 153, which the pinned factor check lists too; it is not counted above.) The adopted point
+  is the next one in score (15) that passes everything. Their FM6 at 400 voices weighs 116 .. 121 (adopted 102, 0.9 92): the
+  generator's fit cannot always reach the budget with parts that heavy.
 
 ## 4. What changed in gen.c
 
 `GC_GEN_X100` 118 to 122, `GC_WILD_X100` 155 to 150, `GC_DEV2_X100` 150 to 155, `GC_DEV2W_X100` 196 to 190, FM6
-(`GC_ENG`/`GC_VOX` 1 and 12) 40 / 13 to 30 / 18, `GC_CCOMP` 70 kept. The budget at CPU TEST ratio 117: 725 a style's piece
+(`GC_ENG`/`GC_VOX` 1 and 12) 40 / 13 to 30 / 18, `GC_CCOMP` 70 kept, `GC_TAPE2` 92 to 95 and `GC_TAPE1` 76 to 78 (§6). The budget at CPU TEST ratio 117: 725 a style's piece
 (was 746), 588 WILD's (was 569). `gc_cost` is split into `gc_terms` and `gc_sum` (same value). Figures `gen_test` prints that
 moved (no bound loosened): EXPLORE budgets 569 / 525 became 588 / 542; the device factor unset x1.50 / x1.96 became x1.55 /
 x1.90; `GT_X1` 41 to 42; two cores AUTO AGE sweep: 2 of 300 over became 0 of 300 (AGE lowered on 136 became 142); EXPLORE +
@@ -119,7 +137,7 @@ the random stream that shift with the fit (MICRO HOUSE lead sounds, the press-be
 ## 5. How strong it is
 
 35 rows, one device, one session; `cpu` is noisy (the same piece at AGE 70 read 65 % and 74 %). The new pieces' cost is the host's
-rebuild, within about 1 % of the device's. The model does not separate late from clean near the budget (G17 at 702 clean,
+rebuild, within about 2 % of the device's (most within 1 %). The model does not separate late from clean near the budget (G17 at 702 clean,
 G02 at 726 late): the adopted point has 10 fewer late rows within the budget than 0.9's constants for 1 more clean row over it; it is a
 better fit of a weak signal, not a predictor of lateness.
 

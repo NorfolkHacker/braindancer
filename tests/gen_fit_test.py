@@ -4,6 +4,7 @@
 """(0.9.1) tools/gen_fit.py: the model as gen.c computes it (0.8's and 0.9's figures in the calibration doc), a fit that
 puts every row of a known model on its side, and tests/gen_cal_rows.h the rows' own."""
 import random
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -44,6 +45,23 @@ for i in range(40):
     syn.append(r)
 th, (score, margin, ml, mc) = F.fit(syn)
 check(f"a known model's rows ({sum(r['late'] for r in syn)} late of 40): every row on its side", score == 0)
+src = (ROOT / "firmware/src/gen.c").read_text()
+
+
+def const(n):
+    return int(re.search(r"#define %s (\d+)u" % n, src).group(1))
+
+
+def arr(n):
+    return [int(x) for x in re.search(r"%s\[NENGINES\] = \{([^}]*)\}" % n, src).group(1).split(",")]
+
+
+A = F.ADOPTED
+eng, vox = arr("GC_ENG"), arr("GC_VOX")
+check("gen.c's constants are gen_fit.py's ADOPTED (factors, FM6, component, TAPE, DEV2)",
+      (const("GC_GEN_X100"), const("GC_WILD_X100"), const("GC_CCOMP"), const("GC_TAPE1"), const("GC_TAPE2"),
+       const("GC_DEV2_X100"), const("GC_DEV2W_X100"), eng[1], eng[12], vox[1], vox[12]) ==
+      (A["sty"], A["wild"], A["k"], *A["tape"], *F.dev2(A), A["e6"], A["e6"], A["v6"], A["v6"]))
 p = subprocess.run([sys.executable, str(ROOT / "tools/gen_fit.py"), str(ROOT / "docs/braindancer/gen-cal-rows.csv"),
                     "--check-h", str(ROOT / "tests/gen_cal_rows.h")])
 check("tests/gen_cal_rows.h is the rows'", p.returncode == 0)

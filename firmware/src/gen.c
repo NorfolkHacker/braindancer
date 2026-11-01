@@ -2114,7 +2114,7 @@ static uint32_t gc_dly_stage(void)                       /* the piece's delay's 
  * ratio, GC_GEN_X100. The budget, 65 % of a half on the device (the governor's line), with no margin taken off (the
  * factor is the device's, measured on the pieces that lost halves): CPU TEST 74 % -> 588 (was 780: 9641 and 3423 both
  * fitted under it and both glitched). Unset, GC_DEV2_X100: 542, 0.5.1's budget (543) */
-/* (0.9.1) re-fitted on 0.8's 15 pieces and 0.9.1's 20 (13 of those late): a style's x1.22 of the CPU TEST's ratio (was 1.18),
+/* (0.9.1) re-fitted on 0.8's 15 pieces and 0.9.1's 20 (14 of those late): a style's x1.22 of the CPU TEST's ratio (was 1.18),
  * WILD x1.50 (was 1.55); CPU TEST ratio 117: the budget 1030 x 100 / (117 x 122 / 100) = 725 a style's piece, 588 WILD's;
  * the chosen point is the best score with at most a quarter of the clean rows over the budget (no music thinned for
  * lateness alone). Unset: 155 and 190.
