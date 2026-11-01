@@ -37,3 +37,7 @@ SMALL THINGS
 21. gen_cal.py delta reads a log with universal newlines; a log edited on Windows could carry CR. gen_cal rows is tested only in Task 9. (Task 3)
 22. Task 4b: the Spanish check is a word list; a bare TEXT.en block in index_pkg.html:213.
 23. Task 6: save_on / LZ_SAVE kept (dead on the device, read by 4 ui_test checks); emulator.yml long comment; 3 blank lines in gen_aa_keycaps.py; flash-map code spans across lines.
+24. (final review 5) gen_clean (gen.c) and system_init (project.c) keep two lists of what NEW PROJECT resets. gen_clean leaves out
+    the DRUM-X kit, FUGUE, the LIVE modifiers and fm6_init because gen_make writes those itself; the 200-rebuild test would
+    catch a gap the snapshot sees, but not a LIVE modifier (live_return) held while GENERATE is pressed. Fix later: a comment
+    in system_init pointing at gen_clean, or one shared helper.
