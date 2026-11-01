@@ -417,6 +417,11 @@ run "GEN calibration data: the log to the device CSV (tools/gen_cal.py)" python3
 run "pages: no BREAK on the README and the landing page, no two-core warning in the installer" python3 tests/stale_pages_test.py
 run "ACID FM built on JIANT FM and Felucca: ABOUT, the web pages, the English manual, its page names and links (built_on_test.py)" python3 tests/built_on_test.py
 run "navigation map (docs/navigation-map.svg) matches the firmware's chains" python3 tools/gen_nav_map.py --check
+if [ -x "${CHROMIUM:-/usr/bin/chromium}" ]; then
+    run "printed cheat sheets and the map's PNG: the size their sources give (render_chromium.py --verify)" python3 tools/render_chromium.py --verify
+else
+    echo "== skip render sizes (no Chromium)"
+fi
 
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, package builder, update protocol" node web/test_web.mjs

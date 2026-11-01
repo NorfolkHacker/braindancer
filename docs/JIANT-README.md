@@ -682,7 +682,7 @@ These design notes are in Spanish.
 | [docs/TONIC-DRUMX.md](docs/TONIC-DRUMX.md) | DRUM-X: the voice, the per-section kit and the phases |
 | [docs/TONIC-UI.md](docs/TONIC-UI.md) | The JIANT FM interface: screen map, format, flash measurements |
 | [Navigation map](docs/navigation-map.svg) ([ES](https://github.com/juanjiant-bit/JIANT/blob/main/docs/navigation-map.es.svg)) | Every section, group and page in chain order, the six rules, the layers and the combos (made by `tools/gen_nav_map.py` from `firmware/src/ui_lens.c`; `--check` says whether it is up to date) |
-| [Cheat sheets](#cheat-sheets) | Controls and sound reference (PNG and PDF; made by `tools/gen_cheatsheets.py` + `tools/render_cheatsheets.mjs`) |
+| [Cheat sheets](#cheat-sheets) | Controls and sound reference (PNG and PDF; made by `tools/gen_cheatsheets.py` + `tools/render_chromium.py`) |
 | [BUILDING.md](BUILDING.md) | Toolchain, build, emulator and tests |
 | [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) | The editor's SysEx protocol |
 | [LICENSING.md](LICENSING.md) | Licenses of each part |

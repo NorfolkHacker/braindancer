@@ -2,8 +2,8 @@
 # Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 # Portions Copyright (C) 2026 NorfolkHacker
 # (JIANT 0.6.7) the two cheat sheets: docs/cheatsheet/controls.html and sound.html (black, Chakra Petch, the thermal
-# palette), then tools/render_cheatsheets.mjs makes the PNGs and PDFs:
-#   python3 tools/gen_cheatsheets.py && node tools/render_cheatsheets.mjs
+# palette), then tools/render_chromium.py makes the PNGs and PDFs:
+#   python3 tools/gen_cheatsheets.py && python3 tools/render_chromium.py
 # (3c-1 task 10b) English only, Braindancer's own pages (the ux_*.c pages, their knob labels and MORE rows; docs/MANUAL.md,
 # web/manual/data.js); JIANT named only on the credits line. Update them together.
 import html, os, re

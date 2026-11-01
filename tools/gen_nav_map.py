@@ -13,7 +13,7 @@ CE_* / CG_* / CHAINS / NAV_DEF), so the map cannot drift from the firmware.
 Every page of every chain the firmware builds is checked onto the map (the DIGITAL engine's chain, CE_DIG, only when
 core.h builds FELUCCA_FM4). The SVG carries its own dark card and fonts (Inter Tight from assets/fonts, instanced and
 subset into the file; the 5 x 7 pixel face of tools/gen_px_font.py drawn as paths), so it reads the same on GitHub's
-light and dark themes. The PNGs (2x) come from the SVG through Playwright's Chromium (as tools/render_cheatsheets.mjs).
+light and dark themes. The PNG (2x) comes from the SVG through the system Chromium (tools/render_chromium.py).
 Needs Pillow and fontTools.
 """
 import base64
@@ -562,21 +562,6 @@ def verify(keys, drawn):
         raise SystemExit(f'gen_nav_map: sections {sorted(secs ^ rows)} are not on the map\'s rows')
 
 
-RENDER_JS = r'''
-const { chromium } = require("playwright");
-const [svg, png, w, h] = process.argv.slice(1);
-(async () => {
-  const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
-  const b = await chromium.launch({ executablePath: exe }).catch(() => chromium.launch());
-  const p = await b.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 2 });
-  await p.goto("file://" + svg);
-  await p.waitForTimeout(300);
-  await p.screenshot({ path: png, omitBackground: true, clip: { x: 0, y: 0, width: +w, height: +h } });
-  await b.close();
-})();
-'''
-
-
 def main():
     sec, keys = parse()
     check = '--check' in sys.argv
@@ -591,14 +576,9 @@ def main():
         out.write_text(doc)
         print(f'{out.relative_to(R)}: {len(keys)} chains, {len(drawn)} pages, {len(doc) // 1024} KB')
         if '--svg' not in sys.argv:
-            png = out.with_suffix('.png')
-            env = dict(os.environ)
-            if 'NODE_PATH' not in env:
-                env['NODE_PATH'] = subprocess.run(['npm', 'root', '-g'], capture_output=True, text=True).stdout.strip()
-            subprocess.run(['node', '-e', RENDER_JS, str(out), str(png), str(W), str(int(round(H)))], check=True, env=env)
-            from PIL import Image                      # (256 colours: a third of the bytes, the same to the eye)
-            Image.open(png).quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(png, optimize=True)
-            print(f'{png.relative_to(R)}: 2x, {png.stat().st_size // 1024} KB')
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import render_chromium                     # (0.9.1: the system Chromium's command line, no Playwright)
+            render_chromium.render_map(out, out.with_suffix('.png'))
     if check:
         print('gen_nav_map: the maps match the firmware\'s chains')
 
