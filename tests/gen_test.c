@@ -16,6 +16,7 @@ static struct { uint32_t cost_thin; uint8_t grain_off; } gt_probe;   /* (0.9.1) 
                                                          * not in the firmware's RAM */
 #define GEN_PROBE(f, v) (gt_probe.f = (v))
 #include "ui_test.c"
+#include "gen_cal_rows.h"
 
 static int gcheck(const char *what, int ok)
 {
@@ -23,10 +24,11 @@ static int gcheck(const char *what, int ok)
     return ok ? 0 : 1;
 }
 static uint8_t gt_cpt;                                   /* (0.9.14) the CPU TEST result the pieces are made for (gen.c gc_dev) */
-/* (0.9 spec 3, pre-flight 20) the model's x1.00 on two cores for every piece: a style's 41 / 63 x 1.18 (0.77) and WILD's
- * 41 / 63 x 1.55 (1.00), both 1.00 at the floor; the budget 1030. Where a check measures music, not the budget: every
- * piece is fitted now (TAPE counted), and on one core no style's piece fits at all (gen.c gc_budget: 594 at most) */
-#define GT_X1 41u
+/* (0.9 spec 3, pre-flight 20; 0.9.1 re-fit) the model's x1.00 on two cores for every piece: a style's 42 / 63 x 1.22
+ * (0.81) and WILD's 42 / 63 x 1.50 (0.99), both under 1.00 at the floor; the budget 1030. Where a check measures music,
+ * not the budget: every piece is fitted now (TAPE counted), and on one core no style's piece fits at all (gen.c
+ * gc_budget: 594 at most) */
+#define GT_X1 42u
 static uint32_t gt_dly_stage(void)                     /* (ACID FM 0.5.2) the rate the piece's delay line runs at (fx.c
                                                          * fx_buses, dly_rate): 0 full, 1 half, 2 a quarter; the full
                                                          * rate whatever the line ran at before (dly_stage's hysteresis) */
@@ -360,14 +362,14 @@ int main(void)
             gen_build(&d);
             bad += gcheck("  the CPU factor in the identity: CPU TEST forgotten, the same piece and budget rebuilt", piece_sig() == s0 &&
                           gc_budget() == b0 && gc_dev_base() != d.dev);
-            {   /* (0.9 review M6) WILD's own factor (x1.55) from the stored ratio: the same */
+            {   /* (0.9 review M6) WILD's own factor (x1.50) from the stored ratio: the same */
                 uint32_t wb, ws;
                 cpt_res = 74; cpt_cores = 2;
                 gid_set(&d, GID_WILD, GID_SOLO, 3423); gen_build(&d); ws = piece_sig(); wb = gc_budget();
                 cpt_res = 0; cpt_cores = 0;
                 gen_build(&d);
-                bad += gcheck("  .. WILD (its own x1.55 from the stored CPU TEST): the same piece and budget rebuilt",
-                              piece_sig() == ws && gc_budget() == wb && wb == 569u && gc_dev_base() != d.dev);
+                bad += gcheck("  .. WILD (its own x1.50 from the stored CPU TEST): the same piece and budget rebuilt",
+                              piece_sig() == ws && gc_budget() == wb && wb == 588u && gc_dev_base() != d.dev);
             }
             mc_host_v12 = 0; gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
         }
@@ -1158,7 +1160,7 @@ int main(void)
         gen_reset();
         gt_cpt = GT_X1;                                 /* (0.9.14) the device as the model holds it (gen.c gc_dev x1.00): the
                                                          * pieces 0.9.13 made; the default's (x1.60) after these. (0.9:
-                                                         * GT_X1, CPU TEST 63 % is x1.18 / x1.55 on two cores) */
+                                                         * GT_X1, CPU TEST 63 % is x1.22 / x1.50 on two cores) */
         cpt_res = GT_X1; cpt_cores = 2;
         mc_host_v12 = 1;                                /* (0.9.13: two cores, the FM-1's default: the CPU budget's, 12 voices) */
         for (g = 0; g < 3u * NGENRE; g++) {             /* (the voices the genres' pieces reach at once, the budget's
@@ -1317,7 +1319,8 @@ int main(void)
              * 1030 / 1.9, 542: 0.5.1's 543), a CPU TEST x1.50 its own ratio (GC_GEN_X100, measured on an FM-1): x1.00 at
              * 42 %, the pieces compared against it; one core as before. (0.9 spec 3's recalibration) Two cores unset: a
              * style's piece x1.50 (gc_dev), WILD's x1.96 (these pieces); a CPU TEST x1.18 its ratio a style's, x1.55 WILD's:
-             * at 42 % a style's x1.00 (0.77, the floor), these WILD pieces' x1.02 (66 x 1.55) */
+             * at 42 % a style's x1.00 (0.77, the floor), these WILD pieces' x1.02 (66 x 1.55). (0.9.1 re-fit) x1.55 / x1.90 unset;
+             * a CPU TEST x1.22 a style's, x1.50 WILD's: at 42 % a style's x1.00 (0.81, the floor), WILD's x0.99 (66 x 1.50) */
             uint32_t est[2] = {0}, over = 0, mel_bad = 0, quiet2 = 0, d0, d1, d2, d3, d4, w0;
             cpt_res = 0;
             mc_host_v12 = 1;
@@ -1356,9 +1359,9 @@ int main(void)
                    "gen:   on average (x1.00: %u), %u at the floor over the budget %u; x%u.%02u at 63 %%, x%u.%02u at 126 %%, x%u.%02u at 30 %%\n",
                    d0 / 100u, d0 % 100u, est[1] / 60u, est[0] / 60u, over, (uint32_t)(1030u * 100u / d0), d1 / 100u, d1 % 100u,
                    d2 / 100u, d2 % 100u, d3 / 100u, d3 % 100u);
-            bad += gcheck("  (0.9.14) the device factor: x1.50 / WILD x1.96 without a CPU TEST (two cores; one: x1.00 at 63 %, "
+            bad += gcheck("  (0.9.14) the device factor: x1.55 / WILD x1.90 without a CPU TEST (two cores; one: x1.00 at 63 %, "
                           "x2.00 at 126 %), lighter pieces, still two melodic parts and sound",
-                          d0 == 150u && w0 == 196u && d4 == 100u && d1 == 100u && d2 == 200u && d3 == 100u && est[1] < est[0] * 3u / 4u && !mel_bad && !quiet2);
+                          d0 == 155u && w0 == 190u && d4 == 100u && d1 == 100u && d2 == 200u && d3 == 100u && est[1] < est[0] * 3u / 4u && !mel_bad && !quiet2);
             cpt_res = GT_X1; cpt_cores = 2;
         }
         gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
@@ -1791,7 +1794,7 @@ int main(void)
          * the voices: 2 lost halves a second, none with its TIME short. EXPLORE 9641 (its delay short) lost ~4.5 a second
          * at 75-80 %. Both fitted 0.5.1's budget (780 at 74 %): the device runs GEN pieces x1.45 .. x1.6 heavier against
          * the CPU TEST song than the model says (gen.c GC_WILD_X100). Now: the budget 65 % of the device's half, 588 at 74 %
-         * (542 unset, as 0.5.1's 543; 0.9 recalibration: EXPLORE x1.55, 569 and 525); a quarter-rate delay only on a piece under it with it, and not on a busy one
+         * (542 unset, as 0.5.1's 543; 0.9 recalibration: EXPLORE x1.55, 569 and 525; 0.9.1: x1.50, 588 and 542); a quarter-rate delay only on a piece under it with it, and not on a busy one
          * (5 parts or more) with the CPU TEST unset; delays at the full or half rate never shortened (a slow genre's 1/4
          * echo stays); EXPLORE fitted under the budget. Then ~1000 pieces (EXPLORE, RANDOM, every genre; the CPU TEST
          * unset and 74 %). (0.9 spec 3) every piece fitted with the full fitter: 0.8's "RANDOM and the genres keep their
@@ -1814,8 +1817,8 @@ int main(void)
                        gc_cost(1), gc_budget());
             }
         }
-        bad += gcheck("(0.5.2) the budget, two cores, EXPLORE: 569 at CPU TEST 74 % (65 % of the FM-1's half), 525 unset (0.9: WILD x1.55)",
-                      bud[1] == 569u && bud[0] == 525u);
+        bad += gcheck("(0.5.2) the budget, two cores, EXPLORE: 588 at CPU TEST 74 % (65 % of the FM-1's half), 542 unset (0.9.1: WILD x1.50)",
+                      bud[1] == 588u && bud[0] == 542u);
         bad += gcheck("  EXPLORE 3423 (CPU TEST unset, 74 %): its delay at the full rate", !st3423[0] && !st3423[1]);
         bad += gcheck("  EXPLORE 3423 and 9641 (CPU TEST unset, 74 %): under the budget", !ov[0][0] && !ov[0][1] && !ov[1][0] && !ov[1][1]);
         for (g = 0; g <= GEN_EXPLORE; g++)
@@ -2317,6 +2320,30 @@ int main(void)
         project_capture(&pb); proj_pack(&sb, &pb); settings_export(&eb);
         bad += gcheck("(0.9) GEN's page and recent pieces: a project and the settings byte for byte the same",
                       !memcmp(&sa, &sb, sizeof sa) && !memcmp(&ea, &eb, sizeof ea));
+    }
+    {   /* (0.9.1 spec 1) the model against the FM-1: every row measured (0.8's 15 pieces, the 0.9.1 session's;
+         * docs/braindancer/gen-cal-rows.csv, tests/gen_cal_rows.h): a clean row within the budget, a late one over it.
+         * Asserted: at most a quarter of the clean rows over (thinned for nothing). The late rows within the budget are
+         * reported only: the FM-1 lost no audio on any piece and the music is not thinned for lateness alone
+         * (docs/braindancer/gen-calibration-0.9.1.md, the fit's objective) */
+        uint32_t i, ml = 0, mc = 0, nl = 0, nc = 0;
+        uint16_t d0 = gcf.dev;
+        uint8_t t0 = gcf.two;
+        for (i = 0; i < GCAL_N; i++) {
+            const gcal_row_t *r = &GCAL[i];
+            uint32_t c, b;
+            gcf.two = r->two;
+            gcf.dev = (uint16_t)gc_dev_of(r->base, r->two, r->wild);
+            c = gc_sum(&r->t);
+            b = gc_budget();
+            if (r->late) { nl++; ml += c <= b; } else { nc++; mc += c > b; }
+            if (r->late ? c <= b : c > b)
+                printf("gen:   %s %s: cost %u, budget %u\n", r->tag, r->late ? "late but within" : "clean but over", c, b);
+        }
+        gcf.dev = d0; gcf.two = t0;
+        printf("gen: (0.9.1) the device's rows: %u late (%u within the budget), %u clean (%u over)\n", nl, ml, nc, mc);
+        bad += gcheck("(0.9.1) the model against the FM-1's rows: at most a quarter of the clean over",
+                      nl && nc && mc * 4u <= nc);
     }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;

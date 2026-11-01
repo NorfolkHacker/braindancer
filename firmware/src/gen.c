@@ -2056,11 +2056,13 @@ static void gx_mutate(void)
  * two cores the budget is the FM-1's measured 65 % (GC_GEN_X100, no margin off). (0.9) every piece fitted
  * (gx_fit_piece: the chord steps' ECHO / ARP NOTES first, then AUTO's AGE given way (gen_fit_tape), then the delay and
  * the rest), and every section after A (gen_fit_section) */
-static const uint8_t GC_ENG[NENGINES] = {27, 40, 45, 27, 27, 64, 27, 27, 27, 27, 70, 60, 40, 27, 27};   /* (ANALOG ..
+static const uint8_t GC_ENG[NENGINES] = {27, 30, 45, 27, 27, 64, 27, 27, 27, 27, 70, 60, 30, 27, 27};   /* (ANALOG ..
                                                          * 14 by number; the retired ones as ANALOG, DIGITAL as FM6;
                                                          * ACID FM 0.2: WHEEL 7, ANIMAL 14 retired) */
-static const uint8_t GC_VOX[NENGINES] = {19, 13, 15, 17, 19, 23, 19, 19, 19, 19, 11, 16, 13, 19, 19};
-/* (0.9 spec 3, recalibrated on 15 GEN pieces played on an FM-1, 0.8, two cores, CPU TEST 74 %) FM6 (12, and DIGITAL, 1)
+static const uint8_t GC_VOX[NENGINES] = {19, 18, 15, 17, 19, 23, 19, 19, 19, 19, 11, 16, 18, 19, 19};
+/* (0.9.1 fit: 15 pieces of 0.8 and 20 of 0.9.1 on an FM-1, 21 late, docs/braindancer/gen-calibration-0.9.1.md) FM6: 30 / 18
+ * (a lighter base, heavier voices; the best score under the clean-over bound that keeps gen_test's fit-floor checks). GC_CCOMP 70 kept.
+ * (0.9 spec 3, recalibrated on 15 GEN pieces played on an FM-1, 0.8, two cores, CPU TEST 74 %) FM6 (12, and DIGITAL, 1)
  * at about half 0.8's 79 / 26: the device's load fitted against the model's terms weighs an FM6 part ~0.2 of the rest
  * (halved: the cautious end). A chord-track step of two notes or more with an ECHO or ARP NOTES step component
  * (comp or comp2): GC_CCOMP more (the model's voices do not see the burst of note-ons; the three pieces that lost the
@@ -2084,10 +2086,11 @@ static const uint8_t GC_DLO[2][3] = {{0, 52, 66}, {0, 63, 81}};   /* [two cores]
  * AGE is kept and the safety net's TAPE rung (audio.c fx_safety_tick) stays the last resort. 0.8's rule "GEN never pays for TAPE" withdrawn. 0.8's figure (139 thousandths one core, 169
  * two: a host measure once, cpu_vg's CPU TEST song section with AGE 100 against AGE 0) recalibrated on the FM-1 (0.9
  * spec 3): a GEN piece at AGE 0 and 50 played at 42 % and 50 % CPU, ~8 %: 92 at the styles' factor with two cores, one
- * core 92 x 139 / 169. One snapshot pair (+-10 %): a targeted measurement on the device decides. The 0.9 AGE retune
+ * core 92 x 139 / 169. (0.9.1) RETROBOC+IDM 4073, AGE 70 against 0: CPU 65 / 74 % against 61 %, +8.5 %: 95 at x1.22, one core
+ * 78. One snapshot pair (+-10 %): a targeted measurement on the device decides. The 0.9 AGE retune
  * keeps TAPE's code paths (every detail non-zero at AGE 1..100) */
-#define GC_TAPE1 76u                                    /* (one core: GC_TAPE2 scaled as 0.8's 139 / 169) */
-#define GC_TAPE2 92u                                    /* (two cores: the device's AGE 0 -> 50 step, ~8 % CPU) */
+#define GC_TAPE1 78u                                    /* (one core: GC_TAPE2 scaled as 0.8's 139 / 169) */
+#define GC_TAPE2 95u                                    /* (two cores: the device's AGE 0 -> 70 step, ~8.5 % CPU) */
 static uint32_t gc_dly_stage(void)                       /* the piece's delay's rate (fx.c fx_buses, dly_rate): 0 full,
                                                          * 1 half, 2 a quarter; the full rate only clear of dly_stage's
                                                          * hysteresis (a line at a lower rate before stays there to 1/32
@@ -2111,15 +2114,19 @@ static uint32_t gc_dly_stage(void)                       /* the piece's delay's 
  * ratio, GC_GEN_X100. The budget, 65 % of a half on the device (the governor's line), with no margin taken off (the
  * factor is the device's, measured on the pieces that lost halves): CPU TEST 74 % -> 588 (was 780: 9641 and 3423 both
  * fitted under it and both glitched). Unset, GC_DEV2_X100: 542, 0.5.1's budget (543) */
-/* (0.9 spec 3, recalibration: 15 GEN pieces on an FM-1 running 0.8, two cores, CPU TEST 74 %) x1.50 was fitted on EXPLORE
+/* (0.9.1) re-fitted on 0.8's 15 pieces and 0.9.1's 20 (13 of those late): a style's x1.22 of the CPU TEST's ratio (was 1.18),
+ * WILD x1.50 (was 1.55); CPU TEST ratio 117: the budget 1030 x 100 / (117 x 122 / 100) = 725 a style's piece, 588 WILD's;
+ * the chosen point is the best score with at most a quarter of the clean rows over the budget (no music thinned for
+ * lateness alone). Unset: 155 and 190.
+ * (0.9 spec 3, recalibration: 15 GEN pieces on an FM-1 running 0.8, two cores, CPU TEST 74 %) x1.50 was fitted on EXPLORE
  * pieces only: a style's piece (a genre, a blend; RANDOM's) runs x1.18 the CPU TEST's ratio (the device's load against
  * the model's terms, FM6 reweighted: bootstrap 110..123), GC_GEN_X100; WILD (EXPLORE) x1.55, the mean of its three
  * pieces measured (9641 1.45, 3423 1.55, 7848 1.64), GC_WILD_X100. CPU TEST 74 %: the budget 746 a style's piece, 569
  * WILD's. Unset: 0.5.1's 190 scaled the same way, 150 and 196. One core: as before (no one-core measurement) */
-#define GC_GEN_X100 118u
-#define GC_WILD_X100 155u
-#define GC_DEV2_X100 150u
-#define GC_DEV2W_X100 196u
+#define GC_GEN_X100 122u
+#define GC_WILD_X100 150u
+#define GC_DEV2_X100 155u
+#define GC_DEV2W_X100 190u
 static uint32_t gc_dev_base(void)                       /* (0.9) the CPU TEST's ratio x100 (1..400), 0 none stored: the
                                                          * identity's (genid_t dev) */
 {
@@ -2156,15 +2163,23 @@ static uint32_t gc_ccomp_n(void)                        /* (0.9) the chord track
     }
     return n;
 }
-static uint32_t gc_cost(int steps)                      /* steps 0: before the parts (a chord track's triads) */
+typedef struct {
+    uint16_t fixed;                                     /* the base, the reverb, the grain, the delay's line, PLAYHEADS */
+    uint8_t tape, ccomp, n;                             /* TAPE counted (AGE above 0); the chord steps with ECHO / ARP NOTES; parts */
+    uint8_t eng[NTRK];                                  /* each part's engine (GC_ENG / GC_VOX) */
+    uint16_t v[NTRK];                                   /* .. and its voices x100 */
+} gc_terms_t;
+static void gc_terms(int steps, gc_terms_t *m)          /* (0.9.1) gc_cost's terms: what the constants weigh (the fit,
+                                                         * tests/gen_terms.c, tests/gen_test.c) */
 {
     const ggenre_t *g = gs.g;
     uint32_t k, i, h, bpm = steps ? (uint32_t)song.g[G_BPM] : (g->bpm_lo + g->bpm_hi) / 2u;
     uint32_t c = (gcf.two ? 295u : 380u) + GC_REV[(uint32_t)(steps ? song.g[G_RTYPE] : g->rtype) % 5u];
     if (steps && (song.g[G_DPIT] || song.g[G_DSPRY])) c += GC_GRAIN;
     if (steps) c += GC_DLO[gcf.two ? 1 : 0][gc_dly_stage()];   /* (0.5.2) the delay's line past the full rate */
-    if (gs.age) c += gcf.two ? GC_TAPE2 : GC_TAPE1;     /* (0.9) TAPE while the piece's AGE is above 0 */
-    if (steps) c += gc_ccomp_n() * GC_CCOMP;            /* (0.9) the chord steps with ECHO / ARP NOTES */
+    m->tape = gs.age != 0;                              /* (0.9) TAPE while the piece's AGE is above 0 */
+    m->ccomp = (uint8_t)(steps ? gc_ccomp_n() : 0u);    /* (0.9) the chord steps with ECHO / ARP NOTES */
+    m->n = 0;
     for (k = 0; k < NTRK && k < trk_live; k++) {
         const track_t *t = &trk[k];
         uint32_t r = gs.role[k], e = t->eng_req % NENGINES, len = dlen(t), on = 0, ns = 0, tie = 0, v, f, cap;
@@ -2191,9 +2206,24 @@ static uint32_t gc_cost(int steps)                      /* steps 0: before the p
             v = cap == 100u ? f : ns * f / on;
             if (v > cap) v = cap;
         }
-        c += GC_ENG[e] + GC_VOX[e] * v / 100u;
+        m->eng[m->n] = (uint8_t)e;
+        m->v[m->n] = (uint16_t)v;
+        m->n++;
     }
+    m->fixed = (uint16_t)c;
+}
+static uint32_t gc_sum(const gc_terms_t *m)             /* (0.9.1) the cost of terms under the constants (gcf's cores) */
+{
+    uint32_t c = m->fixed + m->ccomp * GC_CCOMP + (m->tape ? (gcf.two ? GC_TAPE2 : GC_TAPE1) : 0u), k;
+    for (k = 0; k < m->n; k++)
+        c += GC_ENG[m->eng[k]] + GC_VOX[m->eng[k]] * m->v[k] / 100u;
     return c;
+}
+static uint32_t gc_cost(int steps)                      /* steps 0: before the parts (a chord track's triads) */
+{
+    gc_terms_t m;
+    gc_terms(steps, &m);
+    return gc_sum(&m);
 }
 static uint32_t gsnd(uint32_t r)                        /* a role's recipe */
 {

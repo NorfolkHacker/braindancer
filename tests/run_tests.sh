@@ -414,6 +414,7 @@ fi
 run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/install_test.py
 run "ABOUT page QR code (gen_about_qr.py)" python3 tests/about_qr_test.py
 run "GEN calibration data: the log to the device CSV (tools/gen_cal.py)" python3 tests/gen_cal_test.py
+run "GEN's CPU model fit (tools/gen_fit.py) and its rows" python3 tests/gen_fit_test.py
 run "pages: no BREAK on the README and the landing page, no two-core warning in the installer" python3 tests/stale_pages_test.py
 run "tools/build.py: FELUCCA_NVOICE as an ASCII integer 1..16 only" python3 tests/build_py_test.py
 run "song_chain.c and storage.c agree on NSONG (a static assert)" sh tests/nsong_tie_test.sh
